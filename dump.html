@@ -1,32 +1,30 @@
 <!DOCTYPE html>
-<html lang="ru-RU" data-website-id="1" data-main-object="website.page(5,)">
+<html lang="ru-RU" data-website-id="1" data-main-object="website.page(59,)">
     <head>
         <meta charset="utf-8"/>
         <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <meta name="generator" content="Odoo"/>
-        <meta name="description" content="This is the homepage of the website"/>
             
         <meta property="og:type" content="website"/>
-        <meta property="og:title" content="Home | TOTEM Platform"/>
+        <meta property="og:title" content="Salon totem-demo-salon | TOTEM Platform"/>
         <meta property="og:site_name" content="TOTEM Platform"/>
-        <meta property="og:url" content="https://www.totemv.com/"/>
-        <meta property="og:image" content="https://www.totemv.com/web/image/website/1/logo?unique=babee08"/>
-        <meta property="og:description" content="This is the homepage of the website"/>
+        <meta property="og:url" content="https://www.totemv.com/salon/totem-demo-salon"/>
+        <meta property="og:image" content="https://www.totemv.com/web/image/website/1/logo?unique=a4676f9"/>
             
         <meta name="twitter:card" content="summary_large_image"/>
         
-        <link rel="canonical" href="https://www.totemv.com/"/>
+        <link rel="canonical" href="https://www.totemv.com/salon/totem-demo-salon"/>
         
         <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin=""/>
-        <title>Home | TOTEM Platform</title>
-        <link type="image/x-icon" rel="shortcut icon" href="/web/image/website/1/favicon?unique=babee08"/>
+        <title>Salon totem-demo-salon | TOTEM Platform</title>
+        <link type="image/x-icon" rel="shortcut icon" href="/web/image/website/1/favicon?unique=a4676f9"/>
         <link rel="preload" href="/web/assets/1/306afdf/web.fontawesome.min.woff2" as="font" crossorigin=""/>
         <link rel="preload" href="/web/assets/1/2a63457/web.odoo_ui_icons.min.woff2" as="font" crossorigin=""/>
         <link type="text/css" rel="stylesheet" href="/web/assets/1/b63138d/web.assets_frontend.min.css"/>
         <script id="web.layout.odooscript" type="text/javascript">
             var odoo = {
-                csrf_token: '8b8bd33b997e62364d71516ce1423ef3b61cd7afo1803752244',
+                csrf_token: '6745733052ee7742fafa9210ebbb19b8f8dcb851o1803784039',
                 debug: "",
             };
         </script>
@@ -40,362 +38,18 @@
         <script type="text/javascript" defer="defer" src="/web/assets/1/e9a3dc3/web.assets_frontend_minimal.min.js" onerror="__odooAssetError=1"></script>
         <script type="text/javascript" data-src="/web/assets/1/c9eda3e/web.assets_frontend_lazy.min.js" onerror="__odooAssetError=1"></script>
         
-            <script id="plausible_script" name="plausible" defer="defer" data-domain="totem-platform.odoo.com" src="https://download.odoo.com/js/plausi_saas.js"></script>
-        <script>
-(function () {
-  if (window.__TOTEM_BOOTSTRAP_V1__) return;
-  window.__TOTEM_BOOTSTRAP_V1__ = true;
-
-  var API_BASE = "https://totem-p0-api-production.up.railway.app";
-
-  function parts() {
-    return (location.pathname || "").split("/").filter(Boolean);
-  }
-
-  var p = parts();
-  // ONLY /s/:slug/*
-  if (p.length < 2 || p[0] !== "s" || !p[1]) return;
-
-  var slug = "";
-  try { slug = decodeURIComponent(p[1]); } catch (e) { slug = p[1]; }
-
-  function publishContext(salon_id) {
-    var ctx = { slug: slug, salon_id: String(salon_id) };
-    window.TOTEM_CONTEXT = ctx;
-
-    try {
-      document.documentElement.dataset.totemSlug = slug;
-      document.documentElement.dataset.totemSalonId = String(salon_id);
-    } catch (e) {}
-
-    try {
-      window.dispatchEvent(new CustomEvent("totem:context", { detail: ctx }));
-    } catch (e) {}
-  }
-
-  fetch(API_BASE + "/s/" + encodeURIComponent(slug) + "/resolve")
-    .then(function (r) { return r.json(); })
-    .then(function (j) {
-      if (!j || j.ok !== true) {
-        console.error("TOTEM resolve failed", j);
-        return;
-      }
-      publishContext(j.salon_id);
-      console.log("TOTEM context ready", window.TOTEM_CONTEXT);
-    })
-    .catch(function (e) {
-      console.error("TOTEM resolve error", e);
-    });
-})();
-</script>
-
-<script>
-(function () {
-  if (window.__TOTEM_BINDING_V1__) return;
-  window.__TOTEM_BINDING_V1__ = true;
-
-  function ready(fn){ if(document.readyState!=='loading'){fn();}else{document.addEventListener('DOMContentLoaded',fn);} }
-
-  function waitForContext(cb){
-    if (window.TOTEM_CONTEXT && window.TOTEM_CONTEXT.salon_id) return cb(window.TOTEM_CONTEXT);
-    var t = setInterval(function(){
-      if (window.TOTEM_CONTEXT && window.TOTEM_CONTEXT.salon_id){
-        clearInterval(t); cb(window.TOTEM_CONTEXT);
-      }
-    }, 50);
-    setTimeout(function(){ clearInterval(t); }, 8000);
-  }
-
-  function bind(page, ctx){
-    var root = document.getElementById('totem-root');
-    if (!root) return;
-
-    var API = "https://totem-p0-api-production.up.railway.app";
-    root.innerHTML = '<pre style="opacity:.6">Loading…</pre>';
-
-    var url = '';
-    if (page === 'root') url = '/public/salon/' + ctx.salon_id;
-    if (page === 'booking') url = '/public/booking/salon/' + ctx.salon_id;
-    if (page === 'calendar') url = '/public/calendar/salon/' + ctx.salon_id;
-    if (page === 'reports') url = '/reports/salon/' + ctx.salon_id;
-    if (page === 'owner') url = '/owner/reports/salons';
-
-    if (!url) {
-      root.innerHTML = '<pre>Unknown page</pre>';
-      return;
-    }
-
-    fetch(API + url)
-      .then(function(r){ return r.json(); })
-      .then(function(j){
-        root.innerHTML = '<pre>' + JSON.stringify(j, null, 2) + '</pre>';
-      })
-      .catch(function(e){
-        root.innerHTML = '<pre>Error</pre>';
-        console.error(e);
-      });
-  }
-
-  ready(function(){
-    var root = document.getElementById('totem-root');
-    if (!root) return;
-    var page = root.getAttribute('data-page') || '';
-    if (!page) return;
-    waitForContext(function(ctx){ bind(page, ctx); });
-  });
-})();
-</script>
-
-<script>
-(function(){
-  if (window.__TOTEM_OWNER_GUARD_V1__) return;
-  window.__TOTEM_OWNER_GUARD_V1__ = true;
-
-  function getSlug(){
-    var m = location.pathname.match(/^\/s\/([^\/]+)/);
-    return m ? m[1] : null;
-  }
-
-  function redirectHome(){
-    var slug = getSlug();
-    if (slug) location.replace('/s/' + slug);
-  }
-
-  function hasOwnerToken(){
-    try {
-      var t = localStorage.getItem('TOTEM_OWNER_TOKEN');
-      return !!t;
-    } catch(e){ return false; }
-  }
-
-  function verifyOwner(cb){
-    var token = localStorage.getItem('TOTEM_OWNER_TOKEN');
-    if (!token) return cb(false);
-
-    fetch('https://totem-p0-api-production.up.railway.app/owner/reports/salons', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    })
-    .then(function(r){ return r.ok; })
-    .then(function(ok){ cb(!!ok); })
-    .catch(function(){ cb(false); });
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    if (!location.pathname.match(/^\/s\/[^\/]+\/owner$/)) return;
-
-    if (!hasOwnerToken()){
-      redirectHome(); return;
-    }
-
-    verifyOwner(function(ok){
-      if (!ok) redirectHome();
-    });
-  });
-})();
-</script>
-
-<script>
-(function(){
-  if (window.__TOTEM_POLISH_UI_V1__) return;
-  window.__TOTEM_POLISH_UI_V1__ = true;
-
-  function isObject(v){ return v && typeof v === 'object' && !Array.isArray(v); }
-
-  function renderValue(v){
-    if (Array.isArray(v)){
-      if (!v.length) return '<em>empty</em>';
-      var keys = Object.keys(v[0] || {});
-      var h = '<table class="totem-table"><thead><tr>';
-      keys.forEach(k => h += '<th>'+k+'</th>');
-      h += '</tr></thead><tbody>';
-      v.forEach(row => {
-        h += '<tr>';
-        keys.forEach(k => h += '<td>'+(row[k] ?? '')+'</td>');
-        h += '</tr>';
-      });
-      return h + '</tbody></table>';
-    }
-    if (isObject(v)){
-      var h = '<div class="totem-cards">';
-      Object.keys(v).forEach(k => {
-        h += '<div class="totem-card"><div class="k">'+k+'</div><div class="v">'+v[k]+'</div></div>';
-      });
-      return h + '</div>';
-    }
-    return '<span>'+v+'</span>';
-  }
-
-  function enhance(){
-    var root = document.getElementById('totem-root');
-    if (!root) return;
-    var pre = root.querySelector('pre');
-    if (!pre) return;
-
-    try {
-      var data = JSON.parse(pre.textContent);
-      root.innerHTML = renderValue(data);
-    } catch(e){
-      console.warn('POLISH_UI: not JSON');
-    }
-  }
-
-  var style = document.createElement('style');
-  style.innerHTML = `
-    .totem-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-    .totem-card{border:1px solid #ddd;border-radius:8px;padding:10px}
-    .totem-card .k{font-weight:600;font-size:12px;opacity:.7}
-    .totem-card .v{font-size:14px}
-    .totem-table{border-collapse:collapse;width:100%}
-    .totem-table th,.totem-table td{border:1px solid #ddd;padding:6px;font-size:13px}
-    .totem-table th{background:#f5f5f5}
-  `;
-  document.head.appendChild(style);
-
-  document.addEventListener('DOMContentLoaded', enhance);
-})();
-</script>
-<!-- TOTEM_GUARDS_V1_START -->
-<script>
-(function() {
-  "use strict";
-  var p = location.pathname || "/";
-  var isCabinet = p.indexOf("/masters/") === 0 || p.indexOf("/salons/") === 0;
-  if (!isCabinet) return;
-
-  function go() {
-    try { location.replace("/"); } catch(e) { location.href="/"; }
-  }
-
-  if (typeof fetch !== "function") { go(); return; }
-
-  fetch("/web/session/get_session_info", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
-    body: JSON.stringify({"jsonrpc":"2.0","method":"call","params":{},"id":Date.now()})
-  }).then(function(r) {
-    if (!r.ok) throw 0;
-    return r.json();
-  }).then(function(d) {
-    var r = d && (d.result || d);
-    if (!r || !r.uid) go();
-  }).catch(go);
-})();
-</script>
-<!-- TOTEM_GUARDS_V1_END -->
-<!-- TOTEM_CABINET_UI_V1_START -->
-<script>
-(function(){
-  if (window.__TOTEM_CABINET_UI_V1__) return;
-  window.__TOTEM_CABINET_UI_V1__ = true;
-
-  var p = location.pathname || "/";
-  var isMaster = p.indexOf("/masters/") === 0;
-  var isSalon  = p.indexOf("/salons/") === 0;
-  if (!(isMaster || isSalon)) return;
-
-  var items = isMaster ? [
-    ["Кабинет","/masters/cabinet"],
-    ["Записи","/masters/bookings"],
-    ["Клиенты","/masters/clients"],
-    ["Расписание","/masters/schedule"],
-    ["Финансы","/masters/money"],
-    ["Салоны","/masters/salons"],
-    ["Настройки","/masters/settings"]
-  ] : [
-    ["Кабинет","/salons/cabinet"],
-    ["Записи","/salons/bookings"],
-    ["Клиенты","/salons/clients"],
-    ["Мастера","/salons/masters"],
-    ["Расписание","/salons/schedule"],
-    ["Финансы","/salons/money"],
-    ["Настройки","/salons/settings"]
-  ];
-
-  function css(){
-    var s=document.createElement("style");
-    s.innerHTML =
-      ".totem-side{position:fixed;left:12px;top:80px;z-index:9999;background:#fff;border:1px solid #ddd;border-radius:10px;padding:8px 6px;box-shadow:0 6px 18px rgba(0,0,0,.08)}" +
-      ".totem-side a{display:block;padding:6px 10px;border-radius:8px;color:#222;text-decoration:none;font-size:13px}" +
-      ".totem-side a:hover{background:#f3f3f3}" +
-      ".totem-side a.active{background:#e9eefc}" +
-      "@media(max-width:900px){.totem-side{display:none}}";
-    document.head.appendChild(s);
-  }
-
-  function mount(){
-    if (document.getElementById("totem-side")) return;
-    var d=document.createElement("div");
-    d.id="totem-side"; d.className="totem-side";
-    items.forEach(function(it){
-      var a=document.createElement("a");
-      a.href=it[1]; a.textContent=it[0];
-      if (location.pathname===it[1]) a.className="active";
-      d.appendChild(a);
-    });
-    document.body.appendChild(d);
-  }
-
-  css();
-  if (document.readyState!=="loading") mount();
-  else document.addEventListener("DOMContentLoaded", mount);
-})();
-</script>
-<!-- TOTEM_CABINET_UI_V1_END -->
-<!-- TOTEM_PUBLIC_FLOW_GUARD_V1_START -->
-<script>
-(function(){
-  if (window.__TOTEM_PUBLIC_FLOW_GUARD_V1__) return;
-  window.__TOTEM_PUBLIC_FLOW_GUARD_V1__ = true;
-
-  var p = location.pathname || "";
-  if (!p.match(/^\/s\/[^\/]+(\/.*)?$/)) return;
-
-  var isRoot = p.match(/^\/s\/[^\/]+$/);
-  var isPublicOk = p.match(/^\/s\/[^\/]+\/(booking|calendar)$/);
-  var isRestricted = p.match(/^\/s\/[^\/]+\/(owner|reports)$/);
-
-  // owner/reports handled by existing OWNER_GUARD
-  if (isRestricted) return;
-
-  var MAX_WAIT = 5000;
-  var start = Date.now();
-
-  function redirectRoot(){
-    try {
-      var m = p.match(/^\/s\/([^\/]+)/);
-      if (m && m[1]) location.replace("/s/" + m[1]);
-      else location.replace("/");
-    } catch(e){
-      location.href = "/";
-    }
-  }
-
-  function tick(){
-    if (window.TOTEM_CONTEXT && window.TOTEM_CONTEXT.salon_id) return;
-    if (Date.now() - start > MAX_WAIT){
-      redirectRoot();
-      return;
-    }
-    setTimeout(tick, 100);
-  }
-
-  if (isRoot || isPublicOk){
-    tick();
-  }
-})();
-</script>
-<!-- TOTEM_PUBLIC_FLOW_GUARD_V1_END -->
+            <script id="plausible_script" name="plausible" defer="defer" data-domain="https://www.totemv.com/" src="https://download.odoo.com/js/plausi_saas.js"></script>
+        
 
     </head>
-    <body class="o_id_583 o_website_url_home">
+    <body class="o_id_2280 o_website_url_salon_totem_demo_salon">
         
 
 
 
 
 
-        <div id="wrapwrap" class="homepage   ">
+        <div id="wrapwrap" class="   ">
             <a class="o_skip_to_content btn btn-primary rounded-0 visually-hidden-focusable position-absolute start-0" href="#wrap">Перейти к содержимому</a>
                 <header id="top" data-anchor="true" data-name="Header" data-extra-items-toggle-aria-label="Кнопка дополнительных элементов" class="   o_header_standard" style=" ">
     <nav data-name="Navbar" aria-label="Main" class="navbar navbar-expand-lg navbar-light o_colored_level o_cc d-none d-lg-block shadow-sm ">
@@ -405,7 +59,7 @@
                 
     <a data-name="Navbar Logo" href="/" class="navbar-brand logo me-4">
             
-            <span role="img" aria-label="Logo of TOTEM Platform" title="TOTEM Platform"><img src="/web/image/website/1/logo/TOTEM%20Platform?unique=babee08" class="img img-fluid" width="95" height="40" alt="TOTEM Platform" loading="lazy"/></span>
+            <span role="img" aria-label="Logo of TOTEM Platform" title="TOTEM Platform"><img src="/web/image/website/1/logo/TOTEM%20Platform?unique=a4676f9" class="img img-fluid" width="95" height="40" alt="TOTEM Platform" loading="lazy"/></span>
         </a>
     
                 
@@ -520,7 +174,7 @@
     </li>
 
     <li role="presentation" class="nav-item ">
-        <a role="menuitem" href="/" class="nav-link active">
+        <a role="menuitem" href="/" class="nav-link ">
             <span>Клиенты</span>
         </a>
     </li>
@@ -554,10 +208,8 @@
                     
         <li class="">
                 <div data-name="Text" class="s_text_block ">
-                    <a href="tel:+1 555-555-5556" class="nav-link o_nav-link_secondary p-2">
-                        <i class="fa fa-1x fa-fw fa-phone me-1"></i>
-                        <span class="o_force_ltr"><small>+1 555-555-5556</small></span>
-                    </a>
+                    <a href="tel:+15" class="nav-link o_nav-link_secondary p-2">
+                        <span class="o_force_ltr">​</span><br/></a>
                 </div>
         </li>
                     
@@ -590,7 +242,7 @@
                 
     <a data-name="Navbar Logo" href="/" class="navbar-brand logo ">
             
-            <span role="img" aria-label="Logo of TOTEM Platform" title="TOTEM Platform"><img src="/web/image/website/1/logo/TOTEM%20Platform?unique=babee08" class="img img-fluid" width="95" height="40" alt="TOTEM Platform" loading="lazy"/></span>
+            <span role="img" aria-label="Logo of TOTEM Platform" title="TOTEM Platform"><img src="/web/image/website/1/logo/TOTEM%20Platform?unique=a4676f9" class="img img-fluid" width="95" height="40" alt="TOTEM Platform" loading="lazy"/></span>
         </a>
     
                 <ul class="o_header_mobile_buttons_wrap navbar-nav d-flex flex-row align-items-center gap-2 mb-0 ms-auto"></ul>
@@ -739,7 +391,7 @@
     </li>
 
     <li role="presentation" class="nav-item border-top border-bottom px-0">
-        <a role="menuitem" href="/" class="nav-link p-3 text-wrap active">
+        <a role="menuitem" href="/" class="nav-link p-3 text-wrap ">
             <span>Клиенты</span>
         </a>
     </li>
@@ -749,10 +401,8 @@
                         
         <li class="">
                 <div data-name="Text" class="s_text_block mt-2">
-                    <a href="tel:+1 555-555-5556" class="nav-link o_nav-link_secondary p-2">
-                        <i class="fa fa-1x fa-fw fa-phone me-1"></i>
-                        <span class="o_force_ltr"><small>+1 555-555-5556</small></span>
-                    </a>
+                    <a href="tel:+15" class="nav-link o_nav-link_secondary p-2">
+                        <span class="o_force_ltr">​</span><br/></a>
                 </div>
         </li>
                         
@@ -783,8 +433,14 @@
     </header>
                 <main class="">
                     
-        <div id="wrap" class="oe_structure oe_empty"></div>
-    
+    <div id="wrap" class="oe_structure">
+      <div id="root"></div>
+      <script>
+        window.SALON_SLUG = "totem-demo-salon";
+      </script>
+      <script src="https://app.totemv.com/assets/index-Bnu99CUo.js" defer="defer"></script>
+    </div>
+  
         <div id="o_shared_blocks" class="oe_unremovable"></div>
                 </main>
                 <footer id="bottom" data-anchor="true" data-name="Footer" class="o_footer o_colored_level o_cc ">
@@ -860,51 +516,6 @@
                     </div>
                 </footer>
             </div>
-        <script>
-(function () {
-  // guard: работаем ТОЛЬКО на /salon-demo
-  if (window.location.pathname !== "/salon-demo") return;
-
-  const API_BASE = "https://totem-p0-api-production.up.railway.app";
-  const SALON_SLUG = "totem-demo-salon";
-
-  // временно используем реальный домен backend (без DNS проблем)
-  const BOOK_URL = "https://totem-p0-api-production.up.railway.app/book";
-
-  const salonNameEl = document.getElementById("salon-name");
-  const bookBtn = document.getElementById("book-btn");
-
-  if (!salonNameEl || !bookBtn) return;
-
-  // состояние по умолчанию
-  salonNameEl.textContent = "Загрузка…";
-  bookBtn.disabled = true;
-
-  fetch(API_BASE + "/public/salons/" + SALON_SLUG)
-    .then(function (res) {
-      if (!res.ok) throw new Error("API error");
-      return res.json();
-    })
-    .then(function (data) {
-      salonNameEl.textContent = data.name || "Салон";
-
-      bookBtn.disabled = false;
-      bookBtn.onclick = function () {
-        var returnUrl = encodeURIComponent(window.location.href);
-        var target =
-          BOOK_URL +
-          "?salon=" + encodeURIComponent(SALON_SLUG) +
-          "&return=" + returnUrl;
-
-        window.location.href = target;
-      };
-    })
-    .catch(function () {
-      salonNameEl.textContent = "Салон";
-      bookBtn.disabled = true;
-    });
-})();
-</script>
-
+        
         </body>
 </html>
