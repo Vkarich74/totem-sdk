@@ -10,70 +10,50 @@ function getSlug() {
   return null;
 }
 
-function safe(v) {
-  if (v === null || v === undefined) return "";
-  return String(v).trim();
+function formatMoney(value) {
+  return new Intl.NumberFormat("ru-RU").format(value);
 }
 
 function App() {
   const [salon, setSalon] = useState(null);
   const [metrics, setMetrics] = useState(null);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     const slug = getSlug();
-    if (!slug) {
-      setError("Slug not found");
-      return;
-    }
+    if (!slug) return;
 
-    // salon
     fetch(`${API_BASE}/public/salons/${slug}`)
       .then(r => r.json())
-      .then(data => {
-        if (!data.ok) throw new Error();
-        setSalon(data.salon);
-      })
-      .catch(() => setError("Salon load error"));
+      .then(d => d.ok && setSalon(d.salon));
 
-    // metrics
     fetch(`${API_BASE}/public/salons/${slug}/metrics`)
       .then(r => r.json())
-      .then(data => {
-        if (!data.ok) throw new Error();
-        setMetrics(data.metrics);
-      })
-      .catch(() => {});
+      .then(d => d.ok && setMetrics(d.metrics));
   }, []);
 
-  if (error) return <div style={styles.center}>{error}</div>;
-  if (!salon) return <div style={styles.center}>Loading…</div>;
+  if (!salon) return <div style={styles.center}>Loading...</div>;
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>{salon.name}</h1>
+      <h1>{salon.name}</h1>
       {salon.slogan && <div style={styles.slogan}>{salon.slogan}</div>}
 
       <div style={styles.meta}>
-        <span>Status: {salon.status}</span>
-        {salon.city && <> • {salon.city}</>}
-        {salon.phone && <> • {salon.phone}</>}
+        {salon.status} • {salon.city} • {salon.phone}
       </div>
 
-      <button style={styles.cta}>Book now</button>
-
-      {/* METRICS */}
       {metrics && (
         <div style={styles.metricsRow}>
           <MetricCard label="Bookings" value={metrics.bookings_count} />
-          <MetricCard label="Revenue" value={metrics.revenue_total} />
-          <MetricCard label="Avg check" value={metrics.avg_check} />
+          <MetricCard label="Revenue (All)" value={formatMoney(metrics.revenue_total)} />
+          <MetricCard label="Revenue (30d)" value={formatMoney(metrics.revenue_30d)} />
+          <MetricCard label="Avg Check" value={formatMoney(metrics.avg_check)} />
         </div>
       )}
 
       <div style={styles.section}>
-        <h2>About salon</h2>
-        <p>{salon.description || "Description will appear here."}</p>
+        <h2>About</h2>
+        <p>{salon.description}</p>
       </div>
     </div>
   );
@@ -92,52 +72,41 @@ const styles = {
   page: {
     fontFamily: "system-ui",
     padding: 40,
-    maxWidth: 900,
+    maxWidth: 1000,
     margin: "0 auto"
   },
   center: {
     padding: 40,
     textAlign: "center"
   },
-  title: {
-    fontSize: 36,
-    marginBottom: 6
-  },
   slogan: {
-    fontSize: 18,
     opacity: 0.7,
     marginBottom: 10
   },
   meta: {
-    opacity: 0.8,
-    marginBottom: 20
-  },
-  cta: {
-    padding: "12px 24px",
-    background: "#000",
-    color: "#fff",
-    border: "none",
-    cursor: "pointer",
-    marginBottom: 30
+    marginBottom: 30,
+    opacity: 0.8
   },
   metricsRow: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
     gap: 20,
     marginBottom: 40
   },
   card: {
-    flex: 1,
     padding: 20,
     border: "1px solid #eee",
     borderRadius: 12,
-    textAlign: "center"
+    textAlign: "center",
+    background: "#fafafa"
   },
   cardValue: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 600
   },
   cardLabel: {
-    opacity: 0.6
+    opacity: 0.6,
+    marginTop: 6
   },
   section: {
     marginTop: 30
