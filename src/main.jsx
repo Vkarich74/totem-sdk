@@ -16,6 +16,11 @@ function getSlug() {
   return null;
 }
 
+function safeText(v) {
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
+}
+
 function App() {
   const [salon, setSalon] = useState(null);
   const [error, setError] = useState(null);
@@ -24,26 +29,26 @@ function App() {
     const slug = getSlug();
 
     if (!slug) {
-      setError("Slug not found in URL");
+      setError("Slug не найден в URL");
       return;
     }
 
     fetch(`${API_BASE}/public/salons/${slug}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Salon not found");
+      .then((res) => {
+        if (!res.ok) throw new Error("Салон не найден");
         return res.json();
       })
-      .then(data => {
-        if (!data.ok) throw new Error("Invalid response");
+      .then((data) => {
+        if (!data.ok) throw new Error("Неверный ответ API");
         setSalon(data.salon);
       })
-      .catch(err => setError(err.message));
+      .catch((err) => setError(err.message));
   }, []);
 
   if (error) {
     return (
       <div style={styles.center}>
-        <h2>Error</h2>
+        <h2>Ошибка</h2>
         <div>{error}</div>
       </div>
     );
@@ -52,32 +57,82 @@ function App() {
   if (!salon) {
     return (
       <div style={styles.center}>
-        <h2>Loading salon...</h2>
+        <h2>Загрузка салона…</h2>
       </div>
     );
   }
 
+  const description = safeText(salon.description);
+  const city = safeText(salon.city);
+  const phone = safeText(salon.phone);
+  const logoUrl = safeText(salon.logo_url);
+  const coverUrl = safeText(salon.cover_url);
+
   return (
     <div style={styles.page}>
       {/* HERO */}
-      <div style={styles.hero}>
-        <h1 style={styles.title}>{salon.name}</h1>
-        <div style={styles.meta}>
-          <span>Status: {salon.status}</span>
-          <span>•</span>
-          <span>{salon.enabled ? "Open for booking" : "Disabled"}</span>
+      <div
+        style={{
+          ...styles.hero,
+          ...(coverUrl
+            ? {
+                backgroundImage: `url(${coverUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                padding: "48px",
+                borderRadius: "16px",
+              }
+            : {}),
+        }}
+      >
+        <div style={styles.heroTopRow}>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="logo"
+              style={styles.logo}
+              loading="lazy"
+            />
+          ) : null}
+
+          <div style={{ flex: 1 }}>
+            <h1 style={styles.title}>{salon.name}</h1>
+
+            <div style={styles.meta}>
+              <span>Статус: {salon.status}</span>
+              <span>•</span>
+              <span>{salon.enabled ? "Открыт для записи" : "Отключён"}</span>
+              {city ? (
+                <>
+                  <span>•</span>
+                  <span>{city}</span>
+                </>
+              ) : null}
+              {phone ? (
+                <>
+                  <span>•</span>
+                  <a style={styles.phoneLink} href={`tel:${phone}`}>
+                    {phone}
+                  </a>
+                </>
+              ) : null}
+            </div>
+
+            <button style={styles.cta}>Записаться</button>
+          </div>
         </div>
-        <button style={styles.cta}>
-          Записаться
-        </button>
       </div>
 
-      {/* DESCRIPTION PLACEHOLDER */}
+      {/* DESCRIPTION */}
       <div style={styles.section}>
         <h2>О салоне</h2>
-        <p style={{ opacity: 0.7 }}>
-          Описание салона будет отображаться здесь.
-        </p>
+        {description ? (
+          <p style={styles.description}>{description}</p>
+        ) : (
+          <p style={{ opacity: 0.7 }}>
+            Описание салона будет отображаться здесь.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -88,25 +143,42 @@ const styles = {
     fontFamily: "system-ui",
     padding: "40px",
     maxWidth: "900px",
-    margin: "0 auto"
+    margin: "0 auto",
   },
   center: {
     fontFamily: "system-ui",
     padding: "40px",
-    textAlign: "center"
+    textAlign: "center",
   },
   hero: {
-    marginBottom: "40px"
+    marginBottom: "40px",
+  },
+  heroTopRow: {
+    display: "flex",
+    gap: "16px",
+    alignItems: "flex-start",
+  },
+  logo: {
+    width: "72px",
+    height: "72px",
+    borderRadius: "16px",
+    objectFit: "cover",
   },
   title: {
     fontSize: "36px",
-    marginBottom: "10px"
+    marginBottom: "10px",
   },
   meta: {
-    opacity: 0.7,
+    opacity: 0.8,
     marginBottom: "20px",
     display: "flex",
-    gap: "8px"
+    flexWrap: "wrap",
+    gap: "8px",
+    alignItems: "center",
+  },
+  phoneLink: {
+    color: "inherit",
+    textDecoration: "underline",
   },
   cta: {
     padding: "12px 24px",
@@ -114,11 +186,15 @@ const styles = {
     backgroundColor: "#000",
     color: "#fff",
     border: "none",
-    cursor: "pointer"
+    cursor: "pointer",
   },
   section: {
-    marginTop: "40px"
-  }
+    marginTop: "40px",
+  },
+  description: {
+    lineHeight: 1.6,
+    marginTop: "8px",
+  },
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(
