@@ -62,6 +62,7 @@ function App() {
     );
   }
 
+  const slogan = safeText(salon.slogan);
   const description = safeText(salon.description);
   const city = safeText(salon.city);
   const phone = safeText(salon.phone);
@@ -70,7 +71,6 @@ function App() {
 
   return (
     <div style={styles.page}>
-      {/* HERO */}
       <div
         style={{
           ...styles.hero,
@@ -98,24 +98,30 @@ function App() {
           <div style={{ flex: 1 }}>
             <h1 style={styles.title}>{salon.name}</h1>
 
+            {slogan && (
+              <div style={styles.slogan}>
+                {slogan}
+              </div>
+            )}
+
             <div style={styles.meta}>
               <span>Статус: {salon.status}</span>
               <span>•</span>
               <span>{salon.enabled ? "Открыт для записи" : "Отключён"}</span>
-              {city ? (
+              {city && (
                 <>
                   <span>•</span>
                   <span>{city}</span>
                 </>
-              ) : null}
-              {phone ? (
+              )}
+              {phone && (
                 <>
                   <span>•</span>
                   <a style={styles.phoneLink} href={`tel:${phone}`}>
                     {phone}
                   </a>
                 </>
-              ) : null}
+              )}
             </div>
 
             <button style={styles.cta}>Записаться</button>
@@ -123,7 +129,6 @@ function App() {
         </div>
       </div>
 
-      {/* DESCRIPTION */}
       <div style={styles.section}>
         <h2>О салоне</h2>
         {description ? (
@@ -166,7 +171,12 @@ const styles = {
   },
   title: {
     fontSize: "36px",
-    marginBottom: "10px",
+    marginBottom: "6px",
+  },
+  slogan: {
+    fontSize: "18px",
+    opacity: 0.7,
+    marginBottom: "12px",
   },
   meta: {
     opacity: 0.8,
