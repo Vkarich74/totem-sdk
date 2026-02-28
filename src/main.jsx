@@ -5,140 +5,85 @@ const API_BASE = import.meta.env.VITE_API_BASE;
 
 function getSlug() {
   if (window.SALON_SLUG) return window.SALON_SLUG;
-
-  const path = window.location.pathname;
-  const parts = path.split("/").filter(Boolean);
-
-  if (parts.length === 2 && parts[0] === "salon") {
-    return parts[1];
-  }
-
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  if (parts.length === 2 && parts[0] === "salon") return parts[1];
   return null;
 }
 
-function safeText(v) {
+function safe(v) {
   if (v === null || v === undefined) return "";
   return String(v).trim();
 }
 
 function App() {
   const [salon, setSalon] = useState(null);
+  const [metrics, setMetrics] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const slug = getSlug();
-
     if (!slug) {
-      setError("Slug не найден в URL");
+      setError("Slug not found");
       return;
     }
 
+    // salon
     fetch(`${API_BASE}/public/salons/${slug}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Салон не найден");
-        return res.json();
-      })
-      .then((data) => {
-        if (!data.ok) throw new Error("Неверный ответ API");
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) throw new Error();
         setSalon(data.salon);
       })
-      .catch((err) => setError(err.message));
+      .catch(() => setError("Salon load error"));
+
+    // metrics
+    fetch(`${API_BASE}/public/salons/${slug}/metrics`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) throw new Error();
+        setMetrics(data.metrics);
+      })
+      .catch(() => {});
   }, []);
 
-  if (error) {
-    return (
-      <div style={styles.center}>
-        <h2>Ошибка</h2>
-        <div>{error}</div>
-      </div>
-    );
-  }
-
-  if (!salon) {
-    return (
-      <div style={styles.center}>
-        <h2>Загрузка салона…</h2>
-      </div>
-    );
-  }
-
-  const slogan = safeText(salon.slogan);
-  const description = safeText(salon.description);
-  const city = safeText(salon.city);
-  const phone = safeText(salon.phone);
-  const logoUrl = safeText(salon.logo_url);
-  const coverUrl = safeText(salon.cover_url);
+  if (error) return <div style={styles.center}>{error}</div>;
+  if (!salon) return <div style={styles.center}>Loading…</div>;
 
   return (
     <div style={styles.page}>
-      <div
-        style={{
-          ...styles.hero,
-          ...(coverUrl
-            ? {
-                backgroundImage: `url(${coverUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                padding: "48px",
-                borderRadius: "16px",
-              }
-            : {}),
-        }}
-      >
-        <div style={styles.heroTopRow}>
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt="logo"
-              style={styles.logo}
-              loading="lazy"
-            />
-          ) : null}
+      <h1 style={styles.title}>{salon.name}</h1>
+      {salon.slogan && <div style={styles.slogan}>{salon.slogan}</div>}
 
-          <div style={{ flex: 1 }}>
-            <h1 style={styles.title}>{salon.name}</h1>
-
-            {slogan && (
-              <div style={styles.slogan}>
-                {slogan}
-              </div>
-            )}
-
-            <div style={styles.meta}>
-              <span>Статус: {salon.status}</span>
-              <span>•</span>
-              <span>{salon.enabled ? "Открыт для записи" : "Отключён"}</span>
-              {city && (
-                <>
-                  <span>•</span>
-                  <span>{city}</span>
-                </>
-              )}
-              {phone && (
-                <>
-                  <span>•</span>
-                  <a style={styles.phoneLink} href={`tel:${phone}`}>
-                    {phone}
-                  </a>
-                </>
-              )}
-            </div>
-
-            <button style={styles.cta}>Записаться</button>
-          </div>
-        </div>
+      <div style={styles.meta}>
+        <span>Status: {salon.status}</span>
+        {salon.city && <> • {salon.city}</>}
+        {salon.phone && <> • {salon.phone}</>}
       </div>
+
+      <button style={styles.cta}>Book now</button>
+
+      {/* METRICS */}
+      {metrics && (
+        <div style={styles.metricsRow}>
+          <MetricCard label="Bookings" value={metrics.bookings_count} />
+          <MetricCard label="Revenue" value={metrics.revenue_total} />
+          <MetricCard label="Avg check" value={metrics.avg_check} />
+        </div>
+      )}
 
       <div style={styles.section}>
-        <h2>О салоне</h2>
-        {description ? (
-          <p style={styles.description}>{description}</p>
-        ) : (
-          <p style={{ opacity: 0.7 }}>
-            Описание салона будет отображаться здесь.
-          </p>
-        )}
+        <h2>About salon</h2>
+        <p>{salon.description || "Description will appear here."}</p>
       </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value }) {
+  return (
+    <div style={styles.card}>
+      <div style={styles.cardValue}>{value}</div>
+      <div style={styles.cardLabel}>{label}</div>
     </div>
   );
 }
@@ -146,65 +91,57 @@ function App() {
 const styles = {
   page: {
     fontFamily: "system-ui",
-    padding: "40px",
-    maxWidth: "900px",
-    margin: "0 auto",
+    padding: 40,
+    maxWidth: 900,
+    margin: "0 auto"
   },
   center: {
-    fontFamily: "system-ui",
-    padding: "40px",
-    textAlign: "center",
-  },
-  hero: {
-    marginBottom: "40px",
-  },
-  heroTopRow: {
-    display: "flex",
-    gap: "16px",
-    alignItems: "flex-start",
-  },
-  logo: {
-    width: "72px",
-    height: "72px",
-    borderRadius: "16px",
-    objectFit: "cover",
+    padding: 40,
+    textAlign: "center"
   },
   title: {
-    fontSize: "36px",
-    marginBottom: "6px",
+    fontSize: 36,
+    marginBottom: 6
   },
   slogan: {
-    fontSize: "18px",
+    fontSize: 18,
     opacity: 0.7,
-    marginBottom: "12px",
+    marginBottom: 10
   },
   meta: {
     opacity: 0.8,
-    marginBottom: "20px",
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    alignItems: "center",
-  },
-  phoneLink: {
-    color: "inherit",
-    textDecoration: "underline",
+    marginBottom: 20
   },
   cta: {
     padding: "12px 24px",
-    fontSize: "16px",
-    backgroundColor: "#000",
+    background: "#000",
     color: "#fff",
     border: "none",
     cursor: "pointer",
+    marginBottom: 30
+  },
+  metricsRow: {
+    display: "flex",
+    gap: 20,
+    marginBottom: 40
+  },
+  card: {
+    flex: 1,
+    padding: 20,
+    border: "1px solid #eee",
+    borderRadius: 12,
+    textAlign: "center"
+  },
+  cardValue: {
+    fontSize: 28,
+    fontWeight: 600
+  },
+  cardLabel: {
+    opacity: 0.6
   },
   section: {
-    marginTop: "40px",
-  },
-  description: {
-    lineHeight: 1.6,
-    marginTop: "8px",
-  },
+    marginTop: 30
+  }
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(
