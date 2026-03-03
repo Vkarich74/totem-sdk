@@ -13,14 +13,25 @@ export default function OwnerMastersPage({ slug }) {
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch(`${API}/public/salons/${slug}/masters`);
+        setError(null);
+
+        const res = await fetch(
+          `${API}/internal/salons/${slug}/masters`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error("Ошибка загрузки мастеров");
+        }
+
         const data = await res.json();
 
-        if (!res.ok) throw new Error("Ошибка загрузки мастеров");
-
-        setMasters(data.masters || []);
+        // internal endpoint возвращает массив
+        setMasters(Array.isArray(data) ? data : []);
       } catch (e) {
-        setError(e.message);
+        setError(e.message || "Ошибка");
       } finally {
         setLoading(false);
       }
@@ -56,6 +67,9 @@ export default function OwnerMastersPage({ slug }) {
           }}
         >
           <strong>{m.name}</strong>
+          <div style={{ fontSize: 12, color: "#666" }}>
+            Статус: {m.status}
+          </div>
         </div>
       ))}
     </div>
