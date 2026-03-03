@@ -1,12 +1,11 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import { getSalon, getMasters, getMetrics } from "../api/publicApi";
 import { setMeta, setCanonical, setJSONLD } from "../api/seo";
 import Skeleton from "../layout/Skeleton";
 
-export default function PublicSalonPage() {
-  const { slug } = useParams();
+export default function PublicSalonPage({ slug }) {
   const navigate = useNavigate();
 
   const [salon, setSalon] = useState(null);
@@ -16,6 +15,8 @@ export default function PublicSalonPage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    if (!slug) return;
+
     async function load() {
       setLoading(true);
       setNotFound(false);
@@ -91,7 +92,7 @@ export default function PublicSalonPage() {
   };
 
   const goToBooking = () => {
-    navigate(`/room/book?salon=${slug}`);
+    navigate("/booking");
   };
 
   return (

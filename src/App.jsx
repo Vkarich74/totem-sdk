@@ -1,5 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import { HashRouter, Routes, Route } from "react-router-dom";
 import PublicSalonPage from "./public/PublicSalonPage";
 import BookingPage from "./room/BookingPage";
 import SalonBookingsPage from "./room/SalonBookingsPage";
@@ -12,19 +11,18 @@ function SalonRoom() {
   return <div style={{ padding: 20 }}>Salon Room</div>;
 }
 
-export default function App() {
+export default function App({ slug }) {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
-        <Route path="/" element={<div style={{ padding: 20 }}>TOTEM SDK</div>} />
+        <Route index element={<PublicSalonPage slug={slug} />} />
 
-        <Route path="/room/book" element={<BookingPage />} />
-        <Route path="/room/bookings" element={<SalonBookingsPage />} />
-        <Route path="/room" element={<MasterRoom />} />
+        <Route path="booking" element={<BookingPage slug={slug} />} />
+        <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
 
-        <Route path="/salon/:slug" element={<PublicSalonPage />} />
-        <Route path="/salon" element={<SalonRoom />} />
+        <Route path="room" element={<MasterRoom />} />
+        <Route path="salon" element={<SalonRoom />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
