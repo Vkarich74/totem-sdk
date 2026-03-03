@@ -11,24 +11,31 @@ export default function OwnerMastersPage() {
   const [name, setName] = useState("");
 
   async function loadMasters() {
-    const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
-    const data = await r.json();
-    setMasters(data);
+    try {
+      const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
+      const data = await r.json();
+      setMasters(data);
+    } catch (e) {
+      console.error("LOAD_MASTERS_ERROR", e);
+    }
   }
 
   useEffect(() => {
     loadMasters();
   }, []);
 
-  function startEdit(m) {
-    setEditing(m.id);
-    setName(m.name);
+  function startEdit(master) {
+    setEditing(master.id);
+    setName(master.name);
   }
 
   async function save(id) {
+
     await fetch(`${API_BASE}/internal/masters/${id}/profile`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ name })
     });
 
@@ -37,6 +44,7 @@ export default function OwnerMastersPage() {
   }
 
   async function fire(id) {
+
     await fetch(`${API_BASE}/internal/salons/${slug}/masters/${id}/fire`, {
       method: "POST"
     });
@@ -45,6 +53,7 @@ export default function OwnerMastersPage() {
   }
 
   async function activate(id) {
+
     await fetch(`${API_BASE}/internal/salons/${slug}/masters/${id}/activate`, {
       method: "POST"
     });
@@ -70,7 +79,7 @@ export default function OwnerMastersPage() {
 
         <tbody>
 
-          {masters.map(m => (
+          {masters.map((m) => (
 
             <tr key={m.id}>
 
@@ -82,7 +91,7 @@ export default function OwnerMastersPage() {
 
                   <input
                     value={name}
-                    onChange={(e)=>setName(e.target.value)}
+                    onChange={(e) => setName(e.target.value)}
                   />
 
                 ) : (
@@ -99,31 +108,44 @@ export default function OwnerMastersPage() {
 
                 {editing === m.id ? (
 
-                  <button onClick={()=>save(m.id)}>
+                  <button onClick={() => save(m.id)}>
                     Сохранить
                   </button>
 
                 ) : (
 
                   <>
-                    <button onClick={()=>startEdit(m)}>
+
+                    <button
+                      style={{ marginRight: 10 }}
+                      onClick={() => startEdit(m)}
+                    >
                       Редактировать
                     </button>
 
                     {m.status === "active" && (
-                      <button onClick={()=>fire(m.id)}>
+                      <button
+                        style={{ marginRight: 10 }}
+                        onClick={() => fire(m.id)}
+                      >
                         Уволить
                       </button>
                     )}
 
                     {m.status === "fired" && (
-                      <button onClick={()=>activate(m.id)}>
+                      <button
+                        style={{ marginRight: 10 }}
+                        onClick={() => activate(m.id)}
+                      >
                         Вернуть
                       </button>
                     )}
 
                     {m.status === "pending" && (
-                      <button onClick={()=>activate(m.id)}>
+                      <button
+                        style={{ marginRight: 10 }}
+                        onClick={() => activate(m.id)}
+                      >
                         Активировать
                       </button>
                     )}
