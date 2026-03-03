@@ -2,13 +2,19 @@ import { useEffect, useState } from "react";
 
 const API = "https://api.totemv.com";
 
-export default function OwnerMastersPage({ slug }) {
+export default function OwnerMastersPage() {
+  const slug = window.SALON_SLUG;
+
   const [masters, setMasters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setError("SALON_SLUG not defined");
+      setLoading(false);
+      return;
+    }
 
     async function load() {
       try {
@@ -28,7 +34,6 @@ export default function OwnerMastersPage({ slug }) {
 
         const data = await res.json();
 
-        // internal endpoint возвращает массив
         setMasters(Array.isArray(data) ? data : []);
       } catch (e) {
         setError(e.message || "Ошибка");
