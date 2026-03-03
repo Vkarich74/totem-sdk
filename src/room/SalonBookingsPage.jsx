@@ -49,7 +49,6 @@ export default function SalonBookingsPage() {
 
       if (!res.ok) throw new Error("Ошибка обновления статуса");
 
-      // Локальное обновление state без reload
       setBookings((prev) =>
         prev.map((b) =>
           b.id === id ? { ...b, status } : b
@@ -94,54 +93,79 @@ export default function SalonBookingsPage() {
     });
   };
 
+  if (!salonSlug) {
+    return (
+      <div style={{ padding: 20 }}>
+        Slug салона не найден
+      </div>
+    );
+  }
+
   return (
     <div style={styles.wrapper}>
       <h2 style={{ marginBottom: 20 }}>Бронирования</h2>
 
       {loading && <div style={{ color: "#666" }}>Загрузка...</div>}
 
-      {!loading && bookings.length === 0 && salonSlug && (
+      {!loading && bookings.length === 0 && (
         <div style={{ color: "#666" }}>Нет бронирований</div>
       )}
 
       {bookings.map((b) => (
-        <div key={b.id} style={{
-          ...styles.card,
-          borderLeft: `6px solid ${statusColor(b.status)}`
-        }}>
+        <div
+          key={b.id}
+          style={{
+            ...styles.card,
+            borderLeft: `6px solid ${statusColor(b.status)}`,
+          }}
+        >
           <div style={styles.header}>
             <div style={{ fontWeight: 700 }}>
               BR-{String(b.id).padStart(5, "0")}
             </div>
-            <div style={{ fontWeight: 600, color: statusColor(b.status) }}>
+            <div
+              style={{
+                fontWeight: 600,
+                color: statusColor(b.status),
+              }}
+            >
               {b.status}
             </div>
           </div>
 
-          <div><strong>Клиент:</strong> {b.client_name || "—"}</div>
-          <div><strong>Мастер:</strong> {b.master_name || "—"}</div>
+          <div>
+            <strong>Клиент:</strong> {b.client_name || "—"}
+          </div>
+          <div>
+            <strong>Мастер:</strong> {b.master_name || "—"}
+          </div>
           <div style={{ marginBottom: 12 }}>
             <strong>Дата:</strong> {formatDate(b)}
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10 }}>
             {b.status !== "completed" && (
               <button
                 style={styles.btnGreen}
-                onClick={() => updateStatus(b.id, "completed")}
+                onClick={() =>
+                  updateStatus(b.id, "completed")
+                }
               >
                 Завершить
               </button>
             )}
 
-            {b.status !== "cancelled" && b.status !== "completed" && (
-              <button
-                style={styles.btnRed}
-                onClick={() => updateStatus(b.id, "cancelled")}
-              >
-                Отменить
-              </button>
-            )}
+            {b.status !== "cancelled" &&
+              b.status !== "completed" && (
+                <button
+                  style={styles.btnRed}
+                  onClick={() =>
+                    updateStatus(b.id, "cancelled")
+                  }
+                >
+                  Отменить
+                </button>
+              )}
           </div>
         </div>
       ))}
