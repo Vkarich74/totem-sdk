@@ -52,7 +52,6 @@ function formatDateRu(dateStr) {
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
 
-  // ✅ FIX: slug fallback из window.SALON_SLUG
   const slug =
     searchParams.get("salon") ||
     window.SALON_SLUG ||
@@ -94,6 +93,7 @@ export default function BookingPage() {
         setInitLoading(false);
       }
     }
+
     loadMasters();
   }, [slug]);
 
@@ -125,6 +125,7 @@ export default function BookingPage() {
       setError("Заполните все поля");
       return;
     }
+
     if (!validatePhone(clientPhone)) {
       setError("Введите корректный номер телефона");
       return;
@@ -135,8 +136,7 @@ export default function BookingPage() {
   }
 
   async function confirmBooking() {
-    if (loading) return;
-    if (submitLockRef.current) return;
+    if (loading || submitLockRef.current) return;
 
     submitLockRef.current = true;
     setLoading(true);
@@ -166,10 +166,7 @@ export default function BookingPage() {
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error("Ошибка создания записи");
-      }
+      if (!res.ok) throw new Error("Ошибка создания записи");
 
       setSuccessData({
         bookingId: data.booking_id,
@@ -178,6 +175,7 @@ export default function BookingPage() {
         time,
         clientName
       });
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -187,8 +185,6 @@ export default function BookingPage() {
   }
 
   function resetForm() {
-    submitLockRef.current = false;
-    setLoading(false);
     setSuccessData(null);
     setStep("form");
     setDate("");
@@ -200,25 +196,36 @@ export default function BookingPage() {
     setError("");
   }
 
-  if (initLoading) {
-    return (
-      <div style={{ padding: 20 }}>Загрузка...</div>
-    );
-  }
-
-  if (error && !masters.length) {
-    return (
-      <div style={{ padding: 20, color: "red" }}>
-        {error}
-      </div>
-    );
-  }
+  if (initLoading) return <div style={{ padding: 20 }}>Загрузка...</div>;
 
   if (successData) {
     return (
       <div style={{ padding: 20 }}>
         <h2>Запись подтверждена</h2>
         <div>№ {formatBookingNumber(successData.bookingId)}</div>
+        <button onClick={resetForm}>Создать ещё запись</button>
+      </div>
+    );
+  }
+
+  if (step === "preview") {
+    return (
+      <div style={{ padding: 20 }}>
+        <h2>Подтвердите запись</h2>
+        <div>Клиент: {clientName}</div>
+        <div>Мастер: {selectedMasterName}</div>
+        <div>Дата: {formatDateRu(date)}</div>
+        <div>Время: {time}</div>
+
+        <button onClick={confirmBooking} disabled={loading}>
+          {loading ? "Создание..." : "Подтвердить"}
+        </button>
+
+        <button onClick={() => setStep("form")} disabled={loading}>
+          Назад
+        </button>
+
+        {error && <div style={{ color: "red" }}>{error}</div>}
       </div>
     );
   }
@@ -228,6 +235,20 @@ export default function BookingPage() {
       <h2>Запись на приём</h2>
 
       <form onSubmit={goToPreview}>
+        <input
+          type="text"
+          placeholder="Ваше имя"
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+        />
+
+        <input
+          type="tel"
+          placeholder="Телефон"
+          value={clientPhone}
+          onChange={(e) => setClientPhone(e.target.value)}
+        />
+
         <select
           value={selectedMaster}
           onChange={(e) => {
@@ -245,7 +266,31 @@ export default function BookingPage() {
           ))}
         </select>
 
-        <button type="submit">Продолжить</button>
+        <input
+          type="date"
+          min={todayISO()}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+
+        <select
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          disabled={!date}
+        >
+          <option value="">
+            {date ? "Выберите время" : "Сначала выберите дату"}
+          </option>
+          {timeOptions.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+
+        <button type="submit">
+          Продолжить
+        </button>
 
         {error && <div style={{ color: "red" }}>{error}</div>}
       </form>
