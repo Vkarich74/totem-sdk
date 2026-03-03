@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
 
-export default function OwnerMastersPage() {
+const API_BASE = "https://api.totemv.com";
 
+export default function OwnerMastersPage() {
   const [masters, setMasters] = useState([]);
 
   const slug = window.SALON_SLUG;
 
   async function loadMasters() {
-    const r = await fetch(`/internal/salons/${slug}/masters`);
-    const data = await r.json();
-    setMasters(data);
+    try {
+      const r = await fetch(
+        `${API_BASE}/internal/salons/${slug}/masters`
+      );
+
+      const data = await r.json();
+
+      setMasters(data);
+    } catch (e) {
+      console.error("LOAD_MASTERS_ERROR", e);
+    }
   }
 
   useEffect(() => {
@@ -17,16 +26,20 @@ export default function OwnerMastersPage() {
   }, []);
 
   async function activate(id) {
-    await fetch(`/internal/salons/${slug}/masters/${id}/activate`, {
-      method: "POST"
-    });
+    await fetch(
+      `${API_BASE}/internal/salons/${slug}/masters/${id}/activate`,
+      { method: "POST" }
+    );
+
     loadMasters();
   }
 
   async function fire(id) {
-    await fetch(`/internal/salons/${slug}/masters/${id}/fire`, {
-      method: "POST"
-    });
+    await fetch(
+      `${API_BASE}/internal/salons/${slug}/masters/${id}/fire`,
+      { method: "POST" }
+    );
+
     loadMasters();
   }
 
@@ -35,7 +48,7 @@ export default function OwnerMastersPage() {
 
       <h2>Мастера салона</h2>
 
-      <table>
+      <table border="1" cellPadding="6">
 
         <thead>
           <tr>
@@ -48,8 +61,7 @@ export default function OwnerMastersPage() {
 
         <tbody>
 
-          {masters.map(m => (
-
+          {masters.map((m) => (
             <tr key={m.id}>
 
               <td>{m.id}</td>
@@ -81,7 +93,6 @@ export default function OwnerMastersPage() {
               </td>
 
             </tr>
-
           ))}
 
         </tbody>
