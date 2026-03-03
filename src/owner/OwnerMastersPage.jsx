@@ -61,19 +61,19 @@ export default function OwnerMastersPage() {
     loadMasters();
   }
 
-  async function invite() {
+  async function createMaster() {
 
-    const masterId = prompt("Введите ID мастера");
+    const masterName = prompt("Имя мастера");
 
-    if (!masterId) return;
+    if (!masterName) return;
 
-    await fetch(`${API_BASE}/internal/salons/${slug}/masters/invite`, {
+    await fetch(`${API_BASE}/internal/masters/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        master_id: Number(masterId)
+        name: masterName
       })
     });
 
@@ -87,9 +87,9 @@ export default function OwnerMastersPage() {
 
       <button
         style={{ marginBottom: 20 }}
-        onClick={invite}
+        onClick={createMaster}
       >
-        Пригласить мастера
+        Создать мастера
       </button>
 
       <table border="1" cellPadding="6">
