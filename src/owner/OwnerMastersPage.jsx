@@ -3,42 +3,51 @@ import { useEffect, useState } from "react";
 const API_BASE = "https://api.totemv.com";
 
 export default function OwnerMastersPage() {
-  const [masters, setMasters] = useState([]);
 
   const slug = window.SALON_SLUG;
 
+  const [masters, setMasters] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [name, setName] = useState("");
+
   async function loadMasters() {
-    try {
-      const r = await fetch(
-        `${API_BASE}/internal/salons/${slug}/masters`
-      );
-
-      const data = await r.json();
-
-      setMasters(data);
-    } catch (e) {
-      console.error("LOAD_MASTERS_ERROR", e);
-    }
+    const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
+    const data = await r.json();
+    setMasters(data);
   }
 
   useEffect(() => {
     loadMasters();
   }, []);
 
-  async function activate(id) {
-    await fetch(
-      `${API_BASE}/internal/salons/${slug}/masters/${id}/activate`,
-      { method: "POST" }
-    );
+  function startEdit(m) {
+    setEditing(m.id);
+    setName(m.name);
+  }
 
+  async function save(id) {
+    await fetch(`${API_BASE}/internal/masters/${id}/profile`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name })
+    });
+
+    setEditing(null);
     loadMasters();
   }
 
   async function fire(id) {
-    await fetch(
-      `${API_BASE}/internal/salons/${slug}/masters/${id}/fire`,
-      { method: "POST" }
-    );
+    await fetch(`${API_BASE}/internal/salons/${slug}/masters/${id}/fire`, {
+      method: "POST"
+    });
+
+    loadMasters();
+  }
+
+  async function activate(id) {
+    await fetch(`${API_BASE}/internal/salons/${slug}/masters/${id}/activate`, {
+      method: "POST"
+    });
 
     loadMasters();
   }
@@ -61,38 +70,72 @@ export default function OwnerMastersPage() {
 
         <tbody>
 
-          {masters.map((m) => (
+          {masters.map(m => (
+
             <tr key={m.id}>
 
               <td>{m.id}</td>
 
-              <td>{m.name}</td>
+              <td>
+
+                {editing === m.id ? (
+
+                  <input
+                    value={name}
+                    onChange={(e)=>setName(e.target.value)}
+                  />
+
+                ) : (
+
+                  m.name
+
+                )}
+
+              </td>
 
               <td>{m.status}</td>
 
               <td>
 
-                {m.status === "pending" && (
-                  <button onClick={() => activate(m.id)}>
-                    Активировать
-                  </button>
-                )}
+                {editing === m.id ? (
 
-                {m.status === "active" && (
-                  <button onClick={() => fire(m.id)}>
-                    Уволить
+                  <button onClick={()=>save(m.id)}>
+                    Сохранить
                   </button>
-                )}
 
-                {m.status === "fired" && (
-                  <button onClick={() => activate(m.id)}>
-                    Вернуть
-                  </button>
+                ) : (
+
+                  <>
+                    <button onClick={()=>startEdit(m)}>
+                      Редактировать
+                    </button>
+
+                    {m.status === "active" && (
+                      <button onClick={()=>fire(m.id)}>
+                        Уволить
+                      </button>
+                    )}
+
+                    {m.status === "fired" && (
+                      <button onClick={()=>activate(m.id)}>
+                        Вернуть
+                      </button>
+                    )}
+
+                    {m.status === "pending" && (
+                      <button onClick={()=>activate(m.id)}>
+                        Активировать
+                      </button>
+                    )}
+
+                  </>
+
                 )}
 
               </td>
 
             </tr>
+
           ))}
 
         </tbody>
