@@ -1,184 +1,93 @@
 import { useEffect, useState } from "react";
 
-const API = "https://api.totemv.com";
-
 export default function OwnerMastersPage() {
-  const slug = window.SALON_SLUG;
 
   const [masters, setMasters] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [pageError, setPageError] = useState(null);
 
-  const [editingId, setEditingId] = useState(null);
-  const [draftName, setDraftName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(null);
+  const slug = window.SALON_SLUG;
 
-  async function loadMasters(activeSlug) {
-    const res = await fetch(`${API}/internal/salons/${activeSlug}/masters`, {
-      credentials: "include",
-    });
-
-    if (!res.ok) throw new Error("Ошибка загрузки мастеров");
-
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
+  async function loadMasters() {
+    const r = await fetch(`/internal/salons/${slug}/masters`);
+    const data = await r.json();
+    setMasters(data);
   }
 
   useEffect(() => {
-    if (!slug) {
-      setPageError("SALON_SLUG not defined");
-      setLoading(false);
-      return;
-    }
+    loadMasters();
+  }, []);
 
-    (async () => {
-      try {
-        setLoading(true);
-        setPageError(null);
-        const list = await loadMasters(slug);
-        setMasters(list);
-      } catch (e) {
-        setPageError(e.message || "Ошибка");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [slug]);
-
-  function startEdit(m) {
-    setSaveError(null);
-    setEditingId(m.id);
-    setDraftName(m.name || "");
+  async function activate(id) {
+    await fetch(`/internal/salons/${slug}/masters/${id}/activate`, {
+      method: "POST"
+    });
+    loadMasters();
   }
 
-  function cancelEdit() {
-    setSaveError(null);
-    setEditingId(null);
-    setDraftName("");
+  async function fire(id) {
+    await fetch(`/internal/salons/${slug}/masters/${id}/fire`, {
+      method: "POST"
+    });
+    loadMasters();
   }
-
-  async function saveName(masterId) {
-    const name = (draftName || "").trim();
-
-    if (name.length < 2) {
-      setSaveError("Имя должно быть минимум 2 символа");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setSaveError(null);
-
-      const res = await fetch(`${API}/internal/masters/${masterId}/profile`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok || !data?.ok) {
-        throw new Error("Не удалось сохранить имя");
-      }
-
-      // Обновляем локально без перезагрузки списка
-      setMasters((prev) =>
-        prev.map((m) => (m.id === masterId ? { ...m, name } : m))
-      );
-
-      cancelEdit();
-    } catch (e) {
-      setSaveError(e.message || "Ошибка");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loading) return <div>Загрузка мастеров...</div>;
-
-  if (pageError) return <div style={{ color: "red" }}>{pageError}</div>;
-
-  if (masters.length === 0) return <div>Мастеров нет</div>;
-
-  const card = {
-    padding: 12,
-    marginBottom: 10,
-    border: "1px solid #eee",
-    borderRadius: 8,
-  };
-
-  const row = { display: "flex", gap: 10, alignItems: "center" };
-
-  const small = { fontSize: 12, color: "#666", marginTop: 6 };
-
-  const btn = {
-    padding: "8px 10px",
-    cursor: "pointer",
-  };
-
-  const input = {
-    padding: 8,
-    width: "100%",
-    maxWidth: 360,
-  };
 
   return (
     <div>
-      <h2>Мастера</h2>
 
-      {masters.map((m) => {
-        const isEditing = editingId === m.id;
+      <h2>Мастера салона</h2>
 
-        return (
-          <div key={m.id} style={card}>
-            {!isEditing ? (
-              <>
-                <div style={row}>
-                  <strong style={{ flex: 1 }}>{m.name}</strong>
+      <table>
 
-                  <button style={btn} onClick={() => startEdit(m)}>
-                    Редактировать
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>Статус</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {masters.map(m => (
+
+            <tr key={m.id}>
+
+              <td>{m.id}</td>
+
+              <td>{m.name}</td>
+
+              <td>{m.status}</td>
+
+              <td>
+
+                {m.status === "pending" && (
+                  <button onClick={() => activate(m.id)}>
+                    Активировать
                   </button>
-                </div>
+                )}
 
-                <div style={small}>
-                  Статус: {m.status} • Active: {String(!!m.active)}
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={row}>
-                  <input
-                    style={input}
-                    value={draftName}
-                    onChange={(e) => setDraftName(e.target.value)}
-                    disabled={saving}
-                    placeholder="Имя мастера"
-                  />
-
-                  <button style={btn} onClick={() => saveName(m.id)} disabled={saving}>
-                    {saving ? "Сохранение..." : "Сохранить"}
+                {m.status === "active" && (
+                  <button onClick={() => fire(m.id)}>
+                    Уволить
                   </button>
+                )}
 
-                  <button style={btn} onClick={cancelEdit} disabled={saving}>
-                    Отмена
+                {m.status === "fired" && (
+                  <button onClick={() => activate(m.id)}>
+                    Вернуть
                   </button>
-                </div>
+                )}
 
-                {saveError ? (
-                  <div style={{ color: "red", marginTop: 8 }}>{saveError}</div>
-                ) : null}
+              </td>
 
-                <div style={small}>
-                  ID: {m.id} • slug: {m.master_slug}
-                </div>
-              </>
-            )}
-          </div>
-        );
-      })}
+            </tr>
+
+          ))}
+
+        </tbody>
+
+      </table>
+
     </div>
   );
 }
