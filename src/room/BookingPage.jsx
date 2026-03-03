@@ -119,18 +119,14 @@ export default function BookingPage() {
 
   function goToPreview(e) {
     e.preventDefault();
-    if (loading) return;
-
     if (!selectedMaster || !date || !time || !clientName || !clientPhone) {
       setError("Заполните все поля");
       return;
     }
-
     if (!validatePhone(clientPhone)) {
       setError("Введите корректный номер телефона");
       return;
     }
-
     setError("");
     setStep("preview");
   }
@@ -196,104 +192,203 @@ export default function BookingPage() {
     setError("");
   }
 
-  if (initLoading) return <div style={{ padding: 20 }}>Загрузка...</div>;
+  if (initLoading) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.card}>Загрузка...</div>
+      </div>
+    );
+  }
 
   if (successData) {
     return (
-      <div style={{ padding: 20 }}>
-        <h2>Запись подтверждена</h2>
-        <div>№ {formatBookingNumber(successData.bookingId)}</div>
-        <button onClick={resetForm}>Создать ещё запись</button>
+      <div style={styles.page}>
+        <div style={styles.card}>
+          <h2>Запись подтверждена</h2>
+
+          <div style={styles.successBlock}>
+            <div><strong>Клиент:</strong> {successData.clientName}</div>
+            <div><strong>Салон:</strong> {slug}</div>
+            <div><strong>Мастер:</strong> {successData.masterName}</div>
+            <div><strong>Дата:</strong> {formatDateRu(successData.date)}</div>
+            <div><strong>Время:</strong> {successData.time}</div>
+          </div>
+
+          <div style={styles.bookingNumber}>
+            № {formatBookingNumber(successData.bookingId)}
+          </div>
+
+          <button onClick={resetForm} style={styles.secondaryButton}>
+            Создать ещё запись
+          </button>
+        </div>
       </div>
     );
   }
 
   if (step === "preview") {
     return (
-      <div style={{ padding: 20 }}>
-        <h2>Подтвердите запись</h2>
-        <div>Клиент: {clientName}</div>
-        <div>Мастер: {selectedMasterName}</div>
-        <div>Дата: {formatDateRu(date)}</div>
-        <div>Время: {time}</div>
+      <div style={styles.page}>
+        <div style={styles.card}>
+          <h2>Подтвердите запись</h2>
 
-        <button onClick={confirmBooking} disabled={loading}>
-          {loading ? "Создание..." : "Подтвердить"}
-        </button>
+          <div style={styles.successBlock}>
+            <div><strong>Клиент:</strong> {clientName}</div>
+            <div><strong>Телефон:</strong> {clientPhone}</div>
+            <div><strong>Салон:</strong> {slug}</div>
+            <div><strong>Мастер:</strong> {selectedMasterName}</div>
+            <div><strong>Дата:</strong> {formatDateRu(date)}</div>
+            <div><strong>Время:</strong> {time}</div>
+          </div>
 
-        <button onClick={() => setStep("form")} disabled={loading}>
-          Назад
-        </button>
+          <button onClick={confirmBooking} style={styles.button}>
+            Подтвердить
+          </button>
 
-        {error && <div style={{ color: "red" }}>{error}</div>}
+          <button onClick={() => setStep("form")} style={styles.secondaryButton}>
+            Назад
+          </button>
+
+          {error && <div style={styles.error}>{error}</div>}
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Запись на приём</h2>
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <h2>Запись на приём</h2>
 
-      <form onSubmit={goToPreview}>
-        <input
-          type="text"
-          placeholder="Ваше имя"
-          value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
-        />
+        <form onSubmit={goToPreview} style={styles.form}>
+          <input
+            type="text"
+            placeholder="Ваше имя"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            style={styles.input}
+          />
 
-        <input
-          type="tel"
-          placeholder="Телефон"
-          value={clientPhone}
-          onChange={(e) => setClientPhone(e.target.value)}
-        />
+          <input
+            type="tel"
+            placeholder="Телефон"
+            value={clientPhone}
+            onChange={(e) => setClientPhone(e.target.value)}
+            style={styles.input}
+          />
 
-        <select
-          value={selectedMaster}
-          onChange={(e) => {
-            const id = e.target.value;
-            setSelectedMaster(id);
-            const master = masters.find((m) => String(m.id) === id);
-            setSelectedMasterName(master?.name || "");
-          }}
-        >
-          <option value="">Выберите мастера</option>
-          {masters.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
+          <select
+            value={selectedMaster}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedMaster(id);
+              const master = masters.find((m) => String(m.id) === id);
+              setSelectedMasterName(master?.name || "");
+            }}
+            style={styles.input}
+          >
+            <option value="">Выберите мастера</option>
+            {masters.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            min={todayISO()}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            style={styles.input}
+          />
+
+          <select
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            style={styles.input}
+            disabled={!date}
+          >
+            <option value="">
+              {date ? "Выберите время" : "Сначала выберите дату"}
             </option>
-          ))}
-        </select>
+            {timeOptions.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
 
-        <input
-          type="date"
-          min={todayISO()}
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
+          <button type="submit" style={styles.button}>
+            Продолжить
+          </button>
 
-        <select
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          disabled={!date}
-        >
-          <option value="">
-            {date ? "Выберите время" : "Сначала выберите дату"}
-          </option>
-          {timeOptions.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-
-        <button type="submit">
-          Продолжить
-        </button>
-
-        {error && <div style={{ color: "red" }}>{error}</div>}
-      </form>
+          {error && <div style={styles.error}>{error}</div>}
+        </form>
+      </div>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "#f6f7f9",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16
+  },
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    background: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    boxShadow: "0 10px 25px rgba(0,0,0,0.08)"
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 14
+  },
+  input: {
+    padding: 12,
+    borderRadius: 10,
+    border: "1px solid #ddd"
+  },
+  button: {
+    padding: 14,
+    borderRadius: 12,
+    border: "none",
+    background: "#111",
+    color: "#fff",
+    fontWeight: 600
+  },
+  secondaryButton: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    border: "1px solid #111",
+    background: "#fff",
+    fontWeight: 600
+  },
+  successBlock: {
+    marginBottom: 20,
+    lineHeight: "1.8"
+  },
+  bookingNumber: {
+    padding: 12,
+    background: "#111",
+    color: "#fff",
+    textAlign: "center",
+    borderRadius: 12,
+    fontWeight: 600,
+    marginBottom: 16
+  },
+  error: {
+    color: "#d32f2f",
+    marginTop: 10,
+    textAlign: "center"
+  }
+};
