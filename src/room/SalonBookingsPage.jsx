@@ -5,7 +5,11 @@ const API_BASE = "https://api.totemv.com";
 
 export default function SalonBookingsPage() {
   const [searchParams] = useSearchParams();
-  const salonSlug = searchParams.get("salon");
+
+  const salonSlug =
+    searchParams.get("salon") ||
+    window.SALON_SLUG ||
+    null;
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -14,7 +18,9 @@ export default function SalonBookingsPage() {
     if (!salonSlug) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/public/salons/${salonSlug}/bookings`);
+      const res = await fetch(
+        `${API_BASE}/public/salons/${salonSlug}/bookings`
+      );
       const data = await res.json();
       if (data.ok) setBookings(data.bookings || []);
       else setBookings([]);
@@ -29,6 +35,31 @@ export default function SalonBookingsPage() {
   useEffect(() => {
     load();
   }, [salonSlug]);
+
+  const updateStatus = async (id, status) => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/public/salons/${salonSlug}/bookings/${id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Ошибка обновления статуса");
+
+      // Локальное обновление state без reload
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === id ? { ...b, status } : b
+        )
+      );
+    } catch (err) {
+      console.error("STATUS_UPDATE_ERROR", err);
+      alert("Не удалось изменить статус");
+    }
+  };
 
   const statusColor = (status) => {
     switch (status) {
@@ -48,76 +79,37 @@ export default function SalonBookingsPage() {
 
   const formatDate = (booking) => {
     const iso = booking?.datetime_start || booking?.start_at;
+    if (!iso) return "—";
 
-    if (iso) {
-      const d = new Date(iso);
-      if (!Number.isNaN(d.getTime())) {
-        return d.toLocaleString("ru-RU", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        });
-      }
-    }
-    return "—";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+
+    return d.toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   };
 
   return (
-    <div
-      style={{
-        maxWidth: 720,
-        margin: "0 auto",
-        padding: 20,
-        fontFamily: "system-ui",
-      }}
-    >
+    <div style={styles.wrapper}>
       <h2 style={{ marginBottom: 20 }}>Бронирования</h2>
 
-      {!salonSlug && (
-        <div
-          style={{
-            background: "#fff3cd",
-            border: "1px solid #ffeeba",
-            color: "#856404",
-            padding: 12,
-            borderRadius: 10,
-            marginBottom: 16,
-          }}
-        >
-          Нет salon в URL. Пример: <code>?salon=totem-demo-salon</code>
-        </div>
-      )}
-
-      {loading && (
-        <div style={{ color: "#666", marginBottom: 12 }}>Загрузка...</div>
-      )}
+      {loading && <div style={{ color: "#666" }}>Загрузка...</div>}
 
       {!loading && bookings.length === 0 && salonSlug && (
         <div style={{ color: "#666" }}>Нет бронирований</div>
       )}
 
       {bookings.map((b) => (
-        <div
-          key={b.id}
-          style={{
-            background: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 20,
-            boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-            borderLeft: `6px solid ${statusColor(b.status)}`,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 10,
-            }}
-          >
+        <div key={b.id} style={{
+          ...styles.card,
+          borderLeft: `6px solid ${statusColor(b.status)}`
+        }}>
+          <div style={styles.header}>
             <div style={{ fontWeight: 700 }}>
               BR-{String(b.id).padStart(5, "0")}
             </div>
@@ -126,41 +118,30 @@ export default function SalonBookingsPage() {
             </div>
           </div>
 
-          <div style={{ marginBottom: 6 }}>
-            <strong>Клиент:</strong> {b.client_name || "—"}
-          </div>
-
-          <div style={{ marginBottom: 6 }}>
-            <strong>Мастер:</strong> {b.master_name || "—"}
-          </div>
-
+          <div><strong>Клиент:</strong> {b.client_name || "—"}</div>
+          <div><strong>Мастер:</strong> {b.master_name || "—"}</div>
           <div style={{ marginBottom: 12 }}>
             <strong>Дата:</strong> {formatDate(b)}
           </div>
 
-          <div
-            style={{
-              background: "#f5f5f5",
-              borderRadius: 10,
-              padding: 10,
-              color: "#666",
-              fontSize: 13,
-            }}
-          >
-            Lifecycle действия (confirm/complete/cancel) временно доступны только
-            через Odoo.
-          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {b.status !== "completed" && (
+              <button
+                style={styles.btnGreen}
+                onClick={() => updateStatus(b.id, "completed")}
+              >
+                Завершить
+              </button>
+            )}
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-            <button disabled style={btnDisabled()}>
-              Подтвердить (после Odoo)
-            </button>
-            <button disabled style={btnDisabled()}>
-              Завершить (после Odoo)
-            </button>
-            <button disabled style={btnDisabled()}>
-              Отменить (после Odoo)
-            </button>
+            {b.status !== "cancelled" && b.status !== "completed" && (
+              <button
+                style={styles.btnRed}
+                onClick={() => updateStatus(b.id, "cancelled")}
+              >
+                Отменить
+              </button>
+            )}
           </div>
         </div>
       ))}
@@ -168,15 +149,41 @@ export default function SalonBookingsPage() {
   );
 }
 
-function btnDisabled() {
-  return {
+const styles = {
+  wrapper: {
+    maxWidth: 720,
+    margin: "0 auto",
+    padding: 20,
+    fontFamily: "system-ui",
+  },
+  card: {
+    background: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  btnGreen: {
     padding: "8px 14px",
     border: "none",
     borderRadius: 8,
-    background: "#bbb",
+    background: "#2e7d32",
     color: "#fff",
-    cursor: "not-allowed",
     fontWeight: 600,
-    opacity: 0.7,
-  };
-}
+    cursor: "pointer",
+  },
+  btnRed: {
+    padding: "8px 14px",
+    border: "none",
+    borderRadius: 8,
+    background: "#d32f2f",
+    color: "#fff",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+};
