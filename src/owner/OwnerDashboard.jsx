@@ -4,23 +4,34 @@ import { getSalon, getMetrics } from "../api/publicApi";
 export default function OwnerDashboard({ slug }) {
   const [salon, setSalon] = useState(null);
   const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) return;
 
     async function load() {
-      const salonData = await getSalon(slug);
-      const metricsData = await getMetrics(slug);
+      try {
+        const salonData = await getSalon(slug);
+        const metricsData = await getMetrics(slug);
 
-      setSalon(salonData);
-      setMetrics(metricsData);
+        setSalon(salonData);
+        setMetrics(metricsData);
+      } catch (e) {
+        console.error("OwnerDashboard load error:", e);
+      } finally {
+        setLoading(false);
+      }
     }
 
     load();
   }, [slug]);
 
+  if (loading) {
+    return <div style={{ padding: 40 }}>Загрузка Owner Dashboard...</div>;
+  }
+
   if (!salon) {
-    return <div style={{ padding: 40 }}>Загрузка...</div>;
+    return <div style={{ padding: 40 }}>Салон не найден</div>;
   }
 
   const container = {
@@ -30,7 +41,7 @@ export default function OwnerDashboard({ slug }) {
   };
 
   const card = {
-    background: "white",
+    background: "#ffffff",
     padding: 30,
     borderRadius: 14,
     boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
@@ -41,11 +52,11 @@ export default function OwnerDashboard({ slug }) {
       <div style={container}>
         <div style={{ display: "flex", gap: 40 }}>
 
-          {/* LEFT — SDK CORE (50%) */}
+          {/* LEFT — SDK CORE */}
           <div style={{ flex: 1 }}>
             <div style={card}>
               <h2>{salon.name}</h2>
-              <p style={{ opacity: 0.7 }}>{salon.description}</p>
+              <p style={{ opacity: 0.7 }}>{salon.description || "Описание отсутствует"}</p>
 
               <hr style={{ margin: "20px 0" }} />
 
@@ -62,7 +73,7 @@ export default function OwnerDashboard({ slug }) {
             </div>
           </div>
 
-          {/* RIGHT — CMS SLOT (50%) */}
+          {/* RIGHT — CMS SLOT */}
           <div style={{ flex: 1 }}>
             <div style={card}>
               <div
