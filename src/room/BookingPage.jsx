@@ -51,7 +51,12 @@ function formatDateRu(dateStr) {
 
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
-  const slug = searchParams.get("salon");
+
+  // ✅ FIX: slug fallback из window.SALON_SLUG
+  const slug =
+    searchParams.get("salon") ||
+    window.SALON_SLUG ||
+    null;
 
   const [masters, setMasters] = useState([]);
   const [selectedMaster, setSelectedMaster] = useState("");
@@ -63,16 +68,21 @@ export default function BookingPage() {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
 
-  const [step, setStep] = useState("form"); // form | preview
+  const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
   const [error, setError] = useState("");
   const [successData, setSuccessData] = useState(null);
 
-  // Жёсткий предохранитель от двойной отправки (даже если state ещё не обновился)
   const submitLockRef = useRef(false);
 
   useEffect(() => {
+    if (!slug) {
+      setError("Slug салона не найден");
+      setInitLoading(false);
+      return;
+    }
+
     async function loadMasters() {
       try {
         const res = await fetch(`${API_BASE}/public/salons/${slug}/masters`);
@@ -192,227 +202,53 @@ export default function BookingPage() {
 
   if (initLoading) {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>Загрузка...</div>
+      <div style={{ padding: 20 }}>Загрузка...</div>
+    );
+  }
+
+  if (error && !masters.length) {
+    return (
+      <div style={{ padding: 20, color: "red" }}>
+        {error}
       </div>
     );
   }
 
   if (successData) {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h2>Запись подтверждена</h2>
-
-          <div style={styles.successBlock}>
-            <div><strong>Клиент:</strong> {successData.clientName}</div>
-            <div><strong>Салон:</strong> {slug}</div>
-            <div><strong>Мастер:</strong> {successData.masterName}</div>
-            <div><strong>Дата:</strong> {formatDateRu(successData.date)}</div>
-            <div><strong>Время:</strong> {successData.time}</div>
-          </div>
-
-          <div style={styles.bookingNumber}>
-            № {formatBookingNumber(successData.bookingId)}
-          </div>
-
-          <button onClick={resetForm} style={styles.secondaryButton} disabled={loading}>
-            Создать ещё запись
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "preview") {
-    return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h2>Подтвердите запись</h2>
-
-          <div style={styles.successBlock}>
-            <div><strong>Клиент:</strong> {clientName}</div>
-            <div><strong>Телефон:</strong> {clientPhone}</div>
-            <div><strong>Салон:</strong> {slug}</div>
-            <div><strong>Мастер:</strong> {selectedMasterName}</div>
-            <div><strong>Дата:</strong> {formatDateRu(date)}</div>
-            <div><strong>Время:</strong> {time}</div>
-          </div>
-
-          <button
-            onClick={confirmBooking}
-            disabled={loading}
-            style={{
-              ...styles.button,
-              opacity: loading ? 0.7 : 1,
-              cursor: loading ? "not-allowed" : "pointer"
-            }}
-          >
-            {loading ? "Создание..." : "Подтвердить окончательно"}
-          </button>
-
-          <button
-            onClick={() => { if (!loading) setStep("form"); }}
-            style={{
-              ...styles.secondaryButton,
-              opacity: loading ? 0.6 : 1,
-              cursor: loading ? "not-allowed" : "pointer"
-            }}
-            disabled={loading}
-          >
-            Назад
-          </button>
-
-          {error && <div style={styles.error}>{error}</div>}
-        </div>
+      <div style={{ padding: 20 }}>
+        <h2>Запись подтверждена</h2>
+        <div>№ {formatBookingNumber(successData.bookingId)}</div>
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h2>Запись на приём</h2>
+    <div style={{ padding: 20 }}>
+      <h2>Запись на приём</h2>
 
-        <form onSubmit={goToPreview} style={styles.form}>
-          <input
-            type="text"
-            placeholder="Ваше имя"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            style={styles.input}
-            disabled={loading}
-          />
+      <form onSubmit={goToPreview}>
+        <select
+          value={selectedMaster}
+          onChange={(e) => {
+            const id = e.target.value;
+            setSelectedMaster(id);
+            const master = masters.find((m) => String(m.id) === id);
+            setSelectedMasterName(master?.name || "");
+          }}
+        >
+          <option value="">Выберите мастера</option>
+          {masters.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
 
-          <input
-            type="tel"
-            placeholder="Телефон"
-            value={clientPhone}
-            onChange={(e) => setClientPhone(e.target.value)}
-            style={styles.input}
-            disabled={loading}
-          />
+        <button type="submit">Продолжить</button>
 
-          <select
-            value={selectedMaster}
-            onChange={(e) => {
-              const id = e.target.value;
-              setSelectedMaster(id);
-              const master = masters.find((m) => String(m.id) === id);
-              setSelectedMasterName(master?.name || "");
-            }}
-            style={styles.input}
-            disabled={loading}
-          >
-            <option value="">Выберите мастера</option>
-            {masters.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-
-          <input
-            type="date"
-            min={todayISO()}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            style={styles.input}
-            disabled={loading}
-          />
-
-          <select
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            style={styles.input}
-            disabled={!date || loading}
-          >
-            <option value="">{date ? "Выберите время" : "Сначала выберите дату"}</option>
-            {timeOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="submit"
-            style={{
-              ...styles.button,
-              opacity: loading ? 0.7 : 1,
-              cursor: loading ? "not-allowed" : "pointer"
-            }}
-            disabled={loading}
-          >
-            {loading ? "Подождите..." : "Продолжить"}
-          </button>
-
-          {error && <div style={styles.error}>{error}</div>}
-        </form>
-      </div>
+        {error && <div style={{ color: "red" }}>{error}</div>}
+      </form>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#f6f7f9",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16
-  },
-  card: {
-    width: "100%",
-    maxWidth: 420,
-    background: "#fff",
-    borderRadius: 16,
-    padding: 24,
-    boxShadow: "0 10px 25px rgba(0,0,0,0.08)"
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 14
-  },
-  input: {
-    padding: 12,
-    borderRadius: 10,
-    border: "1px solid #ddd"
-  },
-  button: {
-    padding: 14,
-    borderRadius: 12,
-    border: "none",
-    background: "#111",
-    color: "#fff",
-    fontWeight: 600
-  },
-  secondaryButton: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
-    border: "1px solid #111",
-    background: "#fff",
-    fontWeight: 600
-  },
-  successBlock: {
-    marginBottom: 20,
-    lineHeight: "1.8"
-  },
-  bookingNumber: {
-    padding: 12,
-    background: "#111",
-    color: "#fff",
-    textAlign: "center",
-    borderRadius: 12,
-    fontWeight: 600,
-    marginBottom: 16
-  },
-  error: {
-    color: "#d32f2f",
-    marginTop: 10,
-    textAlign: "center"
-  }
-};
