@@ -11,22 +11,33 @@ export default function OwnerMastersPage() {
   const [name, setName] = useState("");
 
   async function loadMasters() {
+
     try {
+
       const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
       const data = await r.json();
+
       setMasters(data);
+
     } catch (e) {
+
       console.error("LOAD_MASTERS_ERROR", e);
+
     }
+
   }
 
   useEffect(() => {
+
     loadMasters();
+
   }, []);
 
   function startEdit(master) {
+
     setEditing(master.id);
     setName(master.name);
+
   }
 
   async function save(id) {
@@ -36,11 +47,15 @@ export default function OwnerMastersPage() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ name })
+      body: JSON.stringify({
+        name: name
+      })
     });
 
     setEditing(null);
+
     loadMasters();
+
   }
 
   async function fire(id) {
@@ -50,6 +65,7 @@ export default function OwnerMastersPage() {
     });
 
     loadMasters();
+
   }
 
   async function activate(id) {
@@ -59,6 +75,7 @@ export default function OwnerMastersPage() {
     });
 
     loadMasters();
+
   }
 
   async function createMaster() {
@@ -73,11 +90,13 @@ export default function OwnerMastersPage() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        name: masterName
+        name: masterName,
+        salon_slug: slug
       })
     });
 
     loadMasters();
+
   }
 
   return (
