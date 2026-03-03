@@ -2,19 +2,16 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import PublicSalonPage from "./public/PublicSalonPage";
 import BookingPage from "./room/BookingPage";
 import SalonBookingsPage from "./room/SalonBookingsPage";
+
+import OwnerLayout from "./owner/OwnerLayout";
 import OwnerDashboard from "./owner/OwnerDashboard";
+import OwnerMastersPage from "./owner/OwnerMastersPage";
+import OwnerClientsPage from "./owner/OwnerClientsPage";
+import OwnerBookingsPage from "./owner/OwnerBookingsPage";
 
 function getSlugFromPath() {
   const parts = window.location.pathname.split("/");
-  return parts[2] || null; // /salon/:slug
-}
-
-function MasterRoom() {
-  return <div style={{ padding: 20 }}>Master Room</div>;
-}
-
-function SalonRoom() {
-  return <div style={{ padding: 20 }}>Salon Room</div>;
+  return parts[2] || null;
 }
 
 export default function App() {
@@ -29,11 +26,12 @@ export default function App() {
         <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
 
         {/* OWNER */}
-        <Route path="owner" element={<OwnerDashboard slug={slug} />} />
-
-        {/* PLACEHOLDER */}
-        <Route path="room" element={<MasterRoom />} />
-        <Route path="salon" element={<SalonRoom />} />
+        <Route path="owner" element={<OwnerLayout slug={slug} />}>
+          <Route index element={<OwnerDashboard slug={slug} />} />
+          <Route path="masters" element={<OwnerMastersPage slug={slug} />} />
+          <Route path="clients" element={<OwnerClientsPage slug={slug} />} />
+          <Route path="bookings" element={<OwnerBookingsPage slug={slug} />} />
+        </Route>
       </Routes>
     </HashRouter>
   );
