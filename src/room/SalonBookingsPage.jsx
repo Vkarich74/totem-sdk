@@ -36,26 +36,31 @@ export default function SalonBookingsPage() {
     load();
   }, [salonSlug]);
 
-  const updateStatus = async (id, status) => {
+  const lifecycle = async (id, action) => {
     try {
       const res = await fetch(
-        `${API_BASE}/public/salons/${salonSlug}/bookings/${id}`,
+        `${API_BASE}/public/salons/${salonSlug}/bookings/${id}/lifecycle`,
         {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify({ action }),
         }
       );
 
-      if (!res.ok) throw new Error("Ошибка обновления статуса");
+      const data = await res.json();
 
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.error || "LIFECYCLE_FAILED");
+      }
+
+      // Локально обновляем статус
       setBookings((prev) =>
         prev.map((b) =>
-          b.id === id ? { ...b, status } : b
+          b.id === id ? { ...b, status: data.status } : b
         )
       );
     } catch (err) {
-      console.error("STATUS_UPDATE_ERROR", err);
+      console.error("LIFECYCLE_ERROR", err);
       alert("Не удалось изменить статус");
     }
   };
@@ -68,7 +73,6 @@ export default function SalonBookingsPage() {
         return "#1976d2";
       case "completed":
         return "#2e7d32";
-      case "canceled":
       case "cancelled":
         return "#d32f2f";
       default:
@@ -94,11 +98,7 @@ export default function SalonBookingsPage() {
   };
 
   if (!salonSlug) {
-    return (
-      <div style={{ padding: 20 }}>
-        Slug салона не найден
-      </div>
-    );
+    return <div style={{ padding: 20 }}>Slug не найден</div>;
   }
 
   return (
@@ -116,29 +116,20 @@ export default function SalonBookingsPage() {
           key={b.id}
           style={{
             ...styles.card,
-            borderLeft: `6px solid ${statusColor(b.status)}`,
+            borderLeft: `6px solid ${statusColor(b.status)}`
           }}
         >
           <div style={styles.header}>
             <div style={{ fontWeight: 700 }}>
               BR-{String(b.id).padStart(5, "0")}
             </div>
-            <div
-              style={{
-                fontWeight: 600,
-                color: statusColor(b.status),
-              }}
-            >
+            <div style={{ fontWeight: 600, color: statusColor(b.status) }}>
               {b.status}
             </div>
           </div>
 
-          <div>
-            <strong>Клиент:</strong> {b.client_name || "—"}
-          </div>
-          <div>
-            <strong>Мастер:</strong> {b.master_name || "—"}
-          </div>
+          <div><strong>Клиент:</strong> {b.client_name || "—"}</div>
+          <div><strong>Мастер:</strong> {b.master_name || "—"}</div>
           <div style={{ marginBottom: 12 }}>
             <strong>Дата:</strong> {formatDate(b)}
           </div>
@@ -147,25 +138,20 @@ export default function SalonBookingsPage() {
             {b.status !== "completed" && (
               <button
                 style={styles.btnGreen}
-                onClick={() =>
-                  updateStatus(b.id, "completed")
-                }
+                onClick={() => lifecycle(b.id, "complete")}
               >
                 Завершить
               </button>
             )}
 
-            {b.status !== "cancelled" &&
-              b.status !== "completed" && (
-                <button
-                  style={styles.btnRed}
-                  onClick={() =>
-                    updateStatus(b.id, "cancelled")
-                  }
-                >
-                  Отменить
-                </button>
-              )}
+            {b.status !== "cancelled" && b.status !== "completed" && (
+              <button
+                style={styles.btnRed}
+                onClick={() => lifecycle(b.id, "cancel")}
+              >
+                Отменить
+              </button>
+            )}
           </div>
         </div>
       ))}
