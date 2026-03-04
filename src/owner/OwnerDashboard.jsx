@@ -2,115 +2,118 @@ import { useEffect, useState } from "react";
 
 export default function OwnerDashboard(){
 
-const [metrics,setMetrics] = useState(null);
+  const [metrics,setMetrics] = useState(null);
+  const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
-const salonSlug = window.SALON_SLUG;
+  async function load(){
+    try{
 
-async function load(){
+      const r = await fetch(
+        `https://api.totemv.com/internal/salons/${salonSlug}/metrics`
+      );
 
-try{
+      const j = await r.json();
 
-const r = await fetch(
-`https://api.totemv.com/internal/salons/${salonSlug}/metrics`
-);
+      if(j.ok){
+        setMetrics(j.metrics);
+      }
 
-const j = await r.json();
+    }catch(e){
+      console.error(e);
+    }
+  }
 
-if(j.ok){
-setMetrics(j.metrics);
-}
+  useEffect(()=>{
+    load();
+  },[]);
 
-}catch(e){
-console.error(e);
-}
+  if(!metrics){
+    return <div style={{padding:20}}>Loading metrics...</div>;
+  }
 
-}
+  return (
 
-useEffect(()=>{
-load();
-},[]);
+    <div style={{padding:"20px"}}>
 
-if(!metrics){
-return <div>Loading metrics...</div>;
-}
+      <h2>Salon Dashboard</h2>
 
-return (
+      <div
+        style={{
+          display:"grid",
+          gridTemplateColumns:"repeat(4,1fr)",
+          gap:"16px",
+          marginTop:"20px"
+        }}
+      >
 
-<div style={{padding:"20px"}}>
+        <Card title="Bookings Today" value={metrics.bookings_today}/>
+        <Card title="Bookings Week" value={metrics.bookings_week}/>
+        <Card title="Bookings Month" value={metrics.bookings_month}/>
 
-<h2>Salon Dashboard</h2>
+        <Card title="Revenue Today" value={metrics.revenue_today}/>
+        <Card title="Revenue Month" value={metrics.revenue_month}/>
+        <Card title="Avg Check" value={metrics.avg_check}/>
 
-<div style={{
-display:"grid",
-gridTemplateColumns:"repeat(4,1fr)",
-gap:"20px",
-marginTop:"20px"
-}}>
+        <Card title="Masters Active" value={metrics.masters_active}/>
+        <Card title="Masters Pending" value={metrics.masters_pending}/>
+        <Card title="Masters Total" value={metrics.masters_total}/>
 
-<Card title="Bookings Today" value={metrics.bookings_today}/>
-<Card title="Bookings Week" value={metrics.bookings_week}/>
-<Card title="Bookings Month" value={metrics.bookings_month}/>
+        <Card title="Clients Total" value={metrics.clients_total}/>
+        <Card title="Clients Today" value={metrics.clients_today}/>
 
-<Card title="Revenue Today" value={metrics.revenue_today}/>
-<Card title="Revenue Month" value={metrics.revenue_month}/>
-<Card title="Avg Check" value={metrics.avg_check}/>
+        <Card title="Services Total" value={metrics.services_total}/>
 
-<Card title="Masters Active" value={metrics.masters_active}/>
-<Card title="Masters Pending" value={metrics.masters_pending}/>
+        <Card title="Payments Total" value={metrics.payments_total}/>
+        <Card title="Refunds Total" value={metrics.refunds_total}/>
 
-<Card title="Clients Total" value={metrics.clients_total}/>
-<Card title="Clients Today" value={metrics.clients_today}/>
+        <Card title="Slots Today" value={metrics.slots_today}/>
+        <Card title="Booked Slots" value={metrics.slots_booked_today}/>
 
-<Card title="Services" value={metrics.services_total}/>
+        <Card title="Load %" value={metrics.load_today}/>
 
-<Card title="Payments" value={metrics.payments_total}/>
-<Card title="Refunds" value={metrics.refunds_total}/>
+      </div>
 
-<Card title="Slots Today" value={metrics.slots_today}/>
-<Card title="Slots Booked" value={metrics.slots_booked_today}/>
+    </div>
 
-<Card title="Load %" value={metrics.load_today}/>
-
-</div>
-
-</div>
-
-);
+  );
 
 }
 
 function Card({title,value}){
 
-return(
+  return(
 
-<div style={{
-border:"1px solid #ddd",
-borderRadius:"8px",
-padding:"16px",
-background:"#fff"
-}}>
+    <div
+      style={{
+        background:"#fff",
+        border:"1px solid #e5e7eb",
+        borderRadius:"10px",
+        padding:"18px",
+        boxShadow:"0 1px 2px rgba(0,0,0,0.05)"
+      }}
+    >
 
-<div style={{
-fontSize:"12px",
-color:"#666",
-marginBottom:"8px"
-}}>
+      <div
+        style={{
+          fontSize:"12px",
+          color:"#6b7280",
+          marginBottom:"6px"
+        }}
+      >
+        {title}
+      </div>
 
-{title}
+      <div
+        style={{
+          fontSize:"26px",
+          fontWeight:"700"
+        }}
+      >
+        {value}
+      </div>
 
-</div>
+    </div>
 
-<div style={{
-fontSize:"22px",
-fontWeight:"bold"
-}}>
-
-{value}
-
-</div>
-
-</div>
-
-);
+  );
 
 }
