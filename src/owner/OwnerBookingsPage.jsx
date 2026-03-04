@@ -2,150 +2,171 @@ import { useEffect, useState } from "react";
 
 export default function OwnerBookingsPage(){
 
-  const [bookings,setBookings] = useState([]);
-  const [masters,setMasters] = useState([]);
+const [bookings,setBookings] = useState([]);
+const [masters,setMasters] = useState([]);
 
-  const salonSlug = window.SALON_SLUG || "totem-demo-salon";
+const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
-  async function load(){
+async function load(){
 
-    const r = await fetch(
-      `https://api.totemv.com/internal/salons/${salonSlug}/bookings`
-    );
+const r = await fetch(
+`https://api.totemv.com/internal/salons/${salonSlug}/bookings`
+);
 
-    const j = await r.json();
+const j = await r.json();
 
-    if(j.ok){
-      setBookings(j.bookings);
-    }
+if(j.ok){
+setBookings(j.bookings);
+}
 
-    const rm = await fetch(
-      `https://api.totemv.com/internal/salons/${salonSlug}/masters`
-    );
+const rm = await fetch(
+`https://api.totemv.com/internal/salons/${salonSlug}/masters`
+);
 
-    const jm = await rm.json();
+const jm = await rm.json();
 
-    if(jm.ok){
-      setMasters(jm.masters);
-    }
+if(jm.ok){
+setMasters(jm.masters);
+}
 
-  }
+}
 
-  useEffect(()=>{
-    load();
-  },[]);
+useEffect(()=>{
+load();
+},[]);
 
-  return(
+function formatDate(d){
 
-    <div
-      style={{
-        display:"grid",
-        gridTemplateColumns:"1fr 1fr",
-        height:"100%"
-      }}
-    >
+const date = new Date(d);
 
-      {/* LEFT SIDE — BOOKINGS */}
+return date.toLocaleString("ru-RU",{
+day:"2-digit",
+month:"2-digit",
+hour:"2-digit",
+minute:"2-digit"
+});
 
-      <div
-        style={{
-          borderRight:"1px solid #e5e7eb",
-          padding:"20px",
-          overflowY:"auto"
-        }}
-      >
+}
 
-        <h3>Записи</h3>
+return(
 
-        {bookings.map(b=>(
+<div
+style={{
+display:"grid",
+gridTemplateColumns:"1fr 1fr",
+height:"100%"
+}}
+>
 
-          <div
-            key={b.id}
-            style={{
-              border:"1px solid #e5e7eb",
-              borderRadius:"8px",
-              padding:"12px",
-              marginBottom:"10px",
-              background:"#fff"
-            }}
-          >
+{/* LEFT SIDE — BOOKINGS */}
 
-            <div><b>#{b.id}</b></div>
-            <div>Клиент: {b.client_name}</div>
-            <div>Мастер: {b.master_name}</div>
-            <div>{b.start_at}</div>
-            <div>Статус: {b.status}</div>
+<div
+style={{
+borderRight:"1px solid #e5e7eb",
+padding:"20px",
+overflowY:"auto"
+}}
+>
 
-          </div>
+<h3>Записи</h3>
 
-        ))}
+{bookings.map(b=>(
 
-      </div>
+<div
+key={b.id}
+style={{
+border:"1px solid #e5e7eb",
+borderRadius:"8px",
+padding:"12px",
+marginBottom:"10px",
+background:"#fff"
+}}
+>
 
-      {/* RIGHT SIDE — CALENDAR */}
+<div><b>BR-{String(b.id).padStart(5,"0")}</b></div>
 
-      <div
-        style={{
-          padding:"20px",
-          overflowY:"auto"
-        }}
-      >
+<div>Клиент: {b.client_name || "—"}</div>
 
-        <h3>Календарь мастеров (сегодня)</h3>
+<div>Телефон: {b.phone || "—"}</div>
 
-        {masters.map(m=>{
+<div>Мастер: {b.master_name}</div>
 
-          const masterBookings =
-            bookings.filter(b => b.master_id === m.id);
+<div>{formatDate(b.start_at)}</div>
 
-          return(
+<div>Статус: {b.status}</div>
 
-            <div
-              key={m.id}
-              style={{
-                border:"1px solid #e5e7eb",
-                borderRadius:"8px",
-                padding:"12px",
-                marginBottom:"12px"
-              }}
-            >
+</div>
 
-              <div style={{fontWeight:"600"}}>
-                {m.name}
-              </div>
+))}
 
-              {masterBookings.length === 0 && (
-                <div style={{color:"#6b7280"}}>
-                  Нет записей
-                </div>
-              )}
+</div>
 
-              {masterBookings.map(b=>(
-                <div
-                  key={b.id}
-                  style={{
-                    marginTop:"6px",
-                    padding:"6px",
-                    background:"#f3f4f6",
-                    borderRadius:"6px"
-                  }}
-                >
+{/* RIGHT SIDE — CALENDAR */}
 
-                  {b.start_at} — {b.client_name}
+<div
+style={{
+padding:"20px",
+overflowY:"auto"
+}}
+>
 
-                </div>
-              ))}
+<h3>Календарь мастеров</h3>
 
-            </div>
+{masters.map(m=>{
 
-          );
+const masterBookings =
+bookings.filter(b => b.master_name === m.name);
 
-        })}
+return(
 
-      </div>
+<div
+key={m.id}
+style={{
+border:"1px solid #e5e7eb",
+borderRadius:"8px",
+padding:"12px",
+marginBottom:"12px"
+}}
+>
 
-    </div>
+<div style={{fontWeight:"600"}}>
+{m.name}
+</div>
 
-  );
+{masterBookings.length === 0 && (
+<div style={{color:"#6b7280"}}>
+Нет записей
+</div>
+)}
+
+{masterBookings.map(b=>(
+
+<div
+key={b.id}
+style={{
+marginTop:"6px",
+padding:"6px",
+background:"#f3f4f6",
+borderRadius:"6px"
+}}
+>
+
+{formatDate(b.start_at)} — {b.client_name || "клиент"}
+
+</div>
+
+))}
+
+</div>
+
+);
+
+})}
+
+</div>
+
+</div>
+
+);
 
 }
