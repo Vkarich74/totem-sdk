@@ -60,7 +60,7 @@ return(
 
 <div style={{padding:"20px"}}>
 
-<h2>Календарь мастеров</h2>
+<h2 style={{marginBottom:"20px"}}>Календарь мастеров</h2>
 
 {masters.map(m=>{
 
@@ -73,20 +73,39 @@ return(
 key={m.id}
 style={{
 border:"1px solid #e5e7eb",
-borderRadius:"8px",
-padding:"12px",
-marginBottom:"16px"
+borderRadius:"10px",
+padding:"14px",
+marginBottom:"18px",
+background:"#ffffff",
+boxShadow:"0 3px 10px rgba(0,0,0,0.05)"
 }}
 >
 
-<div style={{fontWeight:"600",marginBottom:"10px"}}>
-{m.name}
+<div
+style={{
+fontWeight:"600",
+marginBottom:"12px",
+color:"#2563eb",
+fontSize:"15px"
+}}
+>
+👤 {m.name}
 </div>
 
 {masterBookings.length===0 && (
-<div style={{color:"#6b7280"}}>
+
+<div
+style={{
+background:"#f3f4f6",
+padding:"8px",
+borderRadius:"6px",
+color:"#6b7280",
+fontSize:"13px"
+}}
+>
 Нет записей
 </div>
+
 )}
 
 {masterBookings.map(b=>(
@@ -94,14 +113,24 @@ marginBottom:"16px"
 <div
 key={b.id}
 style={{
-padding:"6px",
+padding:"8px",
 marginBottom:"6px",
-background:"#f3f4f6",
-borderRadius:"6px"
+background:"#ecfdf5",
+borderRadius:"6px",
+display:"flex",
+justifyContent:"space-between",
+alignItems:"center",
+fontSize:"14px"
 }}
 >
 
-{formatTime(b.start_at)} — {b.client_name || "клиент"}
+<span style={{fontWeight:"600",color:"#059669"}}>
+{formatTime(b.start_at)}
+</span>
+
+<span>
+{b.client_name || "клиент"}
+</span>
 
 </div>
 
