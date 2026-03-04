@@ -8,6 +8,8 @@ const [masters,setMasters] = useState([]);
 const [filter,setFilter] = useState("today");
 const [search,setSearch] = useState("");
 
+const [loadingAction,setLoadingAction] = useState(null);
+
 const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
 async function load(){
@@ -55,14 +57,18 @@ useEffect(()=>{
 load();
 
 const interval = setInterval(()=>{
+
+if(!loadingAction){
 load();
+}
+
 },10000);
 
 return ()=>{
 clearInterval(interval);
 };
 
-},[]);
+},[loadingAction]);
 
 function formatDate(d){
 
@@ -103,7 +109,11 @@ return status;
 
 async function action(id,type){
 
+if(loadingAction) return;
+
 try{
+
+setLoadingAction(id);
 
 const r = await fetch(
 `https://api.totemv.com/internal/bookings/${id}/${type}`,
@@ -116,16 +126,21 @@ const j = await r.json();
 
 if(!j.ok){
 console.error("BOOKING ACTION FAILED",j);
+alert("Ошибка изменения статуса");
+setLoadingAction(null);
 return;
 }
 
-load();
+await load();
 
 }catch(e){
 
 console.error("BOOKING ACTION ERROR",e);
+alert("Ошибка сервера");
 
 }
+
+setLoadingAction(null);
 
 }
 
@@ -276,11 +291,18 @@ background:"#fff"
 {b.status==="reserved" && (
 
 <>
-<button onClick={()=>action(b.id,"confirm")}>
+<button
+disabled={loadingAction===b.id}
+onClick={()=>action(b.id,"confirm")}
+>
 Подтвердить
 </button>
 
-<button onClick={()=>action(b.id,"cancel")} style={{marginLeft:"6px"}}>
+<button
+disabled={loadingAction===b.id}
+onClick={()=>action(b.id,"cancel")}
+style={{marginLeft:"6px"}}
+>
 Отменить
 </button>
 </>
@@ -290,11 +312,18 @@ background:"#fff"
 {b.status==="confirmed" && (
 
 <>
-<button onClick={()=>action(b.id,"complete")}>
+<button
+disabled={loadingAction===b.id}
+onClick={()=>action(b.id,"complete")}
+>
 Завершить
 </button>
 
-<button onClick={()=>action(b.id,"cancel")} style={{marginLeft:"6px"}}>
+<button
+disabled={loadingAction===b.id}
+onClick={()=>action(b.id,"cancel")}
+style={{marginLeft:"6px"}}
+>
 Отменить
 </button>
 </>
