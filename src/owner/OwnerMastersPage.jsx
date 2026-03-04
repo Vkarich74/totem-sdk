@@ -17,11 +17,20 @@ export default function OwnerMastersPage() {
       const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
       const data = await r.json();
 
-      setMasters(data);
+      if (Array.isArray(data)) {
+        setMasters(data);
+      }
+      else if (data && Array.isArray(data.masters)) {
+        setMasters(data.masters);
+      }
+      else {
+        setMasters([]);
+      }
 
     } catch (e) {
 
       console.error("LOAD_MASTERS_ERROR", e);
+      setMasters([]);
 
     }
 
@@ -53,7 +62,6 @@ export default function OwnerMastersPage() {
     });
 
     setEditing(null);
-
     loadMasters();
 
   }
