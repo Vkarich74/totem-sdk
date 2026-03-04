@@ -68,6 +68,14 @@ export default function OwnerLayout() {
           <button style={button} onClick={() => navigate("/owner/bookings")}>
             Записи
           </button>
+
+          <button style={button} onClick={() => navigate("/owner/money")}>
+            Деньги
+          </button>
+
+          <button style={button} onClick={() => navigate("/owner/settings")}>
+            Настройки
+          </button>
         </div>
 
         {/* CENTER SDK */}

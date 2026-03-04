@@ -11,6 +11,9 @@ import OwnerBookingsPage from "./owner/OwnerBookingsPage";
 import OwnerCalendarPage from "./owner/OwnerCalendarPage";
 import OwnerClientProfilePage from "./owner/OwnerClientProfilePage";
 
+import OwnerMoneyPage from "./owner/OwnerMoneyPage";
+import OwnerSettingsPage from "./owner/OwnerSettingsPage";
+
 function getSlugFromPath() {
   const parts = window.location.pathname.split("/");
   return parts[2] || null;
@@ -42,6 +45,10 @@ export default function App() {
           <Route path="bookings" element={<OwnerBookingsPage slug={slug} />} />
 
           <Route path="client/:clientId" element={<OwnerClientProfilePage />} />
+
+          <Route path="money" element={<OwnerMoneyPage />} />
+
+          <Route path="settings" element={<OwnerSettingsPage />} />
 
         </Route>
 
