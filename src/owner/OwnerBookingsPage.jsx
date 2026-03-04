@@ -21,7 +21,15 @@ const r = await fetch(
 const j = await r.json();
 
 if(j.ok){
-setBookings(j.bookings || []);
+
+const sorted = (j.bookings || []).sort((a,b)=>{
+if(!a.start_at) return 1;
+if(!b.start_at) return -1;
+return new Date(a.start_at) - new Date(b.start_at);
+});
+
+setBookings(sorted);
+
 }
 
 const rm = await fetch(
@@ -68,6 +76,17 @@ month:"2-digit",
 hour:"2-digit",
 minute:"2-digit"
 });
+
+}
+
+function statusColor(status){
+
+if(status==="reserved") return "#f59e0b";
+if(status==="confirmed") return "#10b981";
+if(status==="completed") return "#6b7280";
+if(status==="cancelled") return "#ef4444";
+
+return "#9ca3af";
 
 }
 
@@ -221,6 +240,7 @@ borderRadius:"6px"
 key={b.id}
 style={{
 border:"1px solid #e5e7eb",
+borderLeft:`6px solid ${statusColor(b.status)}`,
 borderRadius:"8px",
 padding:"12px",
 marginBottom:"10px",
@@ -228,7 +248,17 @@ background:"#fff"
 }}
 >
 
-<div><b>BR-{String(b.id).padStart(5,"0")}</b></div>
+<div style={{display:"flex",justifyContent:"space-between"}}>
+
+<div>
+<b>BR-{String(b.id).padStart(5,"0")}</b>
+</div>
+
+<div style={{color:statusColor(b.status),fontWeight:"600"}}>
+{b.status}
+</div>
+
+</div>
 
 <div>Клиент: {b.client_name || "—"}</div>
 
@@ -237,8 +267,6 @@ background:"#fff"
 <div>Мастер: {b.master_name || "—"}</div>
 
 <div>{formatDate(b.start_at)}</div>
-
-<div>Статус: {b.status}</div>
 
 <div style={{marginTop:"8px"}}>
 
