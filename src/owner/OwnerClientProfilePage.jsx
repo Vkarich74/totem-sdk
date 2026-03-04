@@ -7,7 +7,12 @@ const { clientId } = useParams();
 
 const [client,setClient] = useState(null);
 const [bookings,setBookings] = useState([]);
+const [masters,setMasters] = useState([]);
 const [error,setError] = useState("");
+
+const [showCreate,setShowCreate] = useState(false);
+const [masterId,setMasterId] = useState("");
+const [startAt,setStartAt] = useState("");
 
 function resolveSalonSlug(){
 
@@ -29,9 +34,7 @@ localStorage.setItem("TOTEM_SALON_SLUG", q);
 return q;
 }
 
-}catch(e){
-/* ignore */
-}
+}catch(e){}
 
 return "totem-demo-salon";
 
@@ -39,9 +42,9 @@ return "totem-demo-salon";
 
 const salonSlug = resolveSalonSlug();
 
-async function safeJson(url){
+async function safeJson(url,opts){
 
-const r = await fetch(url);
+const r = await fetch(url,opts);
 
 const ct = (r.headers.get("content-type") || "").toLowerCase();
 
@@ -71,7 +74,6 @@ try{
 
 setError("");
 
-/* 1) clients list */
 const c = await safeJson(
 `https://api.totemv.com/internal/salons/${salonSlug}/clients`
 );
@@ -99,7 +101,14 @@ return;
 
 setClient(found);
 
-/* 2) bookings list */
+const m = await safeJson(
+`https://api.totemv.com/internal/salons/${salonSlug}/masters`
+);
+
+if(m.ok && m.json && m.json.ok){
+setMasters(m.json.masters || []);
+}
+
 const b = await safeJson(
 `https://api.totemv.com/internal/salons/${salonSlug}/bookings`
 );
@@ -139,6 +148,49 @@ setBookings(list);
 console.error("CLIENT PROFILE LOAD ERROR",e);
 setError("CLIENT_PROFILE_LOAD_ERROR");
 
+}
+
+}
+
+async function createBooking(){
+
+if(!masterId || !startAt) return;
+
+try{
+
+const body = {
+client_id: client.id,
+master_id: Number(masterId),
+start_at: startAt,
+client_name: client.name,
+phone: client.phone
+};
+
+const r = await safeJson(
+`https://api.totemv.com/internal/bookings/create`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify(body)
+}
+);
+
+if(!r.ok || !r.json || !r.json.ok){
+alert("CREATE_BOOKING_FAILED");
+return;
+}
+
+setShowCreate(false);
+setMasterId("");
+setStartAt("");
+
+await load();
+
+}catch(e){
+console.error(e);
+alert("CREATE_BOOKING_ERROR");
 }
 
 }
@@ -205,7 +257,82 @@ color:"#065f46"
 Выручка клиента: {revenue} сом
 </div>
 
+<button
+onClick={()=>setShowCreate(true)}
+style={{
+marginTop:"15px",
+background:"#111827",
+color:"#fff",
+padding:"8px 14px",
+borderRadius:"6px",
+border:"none",
+cursor:"pointer"
+}}
+>
+Создать запись
+</button>
+
 </div>
+
+{showCreate && (
+
+<div style={{
+border:"1px solid #e5e7eb",
+padding:"16px",
+borderRadius:"8px",
+marginBottom:"20px"
+}}>
+
+<div style={{marginBottom:"10px",fontWeight:"600"}}>
+Новая запись
+</div>
+
+<div style={{marginBottom:"10px"}}>
+
+<select
+value={masterId}
+onChange={e=>setMasterId(e.target.value)}
+style={{padding:"6px"}}
+>
+<option value="">Выберите мастера</option>
+
+{masters.map(m=>(
+<option key={m.id} value={m.id}>
+{m.name}
+</option>
+))}
+
+</select>
+
+</div>
+
+<div style={{marginBottom:"10px"}}>
+
+<input
+type="datetime-local"
+value={startAt}
+onChange={e=>setStartAt(e.target.value)}
+/>
+
+</div>
+
+<button
+onClick={createBooking}
+style={{
+background:"#059669",
+color:"#fff",
+padding:"8px 14px",
+border:"none",
+borderRadius:"6px",
+cursor:"pointer"
+}}
+>
+Создать
+</button>
+
+</div>
+
+)}
 
 <h3 style={{marginBottom:"10px"}}>История записей</h3>
 
