@@ -90,6 +90,17 @@ return "#9ca3af";
 
 }
 
+function statusText(status){
+
+if(status==="reserved") return "Ожидает подтверждения";
+if(status==="confirmed") return "Подтверждена";
+if(status==="completed") return "Завершена";
+if(status==="cancelled") return "Отменена";
+
+return status;
+
+}
+
 async function action(id,type){
 
 try{
@@ -196,23 +207,15 @@ overflowY:"auto"
 
 <div style={{marginBottom:"12px"}}>
 
-<button
-onClick={()=>setFilter("today")}
-style={{marginRight:"6px"}}
->
+<button onClick={()=>setFilter("today")} style={{marginRight:"6px"}}>
 Сегодня
 </button>
 
-<button
-onClick={()=>setFilter("week")}
-style={{marginRight:"6px"}}
->
+<button onClick={()=>setFilter("week")} style={{marginRight:"6px"}}>
 Неделя
 </button>
 
-<button
-onClick={()=>setFilter("all")}
->
+<button onClick={()=>setFilter("all")}>
 Все
 </button>
 
@@ -255,7 +258,7 @@ background:"#fff"
 </div>
 
 <div style={{color:statusColor(b.status),fontWeight:"600"}}>
-{b.status}
+{statusText(b.status)}
 </div>
 
 </div>
@@ -277,10 +280,7 @@ background:"#fff"
 Подтвердить
 </button>
 
-<button
-onClick={()=>action(b.id,"cancel")}
-style={{marginLeft:"6px"}}
->
+<button onClick={()=>action(b.id,"cancel")} style={{marginLeft:"6px"}}>
 Отменить
 </button>
 </>
@@ -294,10 +294,7 @@ style={{marginLeft:"6px"}}
 Завершить
 </button>
 
-<button
-onClick={()=>action(b.id,"cancel")}
-style={{marginLeft:"6px"}}
->
+<button onClick={()=>action(b.id,"cancel")} style={{marginLeft:"6px"}}>
 Отменить
 </button>
 </>
