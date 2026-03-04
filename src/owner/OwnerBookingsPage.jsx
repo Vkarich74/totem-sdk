@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 export default function OwnerBookingsPage(){
 
   const [bookings,setBookings] = useState([]);
-  const [selected,setSelected] = useState(null);
+  const [masters,setMasters] = useState([]);
 
   const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
@@ -17,6 +17,16 @@ export default function OwnerBookingsPage(){
 
     if(j.ok){
       setBookings(j.bookings);
+    }
+
+    const rm = await fetch(
+      `https://api.totemv.com/internal/salons/${salonSlug}/masters`
+    );
+
+    const jm = await rm.json();
+
+    if(jm.ok){
+      setMasters(jm.masters);
     }
 
   }
@@ -35,7 +45,7 @@ export default function OwnerBookingsPage(){
       }}
     >
 
-      {/* LEFT SIDE — LIST */}
+      {/* LEFT SIDE — BOOKINGS */}
 
       <div
         style={{
@@ -51,21 +61,20 @@ export default function OwnerBookingsPage(){
 
           <div
             key={b.id}
-            onClick={()=>setSelected(b)}
             style={{
               border:"1px solid #e5e7eb",
               borderRadius:"8px",
               padding:"12px",
               marginBottom:"10px",
-              cursor:"pointer",
-              background:selected?.id === b.id ? "#f3f4f6" : "#fff"
+              background:"#fff"
             }}
           >
 
             <div><b>#{b.id}</b></div>
-            <div>{b.client_name}</div>
+            <div>Клиент: {b.client_name}</div>
+            <div>Мастер: {b.master_name}</div>
             <div>{b.start_at}</div>
-            <div>{b.status}</div>
+            <div>Статус: {b.status}</div>
 
           </div>
 
@@ -73,109 +82,65 @@ export default function OwnerBookingsPage(){
 
       </div>
 
-      {/* RIGHT SIDE — DETAILS */}
+      {/* RIGHT SIDE — CALENDAR */}
 
       <div
         style={{
-          padding:"20px"
+          padding:"20px",
+          overflowY:"auto"
         }}
       >
 
-        {!selected && (
-          <div>Выберите запись</div>
-        )}
+        <h3>Календарь мастеров (сегодня)</h3>
 
-        {selected && (
-          <BookingDetails booking={selected} reload={load}/>
-        )}
+        {masters.map(m=>{
 
-      </div>
+          const masterBookings =
+            bookings.filter(b => b.master_id === m.id);
 
-    </div>
+          return(
 
-  );
+            <div
+              key={m.id}
+              style={{
+                border:"1px solid #e5e7eb",
+                borderRadius:"8px",
+                padding:"12px",
+                marginBottom:"12px"
+              }}
+            >
 
-}
+              <div style={{fontWeight:"600"}}>
+                {m.name}
+              </div>
 
-function BookingDetails({booking,reload}){
+              {masterBookings.length === 0 && (
+                <div style={{color:"#6b7280"}}>
+                  Нет записей
+                </div>
+              )}
 
-  async function confirm(){
+              {masterBookings.map(b=>(
+                <div
+                  key={b.id}
+                  style={{
+                    marginTop:"6px",
+                    padding:"6px",
+                    background:"#f3f4f6",
+                    borderRadius:"6px"
+                  }}
+                >
 
-    await fetch(
-      "https://api.totemv.com/internal/bookings/confirm",
-      {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ booking_id:booking.id })
-      }
-    );
+                  {b.start_at} — {b.client_name}
 
-    reload();
+                </div>
+              ))}
 
-  }
+            </div>
 
-  async function cancel(){
+          );
 
-    await fetch(
-      "https://api.totemv.com/internal/bookings/cancel",
-      {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ booking_id:booking.id })
-      }
-    );
-
-    reload();
-
-  }
-
-  async function complete(){
-
-    await fetch(
-      "https://api.totemv.com/internal/bookings/complete",
-      {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ booking_id:booking.id })
-      }
-    );
-
-    reload();
-
-  }
-
-  return(
-
-    <div>
-
-      <h3>Запись #{booking.id}</h3>
-
-      <p>Клиент: {booking.client_name}</p>
-      <p>Мастер: {booking.master_name}</p>
-      <p>Услуга: {booking.service_name}</p>
-      <p>Дата: {booking.start_at}</p>
-      <p>Статус: {booking.status}</p>
-
-      <div style={{marginTop:"20px"}}>
-
-        {booking.status === "reserved" && (
-          <button onClick={confirm}>
-            Подтвердить
-          </button>
-        )}
-
-        {booking.status === "confirmed" && (
-          <button onClick={complete}>
-            Завершить
-          </button>
-        )}
-
-        <button
-          onClick={cancel}
-          style={{marginLeft:"10px"}}
-        >
-          Отменить
-        </button>
+        })}
 
       </div>
 
