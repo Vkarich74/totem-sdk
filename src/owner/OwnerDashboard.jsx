@@ -28,14 +28,14 @@ export default function OwnerDashboard(){
   },[]);
 
   if(!metrics){
-    return <div style={{padding:20}}>Loading metrics...</div>;
+    return <div style={{padding:20}}>Загрузка данных...</div>;
   }
 
   return (
 
     <div style={{padding:"20px"}}>
 
-      <h2>Salon Dashboard</h2>
+      <h2>Панель управления салоном</h2>
 
       <div
         style={{
@@ -46,30 +46,30 @@ export default function OwnerDashboard(){
         }}
       >
 
-        <Card title="Bookings Today" value={metrics.bookings_today}/>
-        <Card title="Bookings Week" value={metrics.bookings_week}/>
-        <Card title="Bookings Month" value={metrics.bookings_month}/>
+        <Card title="Записей сегодня" value={metrics.bookings_today}/>
+        <Card title="Записей за неделю" value={metrics.bookings_week}/>
+        <Card title="Записей за месяц" value={metrics.bookings_month}/>
 
-        <Card title="Revenue Today" value={metrics.revenue_today}/>
-        <Card title="Revenue Month" value={metrics.revenue_month}/>
-        <Card title="Avg Check" value={metrics.avg_check}/>
+        <Card title="Выручка сегодня" value={metrics.revenue_today}/>
+        <Card title="Выручка за месяц" value={metrics.revenue_month}/>
+        <Card title="Средний чек" value={metrics.avg_check}/>
 
-        <Card title="Masters Active" value={metrics.masters_active}/>
-        <Card title="Masters Pending" value={metrics.masters_pending}/>
-        <Card title="Masters Total" value={metrics.masters_total}/>
+        <Card title="Мастеров активных" value={metrics.masters_active}/>
+        <Card title="Мастеров ожидают" value={metrics.masters_pending}/>
+        <Card title="Всего мастеров" value={metrics.masters_total}/>
 
-        <Card title="Clients Total" value={metrics.clients_total}/>
-        <Card title="Clients Today" value={metrics.clients_today}/>
+        <Card title="Клиентов всего" value={metrics.clients_total}/>
+        <Card title="Новых клиентов сегодня" value={metrics.clients_today}/>
 
-        <Card title="Services Total" value={metrics.services_total}/>
+        <Card title="Услуг в салоне" value={metrics.services_total}/>
 
-        <Card title="Payments Total" value={metrics.payments_total}/>
-        <Card title="Refunds Total" value={metrics.refunds_total}/>
+        <Card title="Платежей всего" value={metrics.payments_total}/>
+        <Card title="Возвратов" value={metrics.refunds_total}/>
 
-        <Card title="Slots Today" value={metrics.slots_today}/>
-        <Card title="Booked Slots" value={metrics.slots_booked_today}/>
+        <Card title="Слотов сегодня" value={metrics.slots_today}/>
+        <Card title="Занято слотов" value={metrics.slots_booked_today}/>
 
-        <Card title="Load %" value={metrics.load_today}/>
+        <Card title="Загрузка %" value={metrics.load_today}/>
 
       </div>
 
