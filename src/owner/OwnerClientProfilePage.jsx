@@ -50,6 +50,12 @@ if(!client){
 return <div style={{padding:"20px"}}>Загрузка...</div>;
 }
 
+/* ---- LTV клиента ---- */
+
+const revenue = bookings.reduce((sum,b)=>{
+return sum + (b.price || 0);
+},0);
+
 return(
 
 <div style={{padding:"20px"}}>
@@ -68,6 +74,14 @@ marginBottom:"20px"
 <div>Телефон: {client.phone || "—"}</div>
 <div>Визитов: {client.visits || 0}</div>
 <div>Дата регистрации: {client.created_at || "—"}</div>
+
+<div style={{
+marginTop:"10px",
+fontWeight:"600",
+color:"#065f46"
+}}>
+Выручка клиента: {revenue} ₽
+</div>
 
 </div>
 
