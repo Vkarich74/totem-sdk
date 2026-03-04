@@ -60,8 +60,15 @@ export default function OwnerMastersPage() {
 
   async function fire(id) {
 
-    await fetch(`${API_BASE}/internal/salons/${slug}/masters/${id}/fire`, {
-      method: "POST"
+    await fetch(`${API_BASE}/internal/masters/fire`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        master_id: id,
+        salon_slug: slug
+      })
     });
 
     loadMasters();
@@ -70,8 +77,15 @@ export default function OwnerMastersPage() {
 
   async function activate(id) {
 
-    await fetch(`${API_BASE}/internal/salons/${slug}/masters/${id}/activate`, {
-      method: "POST"
+    await fetch(`${API_BASE}/internal/masters/activate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        master_id: id,
+        salon_slug: slug
+      })
     });
 
     loadMasters();
@@ -108,7 +122,7 @@ export default function OwnerMastersPage() {
         style={{ marginBottom: 20 }}
         onClick={createMaster}
       >
-        Создать мастера
+        Пригласить мастера
       </button>
 
       <table border="1" cellPadding="6">
@@ -168,6 +182,15 @@ export default function OwnerMastersPage() {
                       Редактировать
                     </button>
 
+                    {m.status === "pending" && (
+                      <button
+                        style={{ marginRight: 10 }}
+                        onClick={() => activate(m.id)}
+                      >
+                        Активировать
+                      </button>
+                    )}
+
                     {m.status === "active" && (
                       <button
                         style={{ marginRight: 10 }}
@@ -183,15 +206,6 @@ export default function OwnerMastersPage() {
                         onClick={() => activate(m.id)}
                       >
                         Вернуть
-                      </button>
-                    )}
-
-                    {m.status === "pending" && (
-                      <button
-                        style={{ marginRight: 10 }}
-                        onClick={() => activate(m.id)}
-                      >
-                        Активировать
                       </button>
                     )}
 
