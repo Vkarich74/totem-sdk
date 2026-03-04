@@ -9,6 +9,8 @@ const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
 async function load(){
 
+try{
+
 const r = await fetch(
 `https://api.totemv.com/internal/salons/${salonSlug}/bookings`
 );
@@ -16,7 +18,7 @@ const r = await fetch(
 const j = await r.json();
 
 if(j.ok){
-setBookings(j.bookings);
+setBookings(j.bookings || []);
 }
 
 const rm = await fetch(
@@ -26,7 +28,13 @@ const rm = await fetch(
 const jm = await rm.json();
 
 if(jm.ok){
-setMasters(jm.masters);
+setMasters(jm.masters || []);
+}
+
+}catch(e){
+
+console.error("LOAD BOOKINGS ERROR",e);
+
 }
 
 }
@@ -36,6 +44,8 @@ load();
 },[]);
 
 function formatDate(d){
+
+if(!d) return "—";
 
 const date = new Date(d);
 
@@ -50,14 +60,29 @@ minute:"2-digit"
 
 async function action(id,type){
 
-await fetch(
+try{
+
+const r = await fetch(
 `https://api.totemv.com/internal/bookings/${id}/${type}`,
 {
 method:"PATCH"
 }
 );
 
+const j = await r.json();
+
+if(!j.ok){
+console.error("BOOKING ACTION FAILED",j);
+return;
+}
+
 load();
+
+}catch(e){
+
+console.error("BOOKING ACTION ERROR",e);
+
+}
 
 }
 
@@ -100,7 +125,7 @@ background:"#fff"
 
 <div>Телефон: {b.phone || "—"}</div>
 
-<div>Мастер: {b.master_name}</div>
+<div>Мастер: {b.master_name || "—"}</div>
 
 <div>{formatDate(b.start_at)}</div>
 
