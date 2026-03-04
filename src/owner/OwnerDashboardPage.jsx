@@ -8,6 +8,8 @@ const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
 async function load(){
 
+try{
+
 const r = await fetch(
 `https://api.totemv.com/internal/salons/${salonSlug}/metrics`
 );
@@ -15,7 +17,13 @@ const r = await fetch(
 const j = await r.json();
 
 if(j.ok){
-setMetrics(j.metrics);
+setMetrics(j.metrics || {});
+}
+
+}catch(e){
+
+console.error("METRICS LOAD ERROR",e);
+
 }
 
 }
@@ -41,16 +49,16 @@ gap:"16px",
 marginTop:"20px"
 }}>
 
-<Card title="Записей сегодня" value={metrics.bookings_today}/>
-<Card title="Записей за неделю" value={metrics.bookings_week}/>
-<Card title="Записей за месяц" value={metrics.bookings_month}/>
+<Card title="Записей сегодня" value={metrics.bookings_today || 0}/>
+<Card title="Записей за неделю" value={metrics.bookings_week || 0}/>
+<Card title="Записей за месяц" value={metrics.bookings_month || 0}/>
 
-<Card title="Клиентов всего" value={metrics.clients_total}/>
-<Card title="Новых клиентов сегодня" value={metrics.clients_today}/>
+<Card title="Клиентов всего" value={metrics.clients_total || 0}/>
+<Card title="Новых клиентов сегодня" value={metrics.clients_today || 0}/>
 
-<Card title="Мастеров активных" value={metrics.masters_active}/>
-<Card title="Мастеров ожидают" value={metrics.masters_pending}/>
-<Card title="Всего мастеров" value={metrics.masters_total}/>
+<Card title="Мастеров активных" value={metrics.masters_active || 0}/>
+<Card title="Мастеров ожидают" value={metrics.masters_pending || 0}/>
+<Card title="Всего мастеров" value={metrics.masters_total || 0}/>
 
 </div>
 
