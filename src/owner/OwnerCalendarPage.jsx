@@ -45,7 +45,7 @@ load();
 
 function formatTime(d){
 
-if(!d) return "—";
+if(!d) return "";
 
 const date = new Date(d);
 
@@ -56,91 +56,124 @@ minute:"2-digit"
 
 }
 
+function buildSlots(){
+
+const slots=[];
+
+for(let h=9;h<=21;h++){
+
+slots.push(`${String(h).padStart(2,"0")}:00`);
+slots.push(`${String(h).padStart(2,"0")}:30`);
+
+}
+
+return slots;
+
+}
+
+const slots = buildSlots();
+
+function findBooking(masterName,time){
+
+return bookings.find(b=>{
+
+if(b.master_name!==masterName) return false;
+
+const t = formatTime(b.start_at);
+
+return t===time;
+
+});
+
+}
+
 return(
 
 <div style={{padding:"20px"}}>
 
-<h2 style={{marginBottom:"20px"}}>Календарь мастеров</h2>
+<h2 style={{marginBottom:"20px"}}>Календарь дня</h2>
 
-{masters.map(m=>{
+<div style={{
+display:"grid",
+gridTemplateColumns:`120px repeat(${masters.length},1fr)`,
+border:"1px solid #e5e7eb"
+}}>
 
-const masterBookings =
-bookings.filter(b=>b.master_name === m.name);
+<div style={{background:"#f9fafb"}}></div>
 
-return(
+{masters.map(m=>(
 
 <div
 key={m.id}
 style={{
-border:"1px solid #e5e7eb",
-borderRadius:"10px",
-padding:"14px",
-marginBottom:"18px",
-background:"#ffffff",
-boxShadow:"0 3px 10px rgba(0,0,0,0.05)"
-}}
->
-
-<div
-style={{
-fontWeight:"600",
-marginBottom:"12px",
-color:"#2563eb",
-fontSize:"15px"
-}}
->
-👤 {m.name}
-</div>
-
-{masterBookings.length===0 && (
-
-<div
-style={{
-background:"#f3f4f6",
 padding:"8px",
-borderRadius:"6px",
-color:"#6b7280",
-fontSize:"13px"
+borderLeft:"1px solid #e5e7eb",
+background:"#f9fafb",
+fontWeight:"600"
 }}
 >
-Нет записей
-</div>
-
-)}
-
-{masterBookings.map(b=>(
-
-<div
-key={b.id}
-style={{
-padding:"8px",
-marginBottom:"6px",
-background:"#ecfdf5",
-borderRadius:"6px",
-display:"flex",
-justifyContent:"space-between",
-alignItems:"center",
-fontSize:"14px"
-}}
->
-
-<span style={{fontWeight:"600",color:"#059669"}}>
-{formatTime(b.start_at)}
-</span>
-
-<span>
-{b.client_name || "клиент"}
-</span>
-
+{m.name}
 </div>
 
 ))}
+
+{slots.map(time=>(
+
+<>
+
+<div
+key={time}
+style={{
+padding:"8px",
+borderTop:"1px solid #e5e7eb",
+background:"#fafafa",
+fontSize:"13px"
+}}
+>
+{time}
+</div>
+
+{masters.map(m=>{
+
+const b = findBooking(m.name,time);
+
+return(
+
+<div
+key={m.id+time}
+style={{
+borderTop:"1px solid #e5e7eb",
+borderLeft:"1px solid #e5e7eb",
+padding:"6px",
+minHeight:"36px",
+background: b ? "#d1fae5" : "#ffffff",
+fontSize:"13px"
+}}
+>
+
+{b && (
+
+<div>
+
+<div style={{fontWeight:"600"}}>
+{b.client_name || "клиент"}
+</div>
+
+</div>
+
+)}
 
 </div>
 
 );
 
 })}
+
+</>
+
+))}
+
+</div>
 
 </div>
 
