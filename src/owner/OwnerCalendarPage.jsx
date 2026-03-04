@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import * as api from "../api/internal";
+import { getSalonSlug } from "../utils/salon";
+import { generateTimeSlots } from "../calendar/calendarEngine";
+
 export default function OwnerCalendarPage(){
 
 const navigate = useNavigate();
@@ -8,30 +12,22 @@ const navigate = useNavigate();
 const [bookings,setBookings] = useState([]);
 const [masters,setMasters] = useState([]);
 
-const salonSlug = window.SALON_SLUG || "totem-demo-salon";
+const salonSlug = getSalonSlug();
 
 async function load(){
 
 try{
 
-const rb = await fetch(
-`https://api.totemv.com/internal/salons/${salonSlug}/bookings`
-);
+const resBookings = await api.getBookings(salonSlug);
 
-const jb = await rb.json();
-
-if(jb.ok){
-setBookings(jb.bookings || []);
+if(resBookings.ok){
+setBookings(resBookings.bookings || []);
 }
 
-const rm = await fetch(
-`https://api.totemv.com/internal/salons/${salonSlug}/masters`
-);
+const resMasters = await api.getMasters(salonSlug);
 
-const jm = await rm.json();
-
-if(jm.ok){
-setMasters(jm.masters || []);
+if(resMasters.ok){
+setMasters(resMasters.masters || []);
 }
 
 }catch(e){
@@ -59,22 +55,7 @@ minute:"2-digit"
 
 }
 
-function buildSlots(){
-
-const slots=[];
-
-for(let h=9;h<=21;h++){
-
-slots.push(`${String(h).padStart(2,"0")}:00`);
-slots.push(`${String(h).padStart(2,"0")}:30`);
-
-}
-
-return slots;
-
-}
-
-const slots = buildSlots();
+const slots = generateTimeSlots();
 
 function findBooking(masterName,time){
 

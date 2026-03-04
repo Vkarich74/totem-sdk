@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import * as api from "../api/internal";
-import { getSalonSlug } from "../utils/salon";
 
 export default function OwnerBookingsPage(){
 
@@ -12,17 +10,21 @@ const [search,setSearch] = useState("");
 
 const [loadingAction,setLoadingAction] = useState(null);
 
-const salonSlug = getSalonSlug();
+const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
 async function load(){
 
 try{
 
-const res = await api.getBookings(salonSlug);
+const r = await fetch(
+`https://api.totemv.com/internal/salons/${salonSlug}/bookings`
+);
 
-if(res.ok){
+const j = await r.json();
 
-const sorted = (res.bookings || []).sort((a,b)=>{
+if(j.ok){
+
+const sorted = (j.bookings || []).sort((a,b)=>{
 if(!a.start_at) return 1;
 if(!b.start_at) return -1;
 return new Date(a.start_at) - new Date(b.start_at);
@@ -32,10 +34,14 @@ setBookings(sorted);
 
 }
 
-const resMasters = await api.getMasters(salonSlug);
+const rm = await fetch(
+`https://api.totemv.com/internal/salons/${salonSlug}/masters`
+);
 
-if(resMasters.ok){
-setMasters(resMasters.masters || []);
+const jm = await rm.json();
+
+if(jm.ok){
+setMasters(jm.masters || []);
 }
 
 }catch(e){
@@ -109,10 +115,17 @@ try{
 
 setLoadingAction(id);
 
-const res = await api.bookingAction(id,type);
+const r = await fetch(
+`https://api.totemv.com/internal/bookings/${id}/${type}`,
+{
+method:"PATCH"
+}
+);
 
-if(!res.ok){
-console.error("BOOKING ACTION FAILED");
+const j = await r.json();
+
+if(!j.ok){
+console.error("BOOKING ACTION FAILED",j);
 alert("Ошибка изменения статуса");
 setLoadingAction(null);
 return;
@@ -266,8 +279,11 @@ background:"#fff"
 </div>
 
 <div>Клиент: {b.client_name || "—"}</div>
+
 <div>Телефон: {b.phone || "—"}</div>
+
 <div>Мастер: {b.master_name || "—"}</div>
+
 <div>{formatDate(b.start_at)}</div>
 
 <div style={{marginTop:"8px"}}>
@@ -319,6 +335,68 @@ style={{marginLeft:"6px"}}
 </div>
 
 ))}
+
+</div>
+
+<div
+style={{
+padding:"20px",
+overflowY:"auto"
+}}
+>
+
+<h3>Календарь мастеров</h3>
+
+{masters.map(m=>{
+
+const masterBookings =
+filteredBookings.filter(b => b.master_name === m.name);
+
+return(
+
+<div
+key={m.id}
+style={{
+border:"1px solid #e5e7eb",
+borderRadius:"8px",
+padding:"12px",
+marginBottom:"12px"
+}}
+>
+
+<div style={{fontWeight:"600"}}>
+{m.name}
+</div>
+
+{masterBookings.length === 0 && (
+<div style={{color:"#6b7280"}}>
+Нет записей
+</div>
+)}
+
+{masterBookings.map(b=>(
+
+<div
+key={b.id}
+style={{
+marginTop:"6px",
+padding:"6px",
+background:"#f3f4f6",
+borderRadius:"6px"
+}}
+>
+
+{formatDate(b.start_at)} — {b.client_name || "клиент"}
+
+</div>
+
+))}
+
+</div>
+
+);
+
+})}
 
 </div>
 

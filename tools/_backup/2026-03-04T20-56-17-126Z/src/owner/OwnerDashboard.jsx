@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import * as api from "../api/internal";
-import { getSalonSlug } from "../utils/salon";
 
 export default function OwnerDashboard(){
 
 const [metrics,setMetrics] = useState(null);
 const [error,setError] = useState(null);
 
-const salonSlug = getSalonSlug();
+const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
 async function load(){
 
@@ -15,14 +13,18 @@ try{
 
 setError(null);
 
-const res = await api.getMetrics(salonSlug);
+const r = await fetch(
+`https://api.totemv.com/internal/salons/${salonSlug}/metrics`
+);
 
-if(!res.ok){
-setError("METRICS_FETCH_FAILED");
+const j = await r.json();
+
+if(!j || !j.ok){
+setError("METRICS_API_ERROR");
 return;
 }
 
-setMetrics(res.metrics || {});
+setMetrics(j.metrics || {});
 
 }catch(e){
 
