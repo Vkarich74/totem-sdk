@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function OwnerCalendarPage(){
+
+const navigate = useNavigate();
 
 const [bookings,setBookings] = useState([]);
 const [masters,setMasters] = useState([]);
@@ -232,7 +235,13 @@ createBooking(m,time);
 
 <div>
 
-<div style={{fontWeight:"600"}}>
+<div
+style={{fontWeight:"600",cursor:"pointer"}}
+onClick={(e)=>{
+e.stopPropagation();
+navigate(`/owner/client/${b.client_id}`);
+}}
+>
 {b.client_name || "клиент"}
 </div>
 
