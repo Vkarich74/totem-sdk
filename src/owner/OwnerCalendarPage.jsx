@@ -87,6 +87,40 @@ return t===time;
 
 }
 
+async function createBooking(master,time){
+
+const client = prompt("Имя клиента");
+
+if(!client) return;
+
+try{
+
+await fetch(
+`https://api.totemv.com/internal/bookings/create`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+salon_slug:salonSlug,
+master_name:master.name,
+client_name:client,
+start_at:time
+})
+}
+);
+
+load();
+
+}catch(e){
+
+console.error("CREATE BOOKING ERROR",e);
+
+}
+
+}
+
 return(
 
 <div style={{padding:"20px"}}>
@@ -147,8 +181,16 @@ borderLeft:"1px solid #e5e7eb",
 padding:"6px",
 minHeight:"36px",
 background: b ? "#d1fae5" : "#ffffff",
-fontSize:"13px"
+fontSize:"13px",
+cursor:"pointer"
 }}
+
+onClick={()=>{
+if(!b){
+createBooking(m,time);
+}
+}}
+
 >
 
 {b && (
@@ -161,6 +203,10 @@ fontSize:"13px"
 
 </div>
 
+)}
+
+{!b && (
+<div style={{color:"#9ca3af"}}>+</div>
 )}
 
 </div>
