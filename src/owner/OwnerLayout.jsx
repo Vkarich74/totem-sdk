@@ -52,12 +52,19 @@ export default function OwnerLayout() {
           <button style={button} onClick={() => navigate("/owner")}>
             Dashboard
           </button>
+
+          <button style={button} onClick={() => navigate("/owner/calendar")}>
+            Календарь
+          </button>
+
           <button style={button} onClick={() => navigate("/owner/masters")}>
             Мастера
           </button>
+
           <button style={button} onClick={() => navigate("/owner/clients")}>
             Клиенты
           </button>
+
           <button style={button} onClick={() => navigate("/owner/bookings")}>
             Записи
           </button>
