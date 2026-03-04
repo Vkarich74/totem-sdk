@@ -5,6 +5,9 @@ export default function OwnerBookingsPage(){
 const [bookings,setBookings] = useState([]);
 const [masters,setMasters] = useState([]);
 
+const [filter,setFilter] = useState("today");
+const [search,setSearch] = useState("");
+
 const salonSlug = window.SALON_SLUG || "totem-demo-salon";
 
 async function load(){
@@ -40,7 +43,17 @@ console.error("LOAD BOOKINGS ERROR",e);
 }
 
 useEffect(()=>{
+
 load();
+
+const interval = setInterval(()=>{
+load();
+},10000);
+
+return ()=>{
+clearInterval(interval);
+};
+
 },[]);
 
 function formatDate(d){
@@ -86,6 +99,62 @@ console.error("BOOKING ACTION ERROR",e);
 
 }
 
+function applyFilters(list){
+
+let result = [...list];
+
+const now = new Date();
+
+if(filter==="today"){
+
+const start = new Date();
+start.setHours(0,0,0,0);
+
+const end = new Date();
+end.setHours(23,59,59,999);
+
+result = result.filter(b=>{
+if(!b.start_at) return false;
+const d = new Date(b.start_at);
+return d>=start && d<=end;
+});
+
+}
+
+if(filter==="week"){
+
+const start = new Date();
+start.setDate(now.getDate() - now.getDay() + 1);
+start.setHours(0,0,0,0);
+
+const end = new Date(start);
+end.setDate(start.getDate()+7);
+
+result = result.filter(b=>{
+if(!b.start_at) return false;
+const d = new Date(b.start_at);
+return d>=start && d<end;
+});
+
+}
+
+if(search){
+
+const q = search.toLowerCase();
+
+result = result.filter(b=>
+(b.client_name || "").toLowerCase().includes(q) ||
+(b.phone || "").toLowerCase().includes(q)
+);
+
+}
+
+return result;
+
+}
+
+const filteredBookings = applyFilters(bookings);
+
 return(
 
 <div
@@ -106,7 +175,47 @@ overflowY:"auto"
 
 <h3>Записи</h3>
 
-{bookings.map(b=>(
+<div style={{marginBottom:"12px"}}>
+
+<button
+onClick={()=>setFilter("today")}
+style={{marginRight:"6px"}}
+>
+Сегодня
+</button>
+
+<button
+onClick={()=>setFilter("week")}
+style={{marginRight:"6px"}}
+>
+Неделя
+</button>
+
+<button
+onClick={()=>setFilter("all")}
+>
+Все
+</button>
+
+</div>
+
+<div style={{marginBottom:"12px"}}>
+
+<input
+placeholder="Поиск: имя или телефон"
+value={search}
+onChange={e=>setSearch(e.target.value)}
+style={{
+width:"100%",
+padding:"6px",
+border:"1px solid #e5e7eb",
+borderRadius:"6px"
+}}
+/>
+
+</div>
+
+{filteredBookings.map(b=>(
 
 <div
 key={b.id}
@@ -187,7 +296,7 @@ overflowY:"auto"
 {masters.map(m=>{
 
 const masterBookings =
-bookings.filter(b => b.master_name === m.name);
+filteredBookings.filter(b => b.master_name === m.name);
 
 return(
 
