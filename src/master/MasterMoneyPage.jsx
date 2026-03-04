@@ -1,7 +1,7 @@
 export default function MasterMoneyPage() {
   return (
     <div>
-      <h1>Master Money</h1>
+      <h1>Доход мастера</h1>
     </div>
   )
 }

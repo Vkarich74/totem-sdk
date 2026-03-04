@@ -1,7 +1,7 @@
 export default function MasterClientsPage() {
   return (
     <div>
-      <h1>Master Clients</h1>
+      <h1>Клиенты</h1>
     </div>
   )
 }
