@@ -121,6 +121,37 @@ console.error("CREATE BOOKING ERROR",e);
 
 }
 
+async function moveBooking(booking){
+
+const newTime = prompt("Новое время (например 12:00)", formatTime(booking.start_at));
+
+if(!newTime) return;
+
+try{
+
+await fetch(
+`https://api.totemv.com/internal/bookings/${booking.id}/move`,
+{
+method:"PATCH",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+start_at:newTime
+})
+}
+);
+
+load();
+
+}catch(e){
+
+console.error("MOVE BOOKING ERROR",e);
+
+}
+
+}
+
 return(
 
 <div style={{padding:"20px"}}>
@@ -186,9 +217,13 @@ cursor:"pointer"
 }}
 
 onClick={()=>{
-if(!b){
+
+if(b){
+moveBooking(b);
+}else{
 createBooking(m,time);
 }
+
 }}
 
 >
