@@ -8,6 +8,7 @@ import OwnerDashboard from "./owner/OwnerDashboard";
 import OwnerMastersPage from "./owner/OwnerMastersPage";
 import OwnerClientsPage from "./owner/OwnerClientsPage";
 import OwnerBookingsPage from "./owner/OwnerBookingsPage";
+import OwnerCalendarPage from "./owner/OwnerCalendarPage";
 
 function getSlugFromPath() {
   const parts = window.location.pathname.split("/");
@@ -20,6 +21,7 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
+
         {/* PUBLIC */}
         <Route index element={<PublicSalonPage slug={slug} />} />
         <Route path="booking" element={<BookingPage slug={slug} />} />
@@ -27,11 +29,19 @@ export default function App() {
 
         {/* OWNER */}
         <Route path="owner" element={<OwnerLayout slug={slug} />}>
+
           <Route index element={<OwnerDashboard slug={slug} />} />
+
+          <Route path="calendar" element={<OwnerCalendarPage slug={slug} />} />
+
           <Route path="masters" element={<OwnerMastersPage slug={slug} />} />
+
           <Route path="clients" element={<OwnerClientsPage slug={slug} />} />
+
           <Route path="bookings" element={<OwnerBookingsPage slug={slug} />} />
+
         </Route>
+
       </Routes>
     </HashRouter>
   );
