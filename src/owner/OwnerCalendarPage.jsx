@@ -5,6 +5,14 @@ import * as api from "../api/internal";
 import { getSalonSlug } from "../utils/salon";
 import { generateTimeSlots } from "../calendar/calendarEngine";
 
+function resolveSlug(){
+const util = getSalonSlug();
+if(util) return util;
+
+const parts = window.location.pathname.split("/");
+return parts[2] || "totem-demo-salon";
+}
+
 export default function OwnerCalendarPage(){
 
 const navigate = useNavigate();
@@ -12,7 +20,7 @@ const navigate = useNavigate();
 const [bookings,setBookings] = useState([]);
 const [masters,setMasters] = useState([]);
 
-const salonSlug = getSalonSlug();
+const salonSlug = resolveSlug();
 
 async function load(){
 

@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import * as api from "../api/internal";
 import { getSalonSlug } from "../utils/salon";
 
+function resolveSlug(){
+const util = getSalonSlug();
+if(util) return util;
+
+const parts = window.location.pathname.split("/");
+return parts[2] || "totem-demo-salon";
+}
+
 export default function OwnerBookingsPage(){
 
 const [bookings,setBookings] = useState([]);
@@ -12,7 +20,7 @@ const [search,setSearch] = useState("");
 
 const [loadingAction,setLoadingAction] = useState(null);
 
-const salonSlug = getSalonSlug();
+const salonSlug = resolveSlug();
 
 async function load(){
 
@@ -112,7 +120,6 @@ setLoadingAction(id);
 const res = await api.bookingAction(id,type);
 
 if(!res.ok){
-console.error("BOOKING ACTION FAILED");
 alert("Ошибка изменения статуса");
 setLoadingAction(null);
 return;

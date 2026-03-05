@@ -2,9 +2,18 @@ import { useEffect, useState } from "react";
 
 const API_BASE = "https://api.totemv.com";
 
+function resolveSlug() {
+
+  if (window.SALON_SLUG) return window.SALON_SLUG;
+
+  const parts = window.location.pathname.split("/");
+  return parts[2] || "totem-demo-salon";
+
+}
+
 export default function OwnerMastersPage() {
 
-  const slug = window.SALON_SLUG;
+  const slug = resolveSlug();
 
   const [masters, setMasters] = useState([]);
   const [editing, setEditing] = useState(null);

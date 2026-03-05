@@ -7,7 +7,15 @@ export default function OwnerDashboard(){
 const [metrics,setMetrics] = useState(null);
 const [error,setError] = useState(null);
 
-const salonSlug = getSalonSlug();
+function resolveSlug(){
+const utilSlug = getSalonSlug();
+if(utilSlug) return utilSlug;
+
+const parts = window.location.pathname.split("/");
+return parts[2] || "totem-demo-salon";
+}
+
+const salonSlug = resolveSlug();
 
 async function load(){
 
@@ -17,7 +25,7 @@ setError(null);
 
 const res = await api.getMetrics(salonSlug);
 
-if(!res.ok){
+if(!res || !res.ok){
 setError("METRICS_FETCH_FAILED");
 return;
 }
@@ -38,12 +46,14 @@ useEffect(()=>{
 load();
 
 const interval = setInterval(()=>{
+
 load();
+
 },30000);
 
 return ()=> clearInterval(interval);
 
-},[]);
+},[salonSlug]);
 
 if(error){
 

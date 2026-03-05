@@ -2,12 +2,21 @@ import { useEffect, useState } from "react";
 
 const API_BASE = "https://api.totemv.com";
 
+function resolveSlug() {
+
+  if (window.SALON_SLUG) return window.SALON_SLUG;
+
+  const parts = window.location.pathname.split("/");
+  return parts[2] || "totem-demo-salon";
+
+}
+
 export default function OwnerClientsPage() {
 
 const [clients,setClients] = useState([]);
 const [loading,setLoading] = useState(true);
 
-const salonSlug = window.SALON_SLUG;
+const salonSlug = resolveSlug();
 
 useEffect(()=>{
 
@@ -22,7 +31,7 @@ const res = await fetch(
 const data = await res.json();
 
 if(data.ok){
-setClients(data.clients);
+setClients(data.clients || []);
 }
 
 }catch(e){
@@ -80,7 +89,9 @@ marginTop:"20px"
 <td>{c.visits}</td>
 
 <td>
-{new Date(c.created_at).toLocaleDateString("ru-RU")}
+{c.created_at
+? new Date(c.created_at).toLocaleDateString("ru-RU")
+: ""}
 </td>
 
 </tr>
