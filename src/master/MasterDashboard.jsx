@@ -29,7 +29,7 @@ setError(data.error || "METRICS_FETCH_FAILED");
 return;
 }
 
-setMetrics(data.metrics);
+setMetrics(data.metrics || {});
 
 }catch(err){
 
@@ -46,8 +46,8 @@ load();
 
 if(error){
 return (
-<div>
-<h1>Главная мастера</h1>
+<div style={{padding:"20px"}}>
+<h2>Панель мастера</h2>
 <p>Ошибка загрузки метрик: {error}</p>
 </div>
 );
@@ -55,50 +55,33 @@ return (
 
 if(!metrics){
 return (
-<div>
-<h1>Главная мастера</h1>
-<p>Загрузка метрик...</p>
+<div style={{padding:"20px"}}>
+<h2>Панель мастера</h2>
+<p>Загрузка...</p>
 </div>
 );
 }
 
-return (
+return(
 
-<div>
+<div style={{padding:"20px"}}>
 
-<h1>Главная мастера</h1>
+<h2>Панель мастера</h2>
 
 <div style={{
 display:"grid",
-gridTemplateColumns:"repeat(5,1fr)",
-gap:"20px",
+gridTemplateColumns:"repeat(3,1fr)",
+gap:"16px",
 marginTop:"20px"
 }}>
 
-<Card
-title="Записи сегодня"
-value={metrics.bookings_today}
-/>
+<Card title="Записей сегодня" value={metrics.bookings_today || 0} color="#3b82f6"/>
+<Card title="Записей за неделю" value={metrics.bookings_week || 0} color="#3b82f6"/>
 
-<Card
-title="Записи неделя"
-value={metrics.bookings_week}
-/>
+<Card title="Клиентов всего" value={metrics.clients_total || 0} color="#8b5cf6"/>
 
-<Card
-title="Клиенты"
-value={metrics.clients_total}
-/>
-
-<Card
-title="Доход сегодня"
-value={metrics.revenue_today}
-/>
-
-<Card
-title="Доход месяц"
-value={metrics.revenue_month}
-/>
+<Card title="Доход сегодня" value={metrics.revenue_today || 0} color="#10b981"/>
+<Card title="Доход за месяц" value={metrics.revenue_month || 0} color="#10b981"/>
 
 </div>
 
@@ -108,28 +91,29 @@ value={metrics.revenue_month}
 
 }
 
-function Card({title,value}){
+function Card({title,value,color}){
 
 return(
 
 <div style={{
-border:"1px solid #ddd",
+border:"1px solid #e5e7eb",
+borderLeft:`6px solid ${color}`,
 borderRadius:"8px",
-padding:"20px",
+padding:"16px",
 background:"#fff"
 }}>
 
 <div style={{
-fontSize:"14px",
-color:"#666"
+fontSize:"13px",
+color:"#6b7280"
 }}>
 {title}
 </div>
 
 <div style={{
-fontSize:"28px",
+fontSize:"26px",
 fontWeight:"bold",
-marginTop:"10px"
+marginTop:"6px"
 }}>
 {value}
 </div>
