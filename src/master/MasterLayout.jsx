@@ -43,8 +43,7 @@ async function loadOdooPanel() {
 
   const section = getCurrentSection()
 
-  const url =
-    `${ODOO_BASE}/master/${slug}/${section}`
+  const url = `${ODOO_BASE}/master/${slug}/${section}`
 
   try {
 
@@ -56,8 +55,7 @@ async function loadOdooPanel() {
 
     const html = await res.text()
 
-    const container =
-      document.getElementById("odoo-content")
+    const container = document.getElementById("odoo-content")
 
     if (!container) {
       console.error("ODOO BRIDGE: container missing")
@@ -101,7 +99,7 @@ export default function MasterLayout() {
         {/* LEFT — SDK */}
 
         <div style={{
-          width: "50%",
+          width: "70%",
           borderRight: "1px solid #eee",
           overflow: "auto",
           padding: "20px"
@@ -130,8 +128,6 @@ export default function MasterLayout() {
 
           </nav>
 
-          {/* SDK PAGES */}
-
           <Outlet/>
 
         </div>
@@ -141,7 +137,7 @@ export default function MasterLayout() {
         <div
           id="odoo-content"
           style={{
-            width: "50%",
+            width: "30%",
             overflow: "auto",
             padding: "20px"
           }}
