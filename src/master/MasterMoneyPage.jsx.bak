@@ -2,7 +2,9 @@
 import {useMaster} from "./MasterContext"
 
 function money(n){
+
 return new Intl.NumberFormat("ru-RU").format(n)+" сом"
+
 }
 
 export default function MasterMoneyPage(){
@@ -17,9 +19,13 @@ return(
 
 <h3>Доход</h3>
 
-<div>Сегодня: {money(metrics.revenue_today||0)}</div>
+<div style={{fontSize:"18px"}}>
+Сегодня: {money(metrics.revenue_today||0)}
+</div>
 
-<div>Месяц: {money(metrics.revenue_month||0)}</div>
+<div style={{fontSize:"18px"}}>
+Месяц: {money(metrics.revenue_month||0)}
+</div>
 
 </div>
 

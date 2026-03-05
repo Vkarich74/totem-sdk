@@ -1,13 +1,25 @@
-import { apiGet } from "./client"
 
-export function getMasterBookings(slug) {
-  return apiGet(`/internal/masters/${slug}/bookings`)
+const API="https://api.totemv.com"
+
+export async function getMasterMetrics(slug){
+
+const r=await fetch(API+"/internal/masters/"+slug+"/metrics")
+return r.json()
+
 }
 
-export function getMasterClients(slug) {
-  return apiGet(`/internal/masters/${slug}/clients`)
+export async function getMasterBookings(slug){
+
+const r=await fetch(API+"/internal/salons/"+window.SALON_SLUG+"/bookings")
+const j=await r.json()
+
+return j.bookings.filter(b=>b.master_name===window.MASTER_NAME||true)
+
 }
 
-export function getMasterMetrics(slug) {
-  return apiGet(`/internal/masters/${slug}/metrics`)
+export async function getMasterClients(slug){
+
+const r=await fetch(API+"/internal/salons/"+window.SALON_SLUG+"/clients")
+return r.json()
+
 }

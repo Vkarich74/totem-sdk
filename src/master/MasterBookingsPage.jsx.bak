@@ -1,11 +1,11 @@
 
 import {useMaster} from "./MasterContext"
 
-function statusColor(s){
+function color(status){
 
-if(s==="completed")return "#27ae60"
-if(s==="confirmed")return "#2980b9"
-if(s==="reserved")return "#f39c12"
+if(status==="completed")return "#27ae60"
+if(status==="confirmed")return "#2980b9"
+if(status==="reserved")return "#f39c12"
 return "#e74c3c"
 
 }
@@ -31,15 +31,17 @@ borderRadius:"10px",
 marginBottom:"10px"
 }}>
 
-<div style={{fontWeight:700}}>BR-{b.id}</div>
+<div style={{fontWeight:"700"}}>BR-{b.id}</div>
 
-<div style={{color:statusColor(b.status)}}>{b.status}</div>
+<div style={{color:color(b.status)}}>{b.status}</div>
 
 <div>{new Date(b.start_at).toLocaleString("ru-RU")}</div>
 
 <div>Клиент: {b.client_name||"—"}</div>
 
 <div>Телефон: {b.phone||"—"}</div>
+
+<div>Мастер: {b.master_name}</div>
 
 </div>
 

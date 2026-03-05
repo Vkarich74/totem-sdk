@@ -9,11 +9,11 @@ return(
 
 <div>
 
-<h3>Настройки</h3>
+<h3>Настройки мастера</h3>
 
 <div>Slug: {window.MASTER_SLUG}</div>
 
-<button onClick={reload}>Обновить</button>
+<button onClick={reload}>Обновить данные</button>
 
 </div>
 

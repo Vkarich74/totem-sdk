@@ -1,36 +1,155 @@
-import { Link, Outlet } from "react-router-dom"
+import { Outlet, NavLink } from "react-router-dom"
+import { useEffect } from "react"
+import { MasterProvider } from "./MasterContext"
+
+const ODOO_BASE = "https://www.totemv.com/odoo"
+
+function getMasterSlug() {
+
+  if (window.MASTER_SLUG) {
+    return window.MASTER_SLUG
+  }
+
+  const parts = window.location.pathname.split("/")
+
+  if (parts.length >= 3 && parts[1] === "master") {
+    return parts[2]
+  }
+
+  return null
+}
+
+function getCurrentSection() {
+
+  const hash = window.location.hash
+
+  if (!hash) return "dashboard"
+
+  const parts = hash.split("/")
+
+  if (parts.length < 3) return "dashboard"
+
+  return parts[2]
+}
+
+async function loadOdooPanel() {
+
+  const slug = getMasterSlug()
+
+  if (!slug) {
+    console.error("ODOO BRIDGE: master slug missing")
+    return
+  }
+
+  const section = getCurrentSection()
+
+  const url =
+    `${ODOO_BASE}/master/${slug}/${section}`
+
+  try {
+
+    const res = await fetch(url)
+
+    if (!res.ok) {
+      throw new Error("ODOO_FETCH_FAILED")
+    }
+
+    const html = await res.text()
+
+    const container =
+      document.getElementById("odoo-content")
+
+    if (!container) {
+      console.error("ODOO BRIDGE: container missing")
+      return
+    }
+
+    container.innerHTML = html
+
+  } catch (e) {
+
+    console.error("ODOO BRIDGE ERROR", e)
+
+  }
+
+}
 
 export default function MasterLayout() {
+
+  useEffect(() => {
+
+    loadOdooPanel()
+
+    window.addEventListener("hashchange", loadOdooPanel)
+
+    return () => {
+      window.removeEventListener("hashchange", loadOdooPanel)
+    }
+
+  }, [])
+
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "Arial" }}>
 
-      <aside
-        style={{
-          width: "240px",
-          background: "#111",
-          color: "#fff",
-          padding: "20px",
-          boxSizing: "border-box"
-        }}
-      >
+    <MasterProvider>
 
-        <h2 style={{ marginTop: 0 }}>Панель мастера</h2>
+      <div style={{
+        display: "flex",
+        height: "100vh",
+        width: "100%"
+      }}>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <Link to="/master/dashboard">Главная</Link>
-          <Link to="/master/bookings">Записи</Link>
-          <Link to="/master/clients">Клиенты</Link>
-          <Link to="/master/schedule">Расписание</Link>
-          <Link to="/master/money">Доход</Link>
-          <Link to="/master/settings">Настройки</Link>
-        </nav>
+        {/* LEFT — SDK */}
 
-      </aside>
+        <div style={{
+          width: "50%",
+          borderRight: "1px solid #eee",
+          overflow: "auto",
+          padding: "20px"
+        }}>
 
-      <main style={{ flex: 1, padding: "30px", overflow: "auto" }}>
-        <Outlet />
-      </main>
+          <h2>Панель мастера</h2>
 
-    </div>
+          <nav style={{marginBottom:"20px"}}>
+
+            <NavLink to="/master/dashboard">Главная</NavLink>
+            <br/>
+
+            <NavLink to="/master/bookings">Записи</NavLink>
+            <br/>
+
+            <NavLink to="/master/clients">Клиенты</NavLink>
+            <br/>
+
+            <NavLink to="/master/schedule">Расписание</NavLink>
+            <br/>
+
+            <NavLink to="/master/money">Доход</NavLink>
+            <br/>
+
+            <NavLink to="/master/settings">Настройки</NavLink>
+
+          </nav>
+
+          {/* SDK PAGES */}
+
+          <Outlet/>
+
+        </div>
+
+        {/* RIGHT — ODOO */}
+
+        <div
+          id="odoo-content"
+          style={{
+            width: "50%",
+            overflow: "auto",
+            padding: "20px"
+          }}
+        />
+
+      </div>
+
+    </MasterProvider>
+
   )
 }

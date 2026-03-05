@@ -22,11 +22,13 @@ borderRadius:"10px",
 marginBottom:"10px"
 }}>
 
-<div style={{fontWeight:700}}>{c.name}</div>
+<div style={{fontWeight:"700"}}>{c.name}</div>
 
 <div>Телефон: {c.phone}</div>
 
 <div>Визитов: {c.visits}</div>
+
+<div>{new Date(c.created_at).toLocaleDateString("ru-RU")}</div>
 
 </div>
 
