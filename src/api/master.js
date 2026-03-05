@@ -1,50 +1,73 @@
-const API="https://api.totemv.com"
+const API = "https://api.totemv.com"
 
-function normalizeBookings(j){
+let masterCache = null
 
-if(Array.isArray(j)) return j
-if(Array.isArray(j.bookings)) return j.bookings
-if(Array.isArray(j.data)) return j.data
+async function getMaster(slug) {
 
-return []
+  if (masterCache) return masterCache
 
-}
+  const r = await fetch(API + "/internal/masters/" + slug)
+  const j = await r.json()
 
-function normalizeClients(j){
+  masterCache = j.master
 
-if(Array.isArray(j)) return j
-if(Array.isArray(j.clients)) return j.clients
-if(Array.isArray(j.data)) return j.data
-
-return []
+  return masterCache
 
 }
 
-export async function getMasterMetrics(slug){
+function normalize(arr) {
 
-const r=await fetch(API+"/internal/masters/"+slug+"/metrics")
-const j=await r.json()
+  if (!arr) return []
 
-return j.metrics || j
+  if (Array.isArray(arr)) return arr
 
-}
+  if (Array.isArray(arr.bookings)) return arr.bookings
 
-export async function getMasterBookings(slug){
+  if (Array.isArray(arr.clients)) return arr.clients
 
-const r=await fetch(API+"/internal/salons/"+window.SALON_SLUG+"/bookings")
-const j=await r.json()
+  if (Array.isArray(arr.data)) return arr.data
 
-const bookings=normalizeBookings(j)
-
-return bookings.filter(b=>b.master_name===window.MASTER_NAME || true)
+  return []
 
 }
 
-export async function getMasterClients(slug){
+export async function getMasterMetrics(slug) {
 
-const r=await fetch(API+"/internal/salons/"+window.SALON_SLUG+"/clients")
-const j=await r.json()
+  const r = await fetch(API + "/internal/masters/" + slug + "/metrics")
+  const j = await r.json()
 
-return normalizeClients(j)
+  return j.metrics || j
+
+}
+
+export async function getMasterBookings(slug) {
+
+  const master = await getMaster(slug)
+
+  const r = await fetch(
+    API + "/internal/salons/" + window.SALON_SLUG + "/bookings"
+  )
+
+  const j = await r.json()
+
+  const bookings = normalize(j)
+
+  return bookings.filter(b => b.master_name === master.name)
+
+}
+
+export async function getMasterClients(slug) {
+
+  const master = await getMaster(slug)
+
+  const r = await fetch(
+    API + "/internal/salons/" + window.SALON_SLUG + "/clients"
+  )
+
+  const j = await r.json()
+
+  const clients = normalize(j)
+
+  return clients
 
 }
