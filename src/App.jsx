@@ -43,7 +43,11 @@ export default function App() {
         {/* OWNER */}
         <Route path="owner" element={<OwnerLayout slug={slug} />}>
 
+          {/* старый путь (оставляем) */}
           <Route index element={<OwnerDashboard slug={slug} />} />
+
+          {/* новый канонический путь */}
+          <Route path="dashboard" element={<OwnerDashboard slug={slug} />} />
 
           <Route path="calendar" element={<OwnerCalendarPage slug={slug} />} />
 
