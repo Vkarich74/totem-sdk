@@ -49,7 +49,7 @@ export default function OwnerLayout() {
 
         {/* LEFT MENU */}
         <div style={sidebar}>
-          <button style={button} onClick={() => navigate("/owner")}>
+          <button style={button} onClick={() => navigate("/owner/dashboard")}>
             Dashboard
           </button>
 
