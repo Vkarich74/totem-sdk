@@ -1,31 +1,16 @@
 const API = "https://api.totemv.com"
 
-let masterCache = null
+function normalize(res) {
 
-async function getMaster(slug) {
+  if (!res) return []
 
-  if (masterCache) return masterCache
+  if (Array.isArray(res)) return res
 
-  const r = await fetch(API + "/internal/masters/" + slug)
-  const j = await r.json()
+  if (Array.isArray(res.bookings)) return res.bookings
 
-  masterCache = j.master
+  if (Array.isArray(res.clients)) return res.clients
 
-  return masterCache
-
-}
-
-function normalize(arr) {
-
-  if (!arr) return []
-
-  if (Array.isArray(arr)) return arr
-
-  if (Array.isArray(arr.bookings)) return arr.bookings
-
-  if (Array.isArray(arr.clients)) return arr.clients
-
-  if (Array.isArray(arr.data)) return arr.data
+  if (Array.isArray(res.data)) return res.data
 
   return []
 
@@ -42,32 +27,24 @@ export async function getMasterMetrics(slug) {
 
 export async function getMasterBookings(slug) {
 
-  const master = await getMaster(slug)
-
   const r = await fetch(
-    API + "/internal/salons/" + window.SALON_SLUG + "/bookings"
+    API + "/internal/masters/" + slug + "/bookings"
   )
 
   const j = await r.json()
 
-  const bookings = normalize(j)
-
-  return bookings.filter(b => b.master_name === master.name)
+  return normalize(j)
 
 }
 
 export async function getMasterClients(slug) {
 
-  const master = await getMaster(slug)
-
   const r = await fetch(
-    API + "/internal/salons/" + window.SALON_SLUG + "/clients"
+    API + "/internal/masters/" + slug + "/clients"
   )
 
   const j = await r.json()
 
-  const clients = normalize(j)
-
-  return clients
+  return normalize(j)
 
 }
