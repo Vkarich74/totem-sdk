@@ -64,8 +64,10 @@ export default function App() {
         {/* MASTER */}
         <Route path="master" element={<MasterLayout />}>
 
+          {/* главная мастера */}
           <Route index element={<MasterDashboard />} />
 
+          {/* кабинет мастера */}
           <Route path="dashboard" element={<MasterDashboard />} />
 
           <Route path="bookings" element={<MasterBookingsPage />} />
