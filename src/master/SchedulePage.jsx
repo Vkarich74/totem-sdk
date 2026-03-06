@@ -22,16 +22,23 @@ function generateSlots() {
   return slots;
 }
 
+/*
+FIX:
+API возвращает время в UTC.
+Сравнение должно быть тоже через UTC.
+*/
 function formatTime(dateString) {
+
   const d = new Date(dateString);
 
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
+  const h = String(d.getUTCHours()).padStart(2, "0");
+  const m = String(d.getUTCMinutes()).padStart(2, "0");
 
   return `${h}:${m}`;
 }
 
 export default function SchedulePage() {
+
   const slug = getMasterSlug();
 
   const [bookings, setBookings] = useState([]);
@@ -43,7 +50,9 @@ export default function SchedulePage() {
   }, []);
 
   async function loadBookings() {
+
     try {
+
       setLoading(true);
 
       const res = await api.get(`/internal/masters/${slug}/bookings`);
@@ -61,17 +70,25 @@ export default function SchedulePage() {
       setLoading(false);
 
     }
+
   }
 
   function getBooking(time) {
+
     return bookings.find((b) => {
+
       if (!b.start_at) return false;
+
       return formatTime(b.start_at) === time;
+
     });
+
   }
 
   return (
+
     <div style={{ padding: 20 }}>
+
       <h2>Master Schedule</h2>
 
       {loading && <div>Loading schedule...</div>}
@@ -84,6 +101,7 @@ export default function SchedulePage() {
           marginTop: 20,
         }}
       >
+
         {slots.map((time) => {
 
           const booking = getBooking(time);
@@ -91,6 +109,7 @@ export default function SchedulePage() {
           const booked = !!booking;
 
           return (
+
             <div
               key={time}
               style={{
@@ -103,6 +122,7 @@ export default function SchedulePage() {
                 minHeight: 60,
               }}
             >
+
               <div>{time}</div>
 
               {booking && (
@@ -120,10 +140,17 @@ export default function SchedulePage() {
                   )}
                 </div>
               )}
+
             </div>
+
           );
+
         })}
+
       </div>
+
     </div>
+
   );
+
 }
