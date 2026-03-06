@@ -181,9 +181,11 @@ const slots=useMemo(()=>buildSlots(),[])
 const nowSlot=currentSlot()
 
 function openBooking(id){
-
 window.location.hash="/master/bookings/"+id
+}
 
+function createBooking(time){
+window.location.hash="/master/bookings/new?time="+time+"&date="+dateKey
 }
 
 const stats=useMemo(()=>{
@@ -264,9 +266,7 @@ return(
 <button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
 
 <div style={{fontWeight:700,minWidth:"120px",textAlign:"center"}}>
-
 {formatDMY(dateKey)}
-
 </div>
 
 <button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
@@ -310,12 +310,26 @@ background:highlight?"#e8f7ff":list.length?"#fff":"#fafafa"
 <b style={{minWidth:"60px"}}>{highlight?"▶ "+s:s}</b>
 
 <span style={{color:list.length?"#111":"#999"}}>
-
 {list.length?"занято":"свободно"}
-
 </span>
 
 </div>
+
+{!list.length && (
+
+<div
+onClick={()=>createBooking(s)}
+style={{
+marginTop:"6px",
+fontSize:"13px",
+color:"#2980b9",
+cursor:"pointer"
+}}
+>
++ запись
+</div>
+
+)}
 
 {list.map(b=>(
 
