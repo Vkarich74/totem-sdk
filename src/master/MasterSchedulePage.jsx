@@ -9,31 +9,40 @@ function normalizeStatus(s){
 }
 
 function timeSlots(){
+
   const s=[]
+
   let h=7
   let m=0
 
   for(let i=0;i<56;i++){
+
     const hh=h<10?"0"+h:""+h
     const mm=m<10?"0"+m:""+m
+
     s.push(hh+":"+mm)
 
     m+=15
+
     if(m>=60){
       h++
       m=0
     }
+
   }
 
   return s
+
 }
 
-function timeFromISO(iso){
+function roundSlot(iso){
 
   const d=new Date(iso)
 
-  const h=d.getUTCHours()
-  const m=d.getUTCMinutes()
+  let h=d.getUTCHours()
+  let m=d.getUTCMinutes()
+
+  m=Math.floor(m/15)*15
 
   const hh=h<10?"0"+h:""+h
   const mm=m<10?"0"+m:""+m
@@ -136,15 +145,18 @@ export default function MasterSchedulePage(){
       .filter(b=>dateKeyFromISO(b.start_at)===dateKey)
       .map(b=>({
         ...b,
-        _slot:timeFromISO(b.start_at),
+        _slot:roundSlot(b.start_at),
         _status:normalizeStatus(b.status)
       }))
 
     const map={}
 
     for(const b of list){
+
       if(!map[b._slot]) map[b._slot]=[]
+
       map[b._slot].push(b)
+
     }
 
     return map
