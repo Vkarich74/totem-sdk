@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { getMasterSlug } from "../utils/slug";
 import api from "../api/internal";
 
@@ -11,152 +11,221 @@ function generateSlots() {
     const h = Math.floor(t / 60);
     const m = t % 60;
 
-    const time =
-      String(h).padStart(2, "0") +
-      ":" +
-      String(m).padStart(2, "0");
-
-    slots.push(time);
+    slots.push(
+      String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0")
+    );
   }
 
   return slots;
 }
 
-function formatTimeUTC(dateString) {
-
+function toUtcDateKey(dateString) {
   const d = new Date(dateString);
-
-  const h = String(d.getUTCHours()).padStart(2,"0");
-  const m = String(d.getUTCMinutes()).padStart(2,"0");
-
-  return `${h}:${m}`;
+  return d.toISOString().slice(0, 10);
 }
 
-function formatDateUTC(dateString){
-
+function toUtcTimeKey(dateString) {
   const d = new Date(dateString);
-
-  return d.toISOString().slice(0,10);
-
+  return (
+    String(d.getUTCHours()).padStart(2, "0") +
+    ":" +
+    String(d.getUTCMinutes()).padStart(2, "0")
+  );
 }
 
-export default function SchedulePage(){
+function addDays(dateKey, days) {
+  const d = new Date(`${dateKey}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
+function formatHeaderDate(dateKey) {
+  const [year, month, day] = dateKey.split("-");
+  return `${month}/${day}/${year}`;
+}
+
+function isBusyStatus(status) {
+  const s = String(status || "").toLowerCase();
+  return s !== "cancelled" && s !== "canceled";
+}
+
+export default function SchedulePage() {
   const slug = getMasterSlug();
 
-  const [bookings,setBookings] = useState([]);
-  const [slots] = useState(generateSlots());
-  const [loading,setLoading] = useState(true);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
 
-  const today = new Date().toISOString().slice(0,10);
+  const slots = useMemo(() => generateSlots(), []);
 
-  useEffect(()=>{
+  useEffect(() => {
     loadBookings();
-  },[]);
+  }, [slug]);
 
-  async function loadBookings(){
-
-    try{
-
+  async function loadBookings() {
+    try {
       setLoading(true);
 
       const res = await api.get(`/internal/masters/${slug}/bookings`);
 
-      if(res.data?.ok){
-        setBookings(res.data.bookings || []);
+      if (res.data && res.data.ok) {
+        setBookings(Array.isArray(res.data.bookings) ? res.data.bookings : []);
+      } else {
+        setBookings([]);
       }
-
-    }catch(e){
-
-      console.error("BOOKINGS_FETCH_FAILED",e);
-
-    }finally{
-
+    } catch (e) {
+      console.error("BOOKINGS_FETCH_FAILED", e);
+      setBookings([]);
+    } finally {
       setLoading(false);
-
     }
-
   }
 
-  function getBooking(time){
+  function getBookingForSlot(time) {
+    return bookings.find((booking) => {
+      if (!booking?.start_at) return false;
+      if (!isBusyStatus(booking.status)) return false;
 
-    return bookings.find(b=>{
+      const bookingDate = toUtcDateKey(booking.start_at);
+      const bookingTime = toUtcTimeKey(booking.start_at);
 
-      if(!b.start_at) return false;
-
-      const date = formatDateUTC(b.start_at);
-      const t = formatTimeUTC(b.start_at);
-
-      return date === today && t === time;
-
+      return bookingDate === selectedDate && bookingTime === time;
     });
-
   }
 
-  return(
-
-    <div style={{padding:20}}>
-
-      <h2>Master Schedule</h2>
-
-      {loading && <div>Loading schedule...</div>}
+  return (
+    <div style={{ padding: 20 }}>
+      <h2 style={{ marginTop: 0, marginBottom: 16 }}>Календарь мастера</h2>
 
       <div
         style={{
-          display:"grid",
-          gridTemplateColumns:"repeat(4,1fr)",
-          gap:10,
-          marginTop:20
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 16,
+          flexWrap: "wrap",
         }}
       >
+        <button
+          type="button"
+          onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #ddd",
+            background: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          ←
+        </button>
 
-        {slots.map(time=>{
+        <div style={{ minWidth: 120, fontWeight: 600 }}>
+          {formatHeaderDate(selectedDate)}
+        </div>
 
-          const booking = getBooking(time);
+        <button
+          type="button"
+          onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #ddd",
+            background: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          →
+        </button>
 
+        <button
+          type="button"
+          onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #ddd",
+            background: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          Сегодня
+        </button>
+
+        <button
+          type="button"
+          onClick={loadBookings}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #ddd",
+            background: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          Обновить
+        </button>
+      </div>
+
+      {loading && (
+        <div style={{ marginBottom: 16 }}>
+          Загрузка расписания...
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 10,
+        }}
+      >
+        {slots.map((time) => {
+          const booking = getBookingForSlot(time);
           const booked = !!booking;
 
-          return(
-
+          return (
             <div
               key={time}
               style={{
-                padding:12,
-                borderRadius:6,
-                textAlign:"center",
+                padding: 12,
+                borderRadius: 6,
+                border: "1px solid #ddd",
                 background: booked ? "#ffb3b3" : "#f0f0f0",
-                border:"1px solid #ddd",
-                fontWeight:500,
-                minHeight:60
+                minHeight: 76,
               }}
             >
+              <div
+                style={{
+                  fontWeight: 600,
+                  marginBottom: 6,
+                  textAlign: "center",
+                }}
+              >
+                {time}
+              </div>
 
-              <div>{time}</div>
-
-              {booking && (
-
-                <div style={{fontSize:12,marginTop:5}}>
-
-                  {booking.client_name || "Client"}
-
-                  {booking.phone && (
-                    <div>{booking.phone}</div>
-                  )}
-
+              {booked ? (
+                <div style={{ fontSize: 12, textAlign: "center", color: "#333" }}>
+                  <div style={{ marginBottom: 4 }}>
+                    {booking.client_name || "Client"}
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    {booking.phone || ""}
+                  </div>
+                  <div>{booking.status || "reserved"}</div>
                 </div>
-
+              ) : (
+                <div style={{ fontSize: 12, textAlign: "center", color: "#666" }}>
+                  свободно
+                </div>
               )}
-
             </div>
-
           );
-
         })}
-
       </div>
-
     </div>
-
   );
-
 }
