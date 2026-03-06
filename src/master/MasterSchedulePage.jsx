@@ -125,6 +125,36 @@ const [dateKey,setDateKey]=useState(todayKey())
 
 const slots=useMemo(()=>buildSlots(),[])
 
+const stats=useMemo(()=>{
+
+const today=todayKey()
+const yesterday=addDays(today,-1)
+const tomorrow=addDays(today,1)
+
+let t=0
+let y=0
+let tm=0
+
+for(const b of bookings){
+
+if(!b.start_at)continue
+
+const d=toDateKey(new Date(b.start_at))
+
+if(d===today)t++
+if(d===yesterday)y++
+if(d===tomorrow)tm++
+
+}
+
+return{
+today:t,
+yesterday:y,
+tomorrow:tm
+}
+
+},[bookings])
+
 const calendar=useMemo(()=>{
 
 const map={}
@@ -181,6 +211,22 @@ return(
 <button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
 
 <button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
+
+</div>
+
+<div style={{
+
+border:"1px solid #ddd",
+borderRadius:"10px",
+padding:"10px",
+marginBottom:"12px",
+background:"#fafafa"
+
+}}>
+
+<div>Записей сегодня: <b>{stats.today}</b></div>
+<div>Вчера: <b>{stats.yesterday}</b></div>
+<div>Завтра: <b>{stats.tomorrow}</b></div>
 
 </div>
 
