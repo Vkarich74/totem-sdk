@@ -148,6 +148,17 @@ return sh+":"+sm+" – "+eh+":"+em
 
 }
 
+function durationMinutes(start,end){
+
+if(!end)return 0
+
+const s=new Date(start).getTime()
+const e=new Date(end).getTime()
+
+return Math.round((e-s)/60000)
+
+}
+
 export default function MasterSchedulePage(){
 
 const {bookings=[],loading}=useMaster()
@@ -320,6 +331,12 @@ background:statusColor(b._status)
 <div style={{marginTop:"4px",fontWeight:"600"}}>
 
 {timeRange(b.start_at,b.end_at)}
+
+</div>
+
+<div style={{marginTop:"4px"}}>
+
+длительность: {durationMinutes(b.start_at,b.end_at)} мин
 
 </div>
 
