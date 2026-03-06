@@ -22,7 +22,14 @@ const m = await getMasterMetrics(slug)
 setMetrics(m.metrics || m)
 
 const b = await getMasterBookings(slug)
-setBookings(b || [])
+
+/*
+FIX:
+API возвращает
+{ ok:true, bookings:[...] }
+*/
+
+setBookings(b?.bookings || [])
 
 const c = await getMasterClients(slug)
 setClients(c || [])
