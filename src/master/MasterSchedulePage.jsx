@@ -182,7 +182,7 @@ const nowSlot=currentSlot()
 
 function openBooking(id){
 
-window.location.href="/#/master/bookings?bookingId="+id
+window.location.hash="/master/bookings?bookingId="+id
 
 }
 
