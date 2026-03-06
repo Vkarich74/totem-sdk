@@ -159,6 +159,17 @@ return Math.round((e-s)/60000)
 
 }
 
+function serviceLabel(b){
+
+return (
+b.service_name ||
+b.service ||
+b.service_title ||
+""
+)
+
+}
+
 export default function MasterSchedulePage(){
 
 const {bookings=[],loading}=useMaster()
@@ -327,6 +338,16 @@ background:statusColor(b._status)
 </span>
 
 </div>
+
+{serviceLabel(b) && (
+
+<div style={{marginTop:"4px",fontWeight:"600"}}>
+
+{serviceLabel(b)}
+
+</div>
+
+)}
 
 <div style={{marginTop:"4px",fontWeight:"600"}}>
 
