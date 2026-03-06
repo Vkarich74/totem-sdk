@@ -182,7 +182,7 @@ const nowSlot=currentSlot()
 
 function openBooking(id){
 
-window.location.href="/#/master/bookings/"+id
+window.location.href="/#/master/bookings?bookingId="+id
 
 }
 
@@ -276,13 +276,11 @@ return(
 </div>
 
 <div style={{
-
 border:"1px solid #ddd",
 borderRadius:"10px",
 padding:"10px",
 marginBottom:"12px",
 background:"#fafafa"
-
 }}>
 
 <div>Записей сегодня: <b>{stats.today}</b></div>
@@ -300,13 +298,11 @@ const highlight=s===nowSlot
 return(
 
 <div key={s} style={{
-
 border:"1px solid #ddd",
 borderRadius:"10px",
 padding:"10px",
 marginBottom:"8px",
 background:highlight?"#e8f7ff":list.length?"#fff":"#fafafa"
-
 }}>
 
 <div style={{display:"flex",gap:"10px"}}>
@@ -327,14 +323,13 @@ background:highlight?"#e8f7ff":list.length?"#fff":"#fafafa"
 key={b.id}
 onClick={()=>openBooking(b.id)}
 style={{
-
 marginTop:"8px",
 padding:"10px",
 border:"1px solid #eee",
 borderRadius:"8px",
 background:statusColor(b._status),
-cursor:"pointer"
-
+cursor:"pointer",
+transition:"all .15s"
 }}
 >
 
