@@ -117,6 +117,26 @@ return"#eee"
 
 }
 
+function timeRange(start,end){
+
+const s=new Date(start)
+
+const sh=pad(s.getHours())
+const sm=pad(s.getMinutes())
+
+if(!end){
+return sh+":"+sm
+}
+
+const e=new Date(end)
+
+const eh=pad(e.getHours())
+const em=pad(e.getMinutes())
+
+return sh+":"+sm+" – "+eh+":"+em
+
+}
+
 export default function MasterSchedulePage(){
 
 const {bookings=[],loading}=useMaster()
@@ -279,6 +299,12 @@ background:statusColor(b._status)
 {statusLabel(b._status)}
 
 </span>
+
+</div>
+
+<div style={{marginTop:"4px",fontWeight:"600"}}>
+
+{timeRange(b.start_at,b.end_at)}
 
 </div>
 
