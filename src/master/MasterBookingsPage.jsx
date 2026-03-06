@@ -1,5 +1,6 @@
 import {useMaster} from "./MasterContext"
 import {useParams} from "react-router-dom"
+import {useState} from "react"
 
 function statusColor(s){
 
@@ -14,7 +15,11 @@ export default function MasterBookingsPage(){
 
 const {bookingId}=useParams()
 
-const {bookings,loading}=useMaster()
+const {bookings,loading,master}=useMaster()
+
+const [client,setClient]=useState("")
+const [phone,setPhone]=useState("")
+const [serviceId,setServiceId]=useState("1")
 
 if(loading)return <div>Загрузка...</div>
 
@@ -27,6 +32,30 @@ const params=new URLSearchParams(hash.split("?")[1]||"")
 
 const time=params.get("time")||""
 const date=params.get("date")||""
+
+async function createBooking(){
+
+const start=date+"T"+time+":00"
+
+await fetch(
+"https://api.totemv.com/internal/masters/"+master.slug+"/bookings",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+client_name:client,
+phone:phone,
+start_at:start,
+service_id:Number(serviceId)
+})
+}
+)
+
+window.location.hash="/master/schedule"
+
+}
 
 return(
 
@@ -56,9 +85,35 @@ maxWidth:"420px"
 Время: <b>{time}</b>
 </div>
 
-<div style={{marginTop:"14px",color:"#888"}}>
-форма создания записи будет здесь
-</div>
+<input
+placeholder="Клиент"
+value={client}
+onChange={e=>setClient(e.target.value)}
+style={{width:"100%",marginBottom:"8px"}}
+/>
+
+<input
+placeholder="Телефон"
+value={phone}
+onChange={e=>setPhone(e.target.value)}
+style={{width:"100%",marginBottom:"8px"}}
+/>
+
+<select
+value={serviceId}
+onChange={e=>setServiceId(e.target.value)}
+style={{width:"100%",marginBottom:"10px"}}
+>
+
+<option value="1">Услуга 1</option>
+<option value="2">Услуга 2</option>
+<option value="3">Услуга 3</option>
+
+</select>
+
+<button onClick={createBooking}>
+Создать запись
+</button>
 
 </div>
 
@@ -110,19 +165,15 @@ BR-{booking.id}
 </div>
 
 {booking.service_name && (
-
 <div style={{marginTop:"8px"}}>
 Услуга: {booking.service_name}
 </div>
-
 )}
 
 {booking.price && (
-
 <div style={{marginTop:"6px"}}>
 Цена: {booking.price} ₽
 </div>
-
 )}
 
 <div style={{marginTop:"10px"}}>
