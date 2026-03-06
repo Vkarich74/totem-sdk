@@ -1,347 +1,272 @@
-import {useMemo, useState} from "react"
-import {useMaster} from "./MasterContext"
+import { useMemo, useState } from "react"
+import { useMaster } from "./MasterContext"
 
-function normalizeStatus(s){
-  if(!s) return "reserved"
-  s = String(s).toLowerCase()
-  if(s === "canceled") return "cancelled"
-  return s
+function pad(value) {
+  return value < 10 ? "0" + value : String(value)
 }
 
-function timeSlots(){
+function toLocalDateKey(date) {
+  return (
+    date.getFullYear() +
+    "-" +
+    pad(date.getMonth() + 1) +
+    "-" +
+    pad(date.getDate())
+  )
+}
 
-  const s=[]
+function todayKey() {
+  return toLocalDateKey(new Date())
+}
 
-  let h=7
-  let m=0
+function formatDateDMY(dateKey) {
+  const [y, m, d] = dateKey.split("-")
+  return d + "-" + m + "-" + y
+}
 
-  for(let i=0;i<56;i++){
+function addDays(dateKey, delta) {
+  const [y, m, d] = dateKey.split("-").map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + delta)
+  return toLocalDateKey(date)
+}
 
-    const hh=h<10?"0"+h:""+h
-    const mm=m<10?"0"+m:""+m
+function buildSlots() {
+  const result = []
+  let hour = 7
+  let minute = 0
 
-    s.push(hh+":"+mm)
-
-    m+=15
-
-    if(m>=60){
-      h++
-      m=0
+  for (let i = 0; i < 56; i++) {
+    result.push(pad(hour) + ":" + pad(minute))
+    minute += 15
+    if (minute >= 60) {
+      hour += 1
+      minute = 0
     }
-
   }
 
+  return result
+}
+
+function normalizeStatus(value) {
+  const s = String(value || "reserved").toLowerCase()
+  if (s === "canceled") return "cancelled"
   return s
-
 }
 
-function roundSlot(iso){
-
-  const d=new Date(iso)
-
-  let h=d.getUTCHours()
-  let m=d.getUTCMinutes()
-
-  m=Math.floor(m/15)*15
-
-  const hh=h<10?"0"+h:""+h
-  const mm=m<10?"0"+m:""+m
-
-  return hh+":"+mm
-
-}
-
-function dateKeyFromISO(iso){
-
-  const d=new Date(iso)
-
-  const y=d.getUTCFullYear()
-  const mo=d.getUTCMonth()+1
-  const da=d.getUTCDate()
-
-  const mm=mo<10?"0"+mo:""+mo
-  const dd=da<10?"0"+da:""+da
-
-  return y+"-"+mm+"-"+dd
-
-}
-
-function todayKey(){
-
-  const d=new Date()
-
-  const y=d.getFullYear()
-  const mo=d.getMonth()+1
-  const da=d.getDate()
-
-  const mm=mo<10?"0"+mo:""+mo
-  const dd=da<10?"0"+da:""+da
-
-  return y+"-"+mm+"-"+dd
-
-}
-
-function addDays(dateKey,delta){
-
-  const [y,m,d]=dateKey.split("-").map(Number)
-
-  const dt=new Date(y,(m-1),d)
-
-  dt.setDate(dt.getDate()+delta)
-
-  const yy=dt.getFullYear()
-  const mo=dt.getMonth()+1
-  const da=dt.getDate()
-
-  const mm=mo<10?"0"+mo:""+mo
-  const dd=da<10?"0"+da:""+da
-
-  return yy+"-"+mm+"-"+dd
-
-}
-
-function statusColor(s){
-
-  s=normalizeStatus(s)
-
-  if(s==="reserved") return "#fff3cd"
-  if(s==="confirmed") return "#d0ebff"
-  if(s==="completed") return "#d3f9d8"
-  if(s==="cancelled") return "#ffe3e3"
-
-  return "#eee"
-
-}
-
-function statusLabel(s){
-
-  s=normalizeStatus(s)
-
-  if(s==="reserved") return "ожидает"
-  if(s==="confirmed") return "подтверждена"
-  if(s==="completed") return "завершена"
-  if(s==="cancelled") return "отмена"
-
+function statusLabel(status) {
+  const s = normalizeStatus(status)
+  if (s === "reserved") return "ожидает"
+  if (s === "confirmed") return "подтверждена"
+  if (s === "completed") return "завершена"
+  if (s === "cancelled") return "отмена"
   return s
-
 }
 
-export default function MasterSchedulePage(){
+function statusColor(status) {
+  const s = normalizeStatus(status)
+  if (s === "reserved") return "#fff3cd"
+  if (s === "confirmed") return "#d0ebff"
+  if (s === "completed") return "#d3f9d8"
+  if (s === "cancelled") return "#ffe3e3"
+  return "#eeeeee"
+}
 
-  const {bookings} = useMaster()
+function bookingDateKey(startAt) {
+  return toLocalDateKey(new Date(startAt))
+}
 
-  const [dateKey,setDateKey]=useState(todayKey())
+function bookingSlotKey(startAt) {
+  const date = new Date(startAt)
+  const hour = date.getHours()
+  const minute = date.getMinutes()
+  const roundedMinute = Math.floor(minute / 15) * 15
+  return pad(hour) + ":" + pad(roundedMinute)
+}
 
-  const [quickSlot,setQuickSlot]=useState(null)
-  const [clientName,setClientName]=useState("")
-  const [phone,setPhone]=useState("")
+function bookingTimeLabel(startAt, endAt) {
+  const start = new Date(startAt)
+  const end = endAt ? new Date(endAt) : null
 
-  const slots=useMemo(()=>timeSlots(),[])
+  const startText = pad(start.getHours()) + ":" + pad(start.getMinutes())
 
-  const dayBookings=useMemo(()=>{
+  if (!end) return startText
 
-    const list=(bookings||[])
-      .filter(b=>b && b.start_at)
-      .filter(b=>dateKeyFromISO(b.start_at)===dateKey)
-      .map(b=>({
-        ...b,
-        _slot:roundSlot(b.start_at),
-        _status:normalizeStatus(b.status)
-      }))
+  const endText = pad(end.getHours()) + ":" + pad(end.getMinutes())
+  return startText + " - " + endText
+}
 
-    const map={}
+function sortBookingsByTime(items) {
+  return [...items].sort((a, b) => {
+    return new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+  })
+}
 
-    for(const b of list){
+export default function MasterSchedulePage() {
+  const { bookings = [], loading } = useMaster()
+  const [dateKey, setDateKey] = useState(todayKey())
 
-      if(!map[b._slot]) map[b._slot]=[]
+  const slots = useMemo(() => buildSlots(), [])
 
-      map[b._slot].push(b)
+  const calendarMap = useMemo(() => {
+    const map = {}
 
+    for (const booking of bookings || []) {
+      if (!booking || !booking.start_at) continue
+      if (bookingDateKey(booking.start_at) !== dateKey) continue
+
+      const slot = bookingSlotKey(booking.start_at)
+
+      if (!map[slot]) {
+        map[slot] = []
+      }
+
+      map[slot].push({
+        ...booking,
+        _status: normalizeStatus(booking.status),
+      })
+    }
+
+    for (const slot of Object.keys(map)) {
+      map[slot] = sortBookingsByTime(map[slot])
     }
 
     return map
+  }, [bookings, dateKey])
 
-  },[bookings,dateKey])
+  const dayBookingsCount = useMemo(() => {
+    let total = 0
+    for (const slot of Object.keys(calendarMap)) {
+      total += calendarMap[slot].length
+    }
+    return total
+  }, [calendarMap])
 
-  function openQuick(slot){
-    setQuickSlot(slot)
-    setClientName("")
-    setPhone("")
+  if (loading) {
+    return <div>Загрузка...</div>
   }
 
-  function closeQuick(){
-    setQuickSlot(null)
-  }
-
-  function createBooking(){
-    alert("создание записи: "+clientName+" "+phone+" "+quickSlot)
-    closeQuick()
-  }
-
-  return(
-
+  return (
     <div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          marginBottom: "12px",
+          flexWrap: "wrap",
+        }}
+      >
+        <h3 style={{ margin: 0 }}>Календарь мастера</h3>
 
-      <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
+        <div style={{ flex: 1 }} />
 
-        <h3 style={{margin:0}}>Календарь мастера</h3>
+        <button onClick={() => setDateKey(addDays(dateKey, -1))}>←</button>
 
-        <div style={{flex:1}}/>
-
-        <button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
-
-        <input
-          type="date"
-          value={dateKey}
-          onChange={(e)=>setDateKey(e.target.value)}
-        />
-
-        <button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
-
-        <button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
-
-      </div>
-
-      {slots.map(t=>{
-
-        const list=dayBookings[t]||[]
-        const has=list.length>0
-
-        return(
-
-          <div
-            key={t}
-            style={{
-              border:"1px solid #ddd",
-              padding:"10px",
-              marginBottom:"6px",
-              borderRadius:"8px",
-              background:has?"#fff":"#fafafa",
-              cursor:has?"default":"pointer"
-            }}
-
-            onClick={()=>{
-              if(!has) openQuick(t)
-            }}
-
-          >
-
-            <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-
-              <b style={{minWidth:"60px"}}>{t}</b>
-
-              {has
-                ? <span style={{color:"#111"}}>занято</span>
-                : <span style={{color:"#999"}}>свободно</span>
-              }
-
-            </div>
-
-            {list.map(b=>(
-
-              <div
-                key={b.id}
-                style={{
-                  border:"1px solid #eee",
-                  borderRadius:"8px",
-                  padding:"10px",
-                  marginTop:"8px",
-                  background:statusColor(b._status)
-                }}
-              >
-
-                <div style={{display:"flex",justifyContent:"space-between"}}>
-
-                  <b>#{b.id}</b>
-
-                  <span style={{
-                    fontSize:"12px",
-                    padding:"2px 8px",
-                    borderRadius:"12px",
-                    border:"1px solid rgba(0,0,0,0.2)"
-                  }}>
-                    {statusLabel(b._status)}
-                  </span>
-
-                </div>
-
-                <div style={{marginTop:"6px"}}>
-                  {b.client_name || "клиент"}
-                </div>
-
-                <div style={{color:"#444"}}>
-                  {b.phone || "—"}
-                </div>
-
-              </div>
-
-            ))}
-
-          </div>
-
-        )
-
-      })}
-
-      {quickSlot && (
-
-        <div style={{
-          position:"fixed",
-          top:0,
-          left:0,
-          right:0,
-          bottom:0,
-          background:"rgba(0,0,0,0.3)",
-          display:"flex",
-          alignItems:"center",
-          justifyContent:"center"
-        }}>
-
-          <div style={{
-            background:"#fff",
-            padding:"20px",
-            borderRadius:"10px",
-            width:"300px"
-          }}>
-
-            <h4>Новая запись</h4>
-
-            <div>Время: {quickSlot}</div>
-
-            <input
-              placeholder="имя клиента"
-              value={clientName}
-              onChange={e=>setClientName(e.target.value)}
-              style={{width:"100%",marginTop:"10px"}}
-            />
-
-            <input
-              placeholder="телефон"
-              value={phone}
-              onChange={e=>setPhone(e.target.value)}
-              style={{width:"100%",marginTop:"10px"}}
-            />
-
-            <div style={{marginTop:"12px",display:"flex",gap:"8px"}}>
-
-              <button onClick={createBooking}>
-                сохранить
-              </button>
-
-              <button onClick={closeQuick}>
-                отмена
-              </button>
-
-            </div>
-
-          </div>
-
+        <div
+          style={{
+            minWidth: "120px",
+            textAlign: "center",
+            fontWeight: 700,
+          }}
+        >
+          {formatDateDMY(dateKey)}
         </div>
 
-      )}
+        <button onClick={() => setDateKey(addDays(dateKey, 1))}>→</button>
 
+        <button onClick={() => setDateKey(todayKey())}>Сегодня</button>
+      </div>
+
+      <div
+        style={{
+          border: "1px solid #dddddd",
+          borderRadius: "10px",
+          padding: "10px 12px",
+          marginBottom: "12px",
+          background: "#fafafa",
+        }}
+      >
+        Записей на день: <b>{dayBookingsCount}</b>
+      </div>
+
+      {slots.map((slot) => {
+        const items = calendarMap[slot] || []
+        const busy = items.length > 0
+
+        return (
+          <div
+            key={slot}
+            style={{
+              border: "1px solid #dddddd",
+              borderRadius: "10px",
+              padding: "10px",
+              marginBottom: "8px",
+              background: busy ? "#ffffff" : "#fafafa",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <b style={{ minWidth: "60px" }}>{slot}</b>
+              <span style={{ color: busy ? "#111111" : "#888888" }}>
+                {busy ? "занято" : "свободно"}
+              </span>
+            </div>
+
+            {items.map((booking) => (
+              <div
+                key={booking.id}
+                style={{
+                  marginTop: "8px",
+                  padding: "10px",
+                  border: "1px solid #e9e9e9",
+                  borderRadius: "8px",
+                  background: statusColor(booking._status),
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "10px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <b>#{booking.id}</b>
+
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      border: "1px solid rgba(0,0,0,0.2)",
+                    }}
+                  >
+                    {statusLabel(booking._status)}
+                  </span>
+                </div>
+
+                <div style={{ marginTop: "6px" }}>
+                  {booking.client_name || "клиент"}
+                </div>
+
+                <div style={{ color: "#444444", marginTop: "4px" }}>
+                  {booking.phone || "—"}
+                </div>
+
+                <div style={{ color: "#444444", marginTop: "4px" }}>
+                  {bookingTimeLabel(booking.start_at, booking.end_at)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      })}
     </div>
-
   )
-
 }
