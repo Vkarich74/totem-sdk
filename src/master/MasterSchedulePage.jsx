@@ -29,49 +29,70 @@ function timeSlots(){
 }
 
 function timeFromISO(iso){
+
   const d=new Date(iso)
-  const h=d.getHours()
-  const m=d.getMinutes()
+
+  const h=d.getUTCHours()
+  const m=d.getUTCMinutes()
+
   const hh=h<10?"0"+h:""+h
   const mm=m<10?"0"+m:""+m
+
   return hh+":"+mm
+
 }
 
 function dateKeyFromISO(iso){
+
   const d=new Date(iso)
-  const y=d.getFullYear()
-  const mo=d.getMonth()+1
-  const da=d.getDate()
+
+  const y=d.getUTCFullYear()
+  const mo=d.getUTCMonth()+1
+  const da=d.getUTCDate()
+
   const mm=mo<10?"0"+mo:""+mo
   const dd=da<10?"0"+da:""+da
+
   return y+"-"+mm+"-"+dd
+
 }
 
 function todayKey(){
+
   const d=new Date()
+
   const y=d.getFullYear()
   const mo=d.getMonth()+1
   const da=d.getDate()
+
   const mm=mo<10?"0"+mo:""+mo
   const dd=da<10?"0"+da:""+da
+
   return y+"-"+mm+"-"+dd
+
 }
 
 function addDays(dateKey,delta){
+
   const [y,m,d]=dateKey.split("-").map(Number)
+
   const dt=new Date(y,(m-1),d)
+
   dt.setDate(dt.getDate()+delta)
 
   const yy=dt.getFullYear()
   const mo=dt.getMonth()+1
   const da=dt.getDate()
+
   const mm=mo<10?"0"+mo:""+mo
   const dd=da<10?"0"+da:""+da
 
   return yy+"-"+mm+"-"+dd
+
 }
 
 function statusColor(s){
+
   s=normalizeStatus(s)
 
   if(s==="reserved") return "#fff3cd"
@@ -80,9 +101,11 @@ function statusColor(s){
   if(s==="cancelled") return "#ffe3e3"
 
   return "#eee"
+
 }
 
 function statusLabel(s){
+
   s=normalizeStatus(s)
 
   if(s==="reserved") return "ожидает"
@@ -91,6 +114,7 @@ function statusLabel(s){
   if(s==="cancelled") return "отмена"
 
   return s
+
 }
 
 export default function MasterSchedulePage(){
