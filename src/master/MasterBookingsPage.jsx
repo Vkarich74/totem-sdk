@@ -25,6 +25,15 @@ if(loading)return <div>Загрузка...</div>
 
 const hash=window.location.hash
 
+// безопасно получаем slug мастера
+let masterSlug=""
+if(master && master.slug){
+masterSlug=master.slug
+}else{
+const p=window.location.pathname.split("/")
+masterSlug=p[2]||""
+}
+
 // режим создания записи
 if(hash.includes("/master/bookings/new")){
 
@@ -38,7 +47,7 @@ async function createBooking(){
 const start=date+"T"+time+":00"
 
 await fetch(
-"https://api.totemv.com/internal/masters/"+master.slug+"/bookings",
+"https://api.totemv.com/internal/masters/"+masterSlug+"/bookings",
 {
 method:"POST",
 headers:{
