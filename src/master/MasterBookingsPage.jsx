@@ -44,7 +44,8 @@ const date=params.get("date")||""
 
 async function createBooking(){
 
-const start=date+"T"+time+":00"
+// FIX TIMEZONE KG (+06)
+const start=date+"T"+time+":00+06:00"
 
 await fetch(
 "https://api.totemv.com/internal/masters/"+masterSlug+"/bookings",
