@@ -182,7 +182,7 @@ const nowSlot=currentSlot()
 
 function openBooking(id){
 
-window.location.hash="/master/bookings?bookingId="+id
+window.location.hash="/master/bookings/"+id
 
 }
 
@@ -328,8 +328,7 @@ padding:"10px",
 border:"1px solid #eee",
 borderRadius:"8px",
 background:statusColor(b._status),
-cursor:"pointer",
-transition:"all .15s"
+cursor:"pointer"
 }}
 >
 
@@ -338,45 +337,31 @@ transition:"all .15s"
 <b>#{b.id}</b>
 
 <span style={{fontSize:"12px"}}>
-
 {statusLabel(b._status)}
-
 </span>
 
 </div>
 
 {serviceLabel(b) && (
-
 <div style={{marginTop:"4px",fontWeight:"600"}}>
-
 {serviceLabel(b)}
-
 </div>
-
 )}
 
 <div style={{marginTop:"4px",fontWeight:"600"}}>
-
 {timeRange(b.start_at,b.end_at)}
-
 </div>
 
 <div style={{marginTop:"4px"}}>
-
 длительность: {durationMinutes(b.start_at,b.end_at)} мин
-
 </div>
 
 <div style={{marginTop:"4px"}}>
-
 {b.client_name||"клиент"}
-
 </div>
 
 <div style={{color:"#444"}}>
-
 {b.phone||"—"}
-
 </div>
 
 </div>
