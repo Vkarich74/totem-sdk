@@ -75,6 +75,7 @@ export default function App() {
           <Route path="dashboard" element={<MasterDashboard />} />
 
           <Route path="bookings" element={<MasterBookingsPage />} />
+          <Route path="bookings/:bookingId" element={<MasterBookingsPage />} />
 
           <Route path="clients" element={<MasterClientsPage />} />
 
