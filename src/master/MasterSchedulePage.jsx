@@ -180,6 +180,12 @@ const slots=useMemo(()=>buildSlots(),[])
 
 const nowSlot=currentSlot()
 
+function openBooking(id){
+
+window.location.href="/#/master/bookings/"+id
+
+}
+
 const stats=useMemo(()=>{
 
 const today=todayKey()
@@ -317,15 +323,20 @@ background:highlight?"#e8f7ff":list.length?"#fff":"#fafafa"
 
 {list.map(b=>(
 
-<div key={b.id} style={{
+<div
+key={b.id}
+onClick={()=>openBooking(b.id)}
+style={{
 
 marginTop:"8px",
 padding:"10px",
 border:"1px solid #eee",
 borderRadius:"8px",
-background:statusColor(b._status)
+background:statusColor(b._status),
+cursor:"pointer"
 
-}}>
+}}
+>
 
 <div style={{display:"flex",justifyContent:"space-between"}}>
 
