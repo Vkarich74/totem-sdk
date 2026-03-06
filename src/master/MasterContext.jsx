@@ -19,20 +19,28 @@ setLoading(true)
 try {
 
 const m = await getMasterMetrics(slug)
-setMetrics(m.metrics || m)
+
+setMetrics(
+m?.metrics
+|| m
+|| {}
+)
 
 const b = await getMasterBookings(slug)
 
-/*
-FIX:
-API возвращает
-{ ok:true, bookings:[...] }
-*/
-
-setBookings(b?.bookings || [])
+setBookings(
+Array.isArray(b)
+? b
+: b?.bookings || []
+)
 
 const c = await getMasterClients(slug)
-setClients(c || [])
+
+setClients(
+Array.isArray(c)
+? c
+: c?.clients || []
+)
 
 } catch (e) {
 
