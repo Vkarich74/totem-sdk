@@ -9,16 +9,16 @@ function normalizeStatus(s){
 }
 
 function timeSlots(){
-  const s = []
-  let h = 7
-  let m = 0
+  const s=[]
+  let h=7
+  let m=0
 
   for(let i=0;i<56;i++){
-    const hh = h<10 ? "0"+h : ""+h
-    const mm = m<10 ? "0"+m : ""+m
+    const hh=h<10?"0"+h:""+h
+    const mm=m<10?"0"+m:""+m
     s.push(hh+":"+mm)
 
-    m += 15
+    m+=15
     if(m>=60){
       h++
       m=0
@@ -29,50 +29,50 @@ function timeSlots(){
 }
 
 function timeFromISO(iso){
-  const d = new Date(iso)
-  const h = d.getHours()
-  const m = d.getMinutes()
-  const hh = h<10 ? "0"+h : ""+h
-  const mm = m<10 ? "0"+m : ""+m
+  const d=new Date(iso)
+  const h=d.getHours()
+  const m=d.getMinutes()
+  const hh=h<10?"0"+h:""+h
+  const mm=m<10?"0"+m:""+m
   return hh+":"+mm
 }
 
 function dateKeyFromISO(iso){
-  const d = new Date(iso)
-  const y = d.getFullYear()
-  const mo = d.getMonth()+1
-  const da = d.getDate()
-  const mm = mo<10 ? "0"+mo : ""+mo
-  const dd = da<10 ? "0"+da : ""+da
-  return y + "-" + mm + "-" + dd
+  const d=new Date(iso)
+  const y=d.getFullYear()
+  const mo=d.getMonth()+1
+  const da=d.getDate()
+  const mm=mo<10?"0"+mo:""+mo
+  const dd=da<10?"0"+da:""+da
+  return y+"-"+mm+"-"+dd
 }
 
 function todayKey(){
-  const d = new Date()
-  const y = d.getFullYear()
-  const mo = d.getMonth()+1
-  const da = d.getDate()
-  const mm = mo<10 ? "0"+mo : ""+mo
-  const dd = da<10 ? "0"+da : ""+da
-  return y + "-" + mm + "-" + dd
+  const d=new Date()
+  const y=d.getFullYear()
+  const mo=d.getMonth()+1
+  const da=d.getDate()
+  const mm=mo<10?"0"+mo:""+mo
+  const dd=da<10?"0"+da:""+da
+  return y+"-"+mm+"-"+dd
 }
 
-function addDays(dateKey, delta){
-  const [y,m,d] = dateKey.split("-").map(Number)
-  const dt = new Date(y, (m-1), d)
-  dt.setDate(dt.getDate() + delta)
+function addDays(dateKey,delta){
+  const [y,m,d]=dateKey.split("-").map(Number)
+  const dt=new Date(y,(m-1),d)
+  dt.setDate(dt.getDate()+delta)
 
-  const yy = dt.getFullYear()
-  const mo = dt.getMonth()+1
-  const da = dt.getDate()
-  const mm = mo<10 ? "0"+mo : ""+mo
-  const dd = da<10 ? "0"+da : ""+da
+  const yy=dt.getFullYear()
+  const mo=dt.getMonth()+1
+  const da=dt.getDate()
+  const mm=mo<10?"0"+mo:""+mo
+  const dd=da<10?"0"+da:""+da
 
-  return yy + "-" + mm + "-" + dd
+  return yy+"-"+mm+"-"+dd
 }
 
 function statusColor(s){
-  s = normalizeStatus(s)
+  s=normalizeStatus(s)
 
   if(s==="reserved") return "#fff3cd"
   if(s==="confirmed") return "#d0ebff"
@@ -83,7 +83,7 @@ function statusColor(s){
 }
 
 function statusLabel(s){
-  s = normalizeStatus(s)
+  s=normalizeStatus(s)
 
   if(s==="reserved") return "ожидает"
   if(s==="confirmed") return "подтверждена"
@@ -97,46 +97,60 @@ export default function MasterSchedulePage(){
 
   const {bookings} = useMaster()
 
-  const [dateKey, setDateKey] = useState(todayKey())
+  const [dateKey,setDateKey]=useState(todayKey())
 
-  const slots = useMemo(()=>timeSlots(),[])
+  const [quickSlot,setQuickSlot]=useState(null)
+  const [clientName,setClientName]=useState("")
+  const [phone,setPhone]=useState("")
 
-  const dayBookings = useMemo(()=>{
+  const slots=useMemo(()=>timeSlots(),[])
 
-    const list = (bookings || [])
-      .filter(b => b && b.start_at)
-      .filter(b => dateKeyFromISO(b.start_at) === dateKey)
-      .map(b => ({
+  const dayBookings=useMemo(()=>{
+
+    const list=(bookings||[])
+      .filter(b=>b && b.start_at)
+      .filter(b=>dateKeyFromISO(b.start_at)===dateKey)
+      .map(b=>({
         ...b,
-        _slot: timeFromISO(b.start_at),
-        _status: normalizeStatus(b.status),
+        _slot:timeFromISO(b.start_at),
+        _status:normalizeStatus(b.status)
       }))
 
-    const map = {}
+    const map={}
 
     for(const b of list){
-      if(!map[b._slot]) map[b._slot] = []
+      if(!map[b._slot]) map[b._slot]=[]
       map[b._slot].push(b)
     }
 
     return map
 
-  }, [bookings, dateKey])
+  },[bookings,dateKey])
+
+  function openQuick(slot){
+    setQuickSlot(slot)
+    setClientName("")
+    setPhone("")
+  }
+
+  function closeQuick(){
+    setQuickSlot(null)
+  }
+
+  function createBooking(){
+    alert("создание записи: "+clientName+" "+phone+" "+quickSlot)
+    closeQuick()
+  }
 
   return(
 
     <div>
 
-      <div style={{
-        display:"flex",
-        alignItems:"center",
-        gap:"8px",
-        marginBottom:"12px"
-      }}>
+      <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
 
         <h3 style={{margin:0}}>Календарь мастера</h3>
 
-        <div style={{flex:1}} />
+        <div style={{flex:1}}/>
 
         <button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
 
@@ -154,8 +168,8 @@ export default function MasterSchedulePage(){
 
       {slots.map(t=>{
 
-        const list = dayBookings[t] || []
-        const has = list.length>0
+        const list=dayBookings[t]||[]
+        const has=list.length>0
 
         return(
 
@@ -166,15 +180,17 @@ export default function MasterSchedulePage(){
               padding:"10px",
               marginBottom:"6px",
               borderRadius:"8px",
-              background: has ? "#fff" : "#fafafa"
+              background:has?"#fff":"#fafafa",
+              cursor:has?"default":"pointer"
             }}
+
+            onClick={()=>{
+              if(!has) openQuick(t)
+            }}
+
           >
 
-            <div style={{
-              display:"flex",
-              alignItems:"center",
-              gap:"10px"
-            }}>
+            <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
 
               <b style={{minWidth:"60px"}}>{t}</b>
 
@@ -194,14 +210,11 @@ export default function MasterSchedulePage(){
                   borderRadius:"8px",
                   padding:"10px",
                   marginTop:"8px",
-                  background: statusColor(b._status)
+                  background:statusColor(b._status)
                 }}
               >
 
-                <div style={{
-                  display:"flex",
-                  justifyContent:"space-between"
-                }}>
+                <div style={{display:"flex",justifyContent:"space-between"}}>
 
                   <b>#{b.id}</b>
 
@@ -217,35 +230,11 @@ export default function MasterSchedulePage(){
                 </div>
 
                 <div style={{marginTop:"6px"}}>
-
                   {b.client_name || "клиент"}
-
                 </div>
 
                 <div style={{color:"#444"}}>
-
                   {b.phone || "—"}
-
-                </div>
-
-                <div style={{
-                  marginTop:"8px",
-                  display:"flex",
-                  gap:"6px"
-                }}>
-
-                  <button style={{fontSize:"12px"}}>
-                    клиент
-                  </button>
-
-                  <button style={{fontSize:"12px"}}>
-                    перенести
-                  </button>
-
-                  <button style={{fontSize:"12px"}}>
-                    отменить
-                  </button>
-
                 </div>
 
               </div>
@@ -257,6 +246,63 @@ export default function MasterSchedulePage(){
         )
 
       })}
+
+      {quickSlot && (
+
+        <div style={{
+          position:"fixed",
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          background:"rgba(0,0,0,0.3)",
+          display:"flex",
+          alignItems:"center",
+          justifyContent:"center"
+        }}>
+
+          <div style={{
+            background:"#fff",
+            padding:"20px",
+            borderRadius:"10px",
+            width:"300px"
+          }}>
+
+            <h4>Новая запись</h4>
+
+            <div>Время: {quickSlot}</div>
+
+            <input
+              placeholder="имя клиента"
+              value={clientName}
+              onChange={e=>setClientName(e.target.value)}
+              style={{width:"100%",marginTop:"10px"}}
+            />
+
+            <input
+              placeholder="телефон"
+              value={phone}
+              onChange={e=>setPhone(e.target.value)}
+              style={{width:"100%",marginTop:"10px"}}
+            />
+
+            <div style={{marginTop:"12px",display:"flex",gap:"8px"}}>
+
+              <button onClick={createBooking}>
+                сохранить
+              </button>
+
+              <button onClick={closeQuick}>
+                отмена
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
     </div>
 
