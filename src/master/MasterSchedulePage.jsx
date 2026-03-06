@@ -73,20 +73,24 @@ function addDays(dateKey, delta){
 
 function statusColor(s){
   s = normalizeStatus(s)
-  if(s==="reserved") return "#ffe082"
-  if(s==="confirmed") return "#90caf9"
-  if(s==="completed") return "#a5d6a7"
-  if(s==="cancelled") return "#ef9a9a"
+
+  if(s==="reserved") return "#fff3cd"
+  if(s==="confirmed") return "#d0ebff"
+  if(s==="completed") return "#d3f9d8"
+  if(s==="cancelled") return "#ffe3e3"
+
   return "#eee"
 }
 
 function statusLabel(s){
   s = normalizeStatus(s)
-  if(s==="reserved") return "reserved"
-  if(s==="confirmed") return "confirmed"
-  if(s==="completed") return "completed"
-  if(s==="cancelled") return "cancelled"
-  return s || "reserved"
+
+  if(s==="reserved") return "ожидает"
+  if(s==="confirmed") return "подтверждена"
+  if(s==="completed") return "завершена"
+  if(s==="cancelled") return "отмена"
+
+  return s
 }
 
 export default function MasterSchedulePage(){
@@ -130,7 +134,7 @@ export default function MasterSchedulePage(){
         marginBottom:"12px"
       }}>
 
-        <h3 style={{margin:0}}>Расписание</h3>
+        <h3 style={{margin:0}}>Календарь мастера</h3>
 
         <div style={{flex:1}} />
 
@@ -166,13 +170,17 @@ export default function MasterSchedulePage(){
             }}
           >
 
-            <div style={{display:"flex", gap:"10px"}}>
+            <div style={{
+              display:"flex",
+              alignItems:"center",
+              gap:"10px"
+            }}>
 
-              <b style={{minWidth:"56px"}}>{t}</b>
+              <b style={{minWidth:"60px"}}>{t}</b>
 
               {has
-                ? <span>занято</span>
-                : <span style={{color:"#aaa"}}>свободно</span>
+                ? <span style={{color:"#111"}}>занято</span>
+                : <span style={{color:"#999"}}>свободно</span>
               }
 
             </div>
@@ -184,27 +192,59 @@ export default function MasterSchedulePage(){
                 style={{
                   border:"1px solid #eee",
                   borderRadius:"8px",
-                  padding:"8px",
-                  marginTop:"6px",
+                  padding:"10px",
+                  marginTop:"8px",
                   background: statusColor(b._status)
                 }}
               >
 
-                <div>
+                <div style={{
+                  display:"flex",
+                  justifyContent:"space-between"
+                }}>
 
-                  <b>#{b.id}</b> {b.client_name || "клиент"}
+                  <b>#{b.id}</b>
+
+                  <span style={{
+                    fontSize:"12px",
+                    padding:"2px 8px",
+                    borderRadius:"12px",
+                    border:"1px solid rgba(0,0,0,0.2)"
+                  }}>
+                    {statusLabel(b._status)}
+                  </span>
 
                 </div>
 
-                <div>
+                <div style={{marginTop:"6px"}}>
+
+                  {b.client_name || "клиент"}
+
+                </div>
+
+                <div style={{color:"#444"}}>
 
                   {b.phone || "—"}
 
                 </div>
 
-                <div>
+                <div style={{
+                  marginTop:"8px",
+                  display:"flex",
+                  gap:"6px"
+                }}>
 
-                  {statusLabel(b._status)}
+                  <button style={{fontSize:"12px"}}>
+                    клиент
+                  </button>
+
+                  <button style={{fontSize:"12px"}}>
+                    перенести
+                  </button>
+
+                  <button style={{fontSize:"12px"}}>
+                    отменить
+                  </button>
 
                 </div>
 
