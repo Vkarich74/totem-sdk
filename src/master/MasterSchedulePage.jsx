@@ -63,6 +63,17 @@ return pad(h)+":"+pad(m)
 
 }
 
+function currentSlot(){
+
+const now=new Date()
+
+const h=now.getHours()
+const m=Math.floor(now.getMinutes()/15)*15
+
+return pad(h)+":"+pad(m)
+
+}
+
 function slotKeysBetween(start,end){
 
 const keys=[]
@@ -144,6 +155,8 @@ const {bookings=[],loading}=useMaster()
 const [dateKey,setDateKey]=useState(todayKey())
 
 const slots=useMemo(()=>buildSlots(),[])
+
+const nowSlot=currentSlot()
 
 const stats=useMemo(()=>{
 
@@ -254,6 +267,8 @@ background:"#fafafa"
 
 const list=calendar[s]||[]
 
+const highlight=s===nowSlot
+
 return(
 
 <div key={s} style={{
@@ -262,13 +277,13 @@ border:"1px solid #ddd",
 borderRadius:"10px",
 padding:"10px",
 marginBottom:"8px",
-background:list.length?"#fff":"#fafafa"
+background:highlight?"#e8f7ff":list.length?"#fff":"#fafafa"
 
 }}>
 
 <div style={{display:"flex",gap:"10px"}}>
 
-<b style={{minWidth:"60px"}}>{s}</b>
+<b style={{minWidth:"60px"}}>{highlight?"▶ "+s:s}</b>
 
 <span style={{color:list.length?"#111":"#999"}}>
 
