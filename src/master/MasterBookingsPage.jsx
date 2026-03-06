@@ -62,7 +62,8 @@ service_id:Number(serviceId)
 }
 )
 
-window.location.hash="/master/schedule"
+// ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ КАЛЕНДАРЬ
+window.location.href=window.location.pathname+"#/master/schedule"
 
 }
 
