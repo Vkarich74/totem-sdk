@@ -18,6 +18,56 @@ const {bookings,loading}=useMaster()
 
 if(loading)return <div>Загрузка...</div>
 
+const hash=window.location.hash
+
+// режим создания записи
+if(hash.includes("/master/bookings/new")){
+
+const params=new URLSearchParams(hash.split("?")[1]||"")
+
+const time=params.get("time")||""
+const date=params.get("date")||""
+
+return(
+
+<div>
+
+<button
+onClick={()=>window.location.hash="/master/schedule"}
+style={{marginBottom:"10px"}}
+>
+← календарь
+</button>
+
+<h3>Новая запись</h3>
+
+<div style={{
+border:"1px solid #ddd",
+padding:"14px",
+borderRadius:"12px",
+maxWidth:"420px"
+}}>
+
+<div style={{marginBottom:"10px"}}>
+Дата: <b>{date}</b>
+</div>
+
+<div style={{marginBottom:"10px"}}>
+Время: <b>{time}</b>
+</div>
+
+<div style={{marginTop:"14px",color:"#888"}}>
+форма создания записи будет здесь
+</div>
+
+</div>
+
+</div>
+
+)
+
+}
+
 if(bookingId){
 
 const booking=bookings.find(b=>String(b.id)===String(bookingId))
@@ -36,6 +86,13 @@ return(
 
 <div>
 
+<button
+onClick={()=>window.location.hash="/master/schedule"}
+style={{marginBottom:"10px"}}
+>
+← календарь
+</button>
+
 <h3>Карточка записи</h3>
 
 <div style={{
@@ -51,6 +108,22 @@ BR-{booking.id}
 <div style={{color:statusColor(booking.status),marginTop:"6px"}}>
 {booking.status}
 </div>
+
+{booking.service_name && (
+
+<div style={{marginTop:"8px"}}>
+Услуга: {booking.service_name}
+</div>
+
+)}
+
+{booking.price && (
+
+<div style={{marginTop:"6px"}}>
+Цена: {booking.price} ₽
+</div>
+
+)}
 
 <div style={{marginTop:"10px"}}>
 Время: {new Date(booking.start_at).toLocaleString("ru-RU")}
