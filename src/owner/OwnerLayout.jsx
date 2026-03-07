@@ -73,6 +73,24 @@ export default function OwnerLayout() {
             Деньги
           </button>
 
+          {/* SALON FINANCE */}
+
+          <button style={button} onClick={() => navigate("/owner/salon-money")}>
+            Финансы салона
+          </button>
+
+          <button style={button} onClick={() => navigate("/owner/transactions")}>
+            Транзакции
+          </button>
+
+          <button style={button} onClick={() => navigate("/owner/settlements")}>
+            Сеты
+          </button>
+
+          <button style={button} onClick={() => navigate("/owner/payouts")}>
+            Выплаты
+          </button>
+
           <button style={button} onClick={() => navigate("/owner/settings")}>
             Настройки
           </button>
