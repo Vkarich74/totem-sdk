@@ -60,6 +60,13 @@ t=new Date(t.getTime()+15*60000)
 return keys
 }
 
+function currentSlot(){
+const now=new Date()
+const h=now.getHours()
+const m=Math.floor(now.getMinutes()/15)*15
+return pad(h)+":"+pad(m)
+}
+
 function normalizeStatus(v){
 const s=String(v||"reserved").toLowerCase()
 if(s==="canceled")return"cancelled"
@@ -109,6 +116,8 @@ const {bookings=[],loading}=useMaster()
 const [dateKey,setDateKey]=useState(todayKey())
 
 const slots=useMemo(()=>buildSlots(),[])
+
+const nowSlot=currentSlot()
 
 function openBooking(id){
 window.location.hash="/master/bookings/"+id
@@ -173,16 +182,19 @@ if(skip.has(s))return null
 
 const b=calendar[s]
 
+const isNow=s===nowSlot
+
 return(
 
 <div key={s} style={{
-border:"1px solid #ddd",
+border:isNow?"2px solid #339af0":"1px solid #ddd",
 borderRadius:"10px",
 padding:"10px",
-marginBottom:"8px"
+marginBottom:"8px",
+background:isNow?"#e8f7ff":"#fff"
 }}>
 
-<b>{s}</b>
+<b>{isNow?"▶ "+s:s}</b>
 
 {!b && (
 
