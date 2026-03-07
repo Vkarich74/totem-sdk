@@ -96,8 +96,6 @@ export default function MasterLayout() {
         width: "100%"
       }}>
 
-        {/* LEFT — SDK */}
-
         <div style={{
           width: "70%",
           borderRight: "1px solid #eee",
@@ -124,6 +122,15 @@ export default function MasterLayout() {
             <NavLink to="/master/money">Доход</NavLink>
             <br/>
 
+            <NavLink to="/master/transactions">Транзакции</NavLink>
+            <br/>
+
+            <NavLink to="/master/settlements">Сеты</NavLink>
+            <br/>
+
+            <NavLink to="/master/payouts">Выплаты</NavLink>
+            <br/>
+
             <NavLink to="/master/settings">Настройки</NavLink>
 
           </nav>
@@ -131,8 +138,6 @@ export default function MasterLayout() {
           <Outlet/>
 
         </div>
-
-        {/* RIGHT — ODOO */}
 
         <div
           id="odoo-content"
