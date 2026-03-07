@@ -155,6 +155,35 @@ bg:"#fff5f5"
 }
 }
 
+function getDayKpi(bookings,dateKey){
+let busyMinutes=0
+let bookingsCount=0
+
+for(const b of bookings){
+if(!b.start_at)continue
+
+const start=new Date(b.start_at)
+
+if(toDateKey(start)!==dateKey)continue
+
+const status=normalizeStatus(b.status)
+
+if(status==="cancelled")continue
+
+bookingsCount++
+busyMinutes+=durationMinutes(b.start_at,b.end_at)
+}
+
+const totalMinutes=56*15
+const freeMinutes=Math.max(0,totalMinutes-busyMinutes)
+
+return{
+bookingsCount,
+busyMinutes,
+freeMinutes
+}
+}
+
 function isPastSlot(slot,dateKey){
 if(dateKey!==todayKey())return dateKey<todayKey()
 return slot<currentSlot()
@@ -215,6 +244,10 @@ tomorrow:tm
 
 const dayLoad=useMemo(()=>{
 return getDayLoadMeta(bookings,dateKey)
+},[bookings,dateKey])
+
+const dayKpi=useMemo(()=>{
+return getDayKpi(bookings,dateKey)
 },[bookings,dateKey])
 
 const {calendar,skip}=useMemo(()=>{
@@ -296,6 +329,45 @@ background:"#fafafa"
 </div>
 
 <div style={{
+display:"grid",
+gridTemplateColumns:"repeat(3, 1fr)",
+gap:"8px",
+marginBottom:"12px"
+}}>
+
+<div style={{
+border:"1px solid #ddd",
+borderRadius:"10px",
+padding:"10px",
+background:"#fafafa"
+}}>
+<div style={{fontSize:"12px",color:"#666"}}>Записей в дне</div>
+<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>{dayKpi.bookingsCount}</div>
+</div>
+
+<div style={{
+border:"1px solid #ddd",
+borderRadius:"10px",
+padding:"10px",
+background:"#fafafa"
+}}>
+<div style={{fontSize:"12px",color:"#666"}}>Занято минут</div>
+<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>{dayKpi.busyMinutes}</div>
+</div>
+
+<div style={{
+border:"1px solid #ddd",
+borderRadius:"10px",
+padding:"10px",
+background:"#fafafa"
+}}>
+<div style={{fontSize:"12px",color:"#666"}}>Свободно минут</div>
+<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>{dayKpi.freeMinutes}</div>
+</div>
+
+</div>
+
+<div style={{
 border:"1px solid "+dayLoad.color,
 borderRadius:"10px",
 padding:"12px",
@@ -305,7 +377,7 @@ background:dayLoad.bg
 
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
 <b>Загрузка дня</b>
-<span style={{fontWeight:700,color:dayLoad.color}}>
+<span style={{fontWeight:"700",color:dayLoad.color}}>
 {dayLoad.percent}% · {dayLoad.label}
 </span>
 </div>
