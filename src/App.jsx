@@ -14,6 +14,12 @@ import OwnerClientProfilePage from "./owner/OwnerClientProfilePage";
 import OwnerMoneyPage from "./owner/OwnerMoneyPage";
 import OwnerSettingsPage from "./owner/OwnerSettingsPage";
 
+/* SALON FINANCE */
+import SalonMoneyPage from "./salon/payments/SalonMoneyPage";
+import SalonTransactionsPage from "./salon/payments/SalonTransactionsPage";
+import SalonSettlementsPage from "./salon/payments/SalonSettlementsPage";
+import SalonPayoutsPage from "./salon/payments/SalonPayoutsPage";
+
 /* MASTER */
 import MasterLayout from "./master/MasterLayout";
 import MasterDashboard from "./master/MasterDashboard";
@@ -64,6 +70,12 @@ export default function App() {
 
           <Route path="money" element={<OwnerMoneyPage />} />
 
+          {/* SALON FINANCE */}
+          <Route path="salon-money" element={<SalonMoneyPage />} />
+          <Route path="transactions" element={<SalonTransactionsPage />} />
+          <Route path="settlements" element={<SalonSettlementsPage />} />
+          <Route path="payouts" element={<SalonPayoutsPage />} />
+
           <Route path="settings" element={<OwnerSettingsPage />} />
 
         </Route>
@@ -85,11 +97,8 @@ export default function App() {
           <Route path="money" element={<MasterMoneyPage />} />
 
           {/* FINANCE */}
-
           <Route path="transactions" element={<MasterTransactionsPage />} />
-
           <Route path="settlements" element={<MasterSettlementsPage />} />
-
           <Route path="payouts" element={<MasterPayoutsPage />} />
 
           <Route path="settings" element={<MasterSettingsPage />} />
