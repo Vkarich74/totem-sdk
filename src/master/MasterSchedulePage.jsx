@@ -67,6 +67,13 @@ const m=Math.floor(now.getMinutes()/15)*15
 return pad(h)+":"+pad(m)
 }
 
+function isNowInsideBooking(start,end){
+const now=Date.now()
+const startMs=new Date(start).getTime()
+const endMs=new Date(end).getTime()
+return now>=startMs && now<endMs
+}
+
 function currentMasterSlug(){
 const path=window.location.pathname||""
 const parts=path.split("/").filter(Boolean)
@@ -409,11 +416,13 @@ const dur=durationMinutes(start,end)
 
 const span=Math.max(1,Math.round(dur/15))
 const effectiveStatus=normalizeStatus(statusOverrides[b.id] ?? b.status)
+const isNowBooking=toDateKey(start)===todayKey() && isNowInsideBooking(start,end)
 
 calendar[startSlot]={
 ...b,
 span,
-_status:effectiveStatus
+_status:effectiveStatus,
+_isNow:isNowBooking
 }
 
 const keys=slotKeysBetween(start,end)
@@ -624,7 +633,9 @@ height:b.span*40,
 minHeight:"150px",
 cursor:"pointer",
 boxSizing:"border-box",
-overflowY:"auto"
+overflowY:"auto",
+border:b._isNow?"3px solid #ff6b6b":"none",
+boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 }}
 >
 
