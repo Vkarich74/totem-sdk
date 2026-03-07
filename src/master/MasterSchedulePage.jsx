@@ -577,12 +577,14 @@ onClick={()=>openBooking(b.id)}
 style={{
 marginTop:"8px",
 padding:"10px",
+paddingBottom:"14px",
 borderRadius:"8px",
 background:statusColor(b._status),
 height:b.span*40,
+minHeight:"150px",
 cursor:"pointer",
 boxSizing:"border-box",
-overflow:"hidden"
+overflowY:"auto"
 }}
 >
 
@@ -615,7 +617,7 @@ overflow:"hidden"
 длительность: {durationMinutes(b.start_at,b.end_at)} мин
 </div>
 
-<div style={{marginTop:"8px",display:"flex",gap:"6px"}}>
+<div style={{marginTop:"8px",display:"flex",gap:"6px",position:"sticky",bottom:0,background:statusColor(b._status),paddingTop:"4px"}}>
 
 <button
 onClick={(e)=>quickAction(e,b,"confirm")}
