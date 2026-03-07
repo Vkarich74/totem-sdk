@@ -134,6 +134,17 @@ if(Number.isNaN(n))return 0
 return n
 }
 
+function bookingSalonSlug(b){
+return (
+b.salon_slug ||
+b.salonSlug ||
+b.salon?.slug ||
+b.salon?.code ||
+b.salon_code ||
+""
+)
+}
+
 function serviceLabel(b){
 return (
 b.service_name ||
@@ -231,6 +242,8 @@ export default function MasterSchedulePage(){
 const {bookings=[],loading}=useMaster()
 
 const [dateKey,setDateKey]=useState(todayKey())
+const [statusOverrides,setStatusOverrides]=useState({})
+const [actionLoading,setActionLoading]=useState({})
 
 const slots=useMemo(()=>buildSlots(),[])
 
@@ -244,9 +257,57 @@ function createBooking(time){
 window.location.hash="/master/bookings/new?time="+time+"&date="+dateKey
 }
 
-function quickAction(e,id,action){
+async function quickAction(e,booking,action){
 e.stopPropagation()
-alert("действие: "+action+" для записи #"+id)
+
+const nextStatus=
+action==="confirm" ? "confirmed" :
+action==="done" ? "completed" :
+action==="cancel" ? "cancelled" :
+"reserved"
+
+const salonSlug=bookingSalonSlug(booking)
+
+if(!salonSlug){
+alert("Не найден salon_slug у записи")
+return
+}
+
+setActionLoading((prev)=>({
+...prev,
+[booking.id]:action
+}))
+
+try{
+const response=await fetch(
+"https://api.totemv.com/public/salons/"+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
+{
+method:"PATCH",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({status:nextStatus})
+}
+)
+
+if(!response.ok){
+throw new Error("STATUS_UPDATE_FAILED")
+}
+
+setStatusOverrides((prev)=>({
+...prev,
+[booking.id]:nextStatus
+}))
+
+}catch(error){
+alert("Статус не обновился")
+}finally{
+setActionLoading((prev)=>{
+const next={...prev}
+delete next[booking.id]
+return next
+})
+}
 }
 
 const stats=useMemo(()=>{
@@ -307,11 +368,12 @@ const startSlot=slotKey(start)
 const dur=durationMinutes(start,end)
 
 const span=Math.max(1,Math.round(dur/15))
+const effectiveStatus=normalizeStatus(statusOverrides[b.id] ?? b.status)
 
 calendar[startSlot]={
 ...b,
 span,
-_status:normalizeStatus(b.status)
+_status:effectiveStatus
 }
 
 const keys=slotKeysBetween(start,end)
@@ -325,7 +387,7 @@ skip.add(k)
 
 return{calendar,skip}
 
-},[bookings,dateKey])
+},[bookings,dateKey,statusOverrides])
 
 if(loading)return<div>Загрузка...</div>
 
@@ -458,6 +520,7 @@ if(skip.has(s))return null
 const b=calendar[s]
 const isNow=s===nowSlot
 const isPast=isPastSlot(s,dateKey)
+const bookingBusy=!!(b && actionLoading[b.id])
 
 return(
 
@@ -554,15 +617,24 @@ overflow:"hidden"
 
 <div style={{marginTop:"8px",display:"flex",gap:"6px"}}>
 
-<button onClick={(e)=>quickAction(e,b.id,"confirm")}>
+<button
+onClick={(e)=>quickAction(e,b,"confirm")}
+disabled={bookingBusy}
+>
 ✔
 </button>
 
-<button onClick={(e)=>quickAction(e,b.id,"done")}>
+<button
+onClick={(e)=>quickAction(e,b,"done")}
+disabled={bookingBusy}
+>
 ✓
 </button>
 
-<button onClick={(e)=>quickAction(e,b.id,"cancel")}>
+<button
+onClick={(e)=>quickAction(e,b,"cancel")}
+disabled={bookingBusy}
+>
 ✖
 </button>
 
