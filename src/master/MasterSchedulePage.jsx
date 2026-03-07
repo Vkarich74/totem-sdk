@@ -115,6 +115,25 @@ return minutes+" мин"
 return hours+" ч "+minutes+" мин"
 }
 
+function formatMoney(value){
+return String(value||0)+" сом"
+}
+
+function bookingAmount(b){
+const raw=
+b.price ??
+b.service_price ??
+b.total_price ??
+b.amount ??
+0
+
+const n=Number(raw)
+
+if(Number.isNaN(n))return 0
+
+return n
+}
+
 function serviceLabel(b){
 return (
 b.service_name ||
@@ -173,6 +192,7 @@ bg:"#fff5f5"
 function getDayKpi(bookings,dateKey){
 let busyMinutes=0
 let bookingsCount=0
+let revenueTotal=0
 
 for(const b of bookings){
 if(!b.start_at)continue
@@ -187,6 +207,7 @@ if(status==="cancelled")continue
 
 bookingsCount++
 busyMinutes+=durationMinutes(b.start_at,b.end_at)
+revenueTotal+=bookingAmount(b)
 }
 
 const totalMinutes=56*15
@@ -195,7 +216,8 @@ const freeMinutes=Math.max(0,totalMinutes-busyMinutes)
 return{
 bookingsCount,
 busyMinutes,
-freeMinutes
+freeMinutes,
+revenueTotal
 }
 }
 
@@ -345,7 +367,7 @@ background:"#fafafa"
 
 <div style={{
 display:"grid",
-gridTemplateColumns:"repeat(3, 1fr)",
+gridTemplateColumns:"repeat(4, 1fr)",
 gap:"8px",
 marginBottom:"12px"
 }}>
@@ -381,6 +403,18 @@ background:"#fafafa"
 <div style={{fontSize:"12px",color:"#666"}}>Свободно</div>
 <div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
 {formatHoursMinutes(dayKpi.freeMinutes)}
+</div>
+</div>
+
+<div style={{
+border:"1px solid #ddd",
+borderRadius:"10px",
+padding:"10px",
+background:"#fafafa"
+}}>
+<div style={{fontSize:"12px",color:"#666"}}>Сумма дня</div>
+<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
+{formatMoney(dayKpi.revenueTotal)}
 </div>
 </div>
 
