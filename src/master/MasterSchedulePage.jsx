@@ -74,6 +74,54 @@ const endMs=new Date(end).getTime()
 return now>=startMs && now<endMs
 }
 
+function getNextBookingInfo(bookings,dateKey){
+const now=Date.now()
+let nearest=null
+
+for(const b of bookings){
+if(!b.start_at)continue
+
+const start=new Date(b.start_at)
+if(toDateKey(start)!==dateKey)continue
+
+const status=normalizeStatus(b.status)
+if(status==="cancelled" || status==="completed")continue
+
+const startMs=start.getTime()
+if(startMs<=now)continue
+
+if(!nearest || startMs<nearest.startMs){
+nearest={
+id:b.id,
+startMs,
+startAt:b.start_at,
+clientName:b.client_name || "",
+serviceName:serviceLabel(b) || ""
+}
+}
+}
+
+if(!nearest)return null
+
+const diffMinutes=Math.max(1,Math.ceil((nearest.startMs-now)/60000))
+const hours=Math.floor(diffMinutes/60)
+const minutes=diffMinutes%60
+
+let eta=""
+if(hours>0 && minutes>0){
+eta="через "+hours+" ч "+minutes+" мин"
+}else if(hours>0){
+eta="через "+hours+" ч"
+}else{
+eta="через "+minutes+" мин"
+}
+
+return{
+...nearest,
+eta
+}
+}
+
 function currentMasterSlug(){
 const path=window.location.pathname||""
 const parts=path.split("/").filter(Boolean)
@@ -395,6 +443,10 @@ const dayKpi=useMemo(()=>{
 return getDayKpi(bookings,dateKey)
 },[bookings,dateKey])
 
+const nextBookingInfo=useMemo(()=>{
+return getNextBookingInfo(bookings,dateKey)
+},[bookings,dateKey])
+
 const {calendar,skip}=useMemo(()=>{
 
 const calendar={}
@@ -461,6 +513,32 @@ return(
 <button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
 
 </div>
+
+{nextBookingInfo && (
+
+<div style={{
+border:"1px solid #d0ebff",
+borderRadius:"10px",
+padding:"10px",
+marginBottom:"12px",
+background:"#f1f8ff"
+}}>
+
+<div style={{fontSize:"12px",color:"#666"}}>Ближайшая запись</div>
+
+<div style={{marginTop:"4px",fontWeight:"700"}}>
+{nextBookingInfo.eta}
+</div>
+
+<div style={{marginTop:"4px",fontSize:"13px",color:"#333"}}>
+#{nextBookingInfo.id}
+{nextBookingInfo.serviceName ? " · "+nextBookingInfo.serviceName : ""}
+{nextBookingInfo.clientName ? " · "+nextBookingInfo.clientName : ""}
+</div>
+
+</div>
+
+)}
 
 <div style={{
 border:"1px solid #ddd",
