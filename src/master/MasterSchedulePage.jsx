@@ -109,6 +109,52 @@ b.service_title ||
 )
 }
 
+function getDayLoadMeta(bookings,dateKey){
+let busyMinutes=0
+
+for(const b of bookings){
+if(!b.start_at)continue
+
+const start=new Date(b.start_at)
+
+if(toDateKey(start)!==dateKey)continue
+
+const status=normalizeStatus(b.status)
+
+if(status==="cancelled")continue
+
+busyMinutes+=durationMinutes(b.start_at,b.end_at)
+}
+
+const totalMinutes=56*15
+const percent=Math.min(100,Math.round((busyMinutes/totalMinutes)*100))
+
+if(percent<40){
+return{
+percent,
+label:"низкая",
+color:"#2f9e44",
+bg:"#ebfbee"
+}
+}
+
+if(percent<70){
+return{
+percent,
+label:"средняя",
+color:"#e67700",
+bg:"#fff9db"
+}
+}
+
+return{
+percent,
+label:"высокая",
+color:"#e03131",
+bg:"#fff5f5"
+}
+}
+
 export default function MasterSchedulePage(){
 
 const {bookings=[],loading}=useMaster()
@@ -126,6 +172,45 @@ window.location.hash="/master/bookings/"+id
 function createBooking(time){
 window.location.hash="/master/bookings/new?time="+time+"&date="+dateKey
 }
+
+function quickAction(e,id,action){
+e.stopPropagation()
+alert("действие: "+action+" для записи #"+id)
+}
+
+const stats=useMemo(()=>{
+
+const today=todayKey()
+const yesterday=addDays(today,-1)
+const tomorrow=addDays(today,1)
+
+let t=0
+let y=0
+let tm=0
+
+for(const b of bookings){
+
+if(!b.start_at)continue
+
+const d=toDateKey(new Date(b.start_at))
+
+if(d===today)t++
+if(d===yesterday)y++
+if(d===tomorrow)tm++
+
+}
+
+return{
+today:t,
+yesterday:y,
+tomorrow:tm
+}
+
+},[bookings])
+
+const dayLoad=useMemo(()=>{
+return getDayLoadMeta(bookings,dateKey)
+},[bookings,dateKey])
 
 const {calendar,skip}=useMemo(()=>{
 
@@ -155,7 +240,6 @@ _status:normalizeStatus(b.status)
 }
 
 const keys=slotKeysBetween(start,end)
-
 keys.shift()
 
 for(const k of keys){
@@ -174,14 +258,74 @@ return(
 
 <div>
 
-<h3>Календарь мастера</h3>
+<div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
+
+<h3 style={{margin:0}}>Календарь мастера</h3>
+
+<div style={{flex:1}}/>
+
+<button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
+
+<div style={{fontWeight:700,minWidth:"120px",textAlign:"center"}}>
+{formatDMY(dateKey)}
+</div>
+
+<button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
+
+<button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
+
+</div>
+
+<div style={{
+border:"1px solid #ddd",
+borderRadius:"10px",
+padding:"10px",
+marginBottom:"12px",
+background:"#fafafa"
+}}>
+
+<div>Записей сегодня: <b>{stats.today}</b></div>
+<div>Вчера: <b>{stats.yesterday}</b></div>
+<div>Завтра: <b>{stats.tomorrow}</b></div>
+
+</div>
+
+<div style={{
+border:"1px solid "+dayLoad.color,
+borderRadius:"10px",
+padding:"12px",
+marginBottom:"12px",
+background:dayLoad.bg
+}}>
+
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+<b>Загрузка дня</b>
+<span style={{fontWeight:700,color:dayLoad.color}}>
+{dayLoad.percent}% · {dayLoad.label}
+</span>
+</div>
+
+<div style={{
+height:"12px",
+borderRadius:"999px",
+background:"#f1f3f5",
+overflow:"hidden"
+}}>
+<div style={{
+height:"100%",
+width:dayLoad.percent+"%",
+background:dayLoad.color,
+transition:"width 0.2s ease"
+}}/>
+</div>
+
+</div>
 
 {slots.map(s=>{
 
 if(skip.has(s))return null
 
 const b=calendar[s]
-
 const isNow=s===nowSlot
 
 return(
@@ -194,7 +338,12 @@ marginBottom:"8px",
 background:isNow?"#e8f7ff":"#fff"
 }}>
 
-<b>{isNow?"▶ "+s:s}</b>
+<div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+<b style={{minWidth:"60px"}}>{isNow?"▶ "+s:s}</b>
+<span style={{color:b?"#111":"#999"}}>
+{b?"занято":"свободно"}
+</span>
+</div>
 
 {!b && (
 
@@ -222,21 +371,56 @@ padding:"10px",
 borderRadius:"8px",
 background:statusColor(b._status),
 height:b.span*40,
-cursor:"pointer"
+cursor:"pointer",
+boxSizing:"border-box",
+overflow:"hidden"
 }}
 >
 
+<div style={{display:"flex",justifyContent:"space-between",gap:"8px"}}>
 <b>#{b.id}</b>
+<span style={{fontSize:"12px"}}>{statusLabel(b._status)}</span>
+</div>
 
-<div>{serviceLabel(b)}</div>
+{serviceLabel(b) && (
+<div style={{marginTop:"4px",fontWeight:"600"}}>
+{serviceLabel(b)}
+</div>
+)}
 
-<div>
+<div style={{marginTop:"4px"}}>
 {new Date(b.start_at).toLocaleTimeString().slice(0,5)}
-–
+{" – "}
 {new Date(b.end_at).toLocaleTimeString().slice(0,5)}
 </div>
 
-<div>{b.client_name||"клиент"}</div>
+<div style={{marginTop:"4px"}}>
+{b.client_name||"клиент"}
+</div>
+
+<div style={{marginTop:"4px",color:"#444"}}>
+{b.phone||"—"}
+</div>
+
+<div style={{marginTop:"6px",fontSize:"12px"}}>
+длительность: {durationMinutes(b.start_at,b.end_at)} мин
+</div>
+
+<div style={{marginTop:"8px",display:"flex",gap:"6px"}}>
+
+<button onClick={(e)=>quickAction(e,b.id,"confirm")}>
+✔
+</button>
+
+<button onClick={(e)=>quickAction(e,b.id,"done")}>
+✓
+</button>
+
+<button onClick={(e)=>quickAction(e,b.id,"cancel")}>
+✖
+</button>
+
+</div>
 
 </div>
 
