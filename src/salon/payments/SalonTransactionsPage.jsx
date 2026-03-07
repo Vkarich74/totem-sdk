@@ -6,28 +6,21 @@ export default function SalonTransactionsPage() {
 
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
 
     async function loadTransactions() {
       try {
-        setLoading(true)
-        setError(null)
-
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 5000)
-
         const res = await fetch(
-          `https://api.totemv.com/internal/salons/${slug}/payments`,
-          { signal: controller.signal }
+          `https://api.totemv.com/internal/salons/${slug}/payments`
         )
 
-        clearTimeout(timeout)
-
         if (!res.ok) {
-          throw new Error("API_NOT_AVAILABLE")
+          if (!cancelled) {
+            setTransactions([])
+          }
+          return
         }
 
         const data = await res.json()
@@ -40,16 +33,13 @@ export default function SalonTransactionsPage() {
           }
         }
       } catch (err) {
-        console.warn("SalonTransactionsPage fallback:", err)
-
         if (!cancelled) {
           setTransactions([])
-          setError(null)
         }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+      }
+
+      if (!cancelled) {
+        setLoading(false)
       }
     }
 
@@ -71,15 +61,6 @@ export default function SalonTransactionsPage() {
     )
   }
 
-  if (error) {
-    return (
-      <div>
-        <h1>Транзакции салона</h1>
-        <p>{error}</p>
-      </div>
-    )
-  }
-
   return (
     <div>
       <h1>Транзакции салона</h1>
@@ -97,7 +78,6 @@ export default function SalonTransactionsPage() {
               <th align="left">Статус</th>
             </tr>
           </thead>
-
           <tbody>
             {transactions.map((tx) => (
               <tr key={tx.id}>
