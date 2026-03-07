@@ -19,6 +19,7 @@ export default function SalonTransactionsPage() {
         if (!res.ok) {
           if (!cancelled) {
             setTransactions([])
+            setLoading(false)
           }
           return
         }
@@ -31,15 +32,13 @@ export default function SalonTransactionsPage() {
           } else {
             setTransactions([])
           }
+          setLoading(false)
         }
       } catch (err) {
         if (!cancelled) {
           setTransactions([])
+          setLoading(false)
         }
-      }
-
-      if (!cancelled) {
-        setLoading(false)
       }
     }
 
