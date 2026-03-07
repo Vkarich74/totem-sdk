@@ -67,6 +67,18 @@ const m=Math.floor(now.getMinutes()/15)*15
 return pad(h)+":"+pad(m)
 }
 
+function currentMasterSlug(){
+const path=window.location.pathname||""
+const parts=path.split("/").filter(Boolean)
+const idx=parts.indexOf("master")
+
+if(idx>=0 && parts[idx+1]){
+return parts[idx+1]
+}
+
+return""
+}
+
 function normalizeStatus(v){
 const s=String(v||"reserved").toLowerCase()
 if(s==="canceled")return"cancelled"
@@ -132,17 +144,6 @@ const n=Number(raw)
 if(Number.isNaN(n))return 0
 
 return n
-}
-
-function bookingSalonSlug(b){
-return (
-b.salon_slug ||
-b.salonSlug ||
-b.salon?.slug ||
-b.salon?.code ||
-b.salon_code ||
-""
-)
 }
 
 function serviceLabel(b){
@@ -266,10 +267,10 @@ action==="done" ? "completed" :
 action==="cancel" ? "cancelled" :
 "reserved"
 
-const salonSlug=bookingSalonSlug(booking)
+const masterSlug=currentMasterSlug()
 
-if(!salonSlug){
-alert("Не найден salon_slug у записи")
+if(!masterSlug){
+alert("Не найден master slug в URL")
 return
 }
 
@@ -280,7 +281,7 @@ setActionLoading((prev)=>({
 
 try{
 const response=await fetch(
-"https://api.totemv.com/public/salons/"+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
+"https://api.totemv.com/internal/masters/"+encodeURIComponent(masterSlug)+"/bookings/"+booking.id,
 {
 method:"PATCH",
 headers:{
