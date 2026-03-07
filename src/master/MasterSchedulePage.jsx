@@ -19,21 +19,15 @@ return d+"-"+m+"-"+y
 }
 
 function addDays(key,delta){
-
 const [y,m,d]=key.split("-").map(Number)
-
 const dt=new Date(y,m-1,d)
-
 dt.setDate(dt.getDate()+delta)
-
 return toDateKey(dt)
-
 }
 
 function buildSlots(){
 
 const slots=[]
-
 let h=7
 let m=0
 
@@ -71,24 +65,6 @@ const h=now.getHours()
 const m=Math.floor(now.getMinutes()/15)*15
 
 return pad(h)+":"+pad(m)
-
-}
-
-function slotKeysBetween(start,end){
-
-const keys=[]
-
-let t=new Date(start)
-
-while(t<end){
-
-keys.push(slotKey(t))
-
-t=new Date(t.getTime()+15*60000)
-
-}
-
-return keys
 
 }
 
@@ -150,7 +126,7 @@ return sh+":"+sm+" – "+eh+":"+em
 
 function durationMinutes(start,end){
 
-if(!end)return 0
+if(!end)return 30
 
 const s=new Date(start).getTime()
 const e=new Date(end).getTime()
@@ -230,20 +206,14 @@ const start=new Date(b.start_at)
 
 if(toDateKey(start)!==dateKey)continue
 
-const end=b.end_at?new Date(b.end_at):new Date(start.getTime()+30*60000)
+const slot=slotKey(start)
 
-const slotList=slotKeysBetween(start,end)
+if(!map[slot])map[slot]=[]
 
-for(const s of slotList){
-
-if(!map[s])map[s]=[]
-
-map[s].push({
+map[slot].push({
 ...b,
 _status:normalizeStatus(b.status)
 })
-
-}
 
 }
 
@@ -331,7 +301,13 @@ cursor:"pointer"
 
 )}
 
-{list.map(b=>(
+{list.map(b=>{
+
+const dur=durationMinutes(b.start_at,b.end_at)
+
+const slotHeight=(dur/15)*40
+
+return(
 
 <div
 key={b.id}
@@ -342,7 +318,8 @@ padding:"10px",
 border:"1px solid #eee",
 borderRadius:"8px",
 background:statusColor(b._status),
-cursor:"pointer"
+cursor:"pointer",
+height:slotHeight
 }}
 >
 
@@ -367,7 +344,7 @@ cursor:"pointer"
 </div>
 
 <div style={{marginTop:"4px"}}>
-длительность: {durationMinutes(b.start_at,b.end_at)} мин
+длительность: {dur} мин
 </div>
 
 <div style={{marginTop:"4px"}}>
@@ -380,7 +357,9 @@ cursor:"pointer"
 
 </div>
 
-))}
+)
+
+})}
 
 </div>
 
