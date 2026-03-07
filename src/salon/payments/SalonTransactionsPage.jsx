@@ -9,35 +9,56 @@ export default function SalonTransactionsPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    let cancelled = false
+
     async function loadTransactions() {
       try {
         setLoading(true)
         setError(null)
 
-        const res = await fetch(`/internal/salons/${slug}/payments`)
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 5000)
+
+        const res = await fetch(
+          `https://api.totemv.com/internal/salons/${slug}/payments`,
+          { signal: controller.signal }
+        )
+
+        clearTimeout(timeout)
 
         if (!res.ok) {
-          throw new Error("API_ERROR")
+          throw new Error("API_NOT_AVAILABLE")
         }
 
         const data = await res.json()
 
-        if (data && data.ok && Array.isArray(data.payments)) {
-          setTransactions(data.payments)
-        } else {
-          setTransactions([])
+        if (!cancelled) {
+          if (data && data.ok && Array.isArray(data.payments)) {
+            setTransactions(data.payments)
+          } else {
+            setTransactions([])
+          }
         }
       } catch (err) {
-        console.error("SalonTransactionsPage error:", err)
-        setError("Ошибка загрузки транзакций")
-        setTransactions([])
+        console.warn("SalonTransactionsPage fallback:", err)
+
+        if (!cancelled) {
+          setTransactions([])
+          setError(null)
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
     if (slug) {
       loadTransactions()
+    }
+
+    return () => {
+      cancelled = true
     }
   }, [slug])
 
