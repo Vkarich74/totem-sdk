@@ -155,6 +155,11 @@ bg:"#fff5f5"
 }
 }
 
+function isPastSlot(slot,dateKey){
+if(dateKey!==todayKey())return dateKey<todayKey()
+return slot<currentSlot()
+}
+
 export default function MasterSchedulePage(){
 
 const {bookings=[],loading}=useMaster()
@@ -327,6 +332,7 @@ if(skip.has(s))return null
 
 const b=calendar[s]
 const isNow=s===nowSlot
+const isPast=isPastSlot(s,dateKey)
 
 return(
 
@@ -335,17 +341,20 @@ border:isNow?"2px solid #339af0":"1px solid #ddd",
 borderRadius:"10px",
 padding:"10px",
 marginBottom:"8px",
-background:isNow?"#e8f7ff":"#fff"
+background:isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff",
+opacity:isPast&&!b?0.72:1
 }}>
 
 <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
-<b style={{minWidth:"60px"}}>{isNow?"▶ "+s:s}</b>
+<b style={{minWidth:"60px",color:isPast&&!isNow?"#868e96":"inherit"}}>
+{isNow?"▶ "+s:s}
+</b>
 <span style={{color:b?"#111":"#999"}}>
-{b?"занято":"свободно"}
+{b?"занято":isPast?"прошло":"свободно"}
 </span>
 </div>
 
-{!b && (
+{!b && !isPast && (
 
 <div
 onClick={()=>createBooking(s)}
@@ -357,6 +366,18 @@ cursor:"pointer"
 }}
 >
 + запись
+</div>
+
+)}
+
+{!b && isPast && (
+
+<div style={{
+marginTop:"6px",
+fontSize:"12px",
+color:"#868e96"
+}}>
+время прошло
 </div>
 
 )}
