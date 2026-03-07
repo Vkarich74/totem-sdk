@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "./MasterContext"
 
 function pad(v){
@@ -301,6 +301,15 @@ const [dateKey,setDateKey]=useState(todayKey())
 const [statusOverrides,setStatusOverrides]=useState({})
 const [actionLoading,setActionLoading]=useState({})
 const [masterSalonSlug,setMasterSalonSlug]=useState("")
+const [clockTick,setClockTick]=useState(0)
+
+useEffect(()=>{
+const timer=setInterval(()=>{
+setClockTick(v=>v+1)
+},60000)
+
+return()=>clearInterval(timer)
+},[])
 
 const slots=useMemo(()=>buildSlots(),[])
 
@@ -437,7 +446,7 @@ tomorrow:tm
 
 const dayLoad=useMemo(()=>{
 return getDayLoadMeta(bookings,dateKey)
-},[bookings,dateKey])
+},[bookings,dateKey,clockTick])
 
 const dayKpi=useMemo(()=>{
 return getDayKpi(bookings,dateKey)
@@ -445,7 +454,7 @@ return getDayKpi(bookings,dateKey)
 
 const nextBookingInfo=useMemo(()=>{
 return getNextBookingInfo(bookings,dateKey)
-},[bookings,dateKey])
+},[bookings,dateKey,clockTick])
 
 const {calendar,skip}=useMemo(()=>{
 
@@ -488,7 +497,7 @@ skip.add(k)
 
 return{calendar,skip}
 
-},[bookings,dateKey,statusOverrides])
+},[bookings,dateKey,statusOverrides,clockTick])
 
 if(loading)return<div>Загрузка...</div>
 
