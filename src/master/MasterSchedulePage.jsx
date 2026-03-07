@@ -57,6 +57,24 @@ return pad(h)+":"+pad(m)
 
 }
 
+function slotKeysBetween(start,end){
+
+const keys=[]
+
+let t=new Date(start)
+
+while(t<end){
+
+keys.push(slotKey(t))
+
+t=new Date(t.getTime()+15*60000)
+
+}
+
+return keys
+
+}
+
 function currentSlot(){
 
 const now=new Date()
@@ -248,9 +266,10 @@ const dayLoad=useMemo(()=>{
 return getDayLoadMeta(bookings,dateKey)
 },[bookings,dateKey])
 
-const calendar=useMemo(()=>{
+const {calendar,occupied}=useMemo(()=>{
 
 const map={}
+const occupied=new Set()
 
 for(const b of bookings){
 
@@ -260,18 +279,29 @@ const start=new Date(b.start_at)
 
 if(toDateKey(start)!==dateKey)continue
 
-const slot=slotKey(start)
+const end=b.end_at?new Date(b.end_at):new Date(start.getTime()+30*60000)
 
-if(!map[slot])map[slot]=[]
+const first=slotKey(start)
 
-map[slot].push({
+if(!map[first])map[first]=[]
+
+map[first].push({
 ...b,
 _status:normalizeStatus(b.status)
 })
 
+const keys=slotKeysBetween(start,end)
+
+for(const k of keys){
+occupied.add(k)
 }
 
-return map
+}
+
+return{
+calendar:map,
+occupied
+}
 
 },[bookings,dateKey])
 
@@ -281,74 +311,13 @@ return(
 
 <div>
 
-<div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
-
-<h3 style={{margin:0}}>Календарь мастера</h3>
-
-<div style={{flex:1}}/>
-
-<button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
-
-<div style={{fontWeight:700,minWidth:"120px",textAlign:"center"}}>
-{formatDMY(dateKey)}
-</div>
-
-<button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
-
-<button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
-
-</div>
-
-<div style={{
-border:"1px solid #ddd",
-borderRadius:"10px",
-padding:"10px",
-marginBottom:"12px",
-background:"#fafafa"
-}}>
-
-<div>Записей сегодня: <b>{stats.today}</b></div>
-<div>Вчера: <b>{stats.yesterday}</b></div>
-<div>Завтра: <b>{stats.tomorrow}</b></div>
-
-</div>
-
-<div style={{
-border:"1px solid "+dayLoad.color,
-borderRadius:"10px",
-padding:"12px",
-marginBottom:"12px",
-background:dayLoad.bg
-}}>
-
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
-<b>Загрузка дня</b>
-<span style={{fontWeight:700,color:dayLoad.color}}>
-{dayLoad.percent}% · {dayLoad.label}
-</span>
-</div>
-
-<div style={{
-height:"12px",
-borderRadius:"999px",
-background:"#f1f3f5",
-overflow:"hidden"
-}}>
-<div style={{
-height:"100%",
-width:dayLoad.percent+"%",
-background:dayLoad.color,
-transition:"width 0.2s ease"
-}}/>
-</div>
-
-</div>
+<h3>Календарь мастера</h3>
 
 {slots.map(s=>{
 
 const list=calendar[s]||[]
 
-const highlight=s===nowSlot
+const blocked=occupied.has(s)&&!list.length
 
 return(
 
@@ -357,20 +326,20 @@ border:"1px solid #ddd",
 borderRadius:"10px",
 padding:"10px",
 marginBottom:"8px",
-background:highlight?"#e8f7ff":list.length?"#fff":"#fafafa"
+background:blocked?"#f1f3f5":"#fff"
 }}>
 
 <div style={{display:"flex",gap:"10px"}}>
 
-<b style={{minWidth:"60px"}}>{highlight?"▶ "+s:s}</b>
+<b style={{minWidth:"60px"}}>{s}</b>
 
 <span style={{color:list.length?"#111":"#999"}}>
-{list.length?"занято":"свободно"}
+{list.length?"занято":blocked?"занято":"свободно"}
 </span>
 
 </div>
 
-{!list.length && (
+{!list.length && !blocked && (
 
 <div
 onClick={()=>createBooking(s)}
