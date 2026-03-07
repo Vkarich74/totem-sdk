@@ -23,6 +23,11 @@ import MasterSchedulePage from "./master/MasterSchedulePage";
 import MasterMoneyPage from "./master/MasterMoneyPage";
 import MasterSettingsPage from "./master/MasterSettingsPage";
 
+/* MASTER FINANCE */
+import MasterTransactionsPage from "./master/payments/MasterTransactionsPage";
+import MasterSettlementsPage from "./master/payments/MasterSettlementsPage";
+import MasterPayoutsPage from "./master/payments/MasterPayoutsPage";
+
 function getSlugFromPath() {
   const parts = window.location.pathname.split("/");
   return parts[2] || null;
@@ -43,10 +48,8 @@ export default function App() {
         {/* OWNER */}
         <Route path="owner" element={<OwnerLayout slug={slug} />}>
 
-          {/* старый путь (оставляем) */}
           <Route index element={<OwnerDashboard slug={slug} />} />
 
-          {/* новый канонический путь */}
           <Route path="dashboard" element={<OwnerDashboard slug={slug} />} />
 
           <Route path="calendar" element={<OwnerCalendarPage slug={slug} />} />
@@ -68,10 +71,8 @@ export default function App() {
         {/* MASTER */}
         <Route path="master" element={<MasterLayout />}>
 
-          {/* главная мастера */}
           <Route index element={<MasterDashboard />} />
 
-          {/* кабинет мастера */}
           <Route path="dashboard" element={<MasterDashboard />} />
 
           <Route path="bookings" element={<MasterBookingsPage />} />
@@ -82,6 +83,14 @@ export default function App() {
           <Route path="schedule" element={<MasterSchedulePage />} />
 
           <Route path="money" element={<MasterMoneyPage />} />
+
+          {/* FINANCE */}
+
+          <Route path="transactions" element={<MasterTransactionsPage />} />
+
+          <Route path="settlements" element={<MasterSettlementsPage />} />
+
+          <Route path="payouts" element={<MasterPayoutsPage />} />
 
           <Route path="settings" element={<MasterSettingsPage />} />
 
