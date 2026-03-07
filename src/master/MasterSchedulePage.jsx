@@ -100,6 +100,21 @@ if(!end)return 30
 return Math.round((new Date(end)-new Date(start))/60000)
 }
 
+function formatHoursMinutes(totalMinutes){
+const hours=Math.floor(totalMinutes/60)
+const minutes=totalMinutes%60
+
+if(minutes===0){
+return hours+" ч"
+}
+
+if(hours===0){
+return minutes+" мин"
+}
+
+return hours+" ч "+minutes+" мин"
+}
+
 function serviceLabel(b){
 return (
 b.service_name ||
@@ -351,8 +366,10 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Занято минут</div>
-<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>{dayKpi.busyMinutes}</div>
+<div style={{fontSize:"12px",color:"#666"}}>Занято</div>
+<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
+{formatHoursMinutes(dayKpi.busyMinutes)}
+</div>
 </div>
 
 <div style={{
@@ -361,8 +378,10 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Свободно минут</div>
-<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>{dayKpi.freeMinutes}</div>
+<div style={{fontSize:"12px",color:"#666"}}>Свободно</div>
+<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
+{formatHoursMinutes(dayKpi.freeMinutes)}
+</div>
 </div>
 
 </div>
