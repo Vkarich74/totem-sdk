@@ -245,6 +245,7 @@ const {bookings=[],loading}=useMaster()
 const [dateKey,setDateKey]=useState(todayKey())
 const [statusOverrides,setStatusOverrides]=useState({})
 const [actionLoading,setActionLoading]=useState({})
+const [masterSalonSlug,setMasterSalonSlug]=useState("")
 
 const slots=useMemo(()=>buildSlots(),[])
 
@@ -258,6 +259,43 @@ function createBooking(time){
 window.location.hash="/master/bookings/new?time="+time+"&date="+dateKey
 }
 
+async function resolveSalonSlug(){
+if(masterSalonSlug){
+return masterSalonSlug
+}
+
+const masterSlug=currentMasterSlug()
+
+if(!masterSlug){
+throw new Error("MASTER_SLUG_NOT_FOUND")
+}
+
+const response=await fetch(
+"https://api.totemv.com/internal/masters/"+encodeURIComponent(masterSlug)
+)
+
+if(!response.ok){
+throw new Error("MASTER_FETCH_FAILED")
+}
+
+const data=await response.json()
+const slug=
+data?.master?.salon_slug ??
+data?.master?.salonSlug ??
+data?.master?.salon?.slug ??
+data?.salon_slug ??
+data?.salonSlug ??
+data?.salon?.slug ??
+""
+
+if(!slug){
+throw new Error("SALON_SLUG_NOT_FOUND")
+}
+
+setMasterSalonSlug(slug)
+return slug
+}
+
 async function quickAction(e,booking,action){
 e.stopPropagation()
 
@@ -267,21 +305,16 @@ action==="done" ? "completed" :
 action==="cancel" ? "cancelled" :
 "reserved"
 
-const masterSlug=currentMasterSlug()
-
-if(!masterSlug){
-alert("Не найден master slug в URL")
-return
-}
-
 setActionLoading((prev)=>({
 ...prev,
 [booking.id]:action
 }))
 
 try{
+const salonSlug=await resolveSalonSlug()
+
 const response=await fetch(
-"https://api.totemv.com/internal/masters/"+encodeURIComponent(masterSlug)+"/bookings/"+booking.id,
+"https://api.totemv.com/public/salons/"+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
 {
 method:"PATCH",
 headers:{
@@ -301,7 +334,13 @@ setStatusOverrides((prev)=>({
 }))
 
 }catch(error){
+if(error && error.message==="MASTER_SLUG_NOT_FOUND"){
+alert("Не найден master slug в URL")
+}else if(error && error.message==="SALON_SLUG_NOT_FOUND"){
+alert("У мастера не найден salon slug")
+}else{
 alert("Статус не обновился")
+}
 }finally{
 setActionLoading((prev)=>{
 const next={...prev}
