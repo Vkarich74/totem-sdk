@@ -146,6 +146,56 @@ b.service_title ||
 
 }
 
+function getDayLoadMeta(bookings,dateKey){
+
+let busyMinutes=0
+
+for(const b of bookings){
+
+if(!b.start_at)continue
+
+const start=new Date(b.start_at)
+
+if(toDateKey(start)!==dateKey)continue
+
+const status=normalizeStatus(b.status)
+
+if(status==="cancelled")continue
+
+busyMinutes+=durationMinutes(b.start_at,b.end_at)
+
+}
+
+const totalMinutes=56*15
+const percent=Math.min(100,Math.round((busyMinutes/totalMinutes)*100))
+
+if(percent<40){
+return{
+percent,
+label:"низкая",
+color:"#2f9e44",
+bg:"#ebfbee"
+}
+}
+
+if(percent<70){
+return{
+percent,
+label:"средняя",
+color:"#e67700",
+bg:"#fff9db"
+}
+}
+
+return{
+percent,
+label:"высокая",
+color:"#e03131",
+bg:"#fff5f5"
+}
+
+}
+
 export default function MasterSchedulePage(){
 
 const {bookings=[],loading}=useMaster()
@@ -193,6 +243,10 @@ tomorrow:tm
 }
 
 },[bookings])
+
+const dayLoad=useMemo(()=>{
+return getDayLoadMeta(bookings,dateKey)
+},[bookings,dateKey])
 
 const calendar=useMemo(()=>{
 
@@ -259,6 +313,37 @@ background:"#fafafa"
 
 </div>
 
+<div style={{
+border:"1px solid "+dayLoad.color,
+borderRadius:"10px",
+padding:"12px",
+marginBottom:"12px",
+background:dayLoad.bg
+}}>
+
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+<b>Загрузка дня</b>
+<span style={{fontWeight:700,color:dayLoad.color}}>
+{dayLoad.percent}% · {dayLoad.label}
+</span>
+</div>
+
+<div style={{
+height:"12px",
+borderRadius:"999px",
+background:"#f1f3f5",
+overflow:"hidden"
+}}>
+<div style={{
+height:"100%",
+width:dayLoad.percent+"%",
+background:dayLoad.color,
+transition:"width 0.2s ease"
+}}/>
+</div>
+
+</div>
+
 {slots.map(s=>{
 
 const list=calendar[s]||[]
@@ -319,7 +404,9 @@ border:"1px solid #eee",
 borderRadius:"8px",
 background:statusColor(b._status),
 cursor:"pointer",
-height:slotHeight
+height:slotHeight,
+boxSizing:"border-box",
+overflow:"hidden"
 }}
 >
 
