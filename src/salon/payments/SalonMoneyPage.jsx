@@ -13,6 +13,7 @@ export default function SalonMoneyPage() {
   }
 
   const [metrics, setMetrics] = useState(null)
+  const [wallet, setWallet] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,29 +23,33 @@ export default function SalonMoneyPage() {
     async function loadMoney() {
 
       if (!slug) {
-        if (!cancelled) {
-          setLoading(false)
-        }
+        if (!cancelled) setLoading(false)
         return
       }
 
       try {
 
-        const res = await fetch(
-          `https://api.totemv.com/internal/salons/${slug}/metrics`
-        )
+        const [metricsRes, walletRes] = await Promise.all([
+          fetch(`https://api.totemv.com/internal/salons/${slug}/metrics`),
+          fetch(`https://api.totemv.com/internal/salons/${slug}/wallet-balance`)
+        ])
 
-        if (!res.ok) {
+        if (!metricsRes.ok || !walletRes.ok) {
           if (!cancelled) setLoading(false)
           return
         }
 
-        const data = await res.json()
+        const metricsData = await metricsRes.json()
+        const walletData = await walletRes.json()
 
         if (!cancelled) {
 
-          if (data && data.ok) {
-            setMetrics(data.metrics)
+          if (metricsData?.ok) {
+            setMetrics(metricsData.metrics)
+          }
+
+          if (walletData?.ok) {
+            setWallet(walletData.balance)
           }
 
           setLoading(false)
@@ -79,15 +84,6 @@ export default function SalonMoneyPage() {
     )
   }
 
-  if (!metrics) {
-    return (
-      <div>
-        <h1>Финансы салона</h1>
-        <p>Данные финансов пока отсутствуют</p>
-      </div>
-    )
-  }
-
   return (
     <div>
 
@@ -97,18 +93,23 @@ export default function SalonMoneyPage() {
         <tbody>
 
           <tr>
+            <td><b>Баланс кошелька</b></td>
+            <td>{wallet?.computed_balance_cents || 0}</td>
+          </tr>
+
+          <tr>
             <td><b>Выручка сегодня</b></td>
-            <td>{metrics.revenue_today || 0}</td>
+            <td>{metrics?.revenue_today || 0}</td>
           </tr>
 
           <tr>
             <td><b>Выручка за месяц</b></td>
-            <td>{metrics.revenue_month || 0}</td>
+            <td>{metrics?.revenue_month || 0}</td>
           </tr>
 
           <tr>
             <td><b>Всего платежей</b></td>
-            <td>{metrics.payments_total || 0}</td>
+            <td>{metrics?.payments_total || 0}</td>
           </tr>
 
         </tbody>
