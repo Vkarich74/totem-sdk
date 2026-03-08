@@ -3,7 +3,14 @@ import { useParams } from "react-router-dom"
 
 export default function SalonPayoutsPage() {
 
-  const { slug } = useParams()
+  const params = useParams()
+
+  let slug = params.slug
+
+  if (!slug) {
+    const m = window.location.pathname.match(/salon\/([^/]+)/)
+    if (m) slug = m[1]
+  }
 
   const [payouts, setPayouts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -28,7 +35,6 @@ export default function SalonPayoutsPage() {
           `https://api.totemv.com/internal/salons/${slug}/payouts`
         )
 
-        // endpoint может не существовать
         if (!res.ok) {
           if (!cancelled) {
             setPayouts([])
