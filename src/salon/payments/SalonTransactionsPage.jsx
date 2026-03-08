@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
 
 export default function SalonTransactionsPage() {
-  const { slug } = useParams()
 
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+
     let cancelled = false
 
     async function loadTransactions() {
+
+      const path = window.location.pathname
+
+      const parts = path.split("/")
+      const slug = parts[2]
 
       if (!slug) {
         if (!cancelled) {
@@ -49,7 +53,7 @@ export default function SalonTransactionsPage() {
 
       } catch (err) {
 
-        console.log("PAYMENTS API NOT AVAILABLE")
+        console.log("PAYMENTS API ERROR", err)
 
         if (!cancelled) {
           setTransactions([])
@@ -57,6 +61,7 @@ export default function SalonTransactionsPage() {
         }
 
       }
+
     }
 
     loadTransactions()
@@ -65,7 +70,7 @@ export default function SalonTransactionsPage() {
       cancelled = true
     }
 
-  }, [slug])
+  }, [])
 
   if (loading) {
     return (
@@ -109,7 +114,7 @@ export default function SalonTransactionsPage() {
               <td>{tx.id}</td>
               <td>{tx.created_at || "-"}</td>
               <td>{tx.amount || 0}</td>
-              <td>{tx.provider || tx.method || "-"}</td>
+              <td>{tx.provider || "-"}</td>
               <td>{tx.status || "-"}</td>
             </tr>
 
