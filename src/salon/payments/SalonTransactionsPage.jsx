@@ -26,7 +26,6 @@ export default function SalonTransactionsPage() {
           `https://api.totemv.com/internal/salons/${slug}/payments`
         )
 
-        // endpoint не существует
         if (!res.ok) {
           if (!cancelled) {
             setTransactions([])
@@ -110,7 +109,7 @@ export default function SalonTransactionsPage() {
               <td>{tx.id}</td>
               <td>{tx.created_at || "-"}</td>
               <td>{tx.amount || 0}</td>
-              <td>{tx.method || "-"}</td>
+              <td>{tx.provider || tx.method || "-"}</td>
               <td>{tx.status || "-"}</td>
             </tr>
 
