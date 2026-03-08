@@ -4,11 +4,11 @@ export default function SalonSettlementsPage() {
 
   const [loading, setLoading] = useState(true)
   const [settlements, setSettlements] = useState([])
-  const [error, setError] = useState(null)
 
   useEffect(() => {
 
     async function loadSettlements() {
+
       try {
 
         const path = window.location.pathname
@@ -23,7 +23,6 @@ export default function SalonSettlementsPage() {
         }
 
         if (!slug) {
-          setError("Salon slug not found")
           setLoading(false)
           return
         }
@@ -33,22 +32,22 @@ export default function SalonSettlementsPage() {
         )
 
         if (!response.ok) {
-          throw new Error("API_ERROR")
+
+          // endpoint не существует
+          setSettlements([])
+          setLoading(false)
+          return
         }
 
         const data = await response.json()
 
         if (data && data.ok && data.settlements) {
           setSettlements(data.settlements)
-        } else {
-          setSettlements([])
         }
 
       } catch (e) {
 
-        console.error("SETTLEMENTS_FETCH_ERROR", e)
-
-        setError("SETTLEMENTS_FETCH_FAILED")
+        console.log("SETTLEMENTS API NOT AVAILABLE")
 
       } finally {
 
@@ -70,15 +69,6 @@ export default function SalonSettlementsPage() {
     )
   }
 
-  if (error) {
-    return (
-      <div>
-        <h1>Сеты салона</h1>
-        <p>Ошибка загрузки расчетов</p>
-      </div>
-    )
-  }
-
   if (!settlements.length) {
     return (
       <div>
@@ -93,39 +83,24 @@ export default function SalonSettlementsPage() {
 
       <h1>Сеты салона</h1>
 
-      <div>
+      {settlements.map((s) => (
+        <div
+          key={s.id}
+          style={{
+            border: "1px solid #ddd",
+            padding: "12px",
+            marginBottom: "10px",
+            borderRadius: "6px"
+          }}
+        >
 
-        {settlements.map((s) => (
-          <div
-            key={s.id}
-            style={{
-              border: "1px solid #ddd",
-              padding: "12px",
-              marginBottom: "10px",
-              borderRadius: "6px"
-            }}
-          >
+          <div><strong>ID:</strong> {s.id}</div>
+          <div><strong>Период:</strong> {s.period_start} → {s.period_end}</div>
+          <div><strong>Сумма:</strong> {s.amount}</div>
+          <div><strong>Статус:</strong> {s.status}</div>
 
-            <div>
-              <strong>ID:</strong> {s.id}
-            </div>
-
-            <div>
-              <strong>Период:</strong> {s.period_start} → {s.period_end}
-            </div>
-
-            <div>
-              <strong>Сумма:</strong> {s.amount}
-            </div>
-
-            <div>
-              <strong>Статус:</strong> {s.status}
-            </div>
-
-          </div>
-        ))}
-
-      </div>
+        </div>
+      ))}
 
     </div>
   )
