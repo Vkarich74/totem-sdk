@@ -5,12 +5,20 @@ export default function SalonTransactionsPage() {
   const { slug } = useParams()
 
   const [transactions, setTransactions] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [apiChecked, setApiChecked] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
     async function loadTransactions() {
+      if (!slug) {
+        if (!cancelled) {
+          setTransactions([])
+          setApiChecked(true)
+        }
+        return
+      }
+
       try {
         const res = await fetch(
           `https://api.totemv.com/internal/salons/${slug}/payments`
@@ -19,7 +27,7 @@ export default function SalonTransactionsPage() {
         if (!res.ok) {
           if (!cancelled) {
             setTransactions([])
-            setLoading(false)
+            setApiChecked(true)
           }
           return
         }
@@ -32,39 +40,30 @@ export default function SalonTransactionsPage() {
           } else {
             setTransactions([])
           }
-          setLoading(false)
+          setApiChecked(true)
         }
       } catch (err) {
         if (!cancelled) {
           setTransactions([])
-          setLoading(false)
+          setApiChecked(true)
         }
       }
     }
 
-    if (slug) {
-      loadTransactions()
-    }
+    loadTransactions()
 
     return () => {
       cancelled = true
     }
   }, [slug])
 
-  if (loading) {
-    return (
-      <div>
-        <h1>Транзакции салона</h1>
-        <p>Загрузка транзакций...</p>
-      </div>
-    )
-  }
-
   return (
     <div>
       <h1>Транзакции салона</h1>
 
-      {transactions.length === 0 ? (
+      {!apiChecked ? (
+        <p>Транзакции пока отсутствуют</p>
+      ) : transactions.length === 0 ? (
         <p>Транзакции пока отсутствуют</p>
       ) : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
