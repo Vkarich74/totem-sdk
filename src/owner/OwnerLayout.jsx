@@ -1,118 +1,65 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom"
+import SalonSidebar from "../salon/SalonSidebar"
+import CabinetHeader from "../cabinet/CabinetHeader"
+import CabinetLayout from "../cabinet/CabinetLayout"
+
+function getSalonSlug() {
+
+  if (window.SALON_SLUG) {
+    return window.SALON_SLUG
+  }
+
+  const parts = window.location.pathname.split("/")
+
+  if (parts.length >= 3 && parts[1] === "salon") {
+    return parts[2]
+  }
+
+  return null
+}
 
 export default function OwnerLayout() {
-  const navigate = useNavigate();
 
-  const wrapper = {
-    maxWidth: 1400,
-    margin: "40px auto",
-    padding: "0 20px",
-    fontFamily: "system-ui, sans-serif",
-  };
+  const slug = getSalonSlug()
 
-  const layout = {
-    display: "flex",
-    gap: 30,
-  };
-
-  const sidebar = {
-    flex: "0 0 20%",
-    background: "#fff",
-    padding: 20,
-    borderRadius: 14,
-    boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
-  };
-
-  const content = {
-    flex: "0 0 55%",
-  };
-
-  const cms = {
-    flex: "0 0 25%",
-    background: "#fff",
-    padding: 20,
-    borderRadius: 14,
-    boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
-  };
-
-  const button = {
-    display: "block",
-    width: "100%",
-    padding: 10,
-    marginBottom: 10,
-    cursor: "pointer",
-  };
+  function logout() {
+    window.location.href = "/"
+  }
 
   return (
-    <div style={wrapper}>
-      <div style={layout}>
 
-        {/* LEFT MENU */}
-        <div style={sidebar}>
-          <button style={button} onClick={() => navigate("/owner/dashboard")}>
-            Dashboard
-          </button>
+    <CabinetLayout
 
-          <button style={button} onClick={() => navigate("/owner/calendar")}>
-            Календарь
-          </button>
+      header={
+        <CabinetHeader slug={slug} onLogout={logout} />
+      }
 
-          <button style={button} onClick={() => navigate("/owner/masters")}>
-            Мастера
-          </button>
+      sidebar={
+        <SalonSidebar slug={slug} />
+      }
 
-          <button style={button} onClick={() => navigate("/owner/clients")}>
-            Клиенты
-          </button>
+      page={
+        <Outlet/>
+      }
 
-          <button style={button} onClick={() => navigate("/owner/bookings")}>
-            Записи
-          </button>
+      odoo={
+        <div
+          style={{
+            width: "30%",
+            overflow: "auto",
+            padding: "20px",
+            minHeight: 0
+          }}
+          dangerouslySetInnerHTML={{
+            __html:
+              window.SALON_CMS_HTML ||
+              "<p>Salon CMS</p>"
+          }}
+        />
+      }
 
-          <button style={button} onClick={() => navigate("/owner/money")}>
-            Деньги
-          </button>
+    />
 
-          {/* SALON FINANCE */}
+  )
 
-          <button style={button} onClick={() => navigate("/owner/salon-money")}>
-            Финансы салона
-          </button>
-
-          <button style={button} onClick={() => navigate("/owner/transactions")}>
-            Транзакции
-          </button>
-
-          <button style={button} onClick={() => navigate("/owner/settlements")}>
-            Сеты
-          </button>
-
-          <button style={button} onClick={() => navigate("/owner/payouts")}>
-            Выплаты
-          </button>
-
-          <button style={button} onClick={() => navigate("/owner/settings")}>
-            Настройки
-          </button>
-        </div>
-
-        {/* CENTER SDK */}
-        <div style={content}>
-          <Outlet />
-        </div>
-
-        {/* RIGHT CMS */}
-        <div style={cms}>
-          <div
-            dangerouslySetInnerHTML={{
-              __html:
-                window.SALON_CMS_HTML ||
-                "<p>Информация владельцу.</p>",
-            }}
-          />
-        </div>
-
-      </div>
-    </div>
-  );
 }
