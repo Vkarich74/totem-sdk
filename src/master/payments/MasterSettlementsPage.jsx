@@ -19,6 +19,23 @@ function getMasterSlug() {
   return null;
 }
 
+function money(cents){
+
+  const n = (Number(cents) || 0) / 100
+
+  return new Intl.NumberFormat("ru-RU").format(n) + " сом"
+
+}
+
+function formatDate(iso){
+
+  const d = new Date(iso)
+
+  return d.toLocaleDateString("ru-RU") + " " +
+  d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
+
+}
+
 export default function MasterSettlementsPage() {
 
   const [periods, setPeriods] = useState([]);
@@ -99,11 +116,11 @@ export default function MasterSettlementsPage() {
 
                 <td>{p.id}</td>
 
-                <td>{p.start_date}</td>
+                <td>{formatDate(p.start_date)}</td>
 
-                <td>{p.end_date}</td>
+                <td>{formatDate(p.end_date)}</td>
 
-                <td>{p.amount}</td>
+                <td>{money(p.amount_cents || p.amount)}</td>
 
                 <td>{p.status}</td>
 
