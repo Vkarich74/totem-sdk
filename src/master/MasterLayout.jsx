@@ -123,11 +123,12 @@ export default function MasterLayout() {
           background: "#fafafa"
         }}>
 
-          <div style={{
-            fontWeight:"600",
-            cursor:"pointer"
-          }}
-          onClick={()=>window.location.href="/"}
+          <div
+            style={{
+              fontWeight:"600",
+              cursor:"pointer"
+            }}
+            onClick={()=>window.location.href="/"}
           >
             TOTEM
           </div>
