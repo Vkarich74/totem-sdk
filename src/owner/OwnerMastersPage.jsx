@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+
+import PageSection from "../cabinet/ui/PageSection";
+import StatGrid from "../cabinet/ui/StatGrid";
+import TableSection from "../cabinet/ui/TableSection";
+import EmptyState from "../cabinet/ui/EmptyState";
 
 const API_BASE = "https://api.totemv.com";
 
@@ -16,12 +21,13 @@ export default function OwnerMastersPage() {
   const slug = resolveSlug();
 
   const [masters, setMasters] = useState([]);
-  const [editing, setEditing] = useState(null);
-  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function loadMasters() {
 
     try {
+
+      setLoading(true);
 
       const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
       const data = await r.json();
@@ -41,6 +47,10 @@ export default function OwnerMastersPage() {
       console.error("LOAD_MASTERS_ERROR", e);
       setMasters([]);
 
+    } finally {
+
+      setLoading(false);
+
     }
 
   }
@@ -51,37 +61,11 @@ export default function OwnerMastersPage() {
 
   }, []);
 
-  function startEdit(master) {
-
-    setEditing(master.id);
-    setName(master.name);
-
-  }
-
-  async function save(id) {
-
-    await fetch(`${API_BASE}/internal/masters/${id}/profile`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        name: name
-      })
-    });
-
-    setEditing(null);
-    loadMasters();
-
-  }
-
   async function fire(id) {
 
     await fetch(`${API_BASE}/internal/masters/fire`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         master_id: id,
         salon_slug: slug
@@ -96,9 +80,7 @@ export default function OwnerMastersPage() {
 
     await fetch(`${API_BASE}/internal/masters/activate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         master_id: id,
         salon_slug: slug
@@ -111,17 +93,15 @@ export default function OwnerMastersPage() {
 
   async function createMaster() {
 
-    const masterName = prompt("Имя мастера");
+    const name = prompt("Имя мастера");
 
-    if (!masterName) return;
+    if (!name) return;
 
     await fetch(`${API_BASE}/internal/masters/create`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: masterName,
+        name,
         salon_slug: slug
       })
     });
@@ -130,10 +110,53 @@ export default function OwnerMastersPage() {
 
   }
 
-  return (
-    <div>
+  const stats = useMemo(() => {
 
-      <h2>Мастера салона</h2>
+    const total = masters.length;
+    const active = masters.filter(m => m.status === "active").length;
+    const pending = masters.filter(m => m.status === "pending").length;
+
+    return { total, active, pending };
+
+  }, [masters]);
+
+  const rows = masters.map(m => ({
+
+    id: m.id,
+    name: m.name,
+    status: m.status,
+
+    actions: (
+
+      <>
+        {m.status === "pending" && (
+          <button onClick={() => activate(m.id)}>Активировать</button>
+        )}
+
+        {m.status === "active" && (
+          <button onClick={() => fire(m.id)}>Уволить</button>
+        )}
+
+        {m.status === "fired" && (
+          <button onClick={() => activate(m.id)}>Вернуть</button>
+        )}
+      </>
+
+    )
+
+  }));
+
+  return (
+
+    <PageSection title="Мастера салона">
+
+      <StatGrid
+        items={[
+          { label: "Всего мастеров", value: stats.total },
+          { label: "Активные", value: stats.active },
+          { label: "Ожидают", value: stats.pending }
+        ]}
+      />
 
       <button
         style={{ marginBottom: 20 }}
@@ -142,104 +165,33 @@ export default function OwnerMastersPage() {
         Пригласить мастера
       </button>
 
-      <table border="1" cellPadding="6">
+      {loading && <div>Загрузка...</div>}
 
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Имя</th>
-            <th>Статус</th>
-            <th>Действие</th>
-          </tr>
-        </thead>
+      {!loading && masters.length === 0 && (
 
-        <tbody>
+        <EmptyState
+          title="Мастеров пока нет"
+          text="Пригласите первого мастера."
+        />
 
-          {masters.map((m) => (
+      )}
 
-            <tr key={m.id}>
+      {!loading && masters.length > 0 && (
 
-              <td>{m.id}</td>
+        <TableSection
+          columns={[
+            { key: "id", label: "ID" },
+            { key: "name", label: "Имя" },
+            { key: "status", label: "Статус" },
+            { key: "actions", label: "Действия" }
+          ]}
+          rows={rows}
+        />
 
-              <td>
+      )}
 
-                {editing === m.id ? (
+    </PageSection>
 
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-
-                ) : (
-
-                  m.name
-
-                )}
-
-              </td>
-
-              <td>{m.status}</td>
-
-              <td>
-
-                {editing === m.id ? (
-
-                  <button onClick={() => save(m.id)}>
-                    Сохранить
-                  </button>
-
-                ) : (
-
-                  <>
-
-                    <button
-                      style={{ marginRight: 10 }}
-                      onClick={() => startEdit(m)}
-                    >
-                      Редактировать
-                    </button>
-
-                    {m.status === "pending" && (
-                      <button
-                        style={{ marginRight: 10 }}
-                        onClick={() => activate(m.id)}
-                      >
-                        Активировать
-                      </button>
-                    )}
-
-                    {m.status === "active" && (
-                      <button
-                        style={{ marginRight: 10 }}
-                        onClick={() => fire(m.id)}
-                      >
-                        Уволить
-                      </button>
-                    )}
-
-                    {m.status === "fired" && (
-                      <button
-                        style={{ marginRight: 10 }}
-                        onClick={() => activate(m.id)}
-                      >
-                        Вернуть
-                      </button>
-                    )}
-
-                  </>
-
-                )}
-
-              </td>
-
-            </tr>
-
-          ))}
-
-        </tbody>
-
-      </table>
-
-    </div>
   );
+
 }
