@@ -22,28 +22,25 @@ export default function CabinetLayout({
       <div style={{
         display: "flex",
         flex: 1,
-        minHeight: 0,
-        minWidth: 0,
-        overflow: "hidden"
+        minHeight: 0
       }}>
 
         <div style={{
+          width: "70%",
+          borderRight: "1px solid #eee",
           display: "flex",
-          flex: 1,
-          minHeight: 0,
-          minWidth: 0,
-          overflow: "hidden"
+          minHeight: 0
         }}>
 
           {sidebar}
 
           <div style={{
             flex: 1,
-            minWidth: 0,
-            minHeight: 0,
+            overflowX: "auto",
             overflowY: "auto",
-            overflowX: "hidden",
-            padding: "20px"
+            padding: "20px",
+            minHeight: 0,
+            minWidth: 0
           }}>
 
             {page}
@@ -52,22 +49,15 @@ export default function CabinetLayout({
 
         </div>
 
-        {odoo && (
+        <div style={{
+          width: "30%",
+          minHeight: 0,
+          overflowY: "auto"
+        }}>
 
-          <div style={{
-            width: "320px",
-            flexShrink: 0,
-            minHeight: 0,
-            overflowY: "auto",
-            overflowX: "hidden",
-            borderLeft: "1px solid #eee"
-          }}>
+          {odoo}
 
-            {odoo}
-
-          </div>
-
-        )}
+        </div>
 
       </div>
 
