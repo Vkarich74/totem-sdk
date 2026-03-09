@@ -55,20 +55,14 @@ export default function SalonBookings() {
       <h2>Записи салона</h2>
 
       <div style={styles.filters}>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
+        <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Все статусы</option>
           <option value="confirmed">Подтверждено</option>
           <option value="completed">Завершено</option>
           <option value="cancelled">Отменено</option>
         </select>
 
-        <select
-          value={masterId}
-          onChange={(e) => setMasterId(e.target.value)}
-        >
+        <select value={masterId} onChange={(e) => setMasterId(e.target.value)}>
           <option value="">Все мастера</option>
           {masters.map((m) => (
             <option key={m.id} value={m.id}>
@@ -148,9 +142,7 @@ function BookingCard({ booking }) {
 
 function formatKGS(amount) {
   const value = Number(amount) || 0;
-  return (
-    new Intl.NumberFormat("ru-RU").format(value) + " сом"
-  );
+  return new Intl.NumberFormat("ru-RU").format(value) + " сом";
 }
 
 const styles = {
