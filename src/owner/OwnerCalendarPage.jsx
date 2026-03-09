@@ -150,9 +150,11 @@ return(
 
 <h2 style={{marginBottom:"20px"}}>Календарь дня</h2>
 
+{/* SCROLL CONTAINER */}
+
 <div style={{
-overflowX:"auto",
-width:"100%"
+overflow:"auto",
+maxHeight:"calc(100vh - 220px)"
 }}>
 
 <div style={{
@@ -169,7 +171,7 @@ background:"#f9fafb",
 position:"sticky",
 top:0,
 left:0,
-zIndex:4
+zIndex:5
 }}></div>
 
 {masters.map(m=>(
@@ -183,7 +185,7 @@ background:"#f9fafb",
 fontWeight:"600",
 position:"sticky",
 top:0,
-zIndex:3
+zIndex:4
 }}
 >
 {m.name}
@@ -204,7 +206,7 @@ background:"#fafafa",
 fontSize:"13px",
 position:"sticky",
 left:0,
-zIndex:2
+zIndex:3
 }}
 >
 {time}
