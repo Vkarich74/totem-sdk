@@ -7,13 +7,13 @@ import SalonBookingsPage from "./room/SalonBookingsPage";
 import OwnerLayout from "./owner_backup/OwnerLayout";
 
 /* SALON PAGES */
-import OwnerDashboard from "./salon/pages/OwnerDashboardPage";
-import OwnerMastersPage from "./salon/pages/OwnerMastersPage";
-import OwnerClientsPage from "./salon/pages/OwnerClientsPage";
-import OwnerBookingsPage from "./salon/pages/OwnerBookingsPage";
-import OwnerCalendarPage from "./salon/pages/OwnerCalendarPage";
-import OwnerMoneyPage from "./salon/pages/OwnerMoneyPage";
-import OwnerSettingsPage from "./salon/pages/OwnerSettingsPage";
+import DashboardPage from "./salon/pages/DashboardPage";
+import MastersPage from "./salon/pages/MastersPage";
+import ClientsPage from "./salon/pages/ClientsPage";
+import BookingsPage from "./salon/pages/BookingsPage";
+import CalendarPage from "./salon/pages/CalendarPage";
+import MoneyPage from "./salon/pages/MoneyPage";
+import SettingsPage from "./salon/pages/SettingsPage";
 
 /* SALON FINANCE */
 import SalonMoneyPage from "./salon/payments/SalonMoneyPage";
@@ -55,18 +55,18 @@ export default function App() {
         {/* SALON CABINET */}
         <Route path="salon" element={<OwnerLayout slug={slug} />}>
 
-          <Route index element={<OwnerDashboard slug={slug} />} />
-          <Route path="dashboard" element={<OwnerDashboard slug={slug} />} />
+          <Route index element={<DashboardPage slug={slug} />} />
+          <Route path="dashboard" element={<DashboardPage slug={slug} />} />
 
-          <Route path="calendar" element={<OwnerCalendarPage slug={slug} />} />
+          <Route path="calendar" element={<CalendarPage slug={slug} />} />
 
-          <Route path="masters" element={<OwnerMastersPage slug={slug} />} />
+          <Route path="masters" element={<MastersPage slug={slug} />} />
 
-          <Route path="clients" element={<OwnerClientsPage slug={slug} />} />
+          <Route path="clients" element={<ClientsPage slug={slug} />} />
 
-          <Route path="bookings" element={<OwnerBookingsPage slug={slug} />} />
+          <Route path="bookings" element={<BookingsPage slug={slug} />} />
 
-          <Route path="money" element={<OwnerMoneyPage />} />
+          <Route path="money" element={<MoneyPage />} />
 
           {/* SALON FINANCE */}
           <Route path="salon-money" element={<SalonMoneyPage />} />
@@ -74,7 +74,7 @@ export default function App() {
           <Route path="settlements" element={<SalonSettlementsPage />} />
           <Route path="payouts" element={<SalonPayoutsPage />} />
 
-          <Route path="settings" element={<OwnerSettingsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
 
         </Route>
 
