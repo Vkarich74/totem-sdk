@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import * as api from "../api/internal";
-import { getSalonSlug } from "../utils/salon";
-import { generateTimeSlots } from "../calendar/calendarEngine";
+import * as api from "../../api/internal";
+import { getSalonSlug } from "../../utils/salon";
+import { generateTimeSlots } from "../../calendar/calendarEngine";
 
 function resolveSlug(){
 const util = getSalonSlug();
@@ -150,8 +150,6 @@ return(
 
 <h2 style={{marginBottom:"20px"}}>Календарь дня</h2>
 
-{/* SCROLL CONTAINER */}
-
 <div style={{
 overflow:"auto",
 maxHeight:"calc(100vh - 220px)"
@@ -163,8 +161,6 @@ gridTemplateColumns:`120px repeat(${masters.length},1fr)`,
 border:"1px solid #e5e7eb",
 minWidth:"900px"
 }}>
-
-{/* HEADER */}
 
 <div style={{
 background:"#f9fafb",
