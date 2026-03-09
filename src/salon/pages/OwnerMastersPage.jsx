@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 
-import PageSection from "../../cabinet/ui/PageSection";
-import StatGrid from "../../cabinet/ui/StatGrid";
-import TableSection from "../../cabinet/ui/TableSection";
-import EmptyState from "../../cabinet/ui/EmptyState";
+import PageSection from "../../cabinet/PageSection";
+import StatGrid from "../../cabinet/StatGrid";
+import TableSection from "../../cabinet/TableSection";
+import EmptyState from "../../cabinet/EmptyState";
 
 const API_BASE = "https://api.totemv.com";
 
