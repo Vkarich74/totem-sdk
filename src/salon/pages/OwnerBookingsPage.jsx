@@ -1,336 +1,197 @@
-import { useEffect, useState } from "react";
-import * as api from "../../api/internal";
-import { getSalonSlug } from "../../utils/salon";
+import { useEffect, useState, useMemo } from "react";
 
-function resolveSlug(){
-const util = getSalonSlug();
-if(util) return util;
+import PageSection from "../../cabinet/PageSection";
+import StatGrid from "../../cabinet/StatGrid";
+import TableSection from "../../cabinet/TableSection";
+import EmptyState from "../../cabinet/EmptyState";
 
-const parts = window.location.pathname.split("/");
-return parts[2] || "totem-demo-salon";
-}
+const API_BASE = "https://api.totemv.com";
 
-export default function OwnerBookingsPage(){
+function resolveSlug() {
 
-const [bookings,setBookings] = useState([]);
-const [masters,setMasters] = useState([]);
+  if (window.SALON_SLUG) return window.SALON_SLUG;
 
-const [filter,setFilter] = useState("today");
-const [search,setSearch] = useState("");
-
-const [loadingAction,setLoadingAction] = useState(null);
-
-const salonSlug = resolveSlug();
-
-async function load(){
-
-try{
-
-const res = await api.getBookings(salonSlug);
-
-if(res.ok){
-
-const sorted = (res.bookings || []).sort((a,b)=>{
-if(!a.start_at) return 1;
-if(!b.start_at) return -1;
-return new Date(a.start_at) - new Date(b.start_at);
-});
-
-setBookings(sorted);
+  const parts = window.location.pathname.split("/");
+  return parts[2] || "totem-demo-salon";
 
 }
 
-const resMasters = await api.getMasters(salonSlug);
+export default function OwnerMastersPage() {
 
-if(resMasters.ok){
-setMasters(resMasters.masters || []);
-}
+  const slug = resolveSlug();
 
-}catch(e){
+  const [masters, setMasters] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-console.error("LOAD BOOKINGS ERROR",e);
+  async function loadMasters() {
 
-}
+    try {
 
-}
+      setLoading(true);
 
-useEffect(()=>{
+      const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
+      const data = await r.json();
 
-load();
+      if (Array.isArray(data)) {
+        setMasters(data);
+      }
+      else if (data && Array.isArray(data.masters)) {
+        setMasters(data.masters);
+      }
+      else {
+        setMasters([]);
+      }
 
-const interval = setInterval(()=>{
+    } catch (e) {
 
-if(!loadingAction){
-load();
-}
+      console.error("LOAD_MASTERS_ERROR", e);
+      setMasters([]);
 
-},10000);
+    } finally {
 
-return ()=>{
-clearInterval(interval);
-};
+      setLoading(false);
 
-},[loadingAction]);
+    }
 
-function formatDate(d){
+  }
 
-if(!d) return "—";
+  useEffect(() => {
 
-const date = new Date(d);
+    loadMasters();
 
-return date.toLocaleString("ru-RU",{
-day:"2-digit",
-month:"2-digit",
-hour:"2-digit",
-minute:"2-digit"
-});
+  }, []);
 
-}
+  async function fire(id) {
 
-function statusColor(status){
+    await fetch(`${API_BASE}/internal/masters/fire`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        master_id: id,
+        salon_slug: slug
+      })
+    });
 
-if(status==="reserved") return "#f59e0b";
-if(status==="confirmed") return "#10b981";
-if(status==="completed") return "#6b7280";
-if(status==="cancelled") return "#ef4444";
+    loadMasters();
 
-return "#9ca3af";
+  }
 
-}
+  async function activate(id) {
 
-function statusText(status){
+    await fetch(`${API_BASE}/internal/masters/activate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        master_id: id,
+        salon_slug: slug
+      })
+    });
 
-if(status==="reserved") return "Ожидает подтверждения";
-if(status==="confirmed") return "Подтверждена";
-if(status==="completed") return "Завершена";
-if(status==="cancelled") return "Отменена";
+    loadMasters();
 
-return status;
+  }
 
-}
+  async function createMaster() {
 
-async function action(id,type){
+    const name = prompt("Имя мастера");
 
-if(loadingAction) return;
+    if (!name) return;
 
-try{
+    await fetch(`${API_BASE}/internal/masters/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        salon_slug: slug
+      })
+    });
 
-setLoadingAction(id);
+    loadMasters();
 
-const res = await api.bookingAction(id,type);
+  }
 
-if(!res.ok){
-alert("Ошибка изменения статуса");
-setLoadingAction(null);
-return;
-}
+  const stats = useMemo(() => {
 
-await load();
+    const total = masters.length;
+    const active = masters.filter(m => m.status === "active").length;
+    const pending = masters.filter(m => m.status === "pending").length;
 
-}catch(e){
+    return { total, active, pending };
 
-console.error("BOOKING ACTION ERROR",e);
-alert("Ошибка сервера");
+  }, [masters]);
 
-}
+  const rows = masters.map(m => ({
 
-setLoadingAction(null);
+    id: m.id,
+    name: m.name,
+    status: m.status,
 
-}
+    actions: (
 
-function applyFilters(list){
+      <>
+        {m.status === "pending" && (
+          <button onClick={() => activate(m.id)}>Активировать</button>
+        )}
 
-let result = [...list];
+        {m.status === "active" && (
+          <button onClick={() => fire(m.id)}>Уволить</button>
+        )}
 
-const now = new Date();
+        {m.status === "fired" && (
+          <button onClick={() => activate(m.id)}>Вернуть</button>
+        )}
+      </>
 
-if(filter==="today"){
+    )
 
-const start = new Date();
-start.setHours(0,0,0,0);
+  }));
 
-const end = new Date();
-end.setHours(23,59,59,999);
+  return (
 
-result = result.filter(b=>{
-if(!b.start_at) return false;
-const d = new Date(b.start_at);
-return d>=start && d<=end;
-});
+    <PageSection title="Мастера салона">
 
-}
+      <StatGrid
+        items={[
+          { label: "Всего мастеров", value: stats.total },
+          { label: "Активные", value: stats.active },
+          { label: "Ожидают", value: stats.pending }
+        ]}
+      />
 
-if(filter==="week"){
+      <button
+        style={{ marginBottom: 20 }}
+        onClick={createMaster}
+      >
+        Пригласить мастера
+      </button>
 
-const start = new Date();
-start.setDate(now.getDate() - now.getDay() + 1);
-start.setHours(0,0,0,0);
+      {loading && <div>Загрузка...</div>}
 
-const end = new Date(start);
-end.setDate(start.getDate()+7);
+      {!loading && masters.length === 0 && (
 
-result = result.filter(b=>{
-if(!b.start_at) return false;
-const d = new Date(b.start_at);
-return d>=start && d<end;
-});
+        <EmptyState
+          title="Мастеров пока нет"
+          text="Пригласите первого мастера."
+        />
 
-}
+      )}
 
-if(search){
+      {!loading && masters.length > 0 && (
 
-const q = search.toLowerCase();
+        <TableSection
+          columns={[
+            { key: "id", label: "ID" },
+            { key: "name", label: "Имя" },
+            { key: "status", label: "Статус" },
+            { key: "actions", label: "Действия" }
+          ]}
+          rows={rows}
+        />
 
-result = result.filter(b=>
-(b.client_name || "").toLowerCase().includes(q) ||
-(b.phone || "").toLowerCase().includes(q)
-);
+      )}
 
-}
+    </PageSection>
 
-return result;
-
-}
-
-const filteredBookings = applyFilters(bookings);
-
-return(
-
-<div
-style={{
-display:"grid",
-gridTemplateColumns:"1fr 1fr",
-height:"100%"
-}}
->
-
-<div
-style={{
-borderRight:"1px solid #e5e7eb",
-padding:"20px",
-overflowY:"auto"
-}}
->
-
-<h3>Записи</h3>
-
-<div style={{marginBottom:"12px"}}>
-
-<button onClick={()=>setFilter("today")} style={{marginRight:"6px"}}>
-Сегодня
-</button>
-
-<button onClick={()=>setFilter("week")} style={{marginRight:"6px"}}>
-Неделя
-</button>
-
-<button onClick={()=>setFilter("all")}>
-Все
-</button>
-
-</div>
-
-<div style={{marginBottom:"12px"}}>
-
-<input
-placeholder="Поиск: имя или телефон"
-value={search}
-onChange={e=>setSearch(e.target.value)}
-style={{
-width:"100%",
-padding:"6px",
-border:"1px solid #e5e7eb",
-borderRadius:"6px"
-}}
-/>
-
-</div>
-
-{filteredBookings.map(b=>(
-
-<div
-key={b.id}
-style={{
-border:"1px solid #e5e7eb",
-borderLeft:`6px solid ${statusColor(b.status)}`,
-borderRadius:"8px",
-padding:"12px",
-marginBottom:"10px",
-background:"#fff"
-}}
->
-
-<div style={{display:"flex",justifyContent:"space-between"}}>
-
-<div>
-<b>BR-{String(b.id).padStart(5,"0")}</b>
-</div>
-
-<div style={{color:statusColor(b.status),fontWeight:"600"}}>
-{statusText(b.status)}
-</div>
-
-</div>
-
-<div>Клиент: {b.client_name || "—"}</div>
-<div>Телефон: {b.phone || "—"}</div>
-<div>Мастер: {b.master_name || "—"}</div>
-<div>{formatDate(b.start_at)}</div>
-
-<div style={{marginTop:"8px"}}>
-
-{b.status==="reserved" && (
-
-<>
-<button
-disabled={loadingAction===b.id}
-onClick={()=>action(b.id,"confirm")}
->
-Подтвердить
-</button>
-
-<button
-disabled={loadingAction===b.id}
-onClick={()=>action(b.id,"cancel")}
-style={{marginLeft:"6px"}}
->
-Отменить
-</button>
-</>
-
-)}
-
-{b.status==="confirmed" && (
-
-<>
-<button
-disabled={loadingAction===b.id}
-onClick={()=>action(b.id,"complete")}
->
-Завершить
-</button>
-
-<button
-disabled={loadingAction===b.id}
-onClick={()=>action(b.id,"cancel")}
-style={{marginLeft:"6px"}}
->
-Отменить
-</button>
-</>
-
-)}
-
-</div>
-
-</div>
-
-))}
-
-</div>
-
-</div>
-
-);
+  );
 
 }

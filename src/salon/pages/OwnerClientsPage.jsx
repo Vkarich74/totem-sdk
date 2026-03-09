@@ -81,11 +81,8 @@ marginTop:"20px"
 <tr key={c.id} style={{borderBottom:"1px solid #eee"}}>
 
 <td>{c.id}</td>
-
 <td>{c.name}</td>
-
 <td>{c.phone}</td>
-
 <td>{c.visits}</td>
 
 <td>
