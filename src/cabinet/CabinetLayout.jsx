@@ -1,10 +1,9 @@
-import { Outlet } from "react-router-dom"
-
 export default function CabinetLayout({
 
   header,
   sidebar,
-  odooPanel
+  page,
+  odoo
 
 }) {
 
@@ -21,13 +20,15 @@ export default function CabinetLayout({
 
       <div style={{
         display: "flex",
-        flex: 1
+        flex: 1,
+        minHeight: 0
       }}>
 
         <div style={{
           width: "70%",
           borderRight: "1px solid #eee",
-          display: "flex"
+          display: "flex",
+          minHeight: 0
         }}>
 
           {sidebar}
@@ -35,16 +36,18 @@ export default function CabinetLayout({
           <div style={{
             flex: 1,
             overflow: "auto",
-            padding: "20px"
+            padding: "20px",
+            minHeight: 0,
+            minWidth: 0
           }}>
 
-            <Outlet/>
+            {page}
 
           </div>
 
         </div>
 
-        {odooPanel}
+        {odoo}
 
       </div>
 

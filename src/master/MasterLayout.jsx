@@ -3,6 +3,7 @@ import { useEffect } from "react"
 import { MasterProvider } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
 import CabinetHeader from "../cabinet/CabinetHeader"
+import CabinetLayout from "../cabinet/CabinetLayout"
 
 const ODOO_BASE = "https://www.totemv.com/odoo"
 
@@ -98,56 +99,21 @@ export default function MasterLayout() {
 
     <MasterProvider>
 
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        width: "100%"
-      }}>
+      <CabinetLayout
 
-        {/* HEADER COMPONENT */}
+        header={
+          <CabinetHeader slug={slug} onLogout={logout} />
+        }
 
-        <CabinetHeader slug={slug} onLogout={logout} />
+        sidebar={
+          <MasterSidebar slug={slug} />
+        }
 
-        {/* MAIN */}
+        page={
+          <Outlet/>
+        }
 
-        <div style={{
-          display: "flex",
-          flex: 1,
-          minHeight: 0
-        }}>
-
-          {/* CABINET */}
-
-          <div style={{
-            width: "70%",
-            borderRight: "1px solid #eee",
-            display: "flex",
-            minHeight: 0
-          }}>
-
-            {/* SIDEBAR */}
-
-            <MasterSidebar slug={slug} />
-
-            {/* PAGE */}
-
-            <div style={{
-              flex: 1,
-              overflow: "auto",
-              padding: "20px",
-              minHeight: 0,
-              minWidth: 0
-            }}>
-
-              <Outlet/>
-
-            </div>
-
-          </div>
-
-          {/* ODOO */}
-
+        odoo={
           <div
             id="odoo-content"
             style={{
@@ -157,10 +123,9 @@ export default function MasterLayout() {
               minHeight: 0
             }}
           />
+        }
 
-        </div>
-
-      </div>
+      />
 
     </MasterProvider>
 
