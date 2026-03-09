@@ -4,15 +4,17 @@ import PublicSalonPage from "./public/PublicSalonPage";
 import BookingPage from "./room/BookingPage";
 import SalonBookingsPage from "./room/SalonBookingsPage";
 
-import OwnerLayout from "./owner/OwnerLayout";
-import OwnerDashboard from "./owner/OwnerDashboard";
-import OwnerMastersPage from "./owner/OwnerMastersPage";
-import OwnerClientsPage from "./owner/OwnerClientsPage";
-import OwnerBookingsPage from "./owner/OwnerBookingsPage";
-import OwnerCalendarPage from "./owner/OwnerCalendarPage";
-import OwnerClientProfilePage from "./owner/OwnerClientProfilePage";
-import OwnerMoneyPage from "./owner/OwnerMoneyPage";
-import OwnerSettingsPage from "./owner/OwnerSettingsPage";
+import OwnerLayout from "./owner_backup/OwnerLayout";
+
+/* SALON PAGES (migrated from owner) */
+import OwnerDashboard from "./salon/pages/OwnerDashboard";
+import OwnerMastersPage from "./salon/pages/OwnerMastersPage";
+import OwnerClientsPage from "./salon/pages/OwnerClientsPage";
+import OwnerBookingsPage from "./salon/pages/OwnerBookingsPage";
+import OwnerCalendarPage from "./salon/pages/OwnerCalendarPage";
+import OwnerClientProfilePage from "./salon/pages/OwnerClientProfilePage";
+import OwnerMoneyPage from "./salon/pages/OwnerMoneyPage";
+import OwnerSettingsPage from "./salon/pages/OwnerSettingsPage";
 
 /* SALON FINANCE */
 import SalonMoneyPage from "./salon/payments/SalonMoneyPage";
