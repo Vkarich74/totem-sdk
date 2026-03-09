@@ -74,6 +74,8 @@ async function loadOdooPanel() {
 
 export default function MasterLayout() {
 
+  const slug = getMasterSlug()
+
   useEffect(() => {
 
     loadOdooPanel()
@@ -99,43 +101,63 @@ export default function MasterLayout() {
         <div style={{
           width: "70%",
           borderRight: "1px solid #eee",
-          overflow: "auto",
-          padding: "20px"
+          display: "flex",
+          flexDirection: "column"
         }}>
 
-          <h2>Панель мастера</h2>
+          {/* HEADER */}
 
-          <nav style={{marginBottom:"20px"}}>
+          <div style={{
+            padding: "12px 20px",
+            borderBottom: "1px solid #eee",
+            background: "#fafafa"
+          }}>
+            <strong>Мастер:</strong> {slug}
+          </div>
 
-            <NavLink to="/master/dashboard">Главная</NavLink>
-            <br/>
+          {/* CONTENT */}
 
-            <NavLink to="/master/bookings">Записи</NavLink>
-            <br/>
+          <div style={{
+            flex: 1,
+            overflow: "auto",
+            padding: "20px"
+          }}>
 
-            <NavLink to="/master/clients">Клиенты</NavLink>
-            <br/>
+            <h2>Панель мастера</h2>
 
-            <NavLink to="/master/schedule">Расписание</NavLink>
-            <br/>
+            <nav style={{marginBottom:"20px"}}>
 
-            <NavLink to="/master/money">Доход</NavLink>
-            <br/>
+              <NavLink to="/master/dashboard">Главная</NavLink>
+              <br/>
 
-            <NavLink to="/master/transactions">Транзакции</NavLink>
-            <br/>
+              <NavLink to="/master/bookings">Записи</NavLink>
+              <br/>
 
-            <NavLink to="/master/settlements">Сеты</NavLink>
-            <br/>
+              <NavLink to="/master/clients">Клиенты</NavLink>
+              <br/>
 
-            <NavLink to="/master/payouts">Выплаты</NavLink>
-            <br/>
+              <NavLink to="/master/schedule">Расписание</NavLink>
+              <br/>
 
-            <NavLink to="/master/settings">Настройки</NavLink>
+              <NavLink to="/master/money">Доход</NavLink>
+              <br/>
 
-          </nav>
+              <NavLink to="/master/transactions">Транзакции</NavLink>
+              <br/>
 
-          <Outlet/>
+              <NavLink to="/master/settlements">Сеты</NavLink>
+              <br/>
+
+              <NavLink to="/master/payouts">Выплаты</NavLink>
+              <br/>
+
+              <NavLink to="/master/settings">Настройки</NavLink>
+
+            </nav>
+
+            <Outlet/>
+
+          </div>
 
         </div>
 
