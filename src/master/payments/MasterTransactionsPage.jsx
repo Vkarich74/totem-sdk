@@ -19,6 +19,18 @@ function getMasterSlug() {
   return null;
 }
 
+function money(n){
+  return new Intl.NumberFormat("ru-RU").format(n || 0) + " сом"
+}
+
+function formatDate(iso){
+
+  const d = new Date(iso)
+
+  return d.toLocaleDateString("ru-RU") + " " +
+  d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
+}
+
 export default function MasterTransactionsPage() {
 
   const [transactions, setTransactions] = useState([]);
@@ -39,16 +51,16 @@ export default function MasterTransactionsPage() {
         }
 
         const res = await fetch(
-          `https://api.totemv.com/internal/masters/${slug}/payments`
+          `https://api.totemv.com/masters/${slug}/ledger`
         );
 
         if (!res.ok) {
-          throw new Error("PAYMENTS_FETCH_FAILED");
+          throw new Error("LEDGER_FETCH_FAILED");
         }
 
         const data = await res.json();
 
-        setTransactions(data.transactions || []);
+        setTransactions(data.entries || []);
 
       } catch (e) {
 
@@ -86,7 +98,7 @@ export default function MasterTransactionsPage() {
               <th align="left">Дата</th>
               <th align="left">Тип</th>
               <th align="left">Сумма</th>
-              <th align="left">Статус</th>
+              <th align="left">Баланс</th>
             </tr>
           </thead>
 
@@ -96,13 +108,13 @@ export default function MasterTransactionsPage() {
 
               <tr key={t.id}>
 
-                <td>{t.created_at}</td>
+                <td>{formatDate(t.created_at)}</td>
 
                 <td>{t.type}</td>
 
-                <td>{t.amount}</td>
+                <td>{money(t.amount)}</td>
 
-                <td>{t.status}</td>
+                <td>{money(t.balance_after)}</td>
 
               </tr>
 
