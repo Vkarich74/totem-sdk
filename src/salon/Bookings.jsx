@@ -65,6 +65,7 @@ export default function SalonBookings() {
 
   const rows = bookings.map((b) => {
     const start = new Date(b.datetime_start);
+
     return {
       id: b.id,
       client: b.client_name,
@@ -101,6 +102,7 @@ export default function SalonBookings() {
 
         <select value={masterId} onChange={(e) => setMasterId(e.target.value)}>
           <option value="">Все мастера</option>
+
           {masters.map((m) => (
             <option key={m.id} value={m.id}>
               {m.name}
@@ -109,10 +111,14 @@ export default function SalonBookings() {
         </select>
       </div>
 
-      {loading && <p>Загрузка...</p>}
+      {loading && (
+        <div style={styles.loading}>
+          Загрузка записей...
+        </div>
+      )}
 
       {error && (
-        <div style={{ color: "red" }}>
+        <div style={styles.error}>
           {error}
         </div>
       )}
@@ -163,5 +169,14 @@ const styles = {
     display: "flex",
     gap: "10px",
     marginBottom: "16px",
+  },
+
+  loading: {
+    marginTop: "10px",
+  },
+
+  error: {
+    marginTop: "10px",
+    color: "red",
   },
 };
