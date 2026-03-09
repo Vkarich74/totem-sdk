@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom"
 import { useEffect } from "react"
 import { MasterProvider } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
+import CabinetHeader from "../cabinet/CabinetHeader"
 
 const ODOO_BASE = "https://www.totemv.com/odoo"
 
@@ -104,57 +105,9 @@ export default function MasterLayout() {
         width: "100%"
       }}>
 
-        {/* HEADER */}
+        {/* HEADER COMPONENT */}
 
-        <div style={{
-          height: "50px",
-          borderBottom: "1px solid #eee",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 20px",
-          background: "#fafafa",
-          flexShrink: 0
-        }}>
-
-          <div
-            style={{
-              fontWeight:"600",
-              cursor:"pointer"
-            }}
-            onClick={()=>window.location.href="/"}
-          >
-            TOTEM
-          </div>
-
-          <div style={{
-            display:"flex",
-            alignItems:"center",
-            gap:"20px"
-          }}>
-
-            <div style={{
-              fontSize:"13px",
-              color:"#555"
-            }}>
-              {slug}
-            </div>
-
-            <button
-              onClick={logout}
-              style={{
-                border:"1px solid #ddd",
-                background:"#fff",
-                padding:"5px 10px",
-                cursor:"pointer"
-              }}
-            >
-              Выйти
-            </button>
-
-          </div>
-
-        </div>
+        <CabinetHeader slug={slug} onLogout={logout} />
 
         {/* MAIN */}
 
@@ -173,7 +126,7 @@ export default function MasterLayout() {
             minHeight: 0
           }}>
 
-            {/* SIDEBAR COMPONENT */}
+            {/* SIDEBAR */}
 
             <MasterSidebar slug={slug} />
 
