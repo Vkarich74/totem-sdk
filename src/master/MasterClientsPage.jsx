@@ -1,53 +1,80 @@
 import { useMaster } from "./MasterContext"
+import PageSection from "../cabinet/PageSection"
+import TableSection from "../cabinet/TableSection"
+import EmptyState from "../cabinet/EmptyState"
 
 export default function MasterClientsPage() {
 
 const { clients, loading } = useMaster()
 
 if (loading) {
-  return <div>Загрузка...</div>
+  return (
+    <div style={{padding:"20px"}}>
+      Загрузка...
+    </div>
+  )
 }
 
 if (!clients || clients.length === 0) {
   return (
-    <div>
-      <h3>Клиенты</h3>
-      <div>Клиенты пока отсутствуют</div>
+    <div style={{padding:"20px"}}>
+      <PageSection title="Клиенты">
+        <EmptyState
+          title="Клиенты пока отсутствуют"
+          message="После первых записей клиенты появятся здесь"
+        />
+      </PageSection>
     </div>
   )
 }
 
 return (
 
-<div>
+<div style={{padding:"20px"}}>
 
-<h3>Клиенты</h3>
+<PageSection title="Клиенты">
+
+<TableSection>
+
+<table>
+
+<thead>
+<tr>
+<th>Имя</th>
+<th>Телефон</th>
+<th>Визитов</th>
+</tr>
+</thead>
+
+<tbody>
 
 {clients.map(c => (
 
-<div key={c.id} style={{
-border:"1px solid #ddd",
-padding:"12px",
-borderRadius:"10px",
-marginBottom:"10px",
-background:"#fff"
-}}>
+<tr key={c.id}>
 
-<div style={{fontWeight:700}}>
+<td>
 {c.name || "Без имени"}
-</div>
+</td>
 
-<div>
-Телефон: {c.phone || "—"}
-</div>
+<td>
+{c.phone || "—"}
+</td>
 
-<div>
-Визитов: {c.visits ?? 0}
-</div>
+<td>
+{c.visits ?? 0}
+</td>
 
-</div>
+</tr>
 
 ))}
+
+</tbody>
+
+</table>
+
+</TableSection>
+
+</PageSection>
 
 </div>
 
