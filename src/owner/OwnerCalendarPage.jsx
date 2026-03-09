@@ -150,13 +150,26 @@ return(
 
 <h2 style={{marginBottom:"20px"}}>Календарь дня</h2>
 
+{/* SCROLL CONTAINER */}
+
+<div style={{
+overflowX:"auto",
+width:"100%"
+}}>
+
 <div style={{
 display:"grid",
 gridTemplateColumns:`120px repeat(${masters.length},1fr)`,
-border:"1px solid #e5e7eb"
+border:"1px solid #e5e7eb",
+minWidth:"900px"
 }}>
 
-<div style={{background:"#f9fafb"}}></div>
+<div style={{
+background:"#f9fafb",
+position:"sticky",
+left:0,
+zIndex:3
+}}></div>
 
 {masters.map(m=>(
 
@@ -184,7 +197,10 @@ style={{
 padding:"8px",
 borderTop:"1px solid #e5e7eb",
 background:"#fafafa",
-fontSize:"13px"
+fontSize:"13px",
+position:"sticky",
+left:0,
+zIndex:2
 }}
 >
 {time}
@@ -251,6 +267,8 @@ navigate(`/owner/client/${b.client_id}`);
 </>
 
 ))}
+
+</div>
 
 </div>
 
