@@ -12,9 +12,8 @@ export default function CabinetLayout({
     <div style={{
       display: "flex",
       flexDirection: "column",
-      height: "100vh",
-      width: "100%",
-      overflow: "hidden"
+      minHeight: "100vh",
+      width: "100%"
     }}>
 
       {header}
@@ -22,7 +21,7 @@ export default function CabinetLayout({
       <div style={{
         display: "flex",
         flex: 1,
-        minHeight: 0
+        alignItems: "stretch"
       }}>
 
         {/* SIDEBAR */}
@@ -31,8 +30,7 @@ export default function CabinetLayout({
           width: "260px",
           borderRight: "1px solid #eee",
           display: "flex",
-          flexDirection: "column",
-          height: "100%"
+          flexDirection: "column"
         }}>
           {sidebar}
         </div>
@@ -41,10 +39,6 @@ export default function CabinetLayout({
 
         <div style={{
           flex: 1,
-          minWidth: 0,
-          minHeight: 0,
-          overflowX: "auto",
-          overflowY: "auto",
           padding: "20px"
         }}>
           {page}
@@ -54,9 +48,7 @@ export default function CabinetLayout({
 
         <div style={{
           width: "320px",
-          borderLeft: "1px solid #eee",
-          overflowY: "auto",
-          height: "100%"
+          borderLeft: "1px solid #eee"
         }}>
           {odoo}
         </div>
