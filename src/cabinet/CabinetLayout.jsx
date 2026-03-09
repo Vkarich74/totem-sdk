@@ -13,7 +13,8 @@ export default function CabinetLayout({
       display: "flex",
       flexDirection: "column",
       height: "100vh",
-      width: "100%"
+      width: "100%",
+      overflow: "hidden"
     }}>
 
       {header}
@@ -30,25 +31,23 @@ export default function CabinetLayout({
           width: "260px",
           borderRight: "1px solid #eee",
           display: "flex",
-          flexDirection: "column"
+          flexDirection: "column",
+          minHeight: 0
         }}>
-
           {sidebar}
-
         </div>
 
         {/* MAIN CONTENT */}
 
         <div style={{
           flex: 1,
+          minWidth: 0,
+          minHeight: 0,
           overflowX: "auto",
           overflowY: "auto",
-          padding: "20px",
-          minWidth: 0
+          padding: "20px"
         }}>
-
           {page}
-
         </div>
 
         {/* ODOO PANEL */}
@@ -56,11 +55,10 @@ export default function CabinetLayout({
         <div style={{
           width: "320px",
           borderLeft: "1px solid #eee",
+          minHeight: 0,
           overflowY: "auto"
         }}>
-
           {odoo}
-
         </div>
 
       </div>
