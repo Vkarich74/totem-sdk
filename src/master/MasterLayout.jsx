@@ -96,6 +96,10 @@ export default function MasterLayout() {
     fontWeight: isActive ? "600" : "400"
   })
 
+  function logout() {
+    window.location.href = "/"
+  }
+
   return (
 
     <MasterProvider>
@@ -119,12 +123,40 @@ export default function MasterLayout() {
           background: "#fafafa"
         }}>
 
-          <div>
-            <strong>Кабинет мастера</strong>
+          <div style={{
+            fontWeight:"600",
+            cursor:"pointer"
+          }}
+          onClick={()=>window.location.href="/"}
+          >
+            TOTEM
           </div>
 
-          <div style={{fontSize:"13px", color:"#555"}}>
-            {slug}
+          <div style={{
+            display:"flex",
+            alignItems:"center",
+            gap:"20px"
+          }}>
+
+            <div style={{
+              fontSize:"13px",
+              color:"#555"
+            }}>
+              {slug}
+            </div>
+
+            <button
+              onClick={logout}
+              style={{
+                border:"1px solid #ddd",
+                background:"#fff",
+                padding:"5px 10px",
+                cursor:"pointer"
+              }}
+            >
+              Выйти
+            </button>
+
           </div>
 
         </div>
@@ -167,7 +199,7 @@ export default function MasterLayout() {
 
               </div>
 
-              {/* MAIN MENU */}
+              {/* WORK */}
 
               <div style={{
                 fontSize:"12px",
@@ -197,6 +229,8 @@ export default function MasterLayout() {
 
               </nav>
 
+              {/* FINANCE */}
+
               <div style={{
                 fontSize:"12px",
                 color:"#888",
@@ -225,6 +259,8 @@ export default function MasterLayout() {
                 </NavLink>
 
               </nav>
+
+              {/* SYSTEM */}
 
               <div style={{
                 fontSize:"12px",
