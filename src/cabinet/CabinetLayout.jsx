@@ -23,48 +23,44 @@ export default function CabinetLayout({
         display: "flex",
         flex: 1,
         minHeight: 0,
+        minWidth: 0,
         overflow: "hidden"
       }}>
 
-        {/* SIDEBAR */}
-
         <div style={{
-          width: "220px",
-          flexShrink: 0,
+          display: "flex",
+          flex: 1,
           minHeight: 0,
+          minWidth: 0,
           overflow: "hidden"
         }}>
 
           {sidebar}
 
-        </div>
+          <div style={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "20px"
+          }}>
 
-        {/* CONTENT */}
+            {page}
 
-        <div style={{
-          flex: 1,
-          minWidth: 0,
-          minHeight: 0,
-          overflowY: "auto",
-          overflowX: "hidden",
-          padding: "20px"
-        }}>
-
-          {page}
+          </div>
 
         </div>
-
-        {/* CMS */}
 
         {odoo && (
 
           <div style={{
             width: "320px",
             flexShrink: 0,
-            borderLeft: "1px solid #eee",
             minHeight: 0,
             overflowY: "auto",
-            overflowX: "hidden"
+            overflowX: "hidden",
+            borderLeft: "1px solid #eee"
           }}>
 
             {odoo}
