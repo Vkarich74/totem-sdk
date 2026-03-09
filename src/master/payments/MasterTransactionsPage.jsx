@@ -19,8 +19,9 @@ function getMasterSlug() {
   return null;
 }
 
-function money(n){
-  return new Intl.NumberFormat("ru-RU").format(n || 0) + " сом"
+function money(cents){
+  const n = (Number(cents) || 0) / 100
+  return new Intl.NumberFormat("ru-RU").format(n) + " сом"
 }
 
 function formatDate(iso){
@@ -58,7 +59,7 @@ export default function MasterTransactionsPage() {
 
         const data = await res.json();
 
-        setTransactions(data.entries || []);
+        setTransactions(data.ledger || []);
 
       } catch (e) {
 
@@ -96,7 +97,7 @@ export default function MasterTransactionsPage() {
               <th align="left">Дата</th>
               <th align="left">Тип</th>
               <th align="left">Сумма</th>
-              <th align="left">Баланс</th>
+              <th align="left">Направление</th>
             </tr>
           </thead>
 
@@ -108,11 +109,11 @@ export default function MasterTransactionsPage() {
 
                 <td>{formatDate(t.created_at)}</td>
 
-                <td>{t.type}</td>
+                <td>{t.reference_type}</td>
 
-                <td>{money(t.amount)}</td>
+                <td>{money(t.amount_cents)}</td>
 
-                <td>{money(t.balance_after)}</td>
+                <td>{t.direction}</td>
 
               </tr>
 
