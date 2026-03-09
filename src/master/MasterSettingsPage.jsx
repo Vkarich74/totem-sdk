@@ -73,7 +73,7 @@ marginBottom:"8px"
 <input
 value={service.name}
 onChange={e=>setService({...service,name:e.target.value})}
-placeholder="╨¥╨░╨╖╨▓╨░╨╜╨╕╨╡ ╤â╤ü╨╗╤â╨│╨╕"
+placeholder="Название услуги"
 style={{
 flex:2,
 padding:"8px",
@@ -86,7 +86,7 @@ borderRadius:"6px"
 type="number"
 value={service.price}
 onChange={e=>setService({...service,price:e.target.value})}
-placeholder="╨ª╨╡╨╜╨░"
+placeholder="Цена"
 style={{
 flex:1,
 padding:"8px",
@@ -99,7 +99,7 @@ borderRadius:"6px"
 type="number"
 value={service.duration}
 onChange={e=>setService({...service,duration:e.target.value})}
-placeholder="╨£╨╕╨╜"
+placeholder="Мин"
 style={{
 flex:1,
 padding:"8px",
@@ -127,8 +127,8 @@ const [email,setEmail]=useState("")
 const [whatsapp,setWhatsapp]=useState("")
 
 const [services,setServices]=useState([
-{name:"╨í╤é╤Ç╨╕╨╢╨║╨░",price:800,duration:30},
-{name:"╨£╨░╨╜╨╕╨║╤Ä╤Ç",price:1200,duration:60}
+{name:"Стрижка",price:800,duration:30},
+{name:"Маникюр",price:1200,duration:60}
 ])
 
 const [hours,setHours]=useState({
@@ -171,37 +171,33 @@ minBefore,
 advance
 })
 
-alert("╨¥╨░╤ü╤é╤Ç╨╛╨╣╨║╨╕ ╤ü╨╛╤à╤Ç╨░╨╜╨╡╨╜╤ï (╨╗╨╛╨║╨░╨╗╤î╨╜╨╛)")
+alert("Настройки сохранены (локально)")
 
 }
 
 return(
 
-<PageSection title="╨¥╨░╤ü╤é╤Ç╨╛╨╣╨║╨╕ ╨╝╨░╤ü╤é╨╡╤Ç╨░">
+<PageSection title="Настройки мастера">
 
-<h3>╨¥╨░╤ü╤é╤Ç╨╛╨╣╨║╨╕ ╨╝╨░╤ü╤é╨╡╤Ç╨░</h3>
+<h3>Настройки мастера</h3>
 
-<Block title="╨Ü╨╛╨╜╤é╨░╨║╤é╤ï">
+<Block title="Контакты">
 
-<Field label="╨ó╨╡╨╗╨╡╤ä╨╛╨╜" value={phone} onChange={setPhone}/>
-
+<Field label="Телефон" value={phone} onChange={setPhone}/>
 <Field label="Email" value={email} onChange={setEmail}/>
-
 <Field label="WhatsApp" value={whatsapp} onChange={setWhatsapp}/>
 
 </Block>
 
-<Block title="╨ƒ╤Ç╨╛╤ä╨╕╨╗╤î">
+<Block title="Профиль">
 
-<Field label="╨ÿ╨╝╤Å" value={name} onChange={setName}/>
-
-<Field label="╨ñ╨╛╤é╨╛ (URL)" value={photo} onChange={setPhoto}/>
-
-<Field label="╨₧╨┐╨╕╤ü╨░╨╜╨╕╨╡" value={bio} onChange={setBio}/>
+<Field label="Имя" value={name} onChange={setName}/>
+<Field label="Фото (URL)" value={photo} onChange={setPhoto}/>
+<Field label="Описание" value={bio} onChange={setBio}/>
 
 </Block>
 
-<Block title="╨ú╤ü╨╗╤â╨│╨╕">
+<Block title="Услуги">
 
 {services.map((s,i)=>(
 
@@ -213,27 +209,27 @@ setService={(v)=>updateService(i,v)}
 
 ))}
 
-<button onClick={addService}>╨ö╨╛╨▒╨░╨▓╨╕╤é╤î ╤â╤ü╨╗╤â╨│╤â</button>
+<button onClick={addService}>Добавить услугу</button>
 
 </Block>
 
-<Block title="╨á╨░╨▒╨╛╤ç╨╕╨╡ ╤ç╨░╤ü╤ï">
+<Block title="Рабочие часы">
 
-<Field label="╨ƒ╨╛╨╜╨╡╨┤╨╡╨╗╤î╨╜╨╕╨║" value={hours.mon} onChange={v=>setHours({...hours,mon:v})}/>
-<Field label="╨Æ╤é╨╛╤Ç╨╜╨╕╨║" value={hours.tue} onChange={v=>setHours({...hours,tue:v})}/>
-<Field label="╨í╤Ç╨╡╨┤╨░" value={hours.wed} onChange={v=>setHours({...hours,wed:v})}/>
-<Field label="╨º╨╡╤é╨▓╨╡╤Ç╨│" value={hours.thu} onChange={v=>setHours({...hours,thu:v})}/>
-<Field label="╨ƒ╤Å╤é╨╜╨╕╤å╨░" value={hours.fri} onChange={v=>setHours({...hours,fri:v})}/>
-<Field label="╨í╤â╨▒╨▒╨╛╤é╨░" value={hours.sat} onChange={v=>setHours({...hours,sat:v})}/>
-<Field label="╨Æ╨╛╤ü╨║╤Ç╨╡╤ü╨╡╨╜╤î╨╡" value={hours.sun} onChange={v=>setHours({...hours,sun:v})}/>
+<Field label="Понедельник" value={hours.mon} onChange={v=>setHours({...hours,mon:v})}/>
+<Field label="Вторник" value={hours.tue} onChange={v=>setHours({...hours,tue:v})}/>
+<Field label="Среда" value={hours.wed} onChange={v=>setHours({...hours,wed:v})}/>
+<Field label="Четверг" value={hours.thu} onChange={v=>setHours({...hours,thu:v})}/>
+<Field label="Пятница" value={hours.fri} onChange={v=>setHours({...hours,fri:v})}/>
+<Field label="Суббота" value={hours.sat} onChange={v=>setHours({...hours,sat:v})}/>
+<Field label="Воскресенье" value={hours.sun} onChange={v=>setHours({...hours,sun:v})}/>
 
 </Block>
 
-<Block title="╨æ╤â╨║╨╕╨╜╨│ ╨┐╤Ç╨░╨▓╨╕╨╗╨░">
+<Block title="Бронирование">
 
-<Field label="╨¿╨░╨│ ╤ü╨╗╨╛╤é╨░ (╨╝╨╕╨╜)" value={slot} onChange={setSlot} type="number"/>
-<Field label="╨£╨╕╨╜╨╕╨╝╤â╨╝ ╨┤╨╛ ╨╖╨░╨┐╨╕╤ü╨╕ (╨╝╨╕╨╜)" value={minBefore} onChange={setMinBefore} type="number"/>
-<Field label="╨£╨░╨║╤ü╨╕╨╝╤â╨╝ ╨▓╨┐╨╡╤Ç╤æ╨┤ (╨┤╨╜╨╡╨╣)" value={advance} onChange={setAdvance} type="number"/>
+<Field label="Шаг слота (мин)" value={slot} onChange={setSlot} type="number"/>
+<Field label="Минимум до записи (мин)" value={minBefore} onChange={setMinBefore} type="number"/>
+<Field label="Максимум вперед (дней)" value={advance} onChange={setAdvance} type="number"/>
 
 </Block>
 
@@ -249,7 +245,7 @@ cursor:"pointer"
 }}
 >
 
-╨í╨╛╤à╤Ç╨░╨╜╨╕╤é╤î
+Сохранить
 
 </button>
 
