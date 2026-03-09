@@ -1,7 +1,12 @@
 // src/salon/Bookings.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchSalonBookings } from "../api/salonBookings";
 import { fetchSalonMasters } from "../api/salonMasters";
+
+import PageSection from "../cabinet/ui/PageSection";
+import StatGrid from "../cabinet/ui/StatGrid";
+import TableSection from "../cabinet/ui/TableSection";
+import EmptyState from "../cabinet/ui/EmptyState";
 
 const SALON_SLUG = "totem-demo-salon";
 
@@ -25,7 +30,7 @@ export default function SalonBookings() {
   async function loadMasters() {
     try {
       const data = await fetchSalonMasters(SALON_SLUG);
-      setMasters(data);
+      setMasters(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("MASTERS_LOAD_ERROR", err);
     }
@@ -41,7 +46,7 @@ export default function SalonBookings() {
         master_id: masterId,
       });
 
-      setBookings(data);
+      setBookings(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("BOOKINGS_LOAD_ERROR", err);
       setError("Ошибка загрузки записей");
@@ -50,9 +55,41 @@ export default function SalonBookings() {
     }
   }
 
+  const stats = useMemo(() => {
+    const total = bookings.length;
+    const confirmed = bookings.filter((b) => b.status === "confirmed").length;
+    const completed = bookings.filter((b) => b.status === "completed").length;
+
+    return { total, confirmed, completed };
+  }, [bookings]);
+
+  const rows = bookings.map((b) => {
+    const start = new Date(b.datetime_start);
+    return {
+      id: b.id,
+      client: b.client_name,
+      service: b.service_name,
+      master: b.master_name,
+      date: start.toLocaleDateString("ru-RU"),
+      time: start.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      price: formatKGS(b.price),
+      status: mapStatus(b.status),
+    };
+  });
+
   return (
-    <div>
-      <h2>Записи салона</h2>
+    <PageSection title="Записи салона">
+
+      <StatGrid
+        items={[
+          { label: "Всего записей", value: stats.total },
+          { label: "Подтверждено", value: stats.confirmed },
+          { label: "Завершено", value: stats.completed },
+        ]}
+      />
 
       <div style={styles.filters}>
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -73,71 +110,47 @@ export default function SalonBookings() {
       </div>
 
       {loading && <p>Загрузка...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {!loading &&
-        !error &&
-        bookings.map((b) => (
-          <BookingCard key={b.id} booking={b} />
-        ))}
+      {error && (
+        <div style={{ color: "red" }}>
+          {error}
+        </div>
+      )}
 
       {!loading && !error && bookings.length === 0 && (
-        <p>Записей нет.</p>
+        <EmptyState
+          title="Записей пока нет"
+          text="Когда клиенты начнут записываться, записи появятся здесь."
+        />
       )}
-    </div>
+
+      {!loading && !error && bookings.length > 0 && (
+        <TableSection
+          columns={[
+            { key: "client", label: "Клиент" },
+            { key: "service", label: "Услуга" },
+            { key: "master", label: "Мастер" },
+            { key: "date", label: "Дата" },
+            { key: "time", label: "Время" },
+            { key: "price", label: "Цена" },
+            { key: "status", label: "Статус" },
+          ]}
+          rows={rows}
+        />
+      )}
+
+    </PageSection>
   );
 }
 
-function BookingCard({ booking }) {
-  const start = new Date(booking.datetime_start);
-  const end = new Date(booking.datetime_end);
-
-  const statusMap = {
-    confirmed: { text: "Подтверждено", color: "#2563eb" },
-    completed: { text: "Завершено", color: "#16a34a" },
-    cancelled: { text: "Отменено", color: "#dc2626" },
+function mapStatus(status) {
+  const map = {
+    confirmed: "Подтверждено",
+    completed: "Завершено",
+    cancelled: "Отменено",
   };
 
-  const status = statusMap[booking.status];
-
-  return (
-    <div style={styles.card}>
-      <div style={styles.row}>
-        <strong>{booking.client_name}</strong>
-        <span
-          style={{
-            ...styles.status,
-            backgroundColor: status?.color || "#999",
-          }}
-        >
-          {status?.text || booking.status}
-        </span>
-      </div>
-
-      <div>{booking.service_name}</div>
-
-      <div style={styles.sub}>
-        Мастер: {booking.master_name}
-      </div>
-
-      <div style={styles.sub}>
-        {start.toLocaleDateString("ru-RU")}{" "}
-        {start.toLocaleTimeString("ru-RU", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}{" "}
-        —{" "}
-        {end.toLocaleTimeString("ru-RU", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </div>
-
-      <div style={styles.price}>
-        {formatKGS(booking.price)}
-      </div>
-    </div>
-  );
+  return map[status] || status;
 }
 
 function formatKGS(amount) {
@@ -150,30 +163,5 @@ const styles = {
     display: "flex",
     gap: "10px",
     marginBottom: "16px",
-  },
-  card: {
-    border: "1px solid #eee",
-    padding: "12px",
-    borderRadius: "8px",
-    marginBottom: "12px",
-  },
-  row: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "6px",
-  },
-  status: {
-    color: "white",
-    padding: "4px 8px",
-    borderRadius: "12px",
-    fontSize: "12px",
-  },
-  sub: {
-    fontSize: "13px",
-    color: "#555",
-  },
-  price: {
-    marginTop: "6px",
-    fontWeight: "bold",
   },
 };
