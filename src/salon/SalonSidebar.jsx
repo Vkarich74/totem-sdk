@@ -18,8 +18,10 @@ export default function SalonSidebar({ slug }) {
       borderRight: "1px solid #eee",
       padding: "20px",
       background: "#fafafa",
-      overflowY: "auto",
-      minHeight: 0
+      position: "sticky",
+      top: 0,
+      height: "100%",
+      alignSelf: "flex-start"
     }}>
 
       <div style={{marginBottom:"25px"}}>
@@ -36,56 +38,36 @@ export default function SalonSidebar({ slug }) {
 
       </div>
 
-      {/* РАБОТА */}
-
       <div style={{fontSize:"12px",color:"#888",marginBottom:"10px"}}>
-        РАБОТА
+        Основное
       </div>
 
       <nav>
-
         <NavLink style={menuStyle} to="/owner/dashboard">Dashboard</NavLink>
-
         <NavLink style={menuStyle} to="/owner/calendar">Календарь</NavLink>
-
         <NavLink style={menuStyle} to="/owner/masters">Мастера</NavLink>
-
         <NavLink style={menuStyle} to="/owner/clients">Клиенты</NavLink>
-
         <NavLink style={menuStyle} to="/owner/bookings">Записи</NavLink>
-
       </nav>
 
-      {/* ФИНАНСЫ */}
-
       <div style={{fontSize:"12px",color:"#888",marginTop:"25px",marginBottom:"10px"}}>
-        ФИНАНСЫ
+        Финансы
       </div>
 
       <nav>
-
         <NavLink style={menuStyle} to="/owner/money">Деньги</NavLink>
-
         <NavLink style={menuStyle} to="/owner/salon-money">Финансы салона</NavLink>
-
         <NavLink style={menuStyle} to="/owner/transactions">Транзакции</NavLink>
-
         <NavLink style={menuStyle} to="/owner/settlements">Сеты</NavLink>
-
         <NavLink style={menuStyle} to="/owner/payouts">Выплаты</NavLink>
-
       </nav>
 
-      {/* СИСТЕМА */}
-
       <div style={{fontSize:"12px",color:"#888",marginTop:"25px",marginBottom:"10px"}}>
-        СИСТЕМА
+        Аккаунт
       </div>
 
       <nav>
-
         <NavLink style={menuStyle} to="/owner/settings">Настройки</NavLink>
-
       </nav>
 
     </div>
