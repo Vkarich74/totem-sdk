@@ -18,13 +18,15 @@ export default function MasterSidebar({ slug }) {
       borderRight: "1px solid #eee",
       padding: "20px",
       background: "#fafafa",
-      overflowY: "auto",
-      minHeight: 0
+      position: "sticky",
+      top: 0,
+      height: "100%",
+      alignSelf: "flex-start"
     }}>
 
       <div style={{marginBottom:"25px"}}>
 
-        <strong>Мастер</strong>
+        <strong>Кабинет</strong>
 
         <div style={{
           fontSize:"12px",
@@ -37,7 +39,7 @@ export default function MasterSidebar({ slug }) {
       </div>
 
       <div style={{fontSize:"12px",color:"#888",marginBottom:"10px"}}>
-        РАБОТА
+        Основное
       </div>
 
       <nav>
@@ -50,7 +52,7 @@ export default function MasterSidebar({ slug }) {
       </nav>
 
       <div style={{fontSize:"12px",color:"#888",marginTop:"25px",marginBottom:"10px"}}>
-        ФИНАНСЫ
+        Финансы
       </div>
 
       <nav>
@@ -63,7 +65,7 @@ export default function MasterSidebar({ slug }) {
       </nav>
 
       <div style={{fontSize:"12px",color:"#888",marginTop:"25px",marginBottom:"10px"}}>
-        СИСТЕМА
+        Аккаунт
       </div>
 
       <nav>
