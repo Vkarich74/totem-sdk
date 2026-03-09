@@ -24,9 +24,7 @@ function money(n){
 }
 
 function formatDate(iso){
-
   const d = new Date(iso)
-
   return d.toLocaleDateString("ru-RU") + " " +
   d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
 }
@@ -51,7 +49,7 @@ export default function MasterTransactionsPage() {
         }
 
         const res = await fetch(
-          `https://api.totemv.com/masters/${slug}/ledger`
+          `https://api.totemv.com/internal/masters/${slug}/ledger`
         );
 
         if (!res.ok) {
