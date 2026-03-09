@@ -6,13 +6,12 @@ import SalonBookingsPage from "./room/SalonBookingsPage";
 
 import OwnerLayout from "./owner_backup/OwnerLayout";
 
-/* SALON PAGES (migrated from owner) */
-import OwnerDashboard from "./salon/pages/OwnerDashboard";
+/* SALON PAGES */
+import OwnerDashboard from "./salon/pages/OwnerDashboardPage";
 import OwnerMastersPage from "./salon/pages/OwnerMastersPage";
 import OwnerClientsPage from "./salon/pages/OwnerClientsPage";
 import OwnerBookingsPage from "./salon/pages/OwnerBookingsPage";
 import OwnerCalendarPage from "./salon/pages/OwnerCalendarPage";
-import OwnerClientProfilePage from "./salon/pages/OwnerClientProfilePage";
 import OwnerMoneyPage from "./salon/pages/OwnerMoneyPage";
 import OwnerSettingsPage from "./salon/pages/OwnerSettingsPage";
 
@@ -57,7 +56,6 @@ export default function App() {
         <Route path="salon" element={<OwnerLayout slug={slug} />}>
 
           <Route index element={<OwnerDashboard slug={slug} />} />
-
           <Route path="dashboard" element={<OwnerDashboard slug={slug} />} />
 
           <Route path="calendar" element={<OwnerCalendarPage slug={slug} />} />
@@ -67,8 +65,6 @@ export default function App() {
           <Route path="clients" element={<OwnerClientsPage slug={slug} />} />
 
           <Route path="bookings" element={<OwnerBookingsPage slug={slug} />} />
-
-          <Route path="client/:clientId" element={<OwnerClientProfilePage />} />
 
           <Route path="money" element={<OwnerMoneyPage />} />
 
@@ -86,7 +82,6 @@ export default function App() {
         <Route path="master" element={<MasterLayout />}>
 
           <Route index element={<MasterDashboard />} />
-
           <Route path="dashboard" element={<MasterDashboard />} />
 
           <Route path="bookings" element={<MasterBookingsPage />} />
