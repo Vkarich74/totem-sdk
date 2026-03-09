@@ -35,56 +35,114 @@ export default function SalonMasters() {
 
   const stats = useMemo(() => {
     const total = masters.length;
-    const active = masters.filter((m) => m.active).length;
+    const active = masters.filter((master) => master.active).length;
     const inactive = total - active;
 
     return { total, active, inactive };
   }, [masters]);
 
-  const rows = masters.map((m) => ({
-    id: m.id,
-    name: m.name || "Без имени",
-    slug: m.slug || "—",
-    status: m.active ? "Активен" : "Не активен",
-  }));
-
   return (
     <PageSection title="Мастера салона">
-
       <StatGrid
         items={[
           { label: "Всего мастеров", value: stats.total },
           { label: "Активные", value: stats.active },
-          { label: "Не активные", value: stats.inactive },
+          { label: "Неактивные", value: stats.inactive },
         ]}
       />
 
-      {loading && <p>Загрузка...</p>}
-
-      {error && (
-        <div style={{ color: "red" }}>
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && masters.length === 0 && (
+      {loading ? (
+        <TableSection title="Список мастеров">
+          <div style={styles.message}>Загрузка...</div>
+        </TableSection>
+      ) : error ? (
+        <TableSection title="Список мастеров">
+          <div style={styles.error}>{error}</div>
+        </TableSection>
+      ) : masters.length === 0 ? (
         <EmptyState
           title="Мастеров пока нет"
-          text="Когда мастера появятся в системе, они будут отображаться здесь."
+          text="Когда мастера появятся в системе, они будут показаны здесь."
         />
+      ) : (
+        <TableSection title="Список мастеров">
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Имя мастера</th>
+                  <th style={styles.th}>Slug</th>
+                  <th style={styles.th}>Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+                {masters.map((master) => (
+                  <tr key={master.id}>
+                    <td style={styles.td}>{master.name || "Без имени"}</td>
+                    <td style={styles.td}>{master.slug || "—"}</td>
+                    <td style={styles.td}>
+                      <span
+                        style={{
+                          ...styles.badge,
+                          backgroundColor: master.active ? "#16a34a" : "#dc2626",
+                        }}
+                      >
+                        {master.active ? "Активен" : "Не активен"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </TableSection>
       )}
-
-      {!loading && !error && masters.length > 0 && (
-        <TableSection
-          columns={[
-            { key: "name", label: "Имя мастера" },
-            { key: "slug", label: "Slug" },
-            { key: "status", label: "Статус" },
-          ]}
-          rows={rows}
-        />
-      )}
-
     </PageSection>
   );
 }
+
+const styles = {
+  tableWrap: {
+    width: "100%",
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  th: {
+    textAlign: "left",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "#6b7280",
+    padding: "12px 14px",
+    borderBottom: "1px solid #e5e7eb",
+    whiteSpace: "nowrap",
+  },
+  td: {
+    padding: "14px",
+    borderBottom: "1px solid #f0f0f0",
+    fontSize: "14px",
+    color: "#111827",
+    verticalAlign: "middle",
+  },
+  badge: {
+    display: "inline-block",
+    color: "#ffffff",
+    padding: "4px 10px",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: "600",
+    whiteSpace: "nowrap",
+  },
+  message: {
+    fontSize: "14px",
+    color: "#374151",
+    padding: "4px 0",
+  },
+  error: {
+    fontSize: "14px",
+    color: "#dc2626",
+    padding: "4px 0",
+  },
+};
