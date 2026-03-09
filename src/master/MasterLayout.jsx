@@ -120,7 +120,8 @@ export default function MasterLayout() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 20px",
-          background: "#fafafa"
+          background: "#fafafa",
+          flexShrink: 0
         }}>
 
           <div
@@ -166,7 +167,8 @@ export default function MasterLayout() {
 
         <div style={{
           display: "flex",
-          flex: 1
+          flex: 1,
+          minHeight: 0
         }}>
 
           {/* CABINET */}
@@ -174,18 +176,20 @@ export default function MasterLayout() {
           <div style={{
             width: "70%",
             borderRight: "1px solid #eee",
-            display: "flex"
+            display: "flex",
+            minHeight: 0
           }}>
 
             {/* SIDEBAR */}
 
             <div style={{
               width: "220px",
+              flexShrink: 0,
               borderRight: "1px solid #eee",
               padding: "20px",
               background: "#fafafa",
-              height: "100%",
-              overflowY: "auto"
+              overflowY: "auto",
+              minHeight: 0
             }}>
 
               <div style={{marginBottom:"25px"}}>
@@ -245,7 +249,9 @@ export default function MasterLayout() {
             <div style={{
               flex: 1,
               overflow: "auto",
-              padding: "20px"
+              padding: "20px",
+              minHeight: 0,
+              minWidth: 0
             }}>
 
               <Outlet/>
@@ -261,7 +267,8 @@ export default function MasterLayout() {
             style={{
               width: "30%",
               overflow: "auto",
-              padding: "20px"
+              padding: "20px",
+              minHeight: 0
             }}
           />
 
