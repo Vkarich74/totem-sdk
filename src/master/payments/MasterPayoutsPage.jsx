@@ -19,6 +19,23 @@ function getMasterSlug() {
   return null;
 }
 
+function money(cents){
+
+  const n = (Number(cents) || 0) / 100
+
+  return new Intl.NumberFormat("ru-RU").format(n) + " сом"
+
+}
+
+function formatDate(iso){
+
+  const d = new Date(iso)
+
+  return d.toLocaleDateString("ru-RU") + " " +
+  d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
+
+}
+
 export default function MasterPayoutsPage() {
 
   const [payouts, setPayouts] = useState([]);
@@ -96,13 +113,13 @@ export default function MasterPayoutsPage() {
 
               <tr key={p.id}>
 
-                <td>{p.created_at}</td>
+                <td>{formatDate(p.created_at)}</td>
 
-                <td>{p.amount}</td>
+                <td>{money(p.amount_cents || p.amount)}</td>
 
                 <td>{p.status}</td>
 
-                <td>{p.method}</td>
+                <td>{p.method || "—"}</td>
 
               </tr>
 
