@@ -94,90 +94,120 @@ export default function MasterLayout() {
 
       <div style={{
         display: "flex",
+        flexDirection: "column",
         height: "100vh",
         width: "100%"
       }}>
 
-        {/* MASTER CABINET */}
+        {/* CABINET HEADER */}
 
         <div style={{
-          width: "70%",
-          borderRight: "1px solid #eee",
-          display: "flex"
+          height: "50px",
+          borderBottom: "1px solid #eee",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 20px",
+          background: "#fafafa"
         }}>
 
-          {/* SIDEBAR */}
-
-          <div style={{
-            width: "220px",
-            borderRight: "1px solid #eee",
-            padding: "20px",
-            background: "#fafafa"
-          }}>
-
-            <strong>Мастер</strong>
-            <div style={{fontSize:"12px", color:"#777", marginBottom:"20px"}}>
-              {slug}
-            </div>
-
-            <nav>
-
-              <NavLink to="/master/dashboard">Главная</NavLink>
-              <br/><br/>
-
-              <NavLink to="/master/bookings">Записи</NavLink>
-              <br/><br/>
-
-              <NavLink to="/master/clients">Клиенты</NavLink>
-              <br/><br/>
-
-              <NavLink to="/master/schedule">Расписание</NavLink>
-              <br/><br/>
-
-              <NavLink to="/master/money">Доход</NavLink>
-              <br/><br/>
-
-              <NavLink to="/master/transactions">Транзакции</NavLink>
-              <br/><br/>
-
-              <NavLink to="/master/settlements">Сеты</NavLink>
-              <br/><br/>
-
-              <NavLink to="/master/payouts">Выплаты</NavLink>
-              <br/><br/>
-
-              <NavLink to="/master/settings">Настройки</NavLink>
-
-            </nav>
-
+          <div>
+            <strong>Кабинет мастера</strong>
           </div>
 
-          {/* PAGE AREA */}
-
-          <div style={{
-            flex: 1,
-            overflow: "auto",
-            padding: "20px"
-          }}>
-
-            <h2>Панель мастера</h2>
-
-            <Outlet/>
-
+          <div style={{fontSize:"13px", color:"#555"}}>
+            {slug}
           </div>
 
         </div>
 
-        {/* ODOO PANEL */}
+        {/* MAIN AREA */}
 
-        <div
-          id="odoo-content"
-          style={{
-            width: "30%",
-            overflow: "auto",
-            padding: "20px"
-          }}
-        />
+        <div style={{
+          display: "flex",
+          flex: 1
+        }}>
+
+          {/* MASTER CABINET */}
+
+          <div style={{
+            width: "70%",
+            borderRight: "1px solid #eee",
+            display: "flex"
+          }}>
+
+            {/* SIDEBAR */}
+
+            <div style={{
+              width: "220px",
+              borderRight: "1px solid #eee",
+              padding: "20px",
+              background: "#fafafa"
+            }}>
+
+              <strong>Мастер</strong>
+              <div style={{fontSize:"12px", color:"#777", marginBottom:"20px"}}>
+                {slug}
+              </div>
+
+              <nav>
+
+                <NavLink to="/master/dashboard">Главная</NavLink>
+                <br/><br/>
+
+                <NavLink to="/master/bookings">Записи</NavLink>
+                <br/><br/>
+
+                <NavLink to="/master/clients">Клиенты</NavLink>
+                <br/><br/>
+
+                <NavLink to="/master/schedule">Расписание</NavLink>
+                <br/><br/>
+
+                <NavLink to="/master/money">Доход</NavLink>
+                <br/><br/>
+
+                <NavLink to="/master/transactions">Транзакции</NavLink>
+                <br/><br/>
+
+                <NavLink to="/master/settlements">Сеты</NavLink>
+                <br/><br/>
+
+                <NavLink to="/master/payouts">Выплаты</NavLink>
+                <br/><br/>
+
+                <NavLink to="/master/settings">Настройки</NavLink>
+
+              </nav>
+
+            </div>
+
+            {/* PAGE AREA */}
+
+            <div style={{
+              flex: 1,
+              overflow: "auto",
+              padding: "20px"
+            }}>
+
+              <Outlet/>
+
+            </div>
+
+          </div>
+
+          {/* ODOO PANEL */}
+
+          <div
+            id="odoo-content"
+            style={{
+              width: "30%",
+              overflow: "auto",
+              padding: "20px"
+            }}
+          />
+
+        </div>
 
       </div>
 
