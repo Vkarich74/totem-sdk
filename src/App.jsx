@@ -51,7 +51,15 @@ export default function App() {
         <Route path="booking" element={<BookingPage slug={slug} />} />
         <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
 
-        {/* OWNER */}
+        {/* OWNER (SALON CABINET ENGINE) */}
+        {/* IMPORTANT:
+           OwnerLayout already acts as Salon Cabinet Layout.
+           URL structure:
+           /salon/{slug}#/owner/...
+           Therefore we do NOT replace it with SalonLayout
+           to avoid breaking slug + hash navigation.
+        */}
+
         <Route path="owner" element={<OwnerLayout slug={slug} />}>
 
           <Route index element={<OwnerDashboard slug={slug} />} />
