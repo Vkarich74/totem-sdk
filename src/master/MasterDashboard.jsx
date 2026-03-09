@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import PageSection from "../cabinet/PageSection";
 import StatCard from "../cabinet/StatCard";
+import StatGrid from "../cabinet/StatGrid";
 
 export default function MasterDashboard() {
 
@@ -72,11 +73,7 @@ return(
 
 <PageSection>
 
-<div style={{
-display:"grid",
-gridTemplateColumns:"repeat(3,1fr)",
-gap:"16px"
-}}>
+<StatGrid>
 
 <StatCard
 title="Записей сегодня"
@@ -103,7 +100,7 @@ title="Доход за месяц"
 value={metrics.revenue_month || 0}
 />
 
-</div>
+</StatGrid>
 
 </PageSection>
 
