@@ -1,22 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
+
+import PageSection from "../../cabinet/PageSection"
+import TableSection from "../../cabinet/TableSection"
+import EmptyState from "../../cabinet/EmptyState"
 
 function getMasterSlug() {
 
   if (window.MASTER_SLUG) {
-    return window.MASTER_SLUG;
+    return window.MASTER_SLUG
   }
 
-  const parts = window.location.pathname.split("/");
+  const parts = window.location.pathname.split("/")
 
   if (parts.length >= 3 && parts[1] === "salon") {
-    return parts[2];
+    return parts[2]
   }
 
   if (parts.length >= 3 && parts[1] === "master") {
-    return parts[2];
+    return parts[2]
   }
 
-  return null;
+  return null
 }
 
 function money(cents){
@@ -36,101 +40,106 @@ function formatDate(iso){
 
 }
 
-export default function MasterPayoutsPage() {
+export default function MasterPayoutsPage(){
 
-  const [payouts, setPayouts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [payouts,setPayouts] = useState([])
+  const [loading,setLoading] = useState(true)
 
-  useEffect(() => {
+  useEffect(()=>{
 
-    async function loadPayouts() {
+    async function loadPayouts(){
 
-      try {
+      try{
 
-        const slug = getMasterSlug();
+        const slug = getMasterSlug()
 
-        if (!slug) {
-          console.error("MASTER_SLUG_NOT_FOUND");
-          setLoading(false);
-          return;
+        if(!slug){
+          console.error("MASTER_SLUG_NOT_FOUND")
+          setLoading(false)
+          return
         }
 
         const res = await fetch(
           `https://api.totemv.com/internal/masters/${slug}/payouts`
-        );
+        )
 
-        if (!res.ok) {
-          throw new Error("PAYOUTS_FETCH_FAILED");
+        if(!res.ok){
+          throw new Error("PAYOUTS_FETCH_FAILED")
         }
 
-        const data = await res.json();
+        const data = await res.json()
 
-        setPayouts(data.payouts || []);
+        setPayouts(data.payouts || [])
 
-      } catch (e) {
+      }catch(e){
 
-        console.error("Payouts load error", e);
+        console.error("Payouts load error",e)
 
-      } finally {
+      }finally{
 
-        setLoading(false);
+        setLoading(false)
 
       }
 
     }
 
-    loadPayouts();
+    loadPayouts()
 
-  }, []);
+  },[])
 
-  return (
-    <div>
+  return(
 
-      <h1>Выплаты</h1>
+    <PageSection title="Выплаты">
 
-      {loading && <p>Загрузка...</p>}
+      {loading && <div>Загрузка...</div>}
 
       {!loading && payouts.length === 0 && (
-        <p>Выплат пока нет</p>
+        <EmptyState text="Выплат пока нет" />
       )}
 
       {!loading && payouts.length > 0 && (
 
-        <table style={{width:"100%", borderCollapse:"collapse"}}>
+        <TableSection>
 
-          <thead>
-            <tr>
-              <th align="left">Дата</th>
-              <th align="left">Сумма</th>
-              <th align="left">Статус</th>
-              <th align="left">Метод</th>
-            </tr>
-          </thead>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
 
-          <tbody>
-
-            {payouts.map((p) => (
-
-              <tr key={p.id}>
-
-                <td>{formatDate(p.created_at)}</td>
-
-                <td>{money(p.amount_cents || p.amount)}</td>
-
-                <td>{p.status}</td>
-
-                <td>{p.method || "—"}</td>
-
+            <thead>
+              <tr>
+                <th align="left">Дата</th>
+                <th align="left">Сумма</th>
+                <th align="left">Статус</th>
+                <th align="left">Метод</th>
               </tr>
+            </thead>
 
-            ))}
+            <tbody>
 
-          </tbody>
+              {payouts.map(p => (
 
-        </table>
+                <tr key={p.id}>
+
+                  <td>{formatDate(p.created_at)}</td>
+
+                  <td>{money(p.amount_cents || p.amount)}</td>
+
+                  <td>{p.status}</td>
+
+                  <td>{p.method || "—"}</td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </TableSection>
 
       )}
 
-    </div>
-  );
+    </PageSection>
+
+  )
+
 }
