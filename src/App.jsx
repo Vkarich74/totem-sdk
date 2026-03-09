@@ -26,10 +26,10 @@ import MasterDashboard from "./master/MasterDashboard";
 import MasterBookingsPage from "./master/MasterBookingsPage";
 import MasterClientsPage from "./master/MasterClientsPage";
 import MasterSchedulePage from "./master/MasterSchedulePage";
-import MasterMoneyPage from "./master/MasterMoneyPage";
 import MasterSettingsPage from "./master/MasterSettingsPage";
 
 /* MASTER FINANCE */
+import MasterMoneyPage from "./master/payments/MasterMoneyPage";
 import MasterTransactionsPage from "./master/payments/MasterTransactionsPage";
 import MasterSettlementsPage from "./master/payments/MasterSettlementsPage";
 import MasterPayoutsPage from "./master/payments/MasterPayoutsPage";
@@ -94,9 +94,8 @@ export default function App() {
 
           <Route path="schedule" element={<MasterSchedulePage />} />
 
+          {/* MASTER FINANCE */}
           <Route path="money" element={<MasterMoneyPage />} />
-
-          {/* FINANCE */}
           <Route path="transactions" element={<MasterTransactionsPage />} />
           <Route path="settlements" element={<MasterSettlementsPage />} />
           <Route path="payouts" element={<MasterPayoutsPage />} />
