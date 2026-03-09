@@ -1,22 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
+
+import PageSection from "../../cabinet/PageSection"
+import TableSection from "../../cabinet/TableSection"
+import EmptyState from "../../cabinet/EmptyState"
 
 function getMasterSlug() {
 
   if (window.MASTER_SLUG) {
-    return window.MASTER_SLUG;
+    return window.MASTER_SLUG
   }
 
-  const parts = window.location.pathname.split("/");
+  const parts = window.location.pathname.split("/")
 
   if (parts.length >= 3 && parts[1] === "salon") {
-    return parts[2];
+    return parts[2]
   }
 
   if (parts.length >= 3 && parts[1] === "master") {
-    return parts[2];
+    return parts[2]
   }
 
-  return null;
+  return null
 }
 
 function money(cents){
@@ -30,101 +34,106 @@ function formatDate(iso){
   d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
 }
 
-export default function MasterTransactionsPage() {
+export default function MasterTransactionsPage(){
 
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [transactions,setTransactions] = useState([])
+  const [loading,setLoading] = useState(true)
 
-  useEffect(() => {
+  useEffect(()=>{
 
-    async function loadTransactions() {
+    async function loadTransactions(){
 
-      try {
+      try{
 
-        const slug = getMasterSlug();
+        const slug = getMasterSlug()
 
-        if (!slug) {
-          console.error("MASTER_SLUG_NOT_FOUND");
-          setLoading(false);
-          return;
+        if(!slug){
+          console.error("MASTER_SLUG_NOT_FOUND")
+          setLoading(false)
+          return
         }
 
         const res = await fetch(
           `https://api.totemv.com/internal/masters/${slug}/ledger`
-        );
+        )
 
-        if (!res.ok) {
-          throw new Error("LEDGER_FETCH_FAILED");
+        if(!res.ok){
+          throw new Error("LEDGER_FETCH_FAILED")
         }
 
-        const data = await res.json();
+        const data = await res.json()
 
-        setTransactions(data.ledger || []);
+        setTransactions(data.ledger || [])
 
-      } catch (e) {
+      }catch(e){
 
-        console.error("Transactions load error", e);
+        console.error("Transactions load error",e)
 
-      } finally {
+      }finally{
 
-        setLoading(false);
+        setLoading(false)
 
       }
 
     }
 
-    loadTransactions();
+    loadTransactions()
 
-  }, []);
+  },[])
 
-  return (
-    <div>
+  return(
 
-      <h1>Транзакции</h1>
+    <PageSection title="Транзакции">
 
-      {loading && <p>Загрузка...</p>}
+      {loading && <div>Загрузка...</div>}
 
       {!loading && transactions.length === 0 && (
-        <p>Транзакций пока нет</p>
+        <EmptyState text="Транзакций пока нет" />
       )}
 
       {!loading && transactions.length > 0 && (
 
-        <table style={{width:"100%", borderCollapse:"collapse"}}>
+        <TableSection>
 
-          <thead>
-            <tr>
-              <th align="left">Дата</th>
-              <th align="left">Тип</th>
-              <th align="left">Сумма</th>
-              <th align="left">Направление</th>
-            </tr>
-          </thead>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
 
-          <tbody>
-
-            {transactions.map((t) => (
-
-              <tr key={t.id}>
-
-                <td>{formatDate(t.created_at)}</td>
-
-                <td>{t.reference_type}</td>
-
-                <td>{money(t.amount_cents)}</td>
-
-                <td>{t.direction}</td>
-
+            <thead>
+              <tr>
+                <th align="left">Дата</th>
+                <th align="left">Тип</th>
+                <th align="left">Сумма</th>
+                <th align="left">Направление</th>
               </tr>
+            </thead>
 
-            ))}
+            <tbody>
 
-          </tbody>
+              {transactions.map(t => (
 
-        </table>
+                <tr key={t.id}>
+
+                  <td>{formatDate(t.created_at)}</td>
+
+                  <td>{t.reference_type}</td>
+
+                  <td>{money(t.amount_cents)}</td>
+
+                  <td>{t.direction}</td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </TableSection>
 
       )}
 
-    </div>
-  );
+    </PageSection>
+
+  )
+
 }
