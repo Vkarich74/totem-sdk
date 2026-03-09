@@ -104,6 +104,8 @@ export default function MasterLayout() {
 
     <MasterProvider>
 
+      {/* CABINET CONTAINER */}
+
       <div style={{
         display: "flex",
         flexDirection: "column",
@@ -162,14 +164,14 @@ export default function MasterLayout() {
 
         </div>
 
-        {/* MAIN */}
+        {/* CABINET CONTENT */}
 
         <div style={{
           display: "flex",
           flex: 1
         }}>
 
-          {/* CABINET */}
+          {/* CABINET SIDEBAR + PAGE */}
 
           <div style={{
             width: "70%",
@@ -282,7 +284,7 @@ export default function MasterLayout() {
 
             </div>
 
-            {/* PAGE */}
+            {/* PAGE AREA */}
 
             <div style={{
               flex: 1,
@@ -296,7 +298,7 @@ export default function MasterLayout() {
 
           </div>
 
-          {/* ODOO */}
+          {/* ODOO PANEL */}
 
           <div
             id="odoo-content"
