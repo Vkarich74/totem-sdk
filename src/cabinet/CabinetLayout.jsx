@@ -32,12 +32,12 @@ export default function CabinetLayout({
           borderRight: "1px solid #eee",
           display: "flex",
           flexDirection: "column",
-          minHeight: 0
+          height: "100%"
         }}>
           {sidebar}
         </div>
 
-        {/* MAIN CONTENT */}
+        {/* PAGE */}
 
         <div style={{
           flex: 1,
@@ -55,8 +55,8 @@ export default function CabinetLayout({
         <div style={{
           width: "320px",
           borderLeft: "1px solid #eee",
-          minHeight: 0,
-          overflowY: "auto"
+          overflowY: "auto",
+          height: "100%"
         }}>
           {odoo}
         </div>
