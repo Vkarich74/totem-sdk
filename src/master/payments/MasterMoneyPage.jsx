@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 import { useMaster } from "../MasterContext"
 
+import PageSection from "../../cabinet/PageSection"
+import StatGrid from "../../cabinet/StatGrid"
+
 const API_BASE = "https://api.totemv.com"
 
 function money(n){
@@ -17,7 +20,9 @@ function Card({title,value}){
       background:"#fff"
     }}>
 
-      <div style={{color:"#666"}}>{title}</div>
+      <div style={{color:"#666"}}>
+        {title}
+      </div>
 
       <div style={{
         fontSize:"20px",
@@ -71,20 +76,15 @@ export default function MasterMoneyPage(){
 
   },[master])
 
-  if(!metrics) return <div>Загрузка...</div>
+  if(!metrics){
+    return <div>Загрузка...</div>
+  }
 
   return(
 
-    <div>
+    <PageSection title="Доход">
 
-      <h3>Доход</h3>
-
-      <div style={{
-        display:"grid",
-        gridTemplateColumns:"1fr 1fr",
-        gap:"10px",
-        marginBottom:"16px"
-      }}>
+      <StatGrid>
 
         <Card
           title="Баланс кошелька"
@@ -116,9 +116,9 @@ export default function MasterMoneyPage(){
           value={metrics.clients_total || 0}
         />
 
-      </div>
+      </StatGrid>
 
-    </div>
+    </PageSection>
 
   )
 
