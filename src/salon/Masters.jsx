@@ -69,8 +69,8 @@ export default function SalonMasters() {
 
       {!loading && !error && masters.length === 0 && (
         <EmptyState
-          title="Мастеров нет"
-          text="Когда мастера появятся в системе, они будут отображены здесь."
+          title="Мастеров пока нет"
+          text="Когда мастера появятся в системе, они будут отображаться здесь."
         />
       )}
 
