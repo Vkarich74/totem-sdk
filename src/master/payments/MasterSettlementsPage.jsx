@@ -1,22 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
+
+import PageSection from "../../cabinet/PageSection"
+import TableSection from "../../cabinet/TableSection"
+import EmptyState from "../../cabinet/EmptyState"
 
 function getMasterSlug() {
 
   if (window.MASTER_SLUG) {
-    return window.MASTER_SLUG;
+    return window.MASTER_SLUG
   }
 
-  const parts = window.location.pathname.split("/");
+  const parts = window.location.pathname.split("/")
 
   if (parts.length >= 3 && parts[1] === "salon") {
-    return parts[2];
+    return parts[2]
   }
 
   if (parts.length >= 3 && parts[1] === "master") {
-    return parts[2];
+    return parts[2]
   }
 
-  return null;
+  return null
 }
 
 function money(cents){
@@ -36,104 +40,109 @@ function formatDate(iso){
 
 }
 
-export default function MasterSettlementsPage() {
+export default function MasterSettlementsPage(){
 
-  const [periods, setPeriods] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [periods,setPeriods] = useState([])
+  const [loading,setLoading] = useState(true)
 
-  useEffect(() => {
+  useEffect(()=>{
 
-    async function loadSettlements() {
+    async function loadSettlements(){
 
-      try {
+      try{
 
-        const slug = getMasterSlug();
+        const slug = getMasterSlug()
 
-        if (!slug) {
-          console.error("MASTER_SLUG_NOT_FOUND");
-          setLoading(false);
-          return;
+        if(!slug){
+          console.error("MASTER_SLUG_NOT_FOUND")
+          setLoading(false)
+          return
         }
 
         const res = await fetch(
           `https://api.totemv.com/internal/masters/${slug}/settlements`
-        );
+        )
 
-        if (!res.ok) {
-          throw new Error("SETTLEMENTS_FETCH_FAILED");
+        if(!res.ok){
+          throw new Error("SETTLEMENTS_FETCH_FAILED")
         }
 
-        const data = await res.json();
+        const data = await res.json()
 
-        setPeriods(data.periods || []);
+        setPeriods(data.periods || [])
 
-      } catch (e) {
+      }catch(e){
 
-        console.error("Settlements load error", e);
+        console.error("Settlements load error",e)
 
-      } finally {
+      }finally{
 
-        setLoading(false);
+        setLoading(false)
 
       }
 
     }
 
-    loadSettlements();
+    loadSettlements()
 
-  }, []);
+  },[])
 
-  return (
-    <div>
+  return(
 
-      <h1>Сеты</h1>
+    <PageSection title="Сеты">
 
-      {loading && <p>Загрузка...</p>}
+      {loading && <div>Загрузка...</div>}
 
       {!loading && periods.length === 0 && (
-        <p>Расчетных периодов пока нет</p>
+        <EmptyState text="Расчетных периодов пока нет" />
       )}
 
       {!loading && periods.length > 0 && (
 
-        <table style={{width:"100%", borderCollapse:"collapse"}}>
+        <TableSection>
 
-          <thead>
-            <tr>
-              <th align="left">Период</th>
-              <th align="left">Начало</th>
-              <th align="left">Конец</th>
-              <th align="left">Сумма</th>
-              <th align="left">Статус</th>
-            </tr>
-          </thead>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
 
-          <tbody>
-
-            {periods.map((p) => (
-
-              <tr key={p.id}>
-
-                <td>{p.id}</td>
-
-                <td>{formatDate(p.start_date)}</td>
-
-                <td>{formatDate(p.end_date)}</td>
-
-                <td>{money(p.amount_cents || p.amount)}</td>
-
-                <td>{p.status}</td>
-
+            <thead>
+              <tr>
+                <th align="left">Период</th>
+                <th align="left">Начало</th>
+                <th align="left">Конец</th>
+                <th align="left">Сумма</th>
+                <th align="left">Статус</th>
               </tr>
+            </thead>
 
-            ))}
+            <tbody>
 
-          </tbody>
+              {periods.map(p => (
 
-        </table>
+                <tr key={p.id}>
+
+                  <td>{p.id}</td>
+
+                  <td>{formatDate(p.start_date)}</td>
+
+                  <td>{formatDate(p.end_date)}</td>
+
+                  <td>{money(p.amount_cents || p.amount)}</td>
+
+                  <td>{p.status}</td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </TableSection>
 
       )}
 
-    </div>
-  );
+    </PageSection>
+
+  )
+
 }
