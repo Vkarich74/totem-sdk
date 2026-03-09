@@ -1,0 +1,54 @@
+
+import {useMaster} from "./MasterContext"
+
+function color(status){
+
+if(status==="completed")return "#27ae60"
+if(status==="confirmed")return "#2980b9"
+if(status==="reserved")return "#f39c12"
+return "#e74c3c"
+
+}
+
+export default function MasterBookingsPage(){
+
+const {bookings,loading}=useMaster()
+
+if(loading)return <div>Загрузка...</div>
+
+return(
+
+<div>
+
+<h3>Записи</h3>
+
+{bookings.map(b=>(
+
+<div key={b.id} style={{
+border:"1px solid #ddd",
+padding:"12px",
+borderRadius:"10px",
+marginBottom:"10px"
+}}>
+
+<div style={{fontWeight:"700"}}>BR-{b.id}</div>
+
+<div style={{color:color(b.status)}}>{b.status}</div>
+
+<div>{new Date(b.start_at).toLocaleString("ru-RU")}</div>
+
+<div>Клиент: {b.client_name||"—"}</div>
+
+<div>Телефон: {b.phone||"—"}</div>
+
+<div>Мастер: {b.master_name}</div>
+
+</div>
+
+))}
+
+</div>
+
+)
+
+}

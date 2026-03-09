@@ -74,13 +74,6 @@ async function loadOdooPanel() {
 
 export default function MasterLayout() {
 
-  const slug = getMasterSlug()
-
-  const link = (section) => {
-    if (!slug) return `/master/${section}`
-    return `/master/${slug}/${section}`
-  }
-
   useEffect(() => {
 
     loadOdooPanel()
@@ -114,31 +107,31 @@ export default function MasterLayout() {
 
           <nav style={{marginBottom:"20px"}}>
 
-            <NavLink to={link("dashboard")}>Главная</NavLink>
+            <NavLink to="/master/dashboard">Главная</NavLink>
             <br/>
 
-            <NavLink to={link("bookings")}>Записи</NavLink>
+            <NavLink to="/master/bookings">Записи</NavLink>
             <br/>
 
-            <NavLink to={link("clients")}>Клиенты</NavLink>
+            <NavLink to="/master/clients">Клиенты</NavLink>
             <br/>
 
-            <NavLink to={link("schedule")}>Расписание</NavLink>
+            <NavLink to="/master/schedule">Расписание</NavLink>
             <br/>
 
-            <NavLink to={link("money")}>Доход</NavLink>
+            <NavLink to="/master/money">Доход</NavLink>
             <br/>
 
-            <NavLink to={link("transactions")}>Транзакции</NavLink>
+            <NavLink to="/master/transactions">Транзакции</NavLink>
             <br/>
 
-            <NavLink to={link("settlements")}>Сеты</NavLink>
+            <NavLink to="/master/settlements">Сеты</NavLink>
             <br/>
 
-            <NavLink to={link("payouts")}>Выплаты</NavLink>
+            <NavLink to="/master/payouts">Выплаты</NavLink>
             <br/>
 
-            <NavLink to={link("settings")}>Настройки</NavLink>
+            <NavLink to="/master/settings">Настройки</NavLink>
 
           </nav>
 
