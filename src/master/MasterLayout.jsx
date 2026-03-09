@@ -104,8 +104,6 @@ export default function MasterLayout() {
 
     <MasterProvider>
 
-      {/* CABINET CONTAINER */}
-
       <div style={{
         display: "flex",
         flexDirection: "column",
@@ -164,14 +162,14 @@ export default function MasterLayout() {
 
         </div>
 
-        {/* CABINET CONTENT */}
+        {/* MAIN */}
 
         <div style={{
           display: "flex",
           flex: 1
         }}>
 
-          {/* CABINET SIDEBAR + PAGE */}
+          {/* CABINET */}
 
           <div style={{
             width: "70%",
@@ -185,7 +183,9 @@ export default function MasterLayout() {
               width: "220px",
               borderRight: "1px solid #eee",
               padding: "20px",
-              background: "#fafafa"
+              background: "#fafafa",
+              height: "100%",
+              overflowY: "auto"
             }}>
 
               <div style={{marginBottom:"25px"}}>
@@ -202,89 +202,45 @@ export default function MasterLayout() {
 
               </div>
 
-              {/* WORK */}
-
-              <div style={{
-                fontSize:"12px",
-                color:"#888",
-                marginBottom:"10px"
-              }}>
+              <div style={{fontSize:"12px",color:"#888",marginBottom:"10px"}}>
                 РАБОТА
               </div>
 
               <nav>
 
-                <NavLink style={menuStyle} to="/master/dashboard">
-                  Главная
-                </NavLink>
-
-                <NavLink style={menuStyle} to="/master/bookings">
-                  Записи
-                </NavLink>
-
-                <NavLink style={menuStyle} to="/master/clients">
-                  Клиенты
-                </NavLink>
-
-                <NavLink style={menuStyle} to="/master/schedule">
-                  Расписание
-                </NavLink>
+                <NavLink style={menuStyle} to="/master/dashboard">Главная</NavLink>
+                <NavLink style={menuStyle} to="/master/bookings">Записи</NavLink>
+                <NavLink style={menuStyle} to="/master/clients">Клиенты</NavLink>
+                <NavLink style={menuStyle} to="/master/schedule">Расписание</NavLink>
 
               </nav>
 
-              {/* FINANCE */}
-
-              <div style={{
-                fontSize:"12px",
-                color:"#888",
-                marginTop:"25px",
-                marginBottom:"10px"
-              }}>
+              <div style={{fontSize:"12px",color:"#888",marginTop:"25px",marginBottom:"10px"}}>
                 ФИНАНСЫ
               </div>
 
               <nav>
 
-                <NavLink style={menuStyle} to="/master/money">
-                  Доход
-                </NavLink>
-
-                <NavLink style={menuStyle} to="/master/transactions">
-                  Транзакции
-                </NavLink>
-
-                <NavLink style={menuStyle} to="/master/settlements">
-                  Сеты
-                </NavLink>
-
-                <NavLink style={menuStyle} to="/master/payouts">
-                  Выплаты
-                </NavLink>
+                <NavLink style={menuStyle} to="/master/money">Доход</NavLink>
+                <NavLink style={menuStyle} to="/master/transactions">Транзакции</NavLink>
+                <NavLink style={menuStyle} to="/master/settlements">Сеты</NavLink>
+                <NavLink style={menuStyle} to="/master/payouts">Выплаты</NavLink>
 
               </nav>
 
-              {/* SYSTEM */}
-
-              <div style={{
-                fontSize:"12px",
-                color:"#888",
-                marginTop:"25px",
-                marginBottom:"10px"
-              }}>
+              <div style={{fontSize:"12px",color:"#888",marginTop:"25px",marginBottom:"10px"}}>
                 СИСТЕМА
               </div>
 
               <nav>
 
-                <NavLink style={menuStyle} to="/master/settings">
-                  Настройки
-                </NavLink>
+                <NavLink style={menuStyle} to="/master/settings">Настройки</NavLink>
 
               </nav>
 
             </div>
 
-            {/* PAGE AREA */}
+            {/* PAGE */}
 
             <div style={{
               flex: 1,
@@ -298,7 +254,7 @@ export default function MasterLayout() {
 
           </div>
 
-          {/* ODOO PANEL */}
+          {/* ODOO */}
 
           <div
             id="odoo-content"
