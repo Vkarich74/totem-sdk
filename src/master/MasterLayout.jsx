@@ -98,24 +98,61 @@ export default function MasterLayout() {
         width: "100%"
       }}>
 
+        {/* MASTER CABINET */}
+
         <div style={{
           width: "70%",
           borderRight: "1px solid #eee",
-          display: "flex",
-          flexDirection: "column"
+          display: "flex"
         }}>
 
-          {/* HEADER */}
+          {/* SIDEBAR */}
 
           <div style={{
-            padding: "12px 20px",
-            borderBottom: "1px solid #eee",
+            width: "220px",
+            borderRight: "1px solid #eee",
+            padding: "20px",
             background: "#fafafa"
           }}>
-            <strong>Мастер:</strong> {slug}
+
+            <strong>Мастер</strong>
+            <div style={{fontSize:"12px", color:"#777", marginBottom:"20px"}}>
+              {slug}
+            </div>
+
+            <nav>
+
+              <NavLink to="/master/dashboard">Главная</NavLink>
+              <br/><br/>
+
+              <NavLink to="/master/bookings">Записи</NavLink>
+              <br/><br/>
+
+              <NavLink to="/master/clients">Клиенты</NavLink>
+              <br/><br/>
+
+              <NavLink to="/master/schedule">Расписание</NavLink>
+              <br/><br/>
+
+              <NavLink to="/master/money">Доход</NavLink>
+              <br/><br/>
+
+              <NavLink to="/master/transactions">Транзакции</NavLink>
+              <br/><br/>
+
+              <NavLink to="/master/settlements">Сеты</NavLink>
+              <br/><br/>
+
+              <NavLink to="/master/payouts">Выплаты</NavLink>
+              <br/><br/>
+
+              <NavLink to="/master/settings">Настройки</NavLink>
+
+            </nav>
+
           </div>
 
-          {/* CONTENT */}
+          {/* PAGE AREA */}
 
           <div style={{
             flex: 1,
@@ -125,41 +162,13 @@ export default function MasterLayout() {
 
             <h2>Панель мастера</h2>
 
-            <nav style={{marginBottom:"20px"}}>
-
-              <NavLink to="/master/dashboard">Главная</NavLink>
-              <br/>
-
-              <NavLink to="/master/bookings">Записи</NavLink>
-              <br/>
-
-              <NavLink to="/master/clients">Клиенты</NavLink>
-              <br/>
-
-              <NavLink to="/master/schedule">Расписание</NavLink>
-              <br/>
-
-              <NavLink to="/master/money">Доход</NavLink>
-              <br/>
-
-              <NavLink to="/master/transactions">Транзакции</NavLink>
-              <br/>
-
-              <NavLink to="/master/settlements">Сеты</NavLink>
-              <br/>
-
-              <NavLink to="/master/payouts">Выплаты</NavLink>
-              <br/>
-
-              <NavLink to="/master/settings">Настройки</NavLink>
-
-            </nav>
-
             <Outlet/>
 
           </div>
 
         </div>
+
+        {/* ODOO PANEL */}
 
         <div
           id="odoo-content"
