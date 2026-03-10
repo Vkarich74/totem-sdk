@@ -15,7 +15,7 @@ return toDateKey(new Date())
 
 function formatDMY(k){
 const [y,m,d]=k.split("-")
-return d+"-"+m+"-"+y
+return d+"."+m+"."+y
 }
 
 function addDays(key,delta){
@@ -67,27 +67,9 @@ const m=Math.floor(now.getMinutes()/15)*15
 return pad(h)+":"+pad(m)
 }
 
-function isNowInsideBooking(start,end){
-const now=Date.now()
-const startMs=new Date(start).getTime()
-const endMs=new Date(end).getTime()
-return now>=startMs && now<endMs
-}
-
 function normalizeStatus(v){
 const s=String(v||"reserved").toLowerCase()
 if(s==="canceled")return"cancelled"
-return s
-}
-
-function statusLabel(s){
-s=normalizeStatus(s)
-
-if(s==="reserved")return"ожидает"
-if(s==="confirmed")return"подтверждена"
-if(s==="completed")return"завершена"
-if(s==="cancelled")return"отмена"
-
 return s
 }
 
@@ -117,8 +99,6 @@ export default function MasterSchedulePage(){
 const {bookings=[],loading}=useMaster()
 
 const [dateKey,setDateKey]=useState(todayKey())
-const [statusOverrides,setStatusOverrides]=useState({})
-const [actionLoading,setActionLoading]=useState({})
 const [clockTick,setClockTick]=useState(0)
 
 useEffect(()=>{
@@ -162,7 +142,7 @@ skip.add(k)
 
 return{calendar,skip}
 
-},[bookings,dateKey,statusOverrides,clockTick])
+},[bookings,dateKey,clockTick])
 
 if(loading)return<div>Загрузка...</div>
 
@@ -175,7 +155,7 @@ maxHeight:"calc(100vh - 220px)"
 
 <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
 
-<h3 style={{margin:0}}>Календарь мастера</h3>
+<h3 style={{margin:0}}>Расписание мастера</h3>
 
 <div style={{flex:1}}/>
 
@@ -204,21 +184,59 @@ return(
 <div key={s} style={{
 border:isNow?"2px solid #339af0":"1px solid #ddd",
 borderRadius:"10px",
-padding:"10px",
+padding:"12px",
 marginBottom:"8px",
-background:isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff",
-opacity:isPast&&!b?0.72:1
+background:b?statusColor(b.status):(isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff"),
+opacity:isPast&&!b?0.7:1,
+transition:"all .15s"
 }}>
 
 <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+
 <b style={{minWidth:"60px"}}>
-{isNow?"▶ "+s:s}
+{isNow?"● "+s:s}
 </b>
 
-<span style={{color:b?"#111":"#999"}}>
-{b?"занято":isPast?"прошло":"свободно"}
+{!b && (
+<span style={{color:"#999"}}>
+{isPast?"прошло":"свободно"}
 </span>
+)}
+
+{b && (
+
+<div style={{flex:1}}>
+
+<div style={{fontWeight:600}}>
+{b.client_name || "Клиент"}
 </div>
+
+<div style={{fontSize:"13px",color:"#666"}}>
+{b.service_name || ""}
+</div>
+
+</div>
+
+)}
+
+</div>
+
+{b && (
+
+<div style={{
+marginTop:"8px",
+display:"flex",
+gap:"6px",
+flexWrap:"wrap"
+}}>
+
+<button style={{fontSize:"12px"}}>Подтвердить</button>
+<button style={{fontSize:"12px"}}>Завершить</button>
+<button style={{fontSize:"12px"}}>Отменить</button>
+
+</div>
+
+)}
 
 </div>
 
