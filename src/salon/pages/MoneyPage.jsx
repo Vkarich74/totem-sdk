@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PageSection from "../../cabinet/PageSection";
 import * as api from "../../api/internal";
 import { getSalonSlug } from "../../utils/salon";
 
@@ -43,19 +44,26 @@ load();
 },[salonSlug]);
 
 if(!metrics){
-return <div style={{padding:"20px"}}>Загрузка...</div>
+return (
+<PageSection title="Финансы салона">
+<div style={{padding:"20px"}}>Загрузка...</div>
+</PageSection>
+);
 }
 
 return(
 
-<div style={{padding:"20px"}}>
-
-<h2>Финансы салона</h2>
+<PageSection title="Финансы салона">
 
 <div style={{marginTop:"20px"}}>
 
-<div>Доход сегодня: <b>{metrics.revenue_today || 0} сом</b></div>
-<div>Доход за месяц: <b>{metrics.revenue_month || 0} сом</b></div>
+<div>
+Доход сегодня: <b>{metrics.revenue_today || 0} сом</b>
+</div>
+
+<div>
+Доход за месяц: <b>{metrics.revenue_month || 0} сом</b>
+</div>
 
 <div style={{marginTop:"10px"}}>
 Всего платежей: {metrics.payments_total || 0}
@@ -63,7 +71,7 @@ return(
 
 </div>
 
-</div>
+</PageSection>
 
 );
 
