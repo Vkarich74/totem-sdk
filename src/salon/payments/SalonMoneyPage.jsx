@@ -59,9 +59,7 @@ export default function SalonMoneyPage() {
 
         console.log("SALON MONEY API ERROR")
 
-        if (!cancelled) {
-          setLoading(false)
-        }
+        if (!cancelled) setLoading(false)
 
       }
 
@@ -75,56 +73,51 @@ export default function SalonMoneyPage() {
 
   }, [slug])
 
-
   if (loading) {
     return (
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: 20 }}>
         <h1>Финансы салона</h1>
-        <p>Загрузка финансов...</p>
+        <p>Загрузка...</p>
       </div>
     )
   }
-
 
   const walletBalance = wallet?.computed_balance_cents || 0
   const revenueToday = metrics?.revenue_today || 0
   const revenueMonth = metrics?.revenue_month || 0
   const paymentsTotal = metrics?.payments_total || 0
 
-
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 20 }}>
 
       <h1>Финансы салона</h1>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-          gap: 16,
-          marginTop: 20
-        }}
-      >
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4,1fr)",
+        gap: 16,
+        marginTop: 20
+      }}>
 
-        <StatCard
-          title="Баланс кошелька"
-          value={walletBalance}
-        />
+        <div style={card}>
+          <div style={title}>Баланс кошелька</div>
+          <div style={value}>{walletBalance}</div>
+        </div>
 
-        <StatCard
-          title="Выручка сегодня"
-          value={revenueToday}
-        />
+        <div style={card}>
+          <div style={title}>Выручка сегодня</div>
+          <div style={value}>{revenueToday}</div>
+        </div>
 
-        <StatCard
-          title="Выручка за месяц"
-          value={revenueMonth}
-        />
+        <div style={card}>
+          <div style={title}>Выручка за месяц</div>
+          <div style={value}>{revenueMonth}</div>
+        </div>
 
-        <StatCard
-          title="Всего платежей"
-          value={paymentsTotal}
-        />
+        <div style={card}>
+          <div style={title}>Всего платежей</div>
+          <div style={value}>{paymentsTotal}</div>
+        </div>
 
       </div>
 
@@ -132,40 +125,20 @@ export default function SalonMoneyPage() {
   )
 }
 
+const card = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 10,
+  padding: 20
+}
 
+const title = {
+  fontSize: 13,
+  color: "#6b7280",
+  marginBottom: 8
+}
 
-function StatCard({ title, value }) {
-
-  return (
-    <div
-      style={{
-        padding: 20,
-        borderRadius: 10,
-        border: "1px solid #e5e7eb",
-        background: "#fff"
-      }}
-    >
-
-      <div
-        style={{
-          fontSize: 13,
-          color: "#6b7280",
-          marginBottom: 6
-        }}
-      >
-        {title}
-      </div>
-
-      <div
-        style={{
-          fontSize: 28,
-          fontWeight: 600
-        }}
-      >
-        {value}
-      </div>
-
-    </div>
-  )
-
+const value = {
+  fontSize: 28,
+  fontWeight: 600
 }
