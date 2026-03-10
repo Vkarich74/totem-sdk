@@ -5,228 +5,594 @@ import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
 
 function resolveSlug(){
-const util = getSalonSlug();
-if(util) return util;
-const parts = window.location.pathname.split("/");
-return parts[2] || "totem-demo-salon";
+  const util = getSalonSlug();
+  if(util) return util;
+
+  const parts = window.location.pathname.split("/");
+  return parts[2] || "totem-demo-salon";
 }
 
 function statusColor(status){
-if(status==="reserved") return "#f59e0b";
-if(status==="confirmed") return "#10b981";
-if(status==="completed") return "#6b7280";
-if(status==="cancelled") return "#ef4444";
-return "#9ca3af";
+  if(status==="reserved") return "#f59e0b";
+  if(status==="confirmed") return "#10b981";
+  if(status==="completed") return "#6b7280";
+  if(status==="cancelled") return "#ef4444";
+  return "#9ca3af";
 }
 
 function statusText(status){
-if(status==="reserved") return "Ожидает";
-if(status==="confirmed") return "Подтверждена";
-if(status==="completed") return "Завершена";
-if(status==="cancelled") return "Отменена";
-return status;
+  if(status==="reserved") return "Ожидает";
+  if(status==="confirmed") return "Подтверждена";
+  if(status==="completed") return "Завершена";
+  if(status==="cancelled") return "Отменена";
+  return status;
 }
 
 function formatDate(d){
-if(!d) return "—";
-const date = new Date(d);
-return date.toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+  if(!d) return "—";
+
+  const date = new Date(d);
+
+  return date.toLocaleString("ru-RU",{
+    day:"2-digit",
+    month:"2-digit",
+    hour:"2-digit",
+    minute:"2-digit"
+  });
 }
 
 function formatMoney(v){
-if(v===null || v===undefined) return "—";
-return `${v} сом`;
+  if(v===null || v===undefined || v==="") return "—";
+  return `${v} сом`;
+}
+
+function rowHoverStyle(e, enter, active){
+  if(active) return;
+
+  if(enter){
+    e.currentTarget.style.background = "#f9fafb";
+  }else{
+    e.currentTarget.style.background = "#fff";
+  }
 }
 
 export default function BookingsPage(){
 
-const [bookings,setBookings] = useState([]);
-const [masters,setMasters] = useState([]);
+  const [bookings,setBookings] = useState([]);
+  const [masters,setMasters] = useState([]);
 
-const [filter,setFilter] = useState("today");
-const [search,setSearch] = useState("");
+  const [filter,setFilter] = useState("today");
+  const [search,setSearch] = useState("");
 
-const [loadingAction,setLoadingAction] = useState(null);
-const [selectedBookingId,setSelectedBookingId] = useState(null);
+  const [loadingAction,setLoadingAction] = useState(null);
+  const [selectedBookingId,setSelectedBookingId] = useState(null);
 
-const salonSlug = resolveSlug();
+  const salonSlug = resolveSlug();
 
-async function load(){
+  async function load(){
 
-try{
+    try{
 
-const res = await api.getBookings(salonSlug);
+      const res = await api.getBookings(salonSlug);
 
-if(res.ok){
+      if(res.ok){
 
-const sorted = (res.bookings || []).sort((a,b)=>{
-if(!a.start_at) return 1;
-if(!b.start_at) return -1;
-return new Date(a.start_at) - new Date(b.start_at);
-});
+        const sorted = (res.bookings || []).sort((a,b)=>{
+          if(!a.start_at) return 1;
+          if(!b.start_at) return -1;
+          return new Date(a.start_at) - new Date(b.start_at);
+        });
 
-setBookings(sorted);
+        setBookings(sorted);
 
-}
+      }
 
-const resMasters = await api.getMasters(salonSlug);
+      const resMasters = await api.getMasters(salonSlug);
 
-if(resMasters.ok){
-setMasters(resMasters.masters || []);
-}
+      if(resMasters.ok){
+        setMasters(resMasters.masters || []);
+      }
 
-}catch(e){
-console.error(e);
-}
+    }catch(e){
 
-}
+      console.error("LOAD BOOKINGS ERROR",e);
 
-useEffect(()=>{
+    }
 
-load();
+  }
 
-const interval=setInterval(()=>{
-if(!loadingAction){
-load();
-}
-},10000);
+  useEffect(()=>{
 
-return()=>clearInterval(interval);
+    load();
 
-},[loadingAction]);
+    const interval = setInterval(()=>{
+      if(!loadingAction){
+        load();
+      }
+    },10000);
 
-function action(id,type){
+    return ()=>{
+      clearInterval(interval);
+    };
 
-if(loadingAction) return;
+  },[loadingAction]);
 
-setLoadingAction(id);
+  function action(id,type){
 
-api.bookingAction(id,type).then(async(res)=>{
+    if(loadingAction) return;
 
-if(!res.ok){
-alert("Ошибка изменения статуса");
-setLoadingAction(null);
-return;
-}
+    setLoadingAction(id);
 
-await load();
-setLoadingAction(null);
+    api.bookingAction(id,type).then(async (res)=>{
 
-}).catch(()=>{
-alert("Ошибка сервера");
-setLoadingAction(null);
-});
+      if(!res.ok){
+        alert("Ошибка изменения статуса");
+        setLoadingAction(null);
+        return;
+      }
 
-}
+      await load();
+      setLoadingAction(null);
 
-const filteredBookings = bookings;
+    }).catch((e)=>{
+      console.error("BOOKING ACTION ERROR",e);
+      alert("Ошибка сервера");
+      setLoadingAction(null);
+    });
 
-const selectedBooking = useMemo(()=>{
-return filteredBookings.find(b=>String(b.id)===String(selectedBookingId)) || null;
-},[filteredBookings, selectedBookingId]);
+  }
 
-return(
+  function applyFilters(list){
 
-<PageSection title="Записи салона">
+    let result = [...list];
+    const now = new Date();
 
-<div style={{
-display:"grid",
-gridTemplateColumns:"320px 1fr",
-gap:"24px"
-}}>
+    if(filter==="today"){
 
-{/* список */}
+      const start = new Date();
+      start.setHours(0,0,0,0);
 
-<div style={{
-border:"1px solid #e5e7eb",
-borderRadius:"10px",
-overflow:"hidden",
-background:"#fff"
-}}>
+      const end = new Date();
+      end.setHours(23,59,59,999);
 
-{filteredBookings.map(b=>{
+      result = result.filter(b=>{
+        if(!b.start_at) return false;
+        const d = new Date(b.start_at);
+        return d>=start && d<=end;
+      });
 
-const active = String(selectedBookingId)===String(b.id);
+    }
 
-return(
+    if(filter==="week"){
 
-<div
-key={b.id}
-onClick={()=>setSelectedBookingId(b.id)}
-style={{
-padding:"10px 12px",
-borderBottom:"1px solid #eee",
-cursor:"pointer",
-background:active?"#f3f4f6":"#fff"
-}}
->
+      const start = new Date();
+      start.setDate(now.getDate() - now.getDay() + 1);
+      start.setHours(0,0,0,0);
 
-<div style={{display:"flex",justifyContent:"space-between"}}>
-<b>BR-{b.id}</b>
-<span style={{color:statusColor(b.status)}}>{statusText(b.status)}</span>
-</div>
+      const end = new Date(start);
+      end.setDate(start.getDate()+7);
 
-<div style={{fontSize:"13px",color:"#666"}}>
-{formatDate(b.start_at)}
-</div>
+      result = result.filter(b=>{
+        if(!b.start_at) return false;
+        const d = new Date(b.start_at);
+        return d>=start && d<end;
+      });
 
-<div style={{fontSize:"13px"}}>
-{b.client_name || "—"}
-</div>
+    }
 
-</div>
+    if(search){
 
-);
+      const q = search.toLowerCase();
 
-})}
+      result = result.filter(b=>
+        (b.client_name || "").toLowerCase().includes(q) ||
+        (b.phone || "").toLowerCase().includes(q) ||
+        (b.master_name || "").toLowerCase().includes(q) ||
+        (b.service_name || "").toLowerCase().includes(q)
+      );
 
-</div>
+    }
 
-{/* карточка */}
+    return result;
 
-<div style={{
-border:"1px solid #e5e7eb",
-borderRadius:"12px",
-padding:"20px",
-background:"#fff"
-}}>
+  }
 
-{!selectedBooking ? (
+  const filteredBookings = applyFilters(bookings);
 
-<EmptyState title="Выберите запись"/>
+  useEffect(()=>{
 
-):( 
+    if(filteredBookings.length===0){
+      setSelectedBookingId(null);
+      return;
+    }
 
-<>
+    if(selectedBookingId===null){
+      setSelectedBookingId(filteredBookings[0].id);
+      return;
+    }
 
-<h2>BR-{selectedBooking.id}</h2>
+    const exists = filteredBookings.some(b=>String(b.id)===String(selectedBookingId));
 
-<p><b>Статус:</b> {statusText(selectedBooking.status)}</p>
-<p><b>Мастер:</b> {selectedBooking.master_name || "—"}</p>
-<p><b>Услуга:</b> {selectedBooking.service_name || "—"}</p>
-<p><b>Цена:</b> {formatMoney(selectedBooking.price)}</p>
-<p><b>Дата:</b> {formatDate(selectedBooking.start_at)}</p>
-<p><b>Клиент:</b> {selectedBooking.client_name || "—"}</p>
-<p><b>Телефон:</b> {selectedBooking.phone || "—"}</p>
+    if(!exists){
+      setSelectedBookingId(filteredBookings[0].id);
+    }
 
-<div style={{marginTop:"16px"}}>
+  },[filteredBookings, selectedBookingId]);
 
-<button onClick={()=>action(selectedBooking.id,"confirm")}>Подтвердить</button>
-<button onClick={()=>action(selectedBooking.id,"complete")} style={{marginLeft:"6px"}}>Завершить</button>
-<button onClick={()=>action(selectedBooking.id,"cancel")} style={{marginLeft:"6px"}}>Отменить</button>
+  const selectedBooking = useMemo(()=>{
+    return filteredBookings.find(b=>String(b.id)===String(selectedBookingId)) || null;
+  },[filteredBookings, selectedBookingId]);
 
-</div>
+  const selectedMaster = useMemo(()=>{
+    if(!selectedBooking) return null;
+    return masters.find(m=>String(m.id)===String(selectedBooking.master_id)) || null;
+  },[masters, selectedBooking]);
 
-</>
+  return(
 
-)}
+    <PageSection title="Записи салона">
 
-</div>
+      <div style={{marginBottom:"16px",display:"flex",gap:"8px",flexWrap:"wrap"}}>
 
-</div>
+        <button
+          onClick={()=>setFilter("today")}
+          style={{
+            padding:"8px 12px",
+            border:"1px solid #e5e7eb",
+            borderRadius:"8px",
+            background:filter==="today" ? "#111827" : "#fff",
+            color:filter==="today" ? "#fff" : "#111827",
+            cursor:"pointer"
+          }}
+        >
+          Сегодня
+        </button>
 
-</PageSection>
+        <button
+          onClick={()=>setFilter("week")}
+          style={{
+            padding:"8px 12px",
+            border:"1px solid #e5e7eb",
+            borderRadius:"8px",
+            background:filter==="week" ? "#111827" : "#fff",
+            color:filter==="week" ? "#fff" : "#111827",
+            cursor:"pointer"
+          }}
+        >
+          Неделя
+        </button>
 
-);
+        <button
+          onClick={()=>setFilter("all")}
+          style={{
+            padding:"8px 12px",
+            border:"1px solid #e5e7eb",
+            borderRadius:"8px",
+            background:filter==="all" ? "#111827" : "#fff",
+            color:filter==="all" ? "#fff" : "#111827",
+            cursor:"pointer"
+          }}
+        >
+          Все
+        </button>
+
+      </div>
+
+      <div style={{marginBottom:"16px"}}>
+        <input
+          placeholder="Поиск: клиент, телефон, мастер, услуга"
+          value={search}
+          onChange={e=>setSearch(e.target.value)}
+          style={{
+            width:"100%",
+            maxWidth:"480px",
+            padding:"10px 12px",
+            border:"1px solid #e5e7eb",
+            borderRadius:"8px",
+            background:"#fff"
+          }}
+        />
+      </div>
+
+      {filteredBookings.length===0 ? (
+
+        <EmptyState
+          title="Записей пока нет"
+          message="Записи появятся после бронирований"
+        />
+
+      ) : (
+
+        <div style={{overflowX:"auto"}}>
+          <div
+            style={{
+              display:"grid",
+              gridTemplateColumns:"340px minmax(560px, 1fr)",
+              gap:"20px",
+              alignItems:"start",
+              minWidth:"920px"
+            }}
+          >
+
+            <div
+              style={{
+                border:"1px solid #e5e7eb",
+                borderRadius:"12px",
+                background:"#fff",
+                overflow:"hidden"
+              }}
+            >
+
+              <div
+                style={{
+                  display:"grid",
+                  gridTemplateColumns:"96px 110px 1fr",
+                  gap:"12px",
+                  padding:"12px 14px",
+                  borderBottom:"1px solid #e5e7eb",
+                  background:"#f9fafb",
+                  fontSize:"12px",
+                  fontWeight:"700",
+                  color:"#6b7280"
+                }}
+              >
+                <div>ID</div>
+                <div>Статус</div>
+                <div>Клиент / время</div>
+              </div>
+
+              {filteredBookings.map(b=>{
+
+                const active = String(selectedBookingId)===String(b.id);
+
+                return(
+                  <div
+                    key={b.id}
+                    onClick={()=>setSelectedBookingId(b.id)}
+                    onMouseEnter={(e)=>rowHoverStyle(e,true,active)}
+                    onMouseLeave={(e)=>rowHoverStyle(e,false,active)}
+                    style={{
+                      display:"grid",
+                      gridTemplateColumns:"96px 110px 1fr",
+                      gap:"12px",
+                      alignItems:"center",
+                      padding:"12px 14px",
+                      borderBottom:"1px solid #f1f5f9",
+                      cursor:"pointer",
+                      background:active ? "#f3f4f6" : "#fff"
+                    }}
+                  >
+                    <div style={{fontWeight:"700"}}>
+                      BR-{String(b.id).padStart(5,"0")}
+                    </div>
+
+                    <div
+                      style={{
+                        color:statusColor(b.status),
+                        fontSize:"13px",
+                        fontWeight:"700"
+                      }}
+                    >
+                      {statusText(b.status)}
+                    </div>
+
+                    <div style={{minWidth:0}}>
+                      <div
+                        style={{
+                          fontSize:"14px",
+                          fontWeight:"600",
+                          whiteSpace:"nowrap",
+                          overflow:"hidden",
+                          textOverflow:"ellipsis"
+                        }}
+                      >
+                        {b.client_name || "—"}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize:"12px",
+                          color:"#6b7280",
+                          marginTop:"2px",
+                          whiteSpace:"nowrap",
+                          overflow:"hidden",
+                          textOverflow:"ellipsis"
+                        }}
+                      >
+                        {formatDate(b.start_at)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+            </div>
+
+            <div
+              style={{
+                border:"1px solid #e5e7eb",
+                borderRadius:"12px",
+                padding:"24px",
+                background:"#fff",
+                minHeight:"360px"
+              }}
+            >
+
+              {!selectedBooking ? (
+
+                <EmptyState
+                  title="Выберите запись"
+                  message="Выберите запись слева, чтобы открыть карточку"
+                />
+
+              ) : (
+
+                <>
+                  <div
+                    style={{
+                      display:"flex",
+                      justifyContent:"space-between",
+                      alignItems:"center",
+                      gap:"12px",
+                      marginBottom:"20px",
+                      flexWrap:"wrap"
+                    }}
+                  >
+                    <div style={{fontSize:"24px",fontWeight:"700"}}>
+                      BR-{String(selectedBooking.id).padStart(5,"0")}
+                    </div>
+
+                    <div
+                      style={{
+                        padding:"7px 12px",
+                        borderRadius:"999px",
+                        background:"#f9fafb",
+                        border:`1px solid ${statusColor(selectedBooking.status)}`,
+                        color:statusColor(selectedBooking.status),
+                        fontWeight:"700",
+                        fontSize:"13px"
+                      }}
+                    >
+                      {statusText(selectedBooking.status)}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display:"grid",
+                      gridTemplateColumns:"repeat(2,minmax(220px,1fr))",
+                      gap:"16px 24px"
+                    }}
+                  >
+                    <div>
+                      <div style={{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}}>Мастер</div>
+                      <div>{selectedBooking.master_name || selectedMaster?.name || "—"}</div>
+                    </div>
+
+                    <div>
+                      <div style={{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}}>Услуга</div>
+                      <div>{selectedBooking.service_name || "—"}</div>
+                    </div>
+
+                    <div>
+                      <div style={{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}}>Цена</div>
+                      <div>{formatMoney(selectedBooking.price)}</div>
+                    </div>
+
+                    <div>
+                      <div style={{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}}>Дата и время</div>
+                      <div>{formatDate(selectedBooking.start_at)}</div>
+                    </div>
+
+                    <div>
+                      <div style={{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}}>Клиент</div>
+                      <div>{selectedBooking.client_name || "—"}</div>
+                    </div>
+
+                    <div>
+                      <div style={{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}}>Телефон</div>
+                      <div>{selectedBooking.phone || "—"}</div>
+                    </div>
+                  </div>
+
+                  <div style={{marginTop:"24px",display:"flex",gap:"10px",flexWrap:"wrap"}}>
+
+                    {selectedBooking.status==="reserved" && (
+                      <>
+                        <button
+                          disabled={loadingAction===selectedBooking.id}
+                          onClick={()=>action(selectedBooking.id,"confirm")}
+                          style={{
+                            padding:"10px 14px",
+                            border:"1px solid #10b981",
+                            borderRadius:"8px",
+                            background:"#10b981",
+                            color:"#fff",
+                            cursor:"pointer"
+                          }}
+                        >
+                          Подтвердить
+                        </button>
+
+                        <button
+                          disabled={loadingAction===selectedBooking.id}
+                          onClick={()=>action(selectedBooking.id,"cancel")}
+                          style={{
+                            padding:"10px 14px",
+                            border:"1px solid #ef4444",
+                            borderRadius:"8px",
+                            background:"#fff",
+                            color:"#ef4444",
+                            cursor:"pointer"
+                          }}
+                        >
+                          Отменить
+                        </button>
+                      </>
+                    )}
+
+                    {selectedBooking.status==="confirmed" && (
+                      <>
+                        <button
+                          disabled={loadingAction===selectedBooking.id}
+                          onClick={()=>action(selectedBooking.id,"complete")}
+                          style={{
+                            padding:"10px 14px",
+                            border:"1px solid #2563eb",
+                            borderRadius:"8px",
+                            background:"#2563eb",
+                            color:"#fff",
+                            cursor:"pointer"
+                          }}
+                        >
+                          Завершить
+                        </button>
+
+                        <button
+                          disabled={loadingAction===selectedBooking.id}
+                          onClick={()=>action(selectedBooking.id,"cancel")}
+                          style={{
+                            padding:"10px 14px",
+                            border:"1px solid #ef4444",
+                            borderRadius:"8px",
+                            background:"#fff",
+                            color:"#ef4444",
+                            cursor:"pointer"
+                          }}
+                        >
+                          Отменить
+                        </button>
+                      </>
+                    )}
+
+                    {selectedBooking.phone && (
+                      <button
+                        onClick={()=>window.location.href=`tel:${selectedBooking.phone}`}
+                        style={{
+                          padding:"10px 14px",
+                          border:"1px solid #d1d5db",
+                          borderRadius:"8px",
+                          background:"#fff",
+                          cursor:"pointer"
+                        }}
+                      >
+                        Позвонить
+                      </button>
+                    )}
+
+                  </div>
+                </>
+              )}
+
+            </div>
+
+          </div>
+        </div>
+
+      )}
+
+    </PageSection>
+
+  );
 
 }
