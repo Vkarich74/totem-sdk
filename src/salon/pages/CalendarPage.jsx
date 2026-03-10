@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import * as api from "../../api/internal";
 import { getSalonSlug } from "../../utils/salon";
 import { generateTimeSlots } from "../../calendar/calendarEngine";
+import PageSection from "../../cabinet/PageSection";
 
 function resolveSlug(){
 const util = getSalonSlug();
@@ -145,9 +146,7 @@ console.error("MOVE BOOKING ERROR",e);
 
 return(
 
-<div style={{padding:"20px"}}>
-
-<h2 style={{marginBottom:"20px"}}>Календарь дня</h2>
+<PageSection title="Календарь салона">
 
 <div style={{
 overflow:"auto",
@@ -158,6 +157,8 @@ maxHeight:"calc(100vh - 220px)"
 display:"grid",
 gridTemplateColumns:`120px repeat(${masters.length},1fr)`,
 border:"1px solid #e5e7eb",
+borderRadius:"10px",
+background:"#fff",
 minWidth:"900px"
 }}>
 
@@ -174,13 +175,14 @@ zIndex:5
 <div
 key={m.id}
 style={{
-padding:"8px",
+padding:"10px",
 borderLeft:"1px solid #e5e7eb",
 background:"#f9fafb",
 fontWeight:"600",
 position:"sticky",
 top:0,
-zIndex:4
+zIndex:4,
+textAlign:"center"
 }}
 >
 {m.name}
@@ -201,7 +203,8 @@ background:"#fafafa",
 fontSize:"13px",
 position:"sticky",
 left:0,
-zIndex:3
+zIndex:3,
+fontWeight:"500"
 }}
 >
 {time}
@@ -219,10 +222,13 @@ style={{
 borderTop:"1px solid #e5e7eb",
 borderLeft:"1px solid #e5e7eb",
 padding:"6px",
-minHeight:"36px",
+minHeight:"40px",
 background: b ? "#d1fae5" : "#ffffff",
 fontSize:"13px",
-cursor:"pointer"
+cursor:"pointer",
+display:"flex",
+alignItems:"center",
+justifyContent:"center"
 }}
 
 onClick={()=>{
@@ -239,7 +245,7 @@ createBooking(m,time);
 
 {b && (
 
-<div>
+<div style={{textAlign:"center"}}>
 
 <div
 style={{fontWeight:"600",cursor:"pointer"}}
@@ -273,7 +279,7 @@ navigate(`/owner/client/${b.client_id}`);
 
 </div>
 
-</div>
+</PageSection>
 
 );
 
