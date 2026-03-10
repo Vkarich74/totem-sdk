@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PageSection from "../../cabinet/PageSection";
 
 const API_BASE = "https://api.totemv.com";
 
@@ -47,14 +48,16 @@ load();
 },[salonSlug]);
 
 if(loading){
-return <div>Загрузка клиентов...</div>;
+return (
+<PageSection title="Клиенты салона">
+<div>Загрузка клиентов...</div>
+</PageSection>
+);
 }
 
 return (
 
-<div>
-
-<h2>Клиенты салона</h2>
+<PageSection title="Клиенты салона">
 
 <table style={{
 width:"100%",
@@ -99,7 +102,7 @@ marginTop:"20px"
 
 </table>
 
-</div>
+</PageSection>
 
 );
 
