@@ -13,7 +13,6 @@ if(s==="reserved")return "#f39c12"
 return "#e74c3c"
 }
 
-/* ДОБАВЛЕНО: стиль hover строк таблицы */
 function rowHoverStyle(e,enter){
 if(enter){
 e.currentTarget.style.background="#f9fafb"
@@ -32,7 +31,7 @@ const [client,setClient]=useState("")
 const [phone,setPhone]=useState("")
 const [serviceId,setServiceId]=useState("1")
 
-if(loading)return <div style={{padding:"20px"}}>╨ù╨░╨│╤Ç╤â╨╖╨║╨░...</div>
+if(loading)return <div style={{padding:"20px"}}>Загрузка...</div>
 
 const hash=window.location.hash
 
@@ -82,30 +81,30 @@ return(
 onClick={()=>window.location.hash="/master/schedule"}
 style={{marginBottom:"10px"}}
 >
-ΓåÉ ╨║ ╨║╨░╨╗╨╡╨╜╨┤╨░╤Ç╤Ä
+← К календарю
 </button>
 
-<PageSection title="╨¥╨╛╨▓╨░╤Å ╨╖╨░╨┐╨╕╤ü╤î">
+<PageSection title="Новая запись">
 
 <div style={{maxWidth:"420px"}}>
 
 <div style={{marginBottom:"10px"}}>
-╨ö╨░╤é╨░: <b>{date}</b>
+Дата: <b>{date}</b>
 </div>
 
 <div style={{marginBottom:"10px"}}>
-╨Æ╤Ç╨╡╨╝╤Å: <b>{time}</b>
+Время: <b>{time}</b>
 </div>
 
 <input
-placeholder="╨Ü╨╗╨╕╨╡╨╜╤é"
+placeholder="Клиент"
 value={client}
 onChange={e=>setClient(e.target.value)}
 style={{width:"100%",marginBottom:"8px"}}
 />
 
 <input
-placeholder="╨ó╨╡╨╗╨╡╤ä╨╛╨╜"
+placeholder="Телефон"
 value={phone}
 onChange={e=>setPhone(e.target.value)}
 style={{width:"100%",marginBottom:"8px"}}
@@ -116,13 +115,13 @@ value={serviceId}
 onChange={e=>setServiceId(e.target.value)}
 style={{width:"100%",marginBottom:"10px"}}
 >
-<option value="1">╨ú╤ü╨╗╤â╨│╨░ 1</option>
-<option value="2">╨ú╤ü╨╗╤â╨│╨░ 2</option>
-<option value="3">╨ú╤ü╨╗╤â╨│╨░ 3</option>
+<option value="1">Услуга 1</option>
+<option value="2">Услуга 2</option>
+<option value="3">Услуга 3</option>
 </select>
 
 <button onClick={createBooking}>
-╨í╨╛╨╖╨┤╨░╤é╤î ╨╖╨░╨┐╨╕╤ü╤î
+Создать запись
 </button>
 
 </div>
@@ -143,8 +142,8 @@ if(!booking){
 
 return(
 <div style={{padding:"20px"}}>
-<PageSection title="╨ù╨░╨┐╨╕╤ü╤î">
-<EmptyState title="╨ù╨░╨┐╨╕╤ü╤î ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╨░"/>
+<PageSection title="Запись">
+<EmptyState title="Запись не найдена"/>
 </PageSection>
 </div>
 )
@@ -159,7 +158,7 @@ return(
 onClick={()=>window.location.hash="/master/schedule"}
 style={{marginBottom:"10px"}}
 >
-ΓåÉ ╨║ ╨║╨░╨╗╨╡╨╜╨┤╨░╤Ç╤Ä
+← К календарю
 </button>
 
 <PageSection title={"BR-"+booking.id}>
@@ -170,26 +169,26 @@ style={{marginBottom:"10px"}}
 
 {booking.service_name && (
 <div style={{marginBottom:"6px"}}>
-╨ú╤ü╨╗╤â╨│╨░: {booking.service_name}
+Услуга: {booking.service_name}
 </div>
 )}
 
 {booking.price && (
 <div style={{marginBottom:"6px"}}>
-╨ª╨╡╨╜╨░: {booking.price} Γé╕
+Цена: {booking.price} сом
 </div>
 )}
 
 <div style={{marginBottom:"6px"}}>
-╨Æ╤Ç╨╡╨╝╤Å: {new Date(booking.start_at).toLocaleString("ru-RU")}
+Время: {new Date(booking.start_at).toLocaleString("ru-RU")}
 </div>
 
 <div style={{marginBottom:"6px"}}>
-╨Ü╨╗╨╕╨╡╨╜╤é: {booking.client_name||"ΓÇö"}
+Клиент: {booking.client_name||"—"}
 </div>
 
 <div>
-╨ó╨╡╨╗╨╡╤ä╨╛╨╜: {booking.phone||"ΓÇö"}
+Телефон: {booking.phone||"—"}
 </div>
 
 </PageSection>
@@ -204,13 +203,13 @@ return(
 
 <div style={{padding:"20px"}}>
 
-<PageSection title="╨ù╨░╨┐╨╕╤ü╨╕">
+<PageSection title="Записи">
 
 {(!bookings || bookings.length===0) ? (
 
 <EmptyState
-title="╨ù╨░╨┐╨╕╤ü╨╡╨╣ ╨┐╨╛╨║╨░ ╨╜╨╡╤é"
-message="╨ù╨░╨┐╨╕╤ü╨╕ ╨┐╨╛╤Å╨▓╤Å╤é╤ü╤Å ╨┐╨╛╤ü╨╗╨╡ ╨▒╤Ç╨╛╨╜╨╕╤Ç╨╛╨▓╨░╨╜╨╕╨╣"
+title="Записей пока нет"
+message="Записи появятся после бронирований"
 />
 
 ) : (
@@ -222,10 +221,10 @@ message="╨ù╨░╨┐╨╕╤ü╨╕ ╨┐╨╛╤Å╨▓╤Å╤é╤
 <thead>
 <tr>
 <th>ID</th>
-<th>╨í╤é╨░╤é╤â╤ü</th>
-<th>╨ö╨░╤é╨░</th>
-<th>╨Ü╨╗╨╕╨╡╨╜╤é</th>
-<th>╨ó╨╡╨╗╨╡╤ä╨╛╨╜</th>
+<th>Статус</th>
+<th>Дата</th>
+<th>Клиент</th>
+<th>Телефон</th>
 </tr>
 </thead>
 
@@ -260,11 +259,11 @@ BR-{b.id}
 </td>
 
 <td>
-{b.client_name||"ΓÇö"}
+{b.client_name||"—"}
 </td>
 
 <td>
-{b.phone||"ΓÇö"}
+{b.phone||"—"}
 </td>
 
 </tr>
