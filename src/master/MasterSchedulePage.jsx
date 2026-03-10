@@ -313,7 +313,6 @@ return()=>clearInterval(timer)
 },[])
 
 const slots=useMemo(()=>buildSlots(),[])
-
 const nowSlot=currentSlot()
 
 function openBooking(id){
@@ -473,9 +472,7 @@ if(toDateKey(start)!==dateKey)continue
 const end=b.end_at?new Date(b.end_at):new Date(start.getTime()+30*60000)
 
 const startSlot=slotKey(start)
-
 const dur=durationMinutes(start,end)
-
 const span=Math.max(1,Math.round(dur/15))
 const effectiveStatus=normalizeStatus(statusOverrides[b.id] ?? b.status)
 const isNowBooking=toDateKey(start)===todayKey() && isNowInsideBooking(start,end)
@@ -632,7 +629,7 @@ background:dayLoad.bg
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
 <b>Загрузка дня</b>
 <span style={{fontWeight:"700",color:dayLoad.color}}>
-{dayLoad.percent}% Â· {dayLoad.label}
+{dayLoad.percent}% · {dayLoad.label}
 </span>
 </div>
 
@@ -687,7 +684,10 @@ transition:"all 0.15s ease"
 <div
 onClick={()=>createBooking(s)}
 style={{
-marginTop:"6px",fontSize:"13px",color:"#2980b9",cursor:"pointer"
+marginTop:"6px",
+fontSize:"13px",
+color:"#2980b9",
+cursor:"pointer"
 }}
 >
 + запись
@@ -763,7 +763,7 @@ onClick={(e)=>quickAction(e,b,"confirm")}
 disabled={bookingBusy}
 style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
 >
-âœ”
+Подтвердить
 </button>
 
 <button
@@ -771,7 +771,7 @@ onClick={(e)=>quickAction(e,b,"done")}
 disabled={bookingBusy}
 style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
 >
-âœ“
+Завершить
 </button>
 
 <button
@@ -779,7 +779,7 @@ onClick={(e)=>quickAction(e,b,"cancel")}
 disabled={bookingBusy}
 style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
 >
-âœ–
+Отменить
 </button>
 
 </div>
@@ -790,15 +790,11 @@ style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",backgro
 
 </div>
 
-</PageSection>
-
 )
 
 })}
 
 </div>
-
-
 
 )
 
