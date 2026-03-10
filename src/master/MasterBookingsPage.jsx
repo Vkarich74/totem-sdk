@@ -13,6 +13,15 @@ if(s==="reserved")return "#f39c12"
 return "#e74c3c"
 }
 
+/* ДОБАВЛЕНО: стиль hover строк таблицы */
+function rowHoverStyle(e,enter){
+if(enter){
+e.currentTarget.style.background="#f9fafb"
+}else{
+e.currentTarget.style.background=""
+}
+}
+
 export default function MasterBookingsPage(){
 
 const {bookingId}=useParams()
@@ -23,7 +32,7 @@ const [client,setClient]=useState("")
 const [phone,setPhone]=useState("")
 const [serviceId,setServiceId]=useState("1")
 
-if(loading)return <div style={{padding:"20px"}}>Загрузка...</div>
+if(loading)return <div style={{padding:"20px"}}>╨ù╨░╨│╤Ç╤â╨╖╨║╨░...</div>
 
 const hash=window.location.hash
 
@@ -73,30 +82,30 @@ return(
 onClick={()=>window.location.hash="/master/schedule"}
 style={{marginBottom:"10px"}}
 >
-← к календарю
+ΓåÉ ╨║ ╨║╨░╨╗╨╡╨╜╨┤╨░╤Ç╤Ä
 </button>
 
-<PageSection title="Новая запись">
+<PageSection title="╨¥╨╛╨▓╨░╤Å ╨╖╨░╨┐╨╕╤ü╤î">
 
 <div style={{maxWidth:"420px"}}>
 
 <div style={{marginBottom:"10px"}}>
-Дата: <b>{date}</b>
+╨ö╨░╤é╨░: <b>{date}</b>
 </div>
 
 <div style={{marginBottom:"10px"}}>
-Время: <b>{time}</b>
+╨Æ╤Ç╨╡╨╝╤Å: <b>{time}</b>
 </div>
 
 <input
-placeholder="Клиент"
+placeholder="╨Ü╨╗╨╕╨╡╨╜╤é"
 value={client}
 onChange={e=>setClient(e.target.value)}
 style={{width:"100%",marginBottom:"8px"}}
 />
 
 <input
-placeholder="Телефон"
+placeholder="╨ó╨╡╨╗╨╡╤ä╨╛╨╜"
 value={phone}
 onChange={e=>setPhone(e.target.value)}
 style={{width:"100%",marginBottom:"8px"}}
@@ -107,13 +116,13 @@ value={serviceId}
 onChange={e=>setServiceId(e.target.value)}
 style={{width:"100%",marginBottom:"10px"}}
 >
-<option value="1">Услуга 1</option>
-<option value="2">Услуга 2</option>
-<option value="3">Услуга 3</option>
+<option value="1">╨ú╤ü╨╗╤â╨│╨░ 1</option>
+<option value="2">╨ú╤ü╨╗╤â╨│╨░ 2</option>
+<option value="3">╨ú╤ü╨╗╤â╨│╨░ 3</option>
 </select>
 
 <button onClick={createBooking}>
-Создать запись
+╨í╨╛╨╖╨┤╨░╤é╤î ╨╖╨░╨┐╨╕╤ü╤î
 </button>
 
 </div>
@@ -134,8 +143,8 @@ if(!booking){
 
 return(
 <div style={{padding:"20px"}}>
-<PageSection title="Запись">
-<EmptyState title="Запись не найдена"/>
+<PageSection title="╨ù╨░╨┐╨╕╤ü╤î">
+<EmptyState title="╨ù╨░╨┐╨╕╤ü╤î ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╨░"/>
 </PageSection>
 </div>
 )
@@ -150,7 +159,7 @@ return(
 onClick={()=>window.location.hash="/master/schedule"}
 style={{marginBottom:"10px"}}
 >
-← к календарю
+ΓåÉ ╨║ ╨║╨░╨╗╨╡╨╜╨┤╨░╤Ç╤Ä
 </button>
 
 <PageSection title={"BR-"+booking.id}>
@@ -161,26 +170,26 @@ style={{marginBottom:"10px"}}
 
 {booking.service_name && (
 <div style={{marginBottom:"6px"}}>
-Услуга: {booking.service_name}
+╨ú╤ü╨╗╤â╨│╨░: {booking.service_name}
 </div>
 )}
 
 {booking.price && (
 <div style={{marginBottom:"6px"}}>
-Цена: {booking.price} ₸
+╨ª╨╡╨╜╨░: {booking.price} Γé╕
 </div>
 )}
 
 <div style={{marginBottom:"6px"}}>
-Время: {new Date(booking.start_at).toLocaleString("ru-RU")}
+╨Æ╤Ç╨╡╨╝╤Å: {new Date(booking.start_at).toLocaleString("ru-RU")}
 </div>
 
 <div style={{marginBottom:"6px"}}>
-Клиент: {booking.client_name||"—"}
+╨Ü╨╗╨╕╨╡╨╜╤é: {booking.client_name||"ΓÇö"}
 </div>
 
 <div>
-Телефон: {booking.phone||"—"}
+╨ó╨╡╨╗╨╡╤ä╨╛╨╜: {booking.phone||"ΓÇö"}
 </div>
 
 </PageSection>
@@ -195,13 +204,13 @@ return(
 
 <div style={{padding:"20px"}}>
 
-<PageSection title="Записи">
+<PageSection title="╨ù╨░╨┐╨╕╤ü╨╕">
 
 {(!bookings || bookings.length===0) ? (
 
 <EmptyState
-title="Записей пока нет"
-message="Записи появятся после бронирований"
+title="╨ù╨░╨┐╨╕╤ü╨╡╨╣ ╨┐╨╛╨║╨░ ╨╜╨╡╤é"
+message="╨ù╨░╨┐╨╕╤ü╨╕ ╨┐╨╛╤Å╨▓╤Å╤é╤ü╤Å ╨┐╨╛╤ü╨╗╨╡ ╨▒╤Ç╨╛╨╜╨╕╤Ç╨╛╨▓╨░╨╜╨╕╨╣"
 />
 
 ) : (
@@ -213,10 +222,10 @@ message="Записи появятся после бронирований"
 <thead>
 <tr>
 <th>ID</th>
-<th>Статус</th>
-<th>Дата</th>
-<th>Клиент</th>
-<th>Телефон</th>
+<th>╨í╤é╨░╤é╤â╤ü</th>
+<th>╨ö╨░╤é╨░</th>
+<th>╨Ü╨╗╨╕╨╡╨╜╤é</th>
+<th>╨ó╨╡╨╗╨╡╤ä╨╛╨╜</th>
 </tr>
 </thead>
 
@@ -224,7 +233,17 @@ message="Записи появятся после бронирований"
 
 {bookings.map(b=>(
 
-<tr key={b.id}>
+<tr
+key={b.id}
+style={{cursor:"pointer"}}
+onMouseEnter={(e)=>rowHoverStyle(e,true)}
+onMouseLeave={(e)=>rowHoverStyle(e,false)}
+onClick={(e)=>{
+if(e.target.tagName!=="A"){
+window.location.hash="/master/bookings/"+b.id
+}
+}}
+>
 
 <td>
 <a href={"#/master/bookings/"+b.id}>
@@ -241,11 +260,11 @@ BR-{b.id}
 </td>
 
 <td>
-{b.client_name||"—"}
+{b.client_name||"ΓÇö"}
 </td>
 
 <td>
-{b.phone||"—"}
+{b.phone||"ΓÇö"}
 </td>
 
 </tr>
