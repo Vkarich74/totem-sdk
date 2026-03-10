@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import * as api from "../../api/internal";
 import { getSalonSlug } from "../../utils/salon";
 
+
 function resolveSlug(){
 const util = getSalonSlug();
 if(util) return util;
