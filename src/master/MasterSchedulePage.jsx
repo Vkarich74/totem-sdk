@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "./MasterContext"
+import PageSection from "../cabinet/PageSection"
 
 function pad(v){
 return v<10?"0"+v:String(v)
@@ -109,11 +110,11 @@ const minutes=diffMinutes%60
 
 let eta=""
 if(hours>0 && minutes>0){
-eta="Ñ‡ÐµÑ€ÐµÐ· "+hours+" Ñ‡ "+minutes+" Ð¼Ð¸Ð½"
+eta="через "+hours+" ч "+minutes+" мин"
 }else if(hours>0){
-eta="Ñ‡ÐµÑ€ÐµÐ· "+hours+" Ñ‡"
+eta="через "+hours+" ч"
 }else{
-eta="Ñ‡ÐµÑ€ÐµÐ· "+minutes+" Ð¼Ð¸Ð½"
+eta="через "+minutes+" мин"
 }
 
 return{
@@ -143,10 +144,10 @@ return s
 function statusLabel(s){
 s=normalizeStatus(s)
 
-if(s==="reserved")return"Ð¾Ð¶Ð¸Ð´Ð°ÐµÑ‚"
-if(s==="confirmed")return"Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð°"
-if(s==="completed")return"Ð·Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ð°"
-if(s==="cancelled")return"Ð¾Ñ‚Ð¼ÐµÐ½Ð°"
+if(s==="reserved")return"ожидает"
+if(s==="confirmed")return"подтверждена"
+if(s==="completed")return"завершена"
+if(s==="cancelled")return"отмена"
 
 return s
 }
@@ -172,18 +173,18 @@ const hours=Math.floor(totalMinutes/60)
 const minutes=totalMinutes%60
 
 if(minutes===0){
-return hours+" Ñ‡"
+return hours+" ч"
 }
 
 if(hours===0){
-return minutes+" Ð¼Ð¸Ð½"
+return minutes+" мин"
 }
 
-return hours+" Ñ‡ "+minutes+" Ð¼Ð¸Ð½"
+return hours+" ч "+minutes+" мин"
 }
 
 function formatMoney(value){
-return String(value||0)+" ÑÐ¾Ð¼"
+return String(value||0)+" сом"
 }
 
 function bookingAmount(b){
@@ -233,7 +234,7 @@ const percent=Math.min(100,Math.round((busyMinutes/totalMinutes)*100))
 if(percent<40){
 return{
 percent,
-label:"Ð½Ð¸Ð·ÐºÐ°Ñ",
+label:"низкая",
 color:"#2f9e44",
 bg:"#ebfbee"
 }
@@ -242,7 +243,7 @@ bg:"#ebfbee"
 if(percent<70){
 return{
 percent,
-label:"ÑÑ€ÐµÐ´Ð½ÑÑ",
+label:"средняя",
 color:"#e67700",
 bg:"#fff9db"
 }
@@ -250,7 +251,7 @@ bg:"#fff9db"
 
 return{
 percent,
-label:"Ð²Ñ‹ÑÐ¾ÐºÐ°Ñ",
+label:"высокая",
 color:"#e03131",
 bg:"#fff5f5"
 }
@@ -399,11 +400,11 @@ setStatusOverrides((prev)=>({
 
 }catch(error){
 if(error && error.message==="MASTER_SLUG_NOT_FOUND"){
-alert("ÐÐµ Ð½Ð°Ð¹Ð´ÐµÐ½ master slug Ð² URL")
+alert("Не найден master slug в URL")
 }else if(error && error.message==="SALON_SLUG_NOT_FOUND"){
-alert("Ð£ Ð¼Ð°ÑÑ‚ÐµÑ€Ð° Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½ salon slug")
+alert("У мастера не найден salon slug")
 }else{
-alert("Ð¡Ñ‚Ð°Ñ‚ÑƒÑ Ð½Ðµ Ð¾Ð±Ð½Ð¾Ð²Ð¸Ð»ÑÑ")
+alert("Статус не обновился")
 }
 }finally{
 setActionLoading((prev)=>{
@@ -499,27 +500,29 @@ return{calendar,skip}
 
 },[bookings,dateKey,statusOverrides,clockTick])
 
-if(loading)return<div>Ð—Ð°Ð³Ñ€ÑƒÐ·ÐºÐ°...</div>
+if(loading)return<PageSection title="Календарь мастера"><div>Загрузка...</div></PageSection>
 
 return(
+
+<PageSection title="Календарь мастера">
 
 <div>
 
 <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
 
-<h3 style={{margin:0}}>ÐšÐ°Ð»ÐµÐ½Ð´Ð°Ñ€ÑŒ Ð¼Ð°ÑÑ‚ÐµÑ€Ð°</h3>
+<h3 style={{margin:0}}>Календарь мастера</h3>
 
 <div style={{flex:1}}/>
 
-<button onClick={()=>setDateKey(addDays(dateKey,-1))}>â†</button>
+<button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
 
 <div style={{fontWeight:700,minWidth:"120px",textAlign:"center"}}>
 {formatDMY(dateKey)}
 </div>
 
-<button onClick={()=>setDateKey(addDays(dateKey,1))}>â†’</button>
+<button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
 
-<button onClick={()=>setDateKey(todayKey())}>Ð¡ÐµÐ³Ð¾Ð´Ð½Ñ</button>
+<button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
 
 </div>
 
@@ -533,7 +536,7 @@ marginBottom:"12px",
 background:"#f1f8ff"
 }}>
 
-<div style={{fontSize:"12px",color:"#666"}}>Ð‘Ð»Ð¸Ð¶Ð°Ð¹ÑˆÐ°Ñ Ð·Ð°Ð¿Ð¸ÑÑŒ</div>
+<div style={{fontSize:"12px",color:"#666"}}>Ближайшая запись</div>
 
 <div style={{marginTop:"4px",fontWeight:"700"}}>
 {nextBookingInfo.eta}
@@ -541,8 +544,8 @@ background:"#f1f8ff"
 
 <div style={{marginTop:"4px",fontSize:"13px",color:"#333"}}>
 #{nextBookingInfo.id}
-{nextBookingInfo.serviceName ? " Â· "+nextBookingInfo.serviceName : ""}
-{nextBookingInfo.clientName ? " Â· "+nextBookingInfo.clientName : ""}
+{nextBookingInfo.serviceName ? " · "+nextBookingInfo.serviceName : ""}
+{nextBookingInfo.clientName ? " · "+nextBookingInfo.clientName : ""}
 </div>
 
 </div>
@@ -557,9 +560,9 @@ marginBottom:"12px",
 background:"#fafafa"
 }}>
 
-<div>Ð—Ð°Ð¿Ð¸ÑÐµÐ¹ ÑÐµÐ³Ð¾Ð´Ð½Ñ: <b>{stats.today}</b></div>
-<div>Ð’Ñ‡ÐµÑ€Ð°: <b>{stats.yesterday}</b></div>
-<div>Ð—Ð°Ð²Ñ‚Ñ€Ð°: <b>{stats.tomorrow}</b></div>
+<div>Записей сегодня: <b>{stats.today}</b></div>
+<div>Вчера: <b>{stats.yesterday}</b></div>
+<div>Завтра: <b>{stats.tomorrow}</b></div>
 
 </div>
 
@@ -576,7 +579,7 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Ð—Ð°Ð¿Ð¸ÑÐµÐ¹ Ð² Ð´Ð½Ðµ</div>
+<div style={{fontSize:"12px",color:"#666"}}>Записей в дне</div>
 <div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>{dayKpi.bookingsCount}</div>
 </div>
 
@@ -586,7 +589,7 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Ð—Ð°Ð½ÑÑ‚Ð¾</div>
+<div style={{fontSize:"12px",color:"#666"}}>Занято</div>
 <div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
 {formatHoursMinutes(dayKpi.busyMinutes)}
 </div>
@@ -598,7 +601,7 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Ð¡Ð²Ð¾Ð±Ð¾Ð´Ð½Ð¾</div>
+<div style={{fontSize:"12px",color:"#666"}}>Свободно</div>
 <div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
 {formatHoursMinutes(dayKpi.freeMinutes)}
 </div>
@@ -610,7 +613,7 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Ð¡ÑƒÐ¼Ð¼Ð° Ð´Ð½Ñ</div>
+<div style={{fontSize:"12px",color:"#666"}}>Сумма дня</div>
 <div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
 {formatMoney(dayKpi.revenueTotal)}
 </div>
@@ -627,7 +630,7 @@ background:dayLoad.bg
 }}>
 
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
-<b>Ð—Ð°Ð³Ñ€ÑƒÐ·ÐºÐ° Ð´Ð½Ñ</b>
+<b>Загрузка дня</b>
 <span style={{fontWeight:"700",color:dayLoad.color}}>
 {dayLoad.percent}% Â· {dayLoad.label}
 </span>
@@ -666,15 +669,16 @@ borderRadius:"10px",
 padding:"10px",
 marginBottom:"8px",
 background:isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff",
-opacity:isPast&&!b?0.72:1
+opacity:isPast&&!b?0.72:1,
+transition:"all 0.15s ease"
 }}>
 
 <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
 <b style={{minWidth:"60px",color:isPast&&!isNow?"#868e96":"inherit"}}>
-{isNow?"â–¶ "+s:s}
+{isNow?"▶ "+s:s}
 </b>
 <span style={{color:b?"#111":"#999"}}>
-{b?"Ð·Ð°Ð½ÑÑ‚Ð¾":isPast?"Ð¿Ñ€Ð¾ÑˆÐ»Ð¾":"ÑÐ²Ð¾Ð±Ð¾Ð´Ð½Ð¾"}
+{b?"занято":isPast?"прошло":"свободно"}
 </span>
 </div>
 
@@ -683,13 +687,10 @@ opacity:isPast&&!b?0.72:1
 <div
 onClick={()=>createBooking(s)}
 style={{
-marginTop:"6px",
-fontSize:"13px",
-color:"#2980b9",
-cursor:"pointer"
+marginTop:"6px",fontSize:"13px",color:"#2980b9",cursor:"pointer"
 }}
 >
-+ Ð·Ð°Ð¿Ð¸ÑÑŒ
++ запись
 </div>
 
 )}
@@ -701,7 +702,7 @@ marginTop:"6px",
 fontSize:"12px",
 color:"#868e96"
 }}>
-Ð²Ñ€ÐµÐ¼Ñ Ð¿Ñ€Ð¾ÑˆÐ»Ð¾
+время прошло
 </div>
 
 )}
@@ -739,20 +740,20 @@ boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 
 <div style={{marginTop:"4px"}}>
 {new Date(b.start_at).toLocaleTimeString().slice(0,5)}
-{" â€“ "}
+{" – "}
 {new Date(b.end_at).toLocaleTimeString().slice(0,5)}
 </div>
 
 <div style={{marginTop:"4px"}}>
-{b.client_name||"ÐºÐ»Ð¸ÐµÐ½Ñ‚"}
+{b.client_name||"клиент"}
 </div>
 
 <div style={{marginTop:"4px",color:"#444"}}>
-{b.phone||"â€”"}
+{b.phone||"—"}
 </div>
 
 <div style={{marginTop:"6px",fontSize:"12px"}}>
-Ð´Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ: {durationMinutes(b.start_at,b.end_at)} Ð¼Ð¸Ð½
+длительность: {durationMinutes(b.start_at,b.end_at)} мин
 </div>
 
 <div style={{marginTop:"8px",display:"flex",gap:"6px",position:"sticky",bottom:0,background:statusColor(b._status),paddingTop:"4px"}}>
@@ -760,6 +761,7 @@ boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 <button
 onClick={(e)=>quickAction(e,b,"confirm")}
 disabled={bookingBusy}
+style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
 >
 âœ”
 </button>
@@ -767,6 +769,7 @@ disabled={bookingBusy}
 <button
 onClick={(e)=>quickAction(e,b,"done")}
 disabled={bookingBusy}
+style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
 >
 âœ“
 </button>
@@ -774,6 +777,7 @@ disabled={bookingBusy}
 <button
 onClick={(e)=>quickAction(e,b,"cancel")}
 disabled={bookingBusy}
+style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
 >
 âœ–
 </button>
@@ -786,11 +790,15 @@ disabled={bookingBusy}
 
 </div>
 
+</PageSection>
+
 )
 
 })}
 
 </div>
+
+</PageSection>
 
 )
 
