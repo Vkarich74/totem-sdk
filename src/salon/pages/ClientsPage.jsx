@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PageSection from "../../cabinet/PageSection";
 
-const API_BASE = "https://api.totemv.com";
+const API_BASE = import.meta.env.VITE_API_BASE
 
 function resolveSlug() {
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-const API_BASE = "https://api.totemv.com";
+const API_BASE = import.meta.env.VITE_API_BASE
 
 export default function SalonBookingsPage() {
   const [searchParams] = useSearchParams();

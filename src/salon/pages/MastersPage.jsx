@@ -5,7 +5,7 @@ import StatGrid from "../../cabinet/StatGrid";
 import TableSection from "../../cabinet/TableSection";
 import EmptyState from "../../cabinet/EmptyState";
 
-const API_BASE = "https://api.totemv.com";
+const API_BASE = import.meta.env.VITE_API_BASE
 
 function resolveSlug() {
 

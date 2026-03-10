@@ -4,7 +4,7 @@ import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
 import StatGrid from "../../cabinet/StatGrid"
 
-const API_BASE = "https://api.totemv.com"
+const API_BASE = import.meta.env.VITE_API_BASE
 
 function money(n){
   return new Intl.NumberFormat("ru-RU").format(n || 0) + " сом"
