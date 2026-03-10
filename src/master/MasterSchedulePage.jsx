@@ -1,269 +1,244 @@
-import { useEffect, useMemo, useState } from "react"
-import { useMaster } from "./MasterContext"
-
-function pad(v){
-return v<10?"0"+v:String(v)
-}
-
-function toDateKey(d){
-return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())
-}
-
-function todayKey(){
-return toDateKey(new Date())
-}
-
-function formatDMY(k){
-const [y,m,d]=k.split("-")
-return d+"-"+m+"-"+y
-}
-
-function addDays(key,delta){
-const [y,m,d]=key.split("-").map(Number)
-const dt=new Date(y,m-1,d)
-dt.setDate(dt.getDate()+delta)
-return toDateKey(dt)
-}
-
-function buildSlots(){
-const slots=[]
-let h=7
-let m=0
-
-for(let i=0;i<56;i++){
-slots.push(pad(h)+":"+pad(m))
-m+=15
-if(m>=60){
-h++
-m=0
-}
-}
-
-return slots
-}
-
-function slotKey(date){
-const h=date.getHours()
-const m=Math.floor(date.getMinutes()/15)*15
-return pad(h)+":"+pad(m)
-}
-
-function slotKeysBetween(start,end){
-const keys=[]
-let t=new Date(start)
-
-while(t<end){
-keys.push(slotKey(t))
-t=new Date(t.getTime()+15*60000)
-}
-
-return keys
-}
-
-function currentSlot(){
-const now=new Date()
-const h=now.getHours()
-const m=Math.floor(now.getMinutes()/15)*15
-return pad(h)+":"+pad(m)
-}
-
-function isNowInsideBooking(start,end){
-const now=Date.now()
-const startMs=new Date(start).getTime()
-const endMs=new Date(end).getTime()
-return now>=startMs && now<endMs
-}
-
-function normalizeStatus(v){
-const s=String(v||"reserved").toLowerCase()
-if(s==="canceled")return"cancelled"
-return s
-}
-
-function statusLabel(s){
-s=normalizeStatus(s)
-
-if(s==="reserved")return"ожидает"
-if(s==="confirmed")return"подтверждена"
-if(s==="completed")return"завершена"
-if(s==="cancelled")return"отменена"
-
-return s
-}
+import {useMaster} from "./MasterContext"
+import {useParams} from "react-router-dom"
+import {useState} from "react"
 
 function statusColor(s){
-s=normalizeStatus(s)
 
-if(s==="reserved")return"#fff3cd"
-if(s==="confirmed")return"#d0ebff"
-if(s==="completed")return"#d3f9d8"
-if(s==="cancelled")return"#ffe3e3"
-
-return"#eee"
-}
-
-function durationMinutes(start,end){
-if(!end)return 30
-return Math.round((new Date(end)-new Date(start))/60000)
-}
-
-function isPastSlot(slot,dateKey){
-if(dateKey!==todayKey())return dateKey<todayKey()
-return slot<currentSlot()
-}
-
-export default function MasterSchedulePage(){
-
-const {bookings=[],loading}=useMaster()
-
-const [dateKey,setDateKey]=useState(todayKey())
-const [statusOverrides,setStatusOverrides]=useState({})
-const [actionLoading,setActionLoading]=useState({})
-const [clockTick,setClockTick]=useState(0)
-
-useEffect(()=>{
-const timer=setInterval(()=>{
-setClockTick(v=>v+1)
-},60000)
-
-return()=>clearInterval(timer)
-},[])
-
-const slots=useMemo(()=>buildSlots(),[])
-const nowSlot=currentSlot()
-
-const {calendar,skip}=useMemo(()=>{
-
-const calendar={}
-const skip=new Set()
-
-for(const b of bookings){
-
-if(!b.start_at)continue
-
-const start=new Date(b.start_at)
-if(toDateKey(start)!==dateKey)continue
-
-const end=b.end_at?new Date(b.end_at):new Date(start.getTime()+30*60000)
-
-const startSlot=slotKey(start)
-const span=Math.max(1,Math.round(durationMinutes(start,end)/15))
-
-calendar[startSlot]={...b,span}
-
-const keys=slotKeysBetween(start,end)
-keys.shift()
-
-for(const k of keys){
-skip.add(k)
-}
+if(s==="completed")return "#27ae60"
+if(s==="confirmed")return "#2980b9"
+if(s==="reserved")return "#f39c12"
+return "#e74c3c"
 
 }
 
-return{calendar,skip}
+export default function MasterBookingsPage(){
 
-},[bookings,dateKey,statusOverrides,clockTick])
+const {bookingId}=useParams()
 
-if(loading)return<div>Загрузка...</div>
+const {bookings,loading,master}=useMaster()
+
+const [client,setClient]=useState("")
+const [phone,setPhone]=useState("")
+const [serviceId,setServiceId]=useState("1")
+
+if(loading)return <div>Ð—Ð°Ð³Ñ€ÑƒÐ·ÐºÐ°...</div>
+
+const hash=window.location.hash
+
+// Ð±ÐµÐ·Ð¾Ð¿Ð°ÑÐ½Ð¾ Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ slug Ð¼Ð°ÑÑ‚ÐµÑ€Ð°
+let masterSlug=""
+if(master && master.slug){
+masterSlug=master.slug
+}else{
+const p=window.location.pathname.split("/")
+masterSlug=p[2]||""
+}
+
+// Ñ€ÐµÐ¶Ð¸Ð¼ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ Ð·Ð°Ð¿Ð¸ÑÐ¸
+if(hash.includes("/master/bookings/new")){
+
+const params=new URLSearchParams(hash.split("?")[1]||"")
+
+const time=params.get("time")||""
+const date=params.get("date")||""
+
+async function createBooking(){
+
+// FIX TIMEZONE KG (+06)
+const start=date+"T"+time+":00+06:00"
+
+await fetch(
+"https://api.totemv.com/internal/masters/"+masterSlug+"/bookings",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+client_name:client,
+phone:phone,
+start_at:start,
+service_id:Number(serviceId)
+})
+}
+)
+
+// ÐŸÐ Ð˜ÐÐ£Ð”Ð˜Ð¢Ð•Ð›Ð¬ÐÐž ÐžÐ‘ÐÐžÐ’Ð›Ð¯Ð•Ðœ ÐšÐÐ›Ð•ÐÐ”ÐÐ Ð¬
+window.location.href=window.location.pathname+"#/master/schedule"
+
+}
 
 return(
+
+<div>
+
+<button
+onClick={()=>window.location.hash="/master/schedule"}
+style={{marginBottom:"10px"}}
+>
+â† ÐºÐ°Ð»ÐµÐ½Ð´Ð°Ñ€ÑŒ
+</button>
+
+<h3>ÐÐ¾Ð²Ð°Ñ Ð·Ð°Ð¿Ð¸ÑÑŒ</h3>
 
 <div style={{
-overflow:"auto",
-maxHeight:"calc(100vh - 220px)"
+border:"1px solid #ddd",
+padding:"14px",
+borderRadius:"12px",
+maxWidth:"420px"
 }}>
 
-<div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
-
-<h3 style={{margin:0}}>Календарь мастера</h3>
-
-<div style={{flex:1}}/>
-
-<button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
-
-<div style={{fontWeight:700,minWidth:"120px",textAlign:"center"}}>
-{formatDMY(dateKey)}
+<div style={{marginBottom:"10px"}}>
+Ð”Ð°Ñ‚Ð°: <b>{date}</b>
 </div>
 
-<button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
+<div style={{marginBottom:"10px"}}>
+Ð’Ñ€ÐµÐ¼Ñ: <b>{time}</b>
+</div>
 
-<button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
+<input
+placeholder="ÐšÐ»Ð¸ÐµÐ½Ñ‚"
+value={client}
+onChange={e=>setClient(e.target.value)}
+style={{width:"100%",marginBottom:"8px"}}
+/>
+
+<input
+placeholder="Ð¢ÐµÐ»ÐµÑ„Ð¾Ð½"
+value={phone}
+onChange={e=>setPhone(e.target.value)}
+style={{width:"100%",marginBottom:"8px"}}
+/>
+
+<select
+value={serviceId}
+onChange={e=>setServiceId(e.target.value)}
+style={{width:"100%",marginBottom:"10px"}}
+>
+
+<option value="1">Ð£ÑÐ»ÑƒÐ³Ð° 1</option>
+<option value="2">Ð£ÑÐ»ÑƒÐ³Ð° 2</option>
+<option value="3">Ð£ÑÐ»ÑƒÐ³Ð° 3</option>
+
+</select>
+
+<button onClick={createBooking}>
+Ð¡Ð¾Ð·Ð´Ð°Ñ‚ÑŒ Ð·Ð°Ð¿Ð¸ÑÑŒ
+</button>
 
 </div>
 
-{slots.map(s=>{
+</div>
 
-if(skip.has(s))return null
+)
 
-const b=calendar[s]
-const isNow=s===nowSlot
-const isPast=isPastSlot(s,dateKey)
+}
+
+if(bookingId){
+
+const booking=bookings.find(b=>String(b.id)===String(bookingId))
+
+if(!booking){
+
+return(
+<div>
+<h3>Ð—Ð°Ð¿Ð¸ÑÑŒ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð°</h3>
+</div>
+)
+
+}
 
 return(
 
-<div key={s} style={{
-border:isNow?"2px solid #339af0":"1px solid #ddd",
-borderRadius:"10px",
+<div>
+
+<button
+onClick={()=>window.location.hash="/master/schedule"}
+style={{marginBottom:"10px"}}
+>
+â† ÐºÐ°Ð»ÐµÐ½Ð´Ð°Ñ€ÑŒ
+</button>
+
+<h3>ÐšÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° Ð·Ð°Ð¿Ð¸ÑÐ¸</h3>
+
+<div style={{
+border:"1px solid #ddd",
+padding:"14px",
+borderRadius:"12px"
+}}>
+
+<div style={{fontWeight:700,fontSize:"18px"}}>
+BR-{booking.id}
+</div>
+
+<div style={{color:statusColor(booking.status),marginTop:"6px"}}>
+{booking.status}
+</div>
+
+{booking.service_name && (
+<div style={{marginTop:"8px"}}>
+Ð£ÑÐ»ÑƒÐ³Ð°: {booking.service_name}
+</div>
+)}
+
+{booking.price && (
+<div style={{marginTop:"6px"}}>
+Ð¦ÐµÐ½Ð°: {booking.price} â‚½
+</div>
+)}
+
+<div style={{marginTop:"10px"}}>
+Ð’Ñ€ÐµÐ¼Ñ: {new Date(booking.start_at).toLocaleString("ru-RU")}
+</div>
+
+<div style={{marginTop:"6px"}}>
+ÐšÐ»Ð¸ÐµÐ½Ñ‚: {booking.client_name||"â€”"}
+</div>
+
+<div style={{marginTop:"6px"}}>
+Ð¢ÐµÐ»ÐµÑ„Ð¾Ð½: {booking.phone||"â€”"}
+</div>
+
+</div>
+
+</div>
+
+)
+
+}
+
+return(
+
+<div>
+
+<h3>Ð—Ð°Ð¿Ð¸ÑÐ¸</h3>
+
+{bookings.map(b=>(
+
+<div key={b.id} style={{
+border:"1px solid #ddd",
 padding:"12px",
-marginBottom:"8px",
-background:b?statusColor(b.status):(isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff"),
-opacity:isPast&&!b?0.72:1
+borderRadius:"10px",
+marginBottom:"10px"
 }}>
 
-<div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+<div style={{fontWeight:700}}>BR-{b.id}</div>
 
-<b style={{minWidth:"60px"}}>
-{isNow?"● "+s:s}
-</b>
+<div style={{color:statusColor(b.status)}}>{b.status}</div>
 
-{!b && (
-<span style={{color:"#999"}}>
-{isPast?"прошло":"свободно"}
-</span>
-)}
+<div>{new Date(b.start_at).toLocaleString("ru-RU")}</div>
 
-{b && (
+<div>ÐšÐ»Ð¸ÐµÐ½Ñ‚: {b.client_name||"â€”"}</div>
 
-<div style={{flex:1}}>
-
-<div style={{fontWeight:600}}>
-{b.client_name || "Клиент"}
-</div>
-
-<div style={{fontSize:"13px",color:"#666"}}>
-{b.service_name || ""}
-</div>
+<div>Ð¢ÐµÐ»ÐµÑ„Ð¾Ð½: {b.phone||"â€”"}</div>
 
 </div>
 
-)}
-
-</div>
-
-{b && (
-
-<div style={{
-marginTop:"8px",
-display:"flex",
-gap:"6px"
-}}>
-
-<button style={{fontSize:"12px"}}>Подтвердить</button>
-<button style={{fontSize:"12px"}}>Завершить</button>
-<button style={{fontSize:"12px"}}>Отменить</button>
-
-</div>
-
-)}
-
-</div>
-
-)
-
-})}
+))}
 
 </div>
 
 )
 
 }
+
