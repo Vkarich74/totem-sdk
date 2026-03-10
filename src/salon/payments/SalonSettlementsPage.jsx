@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react"
 
+import PageSection from "../../cabinet/PageSection"
+import EmptyState from "../../cabinet/EmptyState"
+
 export default function SalonSettlementsPage() {
 
   const [loading, setLoading] = useState(true)
@@ -33,7 +36,6 @@ export default function SalonSettlementsPage() {
 
         if (!response.ok) {
 
-          // endpoint не существует
           setSettlements([])
           setLoading(false)
           return
@@ -62,26 +64,25 @@ export default function SalonSettlementsPage() {
 
   if (loading) {
     return (
-      <div>
-        <h1>Сеты салона</h1>
-        <p>Загрузка расчетов...</p>
-      </div>
+      <PageSection title="Расчёты салона">
+        <div>Загрузка расчётов...</div>
+      </PageSection>
     )
   }
 
   if (!settlements.length) {
     return (
-      <div>
-        <h1>Сеты салона</h1>
-        <p>Расчёты пока отсутствуют</p>
-      </div>
+      <PageSection title="Расчёты салона">
+        <EmptyState
+          title="Расчёты отсутствуют"
+          text="Расчёты салона пока отсутствуют"
+        />
+      </PageSection>
     )
   }
 
   return (
-    <div>
-
-      <h1>Сеты салона</h1>
+    <PageSection title="Расчёты салона">
 
       {settlements.map((s) => (
         <div
@@ -95,13 +96,13 @@ export default function SalonSettlementsPage() {
         >
 
           <div><strong>ID:</strong> {s.id}</div>
-          <div><strong>Период:</strong> {s.period_start} → {s.period_end}</div>
+          <div><strong>Период:</strong> {s.period_start} — {s.period_end}</div>
           <div><strong>Сумма:</strong> {s.amount}</div>
           <div><strong>Статус:</strong> {s.status}</div>
 
         </div>
       ))}
 
-    </div>
+    </PageSection>
   )
 }
