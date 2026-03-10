@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import PageSection from "../../cabinet/PageSection";
 
 export default function SettingsPage(){
 
@@ -7,9 +7,7 @@ const [name,setName] = useState("Мой салон");
 
 return(
 
-<div style={{padding:"20px"}}>
-
-<h2>Настройки салона</h2>
+<PageSection title="Настройки салона">
 
 <div style={{marginTop:"20px"}}>
 
@@ -41,7 +39,7 @@ borderRadius:"6px"
 
 </div>
 
-</div>
+</PageSection>
 
 );
 
