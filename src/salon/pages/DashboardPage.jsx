@@ -45,12 +45,7 @@ return(
 
 <PageSection title="Панель управления салоном">
 
-<div style={{
-display:"grid",
-gridTemplateColumns:"repeat(3,1fr)",
-gap:"16px",
-marginTop:"20px"
-}}>
+<StatGrid>
 
 <Card title="Записей сегодня" value={metrics.bookings_today || 0} color="#3b82f6"/>
 <Card title="Записей за неделю" value={metrics.bookings_week || 0} color="#3b82f6"/>
@@ -59,13 +54,30 @@ marginTop:"20px"
 <Card title="Клиентов всего" value={metrics.clients_total || 0} color="#8b5cf6"/>
 <Card title="Новых клиентов сегодня" value={metrics.clients_today || 0} color="#8b5cf6"/>
 
-<Card title="Мастеров активных" value={metrics.masters_active || 0} color="#f59e0b"/>
-<Card title="Мастеров ожидают" value={metrics.masters_pending || 0} color="#f59e0b"/>
+<Card title="Активных мастеров" value={metrics.masters_active || 0} color="#f59e0b"/>
+<Card title="Мастеров на проверке" value={metrics.masters_pending || 0} color="#f59e0b"/>
 <Card title="Всего мастеров" value={metrics.masters_total || 0} color="#f59e0b"/>
 
-</div>
+</StatGrid>
 
 </PageSection>
+
+);
+
+}
+
+function StatGrid({children}){
+
+return(
+
+<div style={{
+display:"grid",
+gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
+gap:"16px",
+marginTop:"20px"
+}}>
+{children}
+</div>
 
 );
 
@@ -80,7 +92,8 @@ border:"1px solid #e5e7eb",
 borderLeft:`6px solid ${color}`,
 borderRadius:"8px",
 padding:"16px",
-background:"#fff"
+background:"#fff",
+minHeight:"80px"
 }}>
 
 <div style={{
