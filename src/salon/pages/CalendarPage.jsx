@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import * as api from "../../api/internal";
 import { getSalonSlug } from "../../utils/salon";
 import { generateTimeSlots } from "../../calendar/calendarEngine";
