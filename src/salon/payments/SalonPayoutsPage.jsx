@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 
+import PageSection from "../../cabinet/PageSection"
+import EmptyState from "../../cabinet/EmptyState"
+
 export default function SalonPayoutsPage() {
 
   const params = useParams()
@@ -79,26 +82,25 @@ export default function SalonPayoutsPage() {
 
   if (loading) {
     return (
-      <div>
-        <h1>Выплаты салона</h1>
-        <p>Загрузка выплат...</p>
-      </div>
+      <PageSection title="Выплаты салона">
+        <div>Загрузка выплат...</div>
+      </PageSection>
     )
   }
 
   if (payouts.length === 0) {
     return (
-      <div>
-        <h1>Выплаты салона</h1>
-        <p>Выплаты пока отсутствуют</p>
-      </div>
+      <PageSection title="Выплаты салона">
+        <EmptyState
+          title="Выплаты отсутствуют"
+          text="Выплаты салона пока отсутствуют"
+        />
+      </PageSection>
     )
   }
 
   return (
-    <div>
-
-      <h1>Выплаты салона</h1>
+    <PageSection title="Выплаты салона">
 
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
@@ -127,6 +129,6 @@ export default function SalonPayoutsPage() {
 
       </table>
 
-    </div>
+    </PageSection>
   )
 }
