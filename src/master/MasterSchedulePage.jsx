@@ -1,4 +1,3 @@
-C:\Work\totem-sdk>type C:\Work\totem-sdk\src\master\MasterSchedulePage.jsx
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "./MasterContext"
 
@@ -84,10 +83,10 @@ return s
 function statusLabel(s){
 s=normalizeStatus(s)
 
-if(s==="reserved")return"╨╛╨╢╨╕╨┤╨░╨╡╤é"
-if(s==="confirmed")return"╨┐╨╛╨┤╤é╨▓╨╡╤Ç╨╢╨┤╨╡╨╜╨░"
-if(s==="completed")return"╨╖╨░╨▓╨╡╤Ç╤ê╨╡╨╜╨░"
-if(s==="cancelled")return"╨╛╤é╨╝╨╡╨╜╨░"
+if(s==="reserved")return"ожидает"
+if(s==="confirmed")return"подтверждена"
+if(s==="completed")return"завершена"
+if(s==="cancelled")return"отменена"
 
 return s
 }
@@ -165,7 +164,7 @@ return{calendar,skip}
 
 },[bookings,dateKey,statusOverrides,clockTick])
 
-if(loading)return<div>╨ù╨░╨│╤Ç╤â╨╖╨║╨░...</div>
+if(loading)return<div>Загрузка...</div>
 
 return(
 
@@ -176,19 +175,19 @@ maxHeight:"calc(100vh - 220px)"
 
 <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
 
-<h3 style={{margin:0}}>╨Ü╨░╨╗╨╡╨╜╨┤╨░╤Ç╤î ╨╝╨░╤ü╤é╨╡╤Ç╨░</h3>
+<h3 style={{margin:0}}>Календарь мастера</h3>
 
 <div style={{flex:1}}/>
 
-<button onClick={()=>setDateKey(addDays(dateKey,-1))}>ΓåÉ</button>
+<button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
 
 <div style={{fontWeight:700,minWidth:"120px",textAlign:"center"}}>
 {formatDMY(dateKey)}
 </div>
 
-<button onClick={()=>setDateKey(addDays(dateKey,1))}>ΓåÆ</button>
+<button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
 
-<button onClick={()=>setDateKey(todayKey())}>╨í╨╡╨│╨╛╨┤╨╜╤Å</button>
+<button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
 
 </div>
 
@@ -205,21 +204,57 @@ return(
 <div key={s} style={{
 border:isNow?"2px solid #339af0":"1px solid #ddd",
 borderRadius:"10px",
-padding:"10px",
+padding:"12px",
 marginBottom:"8px",
-background:isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff",
+background:b?statusColor(b.status):(isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff"),
 opacity:isPast&&!b?0.72:1
 }}>
 
 <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+
 <b style={{minWidth:"60px"}}>
-{isNow?"Γû╢ "+s:s}
+{isNow?"● "+s:s}
 </b>
 
-<span style={{color:b?"#111":"#999"}}>
-{b?"╨╖╨░╨╜╤Å╤é╨╛":isPast?"╨┐╤Ç╨╛╤ê╨╗╨╛":"╤ü╨▓╨╛╨▒╨╛╨┤╨╜╨╛"}
+{!b && (
+<span style={{color:"#999"}}>
+{isPast?"прошло":"свободно"}
 </span>
+)}
+
+{b && (
+
+<div style={{flex:1}}>
+
+<div style={{fontWeight:600}}>
+{b.client_name || "Клиент"}
 </div>
+
+<div style={{fontSize:"13px",color:"#666"}}>
+{b.service_name || ""}
+</div>
+
+</div>
+
+)}
+
+</div>
+
+{b && (
+
+<div style={{
+marginTop:"8px",
+display:"flex",
+gap:"6px"
+}}>
+
+<button style={{fontSize:"12px"}}>Подтвердить</button>
+<button style={{fontSize:"12px"}}>Завершить</button>
+<button style={{fontSize:"12px"}}>Отменить</button>
+
+</div>
+
+)}
 
 </div>
 
@@ -232,4 +267,3 @@ opacity:isPast&&!b?0.72:1
 )
 
 }
-C:\Work\totem-sdk>
