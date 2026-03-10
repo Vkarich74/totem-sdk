@@ -16,12 +16,23 @@ function resolveSlug() {
 
 }
 
+function statusLabel(status){
+
+  if(status === "active") return "Активен";
+  if(status === "pending") return "Ожидает";
+  if(status === "fired") return "Уволен";
+
+  return status;
+
+}
+
 export default function MastersPage(){
 
   const slug = resolveSlug();
 
   const [masters, setMasters] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [search,setSearch] = useState("");
 
   async function loadMasters() {
 
@@ -120,15 +131,24 @@ export default function MastersPage(){
 
   }, [masters]);
 
-  const rows = masters.map(m => ({
+  const filtered = masters.filter(m => {
+
+    const q = search.toLowerCase();
+
+    return (m.name || "").toLowerCase().includes(q);
+
+  });
+
+  const rows = filtered.map(m => ({
 
     id: m.id,
     name: m.name,
-    status: m.status,
+    status: statusLabel(m.status),
 
     actions: (
 
-      <>
+      <div style={{display:"flex",gap:"8px"}}>
+
         {m.status === "pending" && (
           <button onClick={() => activate(m.id)}>Активировать</button>
         )}
@@ -140,7 +160,8 @@ export default function MastersPage(){
         {m.status === "fired" && (
           <button onClick={() => activate(m.id)}>Вернуть</button>
         )}
-      </>
+
+      </div>
 
     )
 
@@ -158,6 +179,22 @@ export default function MastersPage(){
         ]}
       />
 
+      <div style={{marginTop:20,marginBottom:20}}>
+
+        <input
+          placeholder="Поиск мастера..."
+          value={search}
+          onChange={(e)=>setSearch(e.target.value)}
+          style={{
+            padding:"10px",
+            width:"280px",
+            border:"1px solid #ddd",
+            borderRadius:"6px"
+          }}
+        />
+
+      </div>
+
       <button
         style={{ marginBottom: 20 }}
         onClick={createMaster}
@@ -167,7 +204,7 @@ export default function MastersPage(){
 
       {loading && <div>Загрузка...</div>}
 
-      {!loading && masters.length === 0 && (
+      {!loading && filtered.length === 0 && (
 
         <EmptyState
           title="Мастеров пока нет"
@@ -176,7 +213,7 @@ export default function MastersPage(){
 
       )}
 
-      {!loading && masters.length > 0 && (
+      {!loading && filtered.length > 0 && (
 
         <TableSection
           columns={[
