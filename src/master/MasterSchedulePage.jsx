@@ -1,3 +1,4 @@
+C:\Work\totem-sdk>type C:\Work\totem-sdk\src\master\MasterSchedulePage.jsx
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "./MasterContext"
 
@@ -15,7 +16,7 @@ return toDateKey(new Date())
 
 function formatDMY(k){
 const [y,m,d]=k.split("-")
-return d+"."+m+"."+y
+return d+"-"+m+"-"+y
 }
 
 function addDays(key,delta){
@@ -67,9 +68,27 @@ const m=Math.floor(now.getMinutes()/15)*15
 return pad(h)+":"+pad(m)
 }
 
+function isNowInsideBooking(start,end){
+const now=Date.now()
+const startMs=new Date(start).getTime()
+const endMs=new Date(end).getTime()
+return now>=startMs && now<endMs
+}
+
 function normalizeStatus(v){
 const s=String(v||"reserved").toLowerCase()
 if(s==="canceled")return"cancelled"
+return s
+}
+
+function statusLabel(s){
+s=normalizeStatus(s)
+
+if(s==="reserved")return"╨╛╨╢╨╕╨┤╨░╨╡╤é"
+if(s==="confirmed")return"╨┐╨╛╨┤╤é╨▓╨╡╤Ç╨╢╨┤╨╡╨╜╨░"
+if(s==="completed")return"╨╖╨░╨▓╨╡╤Ç╤ê╨╡╨╜╨░"
+if(s==="cancelled")return"╨╛╤é╨╝╨╡╨╜╨░"
+
 return s
 }
 
@@ -99,6 +118,8 @@ export default function MasterSchedulePage(){
 const {bookings=[],loading}=useMaster()
 
 const [dateKey,setDateKey]=useState(todayKey())
+const [statusOverrides,setStatusOverrides]=useState({})
+const [actionLoading,setActionLoading]=useState({})
 const [clockTick,setClockTick]=useState(0)
 
 useEffect(()=>{
@@ -142,9 +163,9 @@ skip.add(k)
 
 return{calendar,skip}
 
-},[bookings,dateKey,clockTick])
+},[bookings,dateKey,statusOverrides,clockTick])
 
-if(loading)return<div>Загрузка...</div>
+if(loading)return<div>╨ù╨░╨│╤Ç╤â╨╖╨║╨░...</div>
 
 return(
 
@@ -155,19 +176,19 @@ maxHeight:"calc(100vh - 220px)"
 
 <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
 
-<h3 style={{margin:0}}>Расписание мастера</h3>
+<h3 style={{margin:0}}>╨Ü╨░╨╗╨╡╨╜╨┤╨░╤Ç╤î ╨╝╨░╤ü╤é╨╡╤Ç╨░</h3>
 
 <div style={{flex:1}}/>
 
-<button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
+<button onClick={()=>setDateKey(addDays(dateKey,-1))}>ΓåÉ</button>
 
 <div style={{fontWeight:700,minWidth:"120px",textAlign:"center"}}>
 {formatDMY(dateKey)}
 </div>
 
-<button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
+<button onClick={()=>setDateKey(addDays(dateKey,1))}>ΓåÆ</button>
 
-<button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
+<button onClick={()=>setDateKey(todayKey())}>╨í╨╡╨│╨╛╨┤╨╜╤Å</button>
 
 </div>
 
@@ -184,59 +205,21 @@ return(
 <div key={s} style={{
 border:isNow?"2px solid #339af0":"1px solid #ddd",
 borderRadius:"10px",
-padding:"12px",
+padding:"10px",
 marginBottom:"8px",
-background:b?statusColor(b.status):(isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff"),
-opacity:isPast&&!b?0.7:1,
-transition:"all .15s"
+background:isNow?"#e8f7ff":isPast?"#f8f9fa":"#fff",
+opacity:isPast&&!b?0.72:1
 }}>
 
 <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
-
 <b style={{minWidth:"60px"}}>
-{isNow?"● "+s:s}
+{isNow?"Γû╢ "+s:s}
 </b>
 
-{!b && (
-<span style={{color:"#999"}}>
-{isPast?"прошло":"свободно"}
+<span style={{color:b?"#111":"#999"}}>
+{b?"╨╖╨░╨╜╤Å╤é╨╛":isPast?"╨┐╤Ç╨╛╤ê╨╗╨╛":"╤ü╨▓╨╛╨▒╨╛╨┤╨╜╨╛"}
 </span>
-)}
-
-{b && (
-
-<div style={{flex:1}}>
-
-<div style={{fontWeight:600}}>
-{b.client_name || "Клиент"}
 </div>
-
-<div style={{fontSize:"13px",color:"#666"}}>
-{b.service_name || ""}
-</div>
-
-</div>
-
-)}
-
-</div>
-
-{b && (
-
-<div style={{
-marginTop:"8px",
-display:"flex",
-gap:"6px",
-flexWrap:"wrap"
-}}>
-
-<button style={{fontSize:"12px"}}>Подтвердить</button>
-<button style={{fontSize:"12px"}}>Завершить</button>
-<button style={{fontSize:"12px"}}>Отменить</button>
-
-</div>
-
-)}
 
 </div>
 
@@ -249,3 +232,4 @@ flexWrap:"wrap"
 )
 
 }
+C:\Work\totem-sdk>
