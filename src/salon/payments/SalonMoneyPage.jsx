@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 
-
 export default function SalonMoneyPage() {
 
   const params = useParams()
@@ -76,46 +75,97 @@ export default function SalonMoneyPage() {
 
   }, [slug])
 
+
   if (loading) {
     return (
-      <div>
+      <div style={{ padding: 24 }}>
         <h1>Финансы салона</h1>
         <p>Загрузка финансов...</p>
       </div>
     )
   }
 
+
+  const walletBalance = wallet?.computed_balance_cents || 0
+  const revenueToday = metrics?.revenue_today || 0
+  const revenueMonth = metrics?.revenue_month || 0
+  const paymentsTotal = metrics?.payments_total || 0
+
+
   return (
-    <div>
+    <div style={{ padding: 24 }}>
 
       <h1>Финансы салона</h1>
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <tbody>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+          gap: 16,
+          marginTop: 20
+        }}
+      >
 
-          <tr>
-            <td><b>Баланс кошелька</b></td>
-            <td>{wallet?.computed_balance_cents || 0}</td>
-          </tr>
+        <StatCard
+          title="Баланс кошелька"
+          value={walletBalance}
+        />
 
-          <tr>
-            <td><b>Выручка сегодня</b></td>
-            <td>{metrics?.revenue_today || 0}</td>
-          </tr>
+        <StatCard
+          title="Выручка сегодня"
+          value={revenueToday}
+        />
 
-          <tr>
-            <td><b>Выручка за месяц</b></td>
-            <td>{metrics?.revenue_month || 0}</td>
-          </tr>
+        <StatCard
+          title="Выручка за месяц"
+          value={revenueMonth}
+        />
 
-          <tr>
-            <td><b>Всего платежей</b></td>
-            <td>{metrics?.payments_total || 0}</td>
-          </tr>
+        <StatCard
+          title="Всего платежей"
+          value={paymentsTotal}
+        />
 
-        </tbody>
-      </table>
+      </div>
 
     </div>
   )
+}
+
+
+
+function StatCard({ title, value }) {
+
+  return (
+    <div
+      style={{
+        padding: 20,
+        borderRadius: 10,
+        border: "1px solid #e5e7eb",
+        background: "#fff"
+      }}
+    >
+
+      <div
+        style={{
+          fontSize: 13,
+          color: "#6b7280",
+          marginBottom: 6
+        }}
+      >
+        {title}
+      </div>
+
+      <div
+        style={{
+          fontSize: 28,
+          fontWeight: 600
+        }}
+      >
+        {value}
+      </div>
+
+    </div>
+  )
+
 }
