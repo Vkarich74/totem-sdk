@@ -198,6 +198,26 @@ export default function BookingsPage(){
 
   const filteredBookings = applyFilters(bookings);
 
+  useEffect(()=>{
+
+    if(filteredBookings.length===0){
+      setSelectedBookingId(null);
+      return;
+    }
+
+    if(selectedBookingId===null){
+      setSelectedBookingId(filteredBookings[0].id);
+      return;
+    }
+
+    const exists = filteredBookings.some(b=>String(b.id)===String(selectedBookingId));
+
+    if(!exists){
+      setSelectedBookingId(filteredBookings[0].id);
+    }
+
+  },[filteredBookings, selectedBookingId]);
+
   const selectedBooking = useMemo(()=>{
     return filteredBookings.find(b=>String(b.id)===String(selectedBookingId)) || null;
   },[filteredBookings, selectedBookingId]);
@@ -282,12 +302,59 @@ export default function BookingsPage(){
             <>
               <h2>BR-{selectedBooking.id}</h2>
 
+              <p>Статус: <span style={{color:statusColor(selectedBooking.status)}}>{statusText(selectedBooking.status)}</span></p>
               <p>Мастер: {selectedBooking.master_name}</p>
               <p>Услуга: {selectedBooking.service_name}</p>
               <p>Цена: {formatMoney(selectedBooking.price)}</p>
               <p>Дата: {formatDate(selectedBooking.start_at)}</p>
               <p>Клиент: {selectedBooking.client_name}</p>
               <p>Телефон: {selectedBooking.phone}</p>
+
+              <div style={{marginTop:"16px",display:"flex",gap:"8px",flexWrap:"wrap"}}>
+
+                {selectedBooking.status==="reserved" && (
+                  <>
+                    <button
+                      disabled={loadingAction===selectedBooking.id}
+                      onClick={()=>action(selectedBooking.id,"confirm")}
+                    >
+                      Подтвердить
+                    </button>
+
+                    <button
+                      disabled={loadingAction===selectedBooking.id}
+                      onClick={()=>action(selectedBooking.id,"cancel")}
+                    >
+                      Отменить
+                    </button>
+                  </>
+                )}
+
+                {selectedBooking.status==="confirmed" && (
+                  <>
+                    <button
+                      disabled={loadingAction===selectedBooking.id}
+                      onClick={()=>action(selectedBooking.id,"complete")}
+                    >
+                      Завершить
+                    </button>
+
+                    <button
+                      disabled={loadingAction===selectedBooking.id}
+                      onClick={()=>action(selectedBooking.id,"cancel")}
+                    >
+                      Отменить
+                    </button>
+                  </>
+                )}
+
+                {selectedBooking.phone && (
+                  <button onClick={()=>window.location.href=`tel:${selectedBooking.phone}`}>
+                    Позвонить
+                  </button>
+                )}
+
+              </div>
 
             </>
 
