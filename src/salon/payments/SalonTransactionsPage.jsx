@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react"
 
+import PageSection from "../../cabinet/PageSection"
+import TableSection from "../../cabinet/TableSection"
+import EmptyState from "../../cabinet/EmptyState"
+
 export default function SalonTransactionsPage() {
 
   const [transactions, setTransactions] = useState([])
@@ -12,7 +16,6 @@ export default function SalonTransactionsPage() {
     async function loadTransactions() {
 
       const path = window.location.pathname
-
       const parts = path.split("/")
       const slug = parts[2]
 
@@ -74,55 +77,47 @@ export default function SalonTransactionsPage() {
 
   if (loading) {
     return (
-      <div>
-        <h1>Транзакции салона</h1>
-        <p>Загрузка транзакций...</p>
-      </div>
+      <PageSection title="Транзакции салона">
+        <div>Загрузка транзакций...</div>
+      </PageSection>
     )
   }
 
   if (transactions.length === 0) {
     return (
-      <div>
-        <h1>Транзакции салона</h1>
-        <p>Транзакции пока отсутствуют</p>
-      </div>
+      <PageSection title="Транзакции салона">
+        <EmptyState
+          title="Транзакции отсутствуют"
+          text="Транзакции салона пока отсутствуют"
+        />
+      </PageSection>
     )
   }
 
+  const rows = transactions.map(tx => ({
+    id: tx.id,
+    date: tx.created_at || "-",
+    amount: tx.amount || 0,
+    provider: tx.provider || "-",
+    status: tx.status || "-"
+  }))
+
   return (
-    <div>
 
-      <h1>Транзакции салона</h1>
+    <PageSection title="Транзакции салона">
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th align="left">ID</th>
-            <th align="left">Дата</th>
-            <th align="left">Сумма</th>
-            <th align="left">Метод</th>
-            <th align="left">Статус</th>
-          </tr>
-        </thead>
+      <TableSection
+        columns={[
+          { key: "id", label: "ID" },
+          { key: "date", label: "Дата" },
+          { key: "amount", label: "Сумма" },
+          { key: "provider", label: "Метод" },
+          { key: "status", label: "Статус" }
+        ]}
+        rows={rows}
+      />
 
-        <tbody>
+    </PageSection>
 
-          {transactions.map((tx) => (
-
-            <tr key={tx.id}>
-              <td>{tx.id}</td>
-              <td>{tx.created_at || "-"}</td>
-              <td>{tx.amount || 0}</td>
-              <td>{tx.provider || "-"}</td>
-              <td>{tx.status || "-"}</td>
-            </tr>
-
-          ))}
-
-        </tbody>
-      </table>
-
-    </div>
   )
 }
