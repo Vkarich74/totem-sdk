@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
+import PageSection from "../../cabinet/PageSection"
 
 export default function SalonMoneyPage() {
 
@@ -73,12 +74,12 @@ export default function SalonMoneyPage() {
 
   }, [slug])
 
+
   if (loading) {
     return (
-      <div style={{ padding: 20 }}>
-        <h1>Финансы салона</h1>
-        <p>Загрузка...</p>
-      </div>
+      <PageSection title="Финансы салона">
+        <div style={{padding:"20px"}}>Загрузка финансов...</div>
+      </PageSection>
     )
   }
 
@@ -88,57 +89,77 @@ export default function SalonMoneyPage() {
   const paymentsTotal = metrics?.payments_total || 0
 
   return (
-    <div style={{ padding: 20 }}>
 
-      <h1>Финансы салона</h1>
+    <PageSection title="Финансы салона">
 
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(4,1fr)",
-        gap: 16,
-        marginTop: 20
+        display:"grid",
+        gridTemplateColumns:"repeat(4,1fr)",
+        gap:"16px",
+        marginTop:"20px"
       }}>
 
-        <div style={card}>
-          <div style={title}>Баланс кошелька</div>
-          <div style={value}>{walletBalance}</div>
-        </div>
+        <Card
+          title="Баланс кошелька"
+          value={walletBalance}
+          color="#10b981"
+        />
 
-        <div style={card}>
-          <div style={title}>Выручка сегодня</div>
-          <div style={value}>{revenueToday}</div>
-        </div>
+        <Card
+          title="Выручка сегодня"
+          value={revenueToday}
+          color="#3b82f6"
+        />
 
-        <div style={card}>
-          <div style={title}>Выручка за месяц</div>
-          <div style={value}>{revenueMonth}</div>
-        </div>
+        <Card
+          title="Выручка за месяц"
+          value={revenueMonth}
+          color="#3b82f6"
+        />
 
-        <div style={card}>
-          <div style={title}>Всего платежей</div>
-          <div style={value}>{paymentsTotal}</div>
-        </div>
+        <Card
+          title="Всего платежей"
+          value={paymentsTotal}
+          color="#8b5cf6"
+        />
 
       </div>
 
-    </div>
+    </PageSection>
+
   )
+
 }
 
-const card = {
-  background: "#ffffff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
-  padding: 20
-}
+function Card({title,value,color}){
 
-const title = {
-  fontSize: 13,
-  color: "#6b7280",
-  marginBottom: 8
-}
+return(
 
-const value = {
-  fontSize: 28,
-  fontWeight: 600
+<div style={{
+border:"1px solid #e5e7eb",
+borderLeft:`6px solid ${color}`,
+borderRadius:"8px",
+padding:"16px",
+background:"#fff"
+}}>
+
+<div style={{
+fontSize:"13px",
+color:"#6b7280"
+}}>
+{title}
+</div>
+
+<div style={{
+fontSize:"26px",
+fontWeight:"bold",
+marginTop:"6px"
+}}>
+{value}
+</div>
+
+</div>
+
+)
+
 }
