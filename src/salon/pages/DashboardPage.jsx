@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-
 import PageSection from "../../cabinet/PageSection";
-import StatGrid from "../../cabinet/StatGrid";
 
 export default function DashboardPage(){
 
@@ -47,20 +45,25 @@ return(
 
 <PageSection title="Панель управления салоном">
 
-<StatGrid
-items={[
-{label:"Записей сегодня",value:metrics.bookings_today || 0},
-{label:"Записей за неделю",value:metrics.bookings_week || 0},
-{label:"Записей за месяц",value:metrics.bookings_month || 0},
+<div style={{
+display:"grid",
+gridTemplateColumns:"repeat(3,1fr)",
+gap:"16px",
+marginTop:"20px"
+}}>
 
-{label:"Клиентов всего",value:metrics.clients_total || 0},
-{label:"Новых клиентов сегодня",value:metrics.clients_today || 0},
+<Card title="Записей сегодня" value={metrics.bookings_today || 0} color="#3b82f6"/>
+<Card title="Записей за неделю" value={metrics.bookings_week || 0} color="#3b82f6"/>
+<Card title="Записей за месяц" value={metrics.bookings_month || 0} color="#3b82f6"/>
 
-{label:"Мастеров активных",value:metrics.masters_active || 0},
-{label:"Мастеров ожидают",value:metrics.masters_pending || 0},
-{label:"Всего мастеров",value:metrics.masters_total || 0}
-]}
-/>
+<Card title="Клиентов всего" value={metrics.clients_total || 0} color="#8b5cf6"/>
+<Card title="Новых клиентов сегодня" value={metrics.clients_today || 0} color="#8b5cf6"/>
+
+<Card title="Мастеров активных" value={metrics.masters_active || 0} color="#f59e0b"/>
+<Card title="Мастеров ожидают" value={metrics.masters_pending || 0} color="#f59e0b"/>
+<Card title="Всего мастеров" value={metrics.masters_total || 0} color="#f59e0b"/>
+
+</div>
 
 </PageSection>
 
