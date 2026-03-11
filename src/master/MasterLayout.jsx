@@ -13,10 +13,17 @@ function getMasterSlug() {
     return window.MASTER_SLUG
   }
 
-  const parts = window.location.pathname.split("/")
+  const hash = window.location.hash
 
-  if (parts.length >= 3 && parts[1] === "master") {
-    return parts[2]
+  if (!hash) {
+    return null
+  }
+
+  const clean = hash.replace("#/", "")
+  const parts = clean.split("/")
+
+  if (parts.length >= 2 && parts[0] === "master") {
+    return parts[1]
   }
 
   return null
@@ -28,7 +35,8 @@ function getCurrentSection() {
 
   if (!hash) return "dashboard"
 
-  const parts = hash.split("/")
+  const clean = hash.replace("#/", "")
+  const parts = clean.split("/")
 
   if (parts.length < 3) return "dashboard"
 

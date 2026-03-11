@@ -55,6 +55,7 @@ export default function SalonSidebar({ slug }) {
       </div>
 
       <nav>
+        <NavLink style={menuStyle} to="/salon/finance">Финансы</NavLink>
         <NavLink style={menuStyle} to="/salon/money">Деньги</NavLink>
         <NavLink style={menuStyle} to="/salon/salon-money">Финансы салона</NavLink>
         <NavLink style={menuStyle} to="/salon/transactions">Транзакции</NavLink>

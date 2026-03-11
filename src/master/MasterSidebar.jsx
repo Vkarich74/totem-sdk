@@ -57,6 +57,7 @@ export default function MasterSidebar({ slug }) {
 
       <nav>
 
+        <NavLink style={menuStyle} to="/master/finance">Финансы</NavLink>
         <NavLink style={menuStyle} to="/master/money">Доход</NavLink>
         <NavLink style={menuStyle} to="/master/transactions">Транзакции</NavLink>
         <NavLink style={menuStyle} to="/master/settlements">Сеты</NavLink>

@@ -1,0 +1,127 @@
+TOTEM SDK DEEP TEST
+===================
+
+CONSOLE ERROR: TOTEM SDK: Unable to resolve platform context.
+OK #/
+OK #/booking
+OK #/bookings
+CONSOLE ERROR: Access to fetch at 'https://api.totemv.com/internal/salons/totem-demo-salon/metrics' from origin 'http://localhost:4173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+CONSOLE ERROR: Failed to load resource: net::ERR_FAILED
+CONSOLE ERROR: METRICS LOAD ERROR TypeError: Failed to fetch
+    at r (http://localhost:4173/assets/index.js:141:173)
+    at http://localhost:4173/assets/index.js:141:320
+    at bl (http://localhost:4173/assets/index.js:40:24184)
+    at wn (http://localhost:4173/assets/index.js:40:42168)
+    at wh (http://localhost:4173/assets/index.js:40:41021)
+    at Ut (http://localhost:4173/assets/index.js:40:40078)
+    at Va (http://localhost:4173/assets/index.js:40:36715)
+    at zt (http://localhost:4173/assets/index.js:38:3258)
+    at http://localhost:4173/assets/index.js:40:34102
+OK #/salon/dashboard
+CONSOLE ERROR: Access to fetch at 'https://api.totemv.com/internal/salons/totem-demo-salon/bookings' from origin 'http://localhost:4173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+CONSOLE ERROR: Failed to load resource: net::ERR_FAILED
+CONSOLE ERROR: CALENDAR LOAD ERROR TypeError: Failed to fetch
+    at si (http://localhost:4173/assets/index.js:289:4857)
+    at Xd (http://localhost:4173/assets/index.js:289:5695)
+    at s (http://localhost:4173/assets/index.js:289:11883)
+    at http://localhost:4173/assets/index.js:289:12022
+    at bl (http://localhost:4173/assets/index.js:40:24184)
+    at wn (http://localhost:4173/assets/index.js:40:42168)
+    at wh (http://localhost:4173/assets/index.js:40:41021)
+    at Ut (http://localhost:4173/assets/index.js:40:40078)
+    at Va (http://localhost:4173/assets/index.js:40:36715)
+    at zt (http://localhost:4173/assets/index.js:38:3258)
+OK #/salon/calendar
+CONSOLE ERROR: Access to fetch at 'https://api.totemv.com/internal/salons/totem-demo-salon/masters' from origin 'http://localhost:4173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+CONSOLE ERROR: Failed to load resource: net::ERR_FAILED
+CONSOLE ERROR: LOAD_MASTERS_ERROR TypeError: Failed to fetch
+    at a (http://localhost:4173/assets/index.js:289:395)
+    at http://localhost:4173/assets/index.js:289:601
+    at bl (http://localhost:4173/assets/index.js:40:24184)
+    at wn (http://localhost:4173/assets/index.js:40:42168)
+    at wh (http://localhost:4173/assets/index.js:40:41021)
+    at Ut (http://localhost:4173/assets/index.js:40:40078)
+    at Va (http://localhost:4173/assets/index.js:40:36715)
+    at zt (http://localhost:4173/assets/index.js:38:3258)
+    at http://localhost:4173/assets/index.js:40:34102
+OK #/salon/masters
+CONSOLE ERROR: Access to fetch at 'https://api.totemv.com/internal/salons/totem-demo-salon/clients' from origin 'http://localhost:4173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+CONSOLE ERROR: Failed to load resource: net::ERR_FAILED
+CONSOLE ERROR: TypeError: Failed to fetch
+    at p (http://localhost:4173/assets/index.js:289:2886)
+    at http://localhost:4173/assets/index.js:289:2993
+    at bl (http://localhost:4173/assets/index.js:40:24184)
+    at wn (http://localhost:4173/assets/index.js:40:42168)
+    at wh (http://localhost:4173/assets/index.js:40:41021)
+    at Ut (http://localhost:4173/assets/index.js:40:40078)
+    at Va (http://localhost:4173/assets/index.js:40:36715)
+    at zt (http://localhost:4173/assets/index.js:38:3258)
+    at http://localhost:4173/assets/index.js:40:34102
+OK #/salon/clients
+CONSOLE ERROR: Access to fetch at 'https://api.totemv.com/internal/salons/totem-demo-salon/bookings' from origin 'http://localhost:4173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+CONSOLE ERROR: Failed to load resource: net::ERR_FAILED
+CONSOLE ERROR: LOAD BOOKINGS ERROR TypeError: Failed to fetch
+    at si (http://localhost:4173/assets/index.js:289:4857)
+    at Xd (http://localhost:4173/assets/index.js:289:5695)
+    at x (http://localhost:4173/assets/index.js:289:7599)
+    at http://localhost:4173/assets/index.js:289:7835
+    at bl (http://localhost:4173/assets/index.js:40:24184)
+    at wn (http://localhost:4173/assets/index.js:40:42168)
+    at wh (http://localhost:4173/assets/index.js:40:41021)
+    at Ut (http://localhost:4173/assets/index.js:40:40078)
+    at Va (http://localhost:4173/assets/index.js:40:36715)
+    at zt (http://localhost:4173/assets/index.js:38:3258)
+OK #/salon/bookings
+CONSOLE ERROR: Access to fetch at 'https://api.totemv.com/internal/salons/totem-demo-salon/metrics' from origin 'http://localhost:4173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+CONSOLE ERROR: Failed to load resource: net::ERR_FAILED
+CONSOLE ERROR: LOAD MONEY ERROR TypeError: Failed to fetch
+    at si (http://localhost:4173/assets/index.js:289:4857)
+    at fg (http://localhost:4173/assets/index.js:289:5457)
+    at r (http://localhost:4173/assets/index.js:289:14407)
+    at http://localhost:4173/assets/index.js:289:14482
+    at bl (http://localhost:4173/assets/index.js:40:24184)
+    at wn (http://localhost:4173/assets/index.js:40:42168)
+    at wh (http://localhost:4173/assets/index.js:40:41021)
+    at Ut (http://localhost:4173/assets/index.js:40:40078)
+    at Va (http://localhost:4173/assets/index.js:40:36715)
+    at zt (http://localhost:4173/assets/index.js:38:3258)
+OK #/salon/money
+OK #/salon/transactions
+OK #/salon/settlements
+OK #/salon/payouts
+OK #/salon/settings
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+CONSOLE ERROR: Access to fetch at 'https://api.totemv.com/internal/masters/undefined/metrics' from origin 'http://localhost:4173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+CONSOLE ERROR: Failed to load resource: net::ERR_FAILED
+CONSOLE ERROR: MASTER CONTEXT ERROR TypeError: Failed to fetch
+    at Ng (http://localhost:4173/assets/index.js:289:21370)
+    at p (http://localhost:4173/assets/index.js:289:21864)
+    at http://localhost:4173/assets/index.js:289:22133
+    at bl (http://localhost:4173/assets/index.js:40:24184)
+    at wn (http://localhost:4173/assets/index.js:40:42168)
+    at wh (http://localhost:4173/assets/index.js:40:41021)
+    at Ut (http://localhost:4173/assets/index.js:40:40078)
+    at Va (http://localhost:4173/assets/index.js:40:36715)
+    at zt (http://localhost:4173/assets/index.js:38:3258)
+    at http://localhost:4173/assets/index.js:40:34102
+OK #/master/dashboard
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+OK #/master/bookings
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+OK #/master/clients
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+OK #/master/schedule
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+OK #/master/money
+CONSOLE ERROR: MASTER_SLUG_NOT_FOUND
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+OK #/master/transactions
+CONSOLE ERROR: MASTER_SLUG_NOT_FOUND
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+OK #/master/settlements
+CONSOLE ERROR: MASTER_SLUG_NOT_FOUND
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+OK #/master/payouts
+CONSOLE ERROR: ODOO BRIDGE: master slug missing
+OK #/master/settings
