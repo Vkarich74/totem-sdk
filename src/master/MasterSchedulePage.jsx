@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react"
+ import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "./MasterContext"
-import PageSection from "../cabinet/PageSection"
+ import PageSection from "../cabinet/PageSection"
+
+ const API_BASE = import.meta.env.VITE_API_BASE
 
 function pad(v){
 return v<10?"0"+v:String(v)
@@ -335,7 +337,7 @@ throw new Error("MASTER_SLUG_NOT_FOUND")
 }
 
 const response=await fetch(
-"https://api.totemv.com/internal/masters/"+encodeURIComponent(masterSlug)
+`${API_BASE}/internal/masters/`+encodeURIComponent(masterSlug)
 )
 
 if(!response.ok){
@@ -378,7 +380,7 @@ try{
 const salonSlug=await resolveSalonSlug()
 
 const response=await fetch(
-"https://api.totemv.com/public/salons/"+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
+`${API_BASE}/public/salons/`+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
 {
 method:"PATCH",
 headers:{

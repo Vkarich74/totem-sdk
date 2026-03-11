@@ -5,6 +5,8 @@ import { getSalonSlug } from "../../utils/salon";
 import { generateTimeSlots } from "../../calendar/calendarEngine";
 import PageSection from "../../cabinet/PageSection";
 
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 function resolveSlug(){
 const util = getSalonSlug();
 if(util) return util;
@@ -88,7 +90,7 @@ if(!client) return;
 try{
 
 await fetch(
-`https://api.totemv.com/internal/bookings/create`,
+`${API_BASE}/internal/bookings/create`,
 {
 method:"POST",
 headers:{
@@ -122,7 +124,7 @@ if(!newTime) return;
 try{
 
 await fetch(
-`https://api.totemv.com/internal/bookings/${booking.id}/move`,
+`${API_BASE}/internal/bookings/${booking.id}/move`,
 {
 method:"PATCH",
 headers:{

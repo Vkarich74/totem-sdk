@@ -6,6 +6,8 @@ import PageSection from "../cabinet/PageSection"
 import TableSection from "../cabinet/TableSection"
 import EmptyState from "../cabinet/EmptyState"
 
+const API_BASE = import.meta.env.VITE_API_BASE
+
 function statusColor(s){
 if(s==="completed")return "#27ae60"
 if(s==="confirmed")return "#2980b9"
@@ -55,7 +57,7 @@ async function createBooking(){
 const start=date+"T"+time+":00+06:00"
 
 await fetch(
-"https://api.totemv.com/internal/masters/"+masterSlug+"/bookings",
+`${API_BASE}/internal/masters/${masterSlug}/bookings`,
 {
 method:"POST",
 headers:{

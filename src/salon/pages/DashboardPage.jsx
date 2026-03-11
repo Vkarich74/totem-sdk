@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import PageSection from "../../cabinet/PageSection";
 
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 export default function DashboardPage(){
 
 const [metrics,setMetrics] = useState(null);
@@ -12,7 +14,7 @@ async function load(){
 try{
 
 const r = await fetch(
-`https://api.totemv.com/internal/salons/${salonSlug}/metrics`
+`${API_BASE}/internal/salons/${salonSlug}/metrics`
 );
 
 const j = await r.json();

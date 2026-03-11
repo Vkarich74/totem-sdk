@@ -4,6 +4,8 @@ import { useParams } from "react-router-dom"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
 
+const API_BASE = import.meta.env.VITE_API_BASE
+
 export default function SalonPayoutsPage() {
 
   const params = useParams()
@@ -35,7 +37,7 @@ export default function SalonPayoutsPage() {
       try {
 
         const res = await fetch(
-          `https://api.totemv.com/internal/salons/${slug}/payouts`
+          `${API_BASE}/internal/salons/${slug}/payouts`
         )
 
         if (!res.ok) {

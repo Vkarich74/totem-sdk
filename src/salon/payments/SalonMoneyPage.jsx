@@ -2,6 +2,8 @@ import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import PageSection from "../../cabinet/PageSection"
 
+const API_BASE = import.meta.env.VITE_API_BASE
+
 export default function SalonMoneyPage() {
 
   const params = useParams()
@@ -31,8 +33,8 @@ export default function SalonMoneyPage() {
       try {
 
         const [metricsRes, walletRes] = await Promise.all([
-          fetch(`https://api.totemv.com/internal/salons/${slug}/metrics`),
-          fetch(`https://api.totemv.com/internal/salons/${slug}/wallet-balance`)
+          fetch(`${API_BASE}/internal/salons/${slug}/metrics`),
+          fetch(`${API_BASE}/internal/salons/${slug}/wallet-balance`)
         ])
 
         if (!metricsRes.ok || !walletRes.ok) {

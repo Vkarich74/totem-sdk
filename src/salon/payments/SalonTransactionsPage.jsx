@@ -3,6 +3,8 @@ import { useEffect, useState } from "react"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
 
+const API_BASE = import.meta.env.VITE_API_BASE
+
 export default function SalonTransactionsPage() {
 
   const [transactions, setTransactions] = useState([])
@@ -30,7 +32,7 @@ export default function SalonTransactionsPage() {
       try {
 
         const res = await fetch(
-          `https://api.totemv.com/internal/salons/${slug}/payments`
+          `${API_BASE}/internal/salons/${slug}/payments`
         )
 
         if (!res.ok) {

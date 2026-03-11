@@ -3,6 +3,8 @@ import { useEffect, useState } from "react"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
 
+const API_BASE = import.meta.env.VITE_API_BASE
+
 export default function SalonSettlementsPage() {
 
   const [loading, setLoading] = useState(true)
@@ -31,7 +33,7 @@ export default function SalonSettlementsPage() {
         }
 
         const response = await fetch(
-          `https://api.totemv.com/internal/salons/${slug}/settlements`
+          `${API_BASE}/internal/salons/${slug}/settlements`
         )
 
         if (!response.ok) {

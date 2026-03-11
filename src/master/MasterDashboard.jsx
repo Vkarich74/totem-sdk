@@ -3,6 +3,8 @@ import PageSection from "../cabinet/PageSection";
 import StatCard from "../cabinet/StatCard";
 import StatGrid from "../cabinet/StatGrid";
 
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 export default function MasterDashboard() {
 
 const [metrics,setMetrics] = useState(null);
@@ -22,7 +24,7 @@ return;
 }
 
 const res = await fetch(
-`https://api.totemv.com/internal/masters/${slug}/metrics`
+`${API_BASE}/internal/masters/${slug}/metrics`
 );
 
 const data = await res.json();

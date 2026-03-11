@@ -4,6 +4,8 @@ import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
 import EmptyState from "../../cabinet/EmptyState"
 
+const API_BASE = import.meta.env.VITE_API_BASE
+
 function getMasterSlug() {
 
   if (window.MASTER_SLUG) {
@@ -60,7 +62,7 @@ export default function MasterPayoutsPage(){
         }
 
         const res = await fetch(
-          `https://api.totemv.com/internal/masters/${slug}/payouts`
+          `${API_BASE}/internal/masters/${slug}/payouts`
         )
 
         if(!res.ok){
