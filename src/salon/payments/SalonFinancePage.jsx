@@ -9,6 +9,20 @@ export default function SalonFinancePage() {
   const [contracts, setContracts] = useState([])
   const [contractsLoading, setContractsLoading] = useState(true)
 
+  const [masters, setMasters] = useState([])
+  const [mastersLoading, setMastersLoading] = useState(true)
+
+  const [selectedMasterId, setSelectedMasterId] = useState("")
+  const [masterPercent, setMasterPercent] = useState("70")
+  const [salonPercent, setSalonPercent] = useState("20")
+  const [platformPercent, setPlatformPercent] = useState("10")
+  const [payoutSchedule, setPayoutSchedule] = useState("manual")
+  const [effectiveFrom, setEffectiveFrom] = useState("")
+
+  const [createContractLoading, setCreateContractLoading] = useState(false)
+  const [createContractError, setCreateContractError] = useState("")
+  const [createContractSuccess, setCreateContractSuccess] = useState("")
+
   const [loading, setLoading] = useState(true)
   const [ledgerLoading, setLedgerLoading] = useState(true)
   const [walletLoading, setWalletLoading] = useState(true)
@@ -28,12 +42,40 @@ export default function SalonFinancePage() {
     borderCollapse: "collapse"
   }
 
+  const inputStyle = {
+    width: "100%",
+    padding: 10,
+    border: "1px solid #ccc",
+    borderRadius: 6,
+    boxSizing: "border-box"
+  }
+
+  const labelStyle = {
+    display: "block",
+    marginBottom: 6,
+    fontWeight: 600
+  }
+
+  const fieldBlockStyle = {
+    marginBottom: 14
+  }
+
+  const buttonStyle = {
+    padding: "10px 16px",
+    border: "1px solid #222",
+    borderRadius: 6,
+    background: "#222",
+    color: "#fff",
+    cursor: "pointer"
+  }
+
   useEffect(() => {
 
     loadPayments()
     loadLedger()
     loadWallet()
     loadContracts()
+    loadMasters()
 
   }, [])
 
@@ -157,6 +199,124 @@ export default function SalonFinancePage() {
     finally {
 
       setContractsLoading(false)
+
+    }
+
+  }
+
+
+  async function loadMasters() {
+
+    try {
+
+      const res = await fetch(
+        `https://api.totemv.com/internal/salons/${salonSlug}/masters`
+      )
+
+      const data = await res.json()
+
+      if (Array.isArray(data)) {
+        setMasters(data)
+      }
+      else if (data.masters) {
+        setMasters(data.masters)
+      }
+
+    }
+    catch (err) {
+
+      console.error("Masters load error:", err)
+
+    }
+    finally {
+
+      setMastersLoading(false)
+
+    }
+
+  }
+
+
+  async function createContract(event) {
+
+    event.preventDefault()
+
+    setCreateContractError("")
+    setCreateContractSuccess("")
+
+    const masterIdNumber = Number(selectedMasterId)
+    const masterValue = Number(masterPercent)
+    const salonValue = Number(salonPercent)
+    const platformValue = Number(platformPercent)
+
+    if (!masterIdNumber) {
+      setCreateContractError("Выбери мастера")
+      return
+    }
+
+    if (
+      Number.isNaN(masterValue) ||
+      Number.isNaN(salonValue) ||
+      Number.isNaN(platformValue)
+    ) {
+      setCreateContractError("Проценты должны быть числами")
+      return
+    }
+
+    if (masterValue + salonValue + platformValue !== 100) {
+      setCreateContractError("Сумма процентов должна быть ровно 100")
+      return
+    }
+
+    setCreateContractLoading(true)
+
+    try {
+
+      const payload = {
+        master_id: masterIdNumber,
+        terms_json: {
+          master_percent: masterValue,
+          salon_percent: salonValue,
+          platform_percent: platformValue,
+          payout_schedule: payoutSchedule || "manual"
+        }
+      }
+
+      if (effectiveFrom) {
+        payload.effective_from = effectiveFrom
+      }
+
+      const res = await fetch(
+        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        }
+      )
+
+      const data = await res.json()
+
+      if (!res.ok || !data.ok) {
+        setCreateContractError(data.error || "Не удалось создать контракт")
+        return
+      }
+
+      setCreateContractSuccess("Контракт создан в статусе ожидания")
+      await loadContracts()
+
+    }
+    catch (err) {
+
+      console.error("Create contract error:", err)
+      setCreateContractError("Ошибка создания контракта")
+
+    }
+    finally {
+
+      setCreateContractLoading(false)
 
     }
 
@@ -429,6 +589,135 @@ export default function SalonFinancePage() {
 
             </table>
 
+          )}
+
+        </div>
+
+      </section>
+
+
+      <section>
+
+        <h2>Создать контракт</h2>
+
+        <div style={sectionCardStyle}>
+
+          {mastersLoading && <p>Загрузка мастеров...</p>}
+
+          {!mastersLoading && (
+            <form onSubmit={createContract}>
+
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>Мастер</label>
+                <select
+                  value={selectedMasterId}
+                  onChange={(e) => setSelectedMasterId(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="">Выбери мастера</option>
+                  {masters.map((master) => (
+                    <option key={master.id} value={master.id}>
+                      {master.name || master.slug || master.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>Процент мастера</label>
+                <input
+                  type="number"
+                  value={masterPercent}
+                  onChange={(e) => setMasterPercent(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>Процент салона</label>
+                <input
+                  type="number"
+                  value={salonPercent}
+                  onChange={(e) => setSalonPercent(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>Процент платформы</label>
+                <input
+                  type="number"
+                  value={platformPercent}
+                  onChange={(e) => setPlatformPercent(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>График выплат</label>
+                <select
+                  value={payoutSchedule}
+                  onChange={(e) => setPayoutSchedule(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="manual">Вручную</option>
+                  <option value="daily">Ежедневно</option>
+                  <option value="weekly">Еженедельно</option>
+                  <option value="monthly">Ежемесячно</option>
+                </select>
+              </div>
+
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>Дата начала действия</label>
+                <input
+                  type="datetime-local"
+                  value={effectiveFrom}
+                  onChange={(e) => setEffectiveFrom(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={fieldBlockStyle}>
+                <p>
+                  Сумма процентов: {Number(masterPercent || 0) + Number(salonPercent || 0) + Number(platformPercent || 0)}
+                </p>
+              </div>
+
+              {createContractError && (
+                <div style={{
+                  marginBottom: 14,
+                  padding: 12,
+                  borderRadius: 6,
+                  border: "1px solid #e0b4b4",
+                  background: "#fff6f6",
+                  color: "#9f3a38"
+                }}>
+                  {createContractError}
+                </div>
+              )}
+
+              {createContractSuccess && (
+                <div style={{
+                  marginBottom: 14,
+                  padding: 12,
+                  borderRadius: 6,
+                  border: "1px solid #b7eb8f",
+                  background: "#f6ffed",
+                  color: "#389e0d"
+                }}>
+                  {createContractSuccess}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={createContractLoading}
+                style={buttonStyle}
+              >
+                {createContractLoading ? "Создание..." : "Создать контракт"}
+              </button>
+
+            </form>
           )}
 
         </div>
