@@ -74,8 +74,8 @@ export default function SalonFinancePage() {
 
       const data = await res.json();
 
-      if (data.balance && data.balance.computed_balance_cents !== undefined) {
-        setWalletBalance(data.balance.computed_balance_cents);
+      if (data.balance !== undefined) {
+        setWalletBalance(data.balance);
       }
 
     } catch (err) {
@@ -87,7 +87,7 @@ export default function SalonFinancePage() {
 
 
   function formatAmount(cents) {
-    if (!cents) return "-";
+    if (cents === null || cents === undefined) return "-";
     return (Number(cents) / 100).toFixed(2);
   }
 
@@ -217,7 +217,7 @@ export default function SalonFinancePage() {
                 <tr key={l.id}>
                   <td>{l.id}</td>
                   <td>{l.direction}</td>
-                  <td>{formatAmount(l.amount_cents)}</td>
+                  <td>{formatAmount(l.amount)}</td>
                   <td>{l.reference_type}</td>
                   <td>{l.created_at}</td>
                 </tr>
