@@ -58,6 +58,11 @@ export default function SalonFinancePage() {
     }
   }
 
+  function formatAmount(cents) {
+    if (!cents) return "-";
+    return (Number(cents) / 100).toFixed(2);
+  }
+
   return (
     <div style={{ padding: 20 }}>
 
@@ -143,9 +148,8 @@ export default function SalonFinancePage() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Type</th>
+                <th>Direction</th>
                 <th>Amount</th>
-                <th>Currency</th>
                 <th>Reference</th>
                 <th>Date</th>
               </tr>
@@ -154,10 +158,9 @@ export default function SalonFinancePage() {
               {ledger.map((l) => (
                 <tr key={l.id}>
                   <td>{l.id}</td>
-                  <td>{l.type}</td>
-                  <td>{l.amount}</td>
-                  <td>{l.currency || "KGS"}</td>
-                  <td>{l.reference || "-"}</td>
+                  <td>{l.direction}</td>
+                  <td>{formatAmount(l.amount_cents)}</td>
+                  <td>{l.reference_type}</td>
                   <td>{l.created_at}</td>
                 </tr>
               ))}
