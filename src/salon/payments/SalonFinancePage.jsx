@@ -3,12 +3,15 @@ import React, { useEffect, useState } from "react";
 export default function SalonFinancePage() {
 
   const [payments, setPayments] = useState([]);
+  const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [ledgerLoading, setLedgerLoading] = useState(true);
 
   const salonSlug = "totem-demo-salon";
 
   useEffect(() => {
     loadPayments();
+    loadLedger();
   }, []);
 
   async function loadPayments() {
@@ -30,6 +33,28 @@ export default function SalonFinancePage() {
       console.error("Payments load error:", err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadLedger() {
+    try {
+
+      const res = await fetch(
+        `https://api.totemv.com/internal/salons/${salonSlug}/ledger`
+      );
+
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+        setLedger(data);
+      } else if (data.ledger) {
+        setLedger(data.ledger);
+      }
+
+    } catch (err) {
+      console.error("Ledger load error:", err);
+    } finally {
+      setLedgerLoading(false);
     }
   }
 
@@ -96,6 +121,44 @@ export default function SalonFinancePage() {
                   <td>{p.client_name || "-"}</td>
                   <td>{p.amount}</td>
                   <td>{p.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+      </section>
+
+      <section>
+        <h2>Ledger</h2>
+
+        {ledgerLoading && <p>Loading ledger...</p>}
+
+        {!ledgerLoading && ledger.length === 0 && (
+          <p>No ledger entries</p>
+        )}
+
+        {!ledgerLoading && ledger.length > 0 && (
+          <table border="1" cellPadding="8">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Currency</th>
+                <th>Reference</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ledger.map((l) => (
+                <tr key={l.id}>
+                  <td>{l.id}</td>
+                  <td>{l.type}</td>
+                  <td>{l.amount}</td>
+                  <td>{l.currency || "KGS"}</td>
+                  <td>{l.reference || "-"}</td>
+                  <td>{l.created_at}</td>
                 </tr>
               ))}
             </tbody>
