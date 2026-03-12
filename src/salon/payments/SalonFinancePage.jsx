@@ -37,6 +37,32 @@ export default function SalonFinancePage() {
     marginTop: 10
   }
 
+  const overviewGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 12,
+    marginTop: 10
+  }
+
+  const overviewCardStyle = {
+    border: "1px solid #ddd",
+    padding: 16,
+    borderRadius: 8,
+    background: "#fff"
+  }
+
+  const overviewLabelStyle = {
+    margin: 0,
+    fontSize: 14,
+    color: "#555"
+  }
+
+  const overviewValueStyle = {
+    margin: "8px 0 0 0",
+    fontSize: 24,
+    fontWeight: 700
+  }
+
   const tableStyle = {
     width: "100%",
     borderCollapse: "collapse"
@@ -250,7 +276,7 @@ export default function SalonFinancePage() {
     const platformValue = Number(platformPercent)
 
     if (!masterIdNumber) {
-      setCreateContractError("Выбри мастера")
+      setCreateContractError("Выбери мастера")
       return
     }
 
@@ -336,7 +362,7 @@ export default function SalonFinancePage() {
 
     if (value === "active") return "Активный"
     if (value === "pending") return "Ожидает"
-    if (value === "archived") return "Аирхивный"
+    if (value === "archived") return "Архивный"
 
     return value || "-"
   }
@@ -384,8 +410,67 @@ export default function SalonFinancePage() {
   }
 
 
+  function getContractMasterPercent(contract) {
+
+    const terms = getContractTerms(contract)
+
+    if (terms.master_percent !== undefined && terms.master_percent !== null) {
+      return terms.master_percent
+    }
+
+    if (contract?.share_percent !== undefined && contract?.share_percent !== null) {
+      return contract.share_percent
+    }
+
+    return "-"
+
+  }
+
+
+  function getRevenueByDays(days) {
+
+    const now = new Date()
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+
+    if (days === 7) {
+      start.setDate(start.getDate() - 6)
+    }
+    else if (days === 30) {
+      start.setDate(start.getDate() - 29)
+    }
+
+    return ledger.reduce((sum, entry) => {
+
+      const createdAt = entry?.created_at ? new Date(entry.created_at) : null
+      const amount = Number(entry?.amount || 0)
+      const direction = String(entry?.direction || "").toLowerCase()
+
+      if (!createdAt || Number.isNaN(createdAt.getTime())) {
+        return sum
+      }
+
+      if (createdAt < start) {
+        return sum
+      }
+
+      if (direction !== "credit" && direction !== "in") {
+        return sum
+      }
+
+      return sum + amount
+
+    }, 0)
+
+  }
+
+
   const activeContracts = contracts.filter(c => c.status === "active")
   const pendingContracts = contracts.filter(c => c.status === "pending")
+
+  const todayRevenue = getRevenueByDays(1)
+  const weekRevenue = getRevenueByDays(7)
+  const monthRevenue = getRevenueByDays(30)
 
 
   function renderSettlementRules() {
@@ -404,8 +489,8 @@ export default function SalonFinancePage() {
           <tr>
             <th>Мастер</th>
             <th>Мастер %</th>
-            <th>Салон </th>
-            <th>Полутформа %</th>
+            <th>Салон %</th>
+            <th>Платформа %</th>
           </tr>
         </thead>
 
@@ -458,8 +543,8 @@ export default function SalonFinancePage() {
             <th>Мастер</th>
             <th>График выплат</th>
             <th>Мастер %</th>
-            <th>Салон </th>
-            <th>Полутформа %</th>
+            <th>Салон %</th>
+            <th>Платформа %</th>
           </tr>
         </thead>
 
@@ -497,6 +582,45 @@ export default function SalonFinancePage() {
     <div style={{ padding: 20 }}>
 
       <h1>Финансы</h1>
+
+
+      <section>
+
+        <h2>Finance Overview</h2>
+
+        <div style={overviewGridStyle}>
+
+          <div style={overviewCardStyle}>
+            <p style={overviewLabelStyle}>Баланс кошелька</p>
+            <p style={overviewValueStyle}>
+              {walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
+            </p>
+          </div>
+
+          <div style={overviewCardStyle}>
+            <p style={overviewLabelStyle}>Доход за сегодня</p>
+            <p style={overviewValueStyle}>
+              {ledgerLoading ? "..." : `${formatAmount(todayRevenue)} KGS`}
+            </p>
+          </div>
+
+          <div style={overviewCardStyle}>
+            <p style={overviewLabelStyle}>Доход за 7 дней</p>
+            <p style={overviewValueStyle}>
+              {ledgerLoading ? "..." : `${formatAmount(weekRevenue)} KGS`}
+            </p>
+          </div>
+
+          <div style={overviewCardStyle}>
+            <p style={overviewLabelStyle}>Доход за 30 дней</p>
+            <p style={overviewValueStyle}>
+              {ledgerLoading ? "..." : `${formatAmount(monthRevenue)} KGS`}
+            </p>
+          </div>
+
+        </div>
+
+      </section>
 
 
       <section>
@@ -552,7 +676,7 @@ export default function SalonFinancePage() {
                   <tr key={c.id}>
                     <td>{c.id}</td>
                     <td>{getMasterName(c)}</td>
-                    <td>{c.share_percent}</td>
+                    <td>{getContractMasterPercent(c)}</td>
                     <td>{formatStatus(c.status)}</td>
                   </tr>
 
@@ -579,7 +703,7 @@ export default function SalonFinancePage() {
           {contractsLoading && <p>Загрузка...</p>}
 
           {!contractsLoading && pendingContracts.length === 0 && (
-            <p>Нет ожидающих рконтрактов</p>
+            <p>Нет ожидающих контрактов</p>
           )}
 
           {!contractsLoading && pendingContracts.length > 0 && (
@@ -602,7 +726,7 @@ export default function SalonFinancePage() {
                   <tr key={c.id}>
                     <td>{c.id}</td>
                     <td>{getMasterName(c)}</td>
-                    <td>{c.share_percent}</td>
+                    <td>{getContractMasterPercent(c)}</td>
                     <td>{formatStatus(c.status)}</td>
                   </tr>
 
@@ -848,7 +972,7 @@ export default function SalonFinancePage() {
           {loading && <p>Загрузка платежей...</p>}
 
           {!loading && payments.length === 0 && (
-            <p>Полатежи не найдены</p>
+            <p>Платежи не найдены</p>
           )}
 
           {!loading && payments.length > 0 && (
