@@ -6,6 +6,7 @@ import EmptyState from "../../cabinet/EmptyState"
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
+
 function getMasterSlug() {
 
   if (window.MASTER_SLUG) {
@@ -25,37 +26,44 @@ function getMasterSlug() {
   return null
 }
 
-function money(cents){
 
-  const n = (Number(cents) || 0) / 100
+function money(value) {
+
+  const n = Number(value) || 0
 
   return new Intl.NumberFormat("ru-RU").format(n) + " сом"
 
 }
 
-function formatDate(iso){
+
+function formatDate(iso) {
 
   const d = new Date(iso)
 
-  return d.toLocaleDateString("ru-RU") + " " +
-  d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
+  return (
+    d.toLocaleDateString("ru-RU") +
+    " " +
+    d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+  )
 
 }
 
-export default function MasterSettlementsPage(){
 
-  const [periods,setPeriods] = useState([])
-  const [loading,setLoading] = useState(true)
+export default function MasterSettlementsPage() {
 
-  useEffect(()=>{
+  const [periods, setPeriods] = useState([])
+  const [loading, setLoading] = useState(true)
 
-    async function loadSettlements(){
 
-      try{
+  useEffect(() => {
+
+    async function loadSettlements() {
+
+      try {
 
         const slug = getMasterSlug()
 
-        if(!slug){
+        if (!slug) {
           console.error("MASTER_SLUG_NOT_FOUND")
           setLoading(false)
           return
@@ -65,7 +73,7 @@ export default function MasterSettlementsPage(){
           `${API_BASE}/internal/masters/${slug}/settlements`
         )
 
-        if(!res.ok){
+        if (!res.ok) {
           throw new Error("SETTLEMENTS_FETCH_FAILED")
         }
 
@@ -73,11 +81,11 @@ export default function MasterSettlementsPage(){
 
         setPeriods(data.periods || [])
 
-      }catch(e){
+      } catch (e) {
 
-        console.error("Settlements load error",e)
+        console.error("Settlements load error", e)
 
-      }finally{
+      } finally {
 
         setLoading(false)
 
@@ -87,9 +95,10 @@ export default function MasterSettlementsPage(){
 
     loadSettlements()
 
-  },[])
+  }, [])
 
-  return(
+
+  return (
 
     <PageSection title="Сеты">
 
@@ -103,7 +112,7 @@ export default function MasterSettlementsPage(){
 
         <TableSection>
 
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
             <thead>
               <tr>
@@ -127,7 +136,7 @@ export default function MasterSettlementsPage(){
 
                   <td>{formatDate(p.end_date)}</td>
 
-                  <td>{money(p.amount_cents || p.amount)}</td>
+                  <td>{money(p.amount)}</td>
 
                   <td>{p.status}</td>
 

@@ -6,6 +6,7 @@ import EmptyState from "../../cabinet/EmptyState"
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
+
 function getMasterSlug() {
 
   if (window.MASTER_SLUG) {
@@ -23,39 +24,47 @@ function getMasterSlug() {
   }
 
   return null
+
 }
 
-function money(cents){
 
-  const n = (Number(cents) || 0) / 100
+function money(value) {
+
+  const n = Number(value) || 0
 
   return new Intl.NumberFormat("ru-RU").format(n) + " сом"
 
 }
 
-function formatDate(iso){
+
+function formatDate(iso) {
 
   const d = new Date(iso)
 
-  return d.toLocaleDateString("ru-RU") + " " +
-  d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
+  return (
+    d.toLocaleDateString("ru-RU") +
+    " " +
+    d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+  )
 
 }
 
-export default function MasterPayoutsPage(){
 
-  const [payouts,setPayouts] = useState([])
-  const [loading,setLoading] = useState(true)
+export default function MasterPayoutsPage() {
 
-  useEffect(()=>{
+  const [payouts, setPayouts] = useState([])
+  const [loading, setLoading] = useState(true)
 
-    async function loadPayouts(){
 
-      try{
+  useEffect(() => {
+
+    async function loadPayouts() {
+
+      try {
 
         const slug = getMasterSlug()
 
-        if(!slug){
+        if (!slug) {
           console.error("MASTER_SLUG_NOT_FOUND")
           setLoading(false)
           return
@@ -65,7 +74,7 @@ export default function MasterPayoutsPage(){
           `${API_BASE}/internal/masters/${slug}/payouts`
         )
 
-        if(!res.ok){
+        if (!res.ok) {
           throw new Error("PAYOUTS_FETCH_FAILED")
         }
 
@@ -73,11 +82,11 @@ export default function MasterPayoutsPage(){
 
         setPayouts(data.payouts || [])
 
-      }catch(e){
+      } catch (e) {
 
-        console.error("Payouts load error",e)
+        console.error("Payouts load error", e)
 
-      }finally{
+      } finally {
 
         setLoading(false)
 
@@ -87,9 +96,10 @@ export default function MasterPayoutsPage(){
 
     loadPayouts()
 
-  },[])
+  }, [])
 
-  return(
+
+  return (
 
     <PageSection title="Выплаты">
 
@@ -103,7 +113,7 @@ export default function MasterPayoutsPage(){
 
         <TableSection>
 
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
             <thead>
               <tr>
@@ -122,7 +132,7 @@ export default function MasterPayoutsPage(){
 
                   <td>{formatDate(p.created_at)}</td>
 
-                  <td>{money(p.amount_cents || p.amount)}</td>
+                  <td>{money(p.amount)}</td>
 
                   <td>{p.status}</td>
 

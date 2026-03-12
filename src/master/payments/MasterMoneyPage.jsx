@@ -6,52 +6,71 @@ import StatGrid from "../../cabinet/StatGrid"
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
-function money(n){
-  return new Intl.NumberFormat("ru-RU").format(n || 0) + " сом"
+
+function money(n) {
+
+  const value = Number(n) || 0
+
+  return new Intl.NumberFormat("ru-RU").format(value) + " сом"
+
 }
 
-function Card({title,value,color}){
 
-  return(
-    <div style={{
-      border:"1px solid #eee",
-      borderLeft: color ? `6px solid ${color}` : "1px solid #eee",
-      borderRadius:"10px",
-      padding:"12px",
-      background:"#fff"
-    }}>
+function Card({ title, value, color }) {
 
-      <div style={{color:"#666"}}>
+  return (
+
+    <div
+      style={{
+        border: "1px solid #eee",
+        borderLeft: color ? `6px solid ${color}` : "1px solid #eee",
+        borderRadius: "10px",
+        padding: "12px",
+        background: "#fff"
+      }}
+    >
+
+      <div
+        style={{
+          color: "#666"
+        }}
+      >
         {title}
       </div>
 
-      <div style={{
-        fontSize:"20px",
-        fontWeight:"bold",
-        marginTop:"6px"
-      }}>
+      <div
+        style={{
+          fontSize: "20px",
+          fontWeight: "bold",
+          marginTop: "6px"
+        }}
+      >
         {value}
       </div>
 
     </div>
+
   )
 
 }
 
-export default function MasterMoneyPage(){
 
-  const {metrics, master} = useMaster()
+export default function MasterMoneyPage() {
 
-  const [wallet,setWallet] = useState(null)
-  const [loading,setLoading] = useState(true)
+  const { metrics, master } = useMaster()
 
-  useEffect(()=>{
+  const [wallet, setWallet] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-    if(!master?.slug) return
 
-    async function loadWallet(){
+  useEffect(() => {
 
-      try{
+    if (!master?.slug) return
+
+
+    async function loadWallet() {
+
+      try {
 
         const res = await fetch(
           `${API_BASE}/masters/${master.slug}/wallet-balance`
@@ -59,29 +78,39 @@ export default function MasterMoneyPage(){
 
         const data = await res.json()
 
-        if(data?.ok){
+        if (data?.ok) {
+
           setWallet(data.balance || 0)
+
         }
 
-      }catch(e){
+      }
+      catch (e) {
 
-        console.error("WALLET_LOAD_FAILED",e)
+        console.error("WALLET_LOAD_FAILED", e)
 
-      }finally{
+      }
+      finally {
+
         setLoading(false)
+
       }
 
     }
 
     loadWallet()
 
-  },[master])
+  }, [master])
 
-  if(!metrics){
+
+  if (!metrics) {
+
     return <div>Загрузка...</div>
+
   }
 
-  return(
+
+  return (
 
     <PageSection title="Доход">
 

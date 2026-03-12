@@ -25,8 +25,8 @@ function getMasterSlug() {
   return null
 }
 
-function money(cents){
-  const n = (Number(cents) || 0) / 100
+function money(value){
+  const n = Number(value) || 0
   return new Intl.NumberFormat("ru-RU").format(n) + " сом"
 }
 
@@ -118,7 +118,7 @@ export default function MasterTransactionsPage(){
 
                   <td>{t.reference_type}</td>
 
-                  <td>{money(t.amount_cents)}</td>
+                  <td>{money(t.amount)}</td>
 
                   <td>{t.direction}</td>
 

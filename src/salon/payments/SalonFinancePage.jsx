@@ -1,98 +1,130 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react"
 
 export default function SalonFinancePage() {
 
-  const [payments, setPayments] = useState([]);
-  const [ledger, setLedger] = useState([]);
-  const [walletBalance, setWalletBalance] = useState(null);
+  const [payments, setPayments] = useState([])
+  const [ledger, setLedger] = useState([])
+  const [walletBalance, setWalletBalance] = useState(null)
 
-  const [loading, setLoading] = useState(true);
-  const [ledgerLoading, setLedgerLoading] = useState(true);
-  const [walletLoading, setWalletLoading] = useState(true);
+  const [loading, setLoading] = useState(true)
+  const [ledgerLoading, setLedgerLoading] = useState(true)
+  const [walletLoading, setWalletLoading] = useState(true)
 
-  const salonSlug = "totem-demo-salon";
+  const salonSlug = "totem-demo-salon"
 
   useEffect(() => {
-    loadPayments();
-    loadLedger();
-    loadWallet();
-  }, []);
+
+    loadPayments()
+    loadLedger()
+    loadWallet()
+
+  }, [])
 
 
   async function loadPayments() {
+
     try {
 
       const res = await fetch(
         `https://api.totemv.com/internal/salons/${salonSlug}/payments`
-      );
+      )
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (Array.isArray(data)) {
-        setPayments(data);
-      } else if (data.payments) {
-        setPayments(data.payments);
+        setPayments(data)
+      }
+      else if (data.payments) {
+        setPayments(data.payments)
       }
 
-    } catch (err) {
-      console.error("Payments load error:", err);
-    } finally {
-      setLoading(false);
     }
+    catch (err) {
+
+      console.error("Payments load error:", err)
+
+    }
+    finally {
+
+      setLoading(false)
+
+    }
+
   }
 
 
   async function loadLedger() {
+
     try {
 
       const res = await fetch(
         `https://api.totemv.com/internal/salons/${salonSlug}/ledger`
-      );
+      )
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (Array.isArray(data)) {
-        setLedger(data);
-      } else if (data.ledger) {
-        setLedger(data.ledger);
+        setLedger(data)
+      }
+      else if (data.ledger) {
+        setLedger(data.ledger)
       }
 
-    } catch (err) {
-      console.error("Ledger load error:", err);
-    } finally {
-      setLedgerLoading(false);
     }
+    catch (err) {
+
+      console.error("Ledger load error:", err)
+
+    }
+    finally {
+
+      setLedgerLoading(false)
+
+    }
+
   }
 
 
   async function loadWallet() {
+
     try {
 
       const res = await fetch(
         `https://api.totemv.com/internal/salons/${salonSlug}/wallet-balance`
-      );
+      )
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (data.balance !== undefined) {
-        setWalletBalance(data.balance);
+        setWalletBalance(data.balance)
       }
 
-    } catch (err) {
-      console.error("Wallet load error:", err);
-    } finally {
-      setWalletLoading(false);
     }
+    catch (err) {
+
+      console.error("Wallet load error:", err)
+
+    }
+    finally {
+
+      setWalletLoading(false)
+
+    }
+
   }
 
 
   function formatAmount(value) {
-  if (value === null || value === undefined) return "-";
-  return Number(value);
-}
+
+    if (value === null || value === undefined) return "-"
+
+    return Number(value)
+
+  }
 
 
   return (
+
     <div style={{ padding: 20 }}>
 
       <h1>Finance</h1>
@@ -148,6 +180,7 @@ export default function SalonFinancePage() {
 
 
       <section>
+
         <h2>Payments</h2>
 
         {loading && <p>Loading payments...</p>}
@@ -171,15 +204,25 @@ export default function SalonFinancePage() {
             </thead>
 
             <tbody>
+
               {payments.map((p) => (
+
                 <tr key={p.id}>
+
                   <td>{p.id}</td>
+
                   <td>{p.created_at}</td>
+
                   <td>{p.client_name || "-"}</td>
+
                   <td>{p.amount}</td>
+
                   <td>{p.status}</td>
+
                 </tr>
+
               ))}
+
             </tbody>
 
           </table>
@@ -190,6 +233,7 @@ export default function SalonFinancePage() {
 
 
       <section>
+
         <h2>Ledger</h2>
 
         {ledgerLoading && <p>Loading ledger...</p>}
@@ -213,15 +257,25 @@ export default function SalonFinancePage() {
             </thead>
 
             <tbody>
+
               {ledger.map((l) => (
+
                 <tr key={l.id}>
+
                   <td>{l.id}</td>
+
                   <td>{l.direction}</td>
+
                   <td>{formatAmount(l.amount)}</td>
+
                   <td>{l.reference_type}</td>
+
                   <td>{l.created_at}</td>
+
                 </tr>
+
               ))}
+
             </tbody>
 
           </table>
@@ -231,5 +285,7 @@ export default function SalonFinancePage() {
       </section>
 
     </div>
-  );
+
+  )
+
 }
