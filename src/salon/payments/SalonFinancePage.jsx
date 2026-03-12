@@ -86,10 +86,10 @@ export default function SalonFinancePage() {
   }
 
 
-  function formatAmount(cents) {
-    if (cents === null || cents === undefined) return "-";
-    return (Number(cents) / 100).toFixed(2);
-  }
+  function formatAmount(value) {
+  if (value === null || value === undefined) return "-";
+  return Number(value);
+}
 
 
   return (
