@@ -4,14 +4,18 @@ export default function SalonFinancePage() {
 
   const [payments, setPayments] = useState([]);
   const [ledger, setLedger] = useState([]);
+  const [walletBalance, setWalletBalance] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [ledgerLoading, setLedgerLoading] = useState(true);
+  const [walletLoading, setWalletLoading] = useState(true);
 
   const salonSlug = "totem-demo-salon";
 
   useEffect(() => {
     loadPayments();
     loadLedger();
+    loadWallet();
   }, []);
 
   async function loadPayments() {
@@ -58,6 +62,26 @@ export default function SalonFinancePage() {
     }
   }
 
+  async function loadWallet() {
+    try {
+
+      const res = await fetch(
+        `https://api.totemv.com/internal/salons/${salonSlug}/wallet-balance`
+      );
+
+      const data = await res.json();
+
+      if (data.balance_cents !== undefined) {
+        setWalletBalance(data.balance_cents);
+      }
+
+    } catch (err) {
+      console.error("Wallet load error:", err);
+    } finally {
+      setWalletLoading(false);
+    }
+  }
+
   function formatAmount(cents) {
     if (!cents) return "-";
     return (Number(cents) / 100).toFixed(2);
@@ -96,6 +120,18 @@ export default function SalonFinancePage() {
       <section>
         <h2>Contract History</h2>
         <p>История изменений контрактов.</p>
+      </section>
+
+      <section>
+
+        <h2>Wallet Balance</h2>
+
+        {walletLoading && <p>Loading wallet...</p>}
+
+        {!walletLoading && (
+          <h3>{formatAmount(walletBalance)} KGS</h3>
+        )}
+
       </section>
 
       <section>
