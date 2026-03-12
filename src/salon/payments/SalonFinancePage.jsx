@@ -163,6 +163,65 @@ export default function SalonFinancePage() {
   const pendingContracts = contracts.filter(c => c.status === "pending")
 
 
+  function renderSettlementRules() {
+
+    if (contractsLoading) return <p>Loading rules...</p>
+
+    if (activeContracts.length === 0) {
+      return <p>No settlement rules available</p>
+    }
+
+    return (
+
+      <table border="1" cellPadding="8">
+
+        <thead>
+          <tr>
+            <th>Master</th>
+            <th>Master Share</th>
+            <th>Salon Share</th>
+            <th>Payout Schedule</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {activeContracts.map(c => {
+
+            let terms = {}
+
+            try {
+              terms = JSON.parse(c.terms_json || "{}")
+            } catch {
+              terms = {}
+            }
+
+            const masterShare = terms.master_share || "-"
+            const salonShare = terms.salon_share || "-"
+            const payoutSchedule = terms.payout_schedule || "-"
+
+            return (
+
+              <tr key={c.id}>
+                <td>{c.master_slug}</td>
+                <td>{masterShare}%</td>
+                <td>{salonShare}%</td>
+                <td>{payoutSchedule}</td>
+              </tr>
+
+            )
+
+          })}
+
+        </tbody>
+
+      </table>
+
+    )
+
+  }
+
+
   return (
 
     <div style={{ padding: 20 }}>
@@ -278,14 +337,20 @@ export default function SalonFinancePage() {
 
 
       <section>
+
         <h2>Settlement Rules</h2>
-        <p>Settlement rules defined in contract terms.</p>
+
+        {renderSettlementRules()}
+
       </section>
 
 
       <section>
+
         <h2>Payout Method</h2>
-        <p>Payout configuration defined per contract.</p>
+
+        <p>Payout configuration defined in contract terms.</p>
+
       </section>
 
 
