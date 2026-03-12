@@ -15,6 +15,19 @@ export default function SalonFinancePage() {
 
   const salonSlug = "totem-demo-salon"
 
+  const sectionCardStyle = {
+    border: "1px solid #ddd",
+    padding: 20,
+    borderRadius: 8,
+    background: "#fafafa",
+    marginTop: 10
+  }
+
+  const tableStyle = {
+    width: "100%",
+    borderCollapse: "collapse"
+  }
+
   useEffect(() => {
 
     loadPayments()
@@ -159,28 +172,58 @@ export default function SalonFinancePage() {
   }
 
 
+  function formatStatus(value) {
+
+    if (value === "active") return "Активный"
+    if (value === "pending") return "Ожидает"
+    if (value === "archived") return "Архивный"
+
+    return value || "-"
+  }
+
+
+  function getContractTerms(contract) {
+
+    let terms = {}
+
+    if (typeof contract?.terms_json === "object" && contract?.terms_json !== null) {
+      terms = contract.terms_json
+    }
+    else {
+      try {
+        terms = JSON.parse(contract?.terms_json || "{}")
+      } catch {
+        terms = {}
+      }
+    }
+
+    return terms
+
+  }
+
+
   const activeContracts = contracts.filter(c => c.status === "active")
   const pendingContracts = contracts.filter(c => c.status === "pending")
 
 
   function renderSettlementRules() {
 
-    if (contractsLoading) return <p>Loading rules...</p>
+    if (contractsLoading) return <p>Загрузка правил...</p>
 
     if (activeContracts.length === 0) {
-      return <p>No settlement rules available</p>
+      return <p>Нет правил распределения</p>
     }
 
     return (
 
-      <table border="1" cellPadding="8">
+      <table border="1" cellPadding="8" style={tableStyle}>
 
         <thead>
           <tr>
-            <th>Master</th>
-            <th>Master %</th>
-            <th>Salon %</th>
-            <th>Platform %</th>
+            <th>Мастер</th>
+            <th>Мастер %</th>
+            <th>Салон %</th>
+            <th>Платформа %</th>
           </tr>
         </thead>
 
@@ -188,18 +231,7 @@ export default function SalonFinancePage() {
 
           {activeContracts.map(c => {
 
-            let terms = {}
-
-            if (typeof c.terms_json === "object") {
-              terms = c.terms_json
-            }
-            else {
-              try {
-                terms = JSON.parse(c.terms_json || "{}")
-              } catch {
-                terms = {}
-              }
-            }
+            const terms = getContractTerms(c)
 
             const masterShare = terms.master_percent ?? "-"
             const salonShare = terms.salon_percent ?? "-"
@@ -229,23 +261,23 @@ export default function SalonFinancePage() {
 
   function renderPayoutMethod() {
 
-    if (contractsLoading) return <p>Loading payout rules...</p>
+    if (contractsLoading) return <p>Загрузка правил выплат...</p>
 
     if (activeContracts.length === 0) {
-      return <p>No payout configuration</p>
+      return <p>Нет настроек выплат</p>
     }
 
     return (
 
-      <table border="1" cellPadding="8">
+      <table border="1" cellPadding="8" style={tableStyle}>
 
         <thead>
           <tr>
-            <th>Master</th>
-            <th>Payout Schedule</th>
-            <th>Master %</th>
-            <th>Salon %</th>
-            <th>Platform %</th>
+            <th>Мастер</th>
+            <th>График выплат</th>
+            <th>Мастер %</th>
+            <th>Салон %</th>
+            <th>Платформа %</th>
           </tr>
         </thead>
 
@@ -253,24 +285,13 @@ export default function SalonFinancePage() {
 
           {activeContracts.map(c => {
 
-            let terms = {}
-
-            if (typeof c.terms_json === "object") {
-              terms = c.terms_json
-            }
-            else {
-              try {
-                terms = JSON.parse(c.terms_json || "{}")
-              } catch {
-                terms = {}
-              }
-            }
+            const terms = getContractTerms(c)
 
             return (
 
               <tr key={c.id}>
                 <td>{c.master_slug}</td>
-                <td>{terms.payout_schedule || "manual"}</td>
+                <td>{terms.payout_schedule || "вручную"}</td>
                 <td>{terms.master_percent ?? "-"}</td>
                 <td>{terms.salon_percent ?? "-"}</td>
                 <td>{terms.platform_percent ?? "-"}</td>
@@ -293,191 +314,206 @@ export default function SalonFinancePage() {
 
     <div style={{ padding: 20 }}>
 
-      <h1>Finance</h1>
+      <h1>Финансы</h1>
 
 
       <section>
 
-        <h2>Contract Summary</h2>
+        <h2>Сводка по контрактам</h2>
 
-        {contractsLoading && <p>Loading contracts...</p>}
+        <div style={sectionCardStyle}>
 
-        {!contractsLoading && (
-          <div>
-            <p>Active contracts: {activeContracts.length}</p>
-            <p>Pending contracts: {pendingContracts.length}</p>
-            <p>Total contracts: {contracts.length}</p>
-          </div>
-        )}
+          {contractsLoading && <p>Загрузка контрактов...</p>}
+
+          {!contractsLoading && (
+            <div>
+              <p>Активные контракты: {activeContracts.length}</p>
+              <p>Ожидающие контракты: {pendingContracts.length}</p>
+              <p>Всего контрактов: {contracts.length}</p>
+            </div>
+          )}
+
+        </div>
 
       </section>
 
 
       <section>
 
-        <h2>Master Contracts</h2>
+        <h2>Контракты мастеров</h2>
 
-        {contractsLoading && <p>Loading...</p>}
+        <div style={sectionCardStyle}>
 
-        {!contractsLoading && activeContracts.length === 0 && (
-          <p>No active contracts</p>
-        )}
+          {contractsLoading && <p>Загрузка...</p>}
 
-        {!contractsLoading && activeContracts.length > 0 && (
+          {!contractsLoading && activeContracts.length === 0 && (
+            <p>Нет активных контрактов</p>
+          )}
 
-          <table border="1" cellPadding="8">
+          {!contractsLoading && activeContracts.length > 0 && (
 
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Master</th>
-                <th>Share %</th>
-                <th>Status</th>
-              </tr>
-            </thead>
+            <table border="1" cellPadding="8" style={tableStyle}>
 
-            <tbody>
-
-              {activeContracts.map((c) => (
-
-                <tr key={c.id}>
-                  <td>{c.id}</td>
-                  <td>{c.master_slug}</td>
-                  <td>{c.share_percent}</td>
-                  <td>{c.status}</td>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Мастер</th>
+                  <th>Доля %</th>
+                  <th>Статус</th>
                 </tr>
+              </thead>
 
-              ))}
+              <tbody>
 
-            </tbody>
+                {activeContracts.map((c) => (
 
-          </table>
+                  <tr key={c.id}>
+                    <td>{c.id}</td>
+                    <td>{c.master_slug}</td>
+                    <td>{c.share_percent}</td>
+                    <td>{formatStatus(c.status)}</td>
+                  </tr>
 
-        )}
+                ))}
+
+              </tbody>
+
+            </table>
+
+          )}
+
+        </div>
 
       </section>
 
 
       <section>
 
-        <h2>Pending Contracts</h2>
+        <h2>Ожидающие контракты</h2>
 
-        {contractsLoading && <p>Loading...</p>}
+        <div style={sectionCardStyle}>
 
-        {!contractsLoading && pendingContracts.length === 0 && (
-          <p>No pending contracts</p>
-        )}
+          {contractsLoading && <p>Загрузка...</p>}
 
-        {!contractsLoading && pendingContracts.length > 0 && (
+          {!contractsLoading && pendingContracts.length === 0 && (
+            <p>Нет ожидающих контрактов</p>
+          )}
 
-          <table border="1" cellPadding="8">
+          {!contractsLoading && pendingContracts.length > 0 && (
 
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Master</th>
-                <th>Share %</th>
-                <th>Status</th>
-              </tr>
-            </thead>
+            <table border="1" cellPadding="8" style={tableStyle}>
 
-            <tbody>
-
-              {pendingContracts.map((c) => (
-
-                <tr key={c.id}>
-                  <td>{c.id}</td>
-                  <td>{c.master_slug}</td>
-                  <td>{c.share_percent}</td>
-                  <td>{c.status}</td>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Мастер</th>
+                  <th>Доля %</th>
+                  <th>Статус</th>
                 </tr>
+              </thead>
 
-              ))}
+              <tbody>
 
-            </tbody>
+                {pendingContracts.map((c) => (
 
-          </table>
+                  <tr key={c.id}>
+                    <td>{c.id}</td>
+                    <td>{c.master_slug}</td>
+                    <td>{c.share_percent}</td>
+                    <td>{formatStatus(c.status)}</td>
+                  </tr>
 
-        )}
+                ))}
 
-      </section>
+              </tbody>
 
+            </table>
 
-      <section>
+          )}
 
-        <h2>Settlement Rules</h2>
-
-        {renderSettlementRules()}
-
-      </section>
-
-
-      <section>
-
-        <h2>Payout Method</h2>
-
-        {renderPayoutMethod()}
+        </div>
 
       </section>
 
 
       <section>
 
-        <h2>Contract History</h2>
+        <h2>Правила распределения</h2>
 
-        {contractsLoading && <p>Loading...</p>}
+        <div style={sectionCardStyle}>
+          {renderSettlementRules()}
+        </div>
 
-        {!contractsLoading && contracts.length === 0 && (
-          <p>No contract history</p>
-        )}
+      </section>
 
-        {!contractsLoading && contracts.length > 0 && (
 
-          <table border="1" cellPadding="8">
+      <section>
 
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Master</th>
-                <th>Status</th>
-                <th>Created</th>
-              </tr>
-            </thead>
+        <h2>Способ выплат</h2>
 
-            <tbody>
+        <div style={sectionCardStyle}>
+          {renderPayoutMethod()}
+        </div>
 
-              {contracts.map((c) => (
+      </section>
 
-                <tr key={c.id}>
-                  <td>{c.id}</td>
-                  <td>{c.master_slug}</td>
-                  <td>{c.status}</td>
-                  <td>{c.created_at}</td>
+
+      <section>
+
+        <h2>История контрактов</h2>
+
+        <div style={sectionCardStyle}>
+
+          {contractsLoading && <p>Загрузка...</p>}
+
+          {!contractsLoading && contracts.length === 0 && (
+            <p>История контрактов пуста</p>
+          )}
+
+          {!contractsLoading && contracts.length > 0 && (
+
+            <table border="1" cellPadding="8" style={tableStyle}>
+
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Мастер</th>
+                  <th>Статус</th>
+                  <th>Создан</th>
                 </tr>
+              </thead>
 
-              ))}
+              <tbody>
 
-            </tbody>
+                {contracts.map((c) => (
 
-          </table>
+                  <tr key={c.id}>
+                    <td>{c.id}</td>
+                    <td>{c.master_slug}</td>
+                    <td>{formatStatus(c.status)}</td>
+                    <td>{c.created_at}</td>
+                  </tr>
 
-        )}
+                ))}
+
+              </tbody>
+
+            </table>
+
+          )}
+
+        </div>
 
       </section>
 
 
       <section>
 
-        <h2>Wallet Balance</h2>
+        <h2>Баланс кошелька</h2>
 
-        <div style={{
-          border: "1px solid #ddd",
-          padding: 20,
-          borderRadius: 8,
-          background: "#fafafa"
-        }}>
+        <div style={sectionCardStyle}>
 
-          {walletLoading && <p>Loading wallet...</p>}
+          {walletLoading && <p>Загрузка кошелька...</p>}
 
           {!walletLoading && (
             <h3>{formatAmount(walletBalance)} KGS</h3>
@@ -490,106 +526,114 @@ export default function SalonFinancePage() {
 
       <section>
 
-        <h2>Payments</h2>
+        <h2>Платежи</h2>
 
-        {loading && <p>Loading payments...</p>}
+        <div style={sectionCardStyle}>
 
-        {!loading && payments.length === 0 && (
-          <p>No payments found</p>
-        )}
+          {loading && <p>Загрузка платежей...</p>}
 
-        {!loading && payments.length > 0 && (
+          {!loading && payments.length === 0 && (
+            <p>Платежи не найдены</p>
+          )}
 
-          <table border="1" cellPadding="8">
+          {!loading && payments.length > 0 && (
 
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Date</th>
-                <th>Client</th>
-                <th>Amount</th>
-                <th>Status</th>
-              </tr>
-            </thead>
+            <table border="1" cellPadding="8" style={tableStyle}>
 
-            <tbody>
-
-              {payments.map((p) => (
-
-                <tr key={p.id}>
-
-                  <td>{p.id}</td>
-
-                  <td>{p.created_at}</td>
-
-                  <td>{p.client_name || "-"}</td>
-
-                  <td>{p.amount}</td>
-
-                  <td>{p.status}</td>
-
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Дата</th>
+                  <th>Клиент</th>
+                  <th>Сумма</th>
+                  <th>Статус</th>
                 </tr>
+              </thead>
 
-              ))}
+              <tbody>
 
-            </tbody>
+                {payments.map((p) => (
 
-          </table>
+                  <tr key={p.id}>
 
-        )}
+                    <td>{p.id}</td>
+
+                    <td>{p.created_at}</td>
+
+                    <td>{p.client_name || "-"}</td>
+
+                    <td>{p.amount}</td>
+
+                    <td>{p.status}</td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          )}
+
+        </div>
 
       </section>
 
 
       <section>
 
-        <h2>Ledger</h2>
+        <h2>Леджер</h2>
 
-        {ledgerLoading && <p>Loading ledger...</p>}
+        <div style={sectionCardStyle}>
 
-        {!ledgerLoading && ledger.length === 0 && (
-          <p>No ledger entries</p>
-        )}
+          {ledgerLoading && <p>Загрузка леджера...</p>}
 
-        {!ledgerLoading && ledger.length > 0 && (
+          {!ledgerLoading && ledger.length === 0 && (
+            <p>Нет записей леджера</p>
+          )}
 
-          <table border="1" cellPadding="8">
+          {!ledgerLoading && ledger.length > 0 && (
 
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Direction</th>
-                <th>Amount</th>
-                <th>Reference</th>
-                <th>Date</th>
-              </tr>
-            </thead>
+            <table border="1" cellPadding="8" style={tableStyle}>
 
-            <tbody>
-
-              {ledger.map((l) => (
-
-                <tr key={l.id}>
-
-                  <td>{l.id}</td>
-
-                  <td>{l.direction}</td>
-
-                  <td>{formatAmount(l.amount)}</td>
-
-                  <td>{l.reference_type}</td>
-
-                  <td>{l.created_at}</td>
-
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Направление</th>
+                  <th>Сумма</th>
+                  <th>Источник</th>
+                  <th>Дата</th>
                 </tr>
+              </thead>
 
-              ))}
+              <tbody>
 
-            </tbody>
+                {ledger.map((l) => (
 
-          </table>
+                  <tr key={l.id}>
 
-        )}
+                    <td>{l.id}</td>
+
+                    <td>{l.direction}</td>
+
+                    <td>{formatAmount(l.amount)}</td>
+
+                    <td>{l.reference_type}</td>
+
+                    <td>{l.created_at}</td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          )}
+
+        </div>
 
       </section>
 
