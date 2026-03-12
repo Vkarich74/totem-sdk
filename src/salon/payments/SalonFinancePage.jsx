@@ -178,9 +178,9 @@ export default function SalonFinancePage() {
         <thead>
           <tr>
             <th>Master</th>
-            <th>Master Share</th>
-            <th>Salon Share</th>
-            <th>Payout Schedule</th>
+            <th>Master %</th>
+            <th>Salon %</th>
+            <th>Platform %</th>
           </tr>
         </thead>
 
@@ -190,23 +190,28 @@ export default function SalonFinancePage() {
 
             let terms = {}
 
-            try {
-              terms = JSON.parse(c.terms_json || "{}")
-            } catch {
-              terms = {}
+            if (typeof c.terms_json === "object") {
+              terms = c.terms_json
+            }
+            else {
+              try {
+                terms = JSON.parse(c.terms_json || "{}")
+              } catch {
+                terms = {}
+              }
             }
 
-            const masterShare = terms.master_share || "-"
-            const salonShare = terms.salon_share || "-"
-            const payoutSchedule = terms.payout_schedule || "-"
+            const masterShare = terms.master_percent ?? "-"
+            const salonShare = terms.salon_percent ?? "-"
+            const platformShare = terms.platform_percent ?? "-"
 
             return (
 
               <tr key={c.id}>
                 <td>{c.master_slug}</td>
-                <td>{masterShare}%</td>
-                <td>{salonShare}%</td>
-                <td>{payoutSchedule}</td>
+                <td>{masterShare}</td>
+                <td>{salonShare}</td>
+                <td>{platformShare}</td>
               </tr>
 
             )
