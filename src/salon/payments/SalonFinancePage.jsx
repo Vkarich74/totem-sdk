@@ -6,6 +6,9 @@ export default function SalonFinancePage() {
   const [ledger, setLedger] = useState([])
   const [walletBalance, setWalletBalance] = useState(null)
 
+  const [contracts, setContracts] = useState([])
+  const [contractsLoading, setContractsLoading] = useState(true)
+
   const [loading, setLoading] = useState(true)
   const [ledgerLoading, setLedgerLoading] = useState(true)
   const [walletLoading, setWalletLoading] = useState(true)
@@ -17,6 +20,7 @@ export default function SalonFinancePage() {
     loadPayments()
     loadLedger()
     loadWallet()
+    loadContracts()
 
   }, [])
 
@@ -114,6 +118,38 @@ export default function SalonFinancePage() {
   }
 
 
+  async function loadContracts() {
+
+    try {
+
+      const res = await fetch(
+        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`
+      )
+
+      const data = await res.json()
+
+      if (Array.isArray(data)) {
+        setContracts(data)
+      }
+      else if (data.contracts) {
+        setContracts(data.contracts)
+      }
+
+    }
+    catch (err) {
+
+      console.error("Contracts load error:", err)
+
+    }
+    finally {
+
+      setContractsLoading(false)
+
+    }
+
+  }
+
+
   function formatAmount(value) {
 
     if (value === null || value === undefined) return "-"
@@ -121,6 +157,10 @@ export default function SalonFinancePage() {
     return Number(value)
 
   }
+
+
+  const activeContracts = contracts.filter(c => c.status === "active")
+  const pendingContracts = contracts.filter(c => c.status === "pending")
 
 
   return (
@@ -131,38 +171,166 @@ export default function SalonFinancePage() {
 
 
       <section>
+
         <h2>Contract Summary</h2>
-        <p>Активные контракты с мастерами.</p>
+
+        {contractsLoading && <p>Loading contracts...</p>}
+
+        {!contractsLoading && (
+          <div>
+            <p>Active contracts: {activeContracts.length}</p>
+            <p>Pending contracts: {pendingContracts.length}</p>
+            <p>Total contracts: {contracts.length}</p>
+          </div>
+        )}
+
       </section>
 
 
       <section>
+
         <h2>Master Contracts</h2>
-        <p>Список контрактов мастеров.</p>
+
+        {contractsLoading && <p>Loading...</p>}
+
+        {!contractsLoading && activeContracts.length === 0 && (
+          <p>No active contracts</p>
+        )}
+
+        {!contractsLoading && activeContracts.length > 0 && (
+
+          <table border="1" cellPadding="8">
+
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Master</th>
+                <th>Share %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {activeContracts.map((c) => (
+
+                <tr key={c.id}>
+                  <td>{c.id}</td>
+                  <td>{c.master_slug}</td>
+                  <td>{c.share_percent}</td>
+                  <td>{c.status}</td>
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        )}
+
       </section>
 
 
       <section>
+
         <h2>Pending Contracts</h2>
-        <p>Контракты ожидающие подтверждения.</p>
+
+        {contractsLoading && <p>Loading...</p>}
+
+        {!contractsLoading && pendingContracts.length === 0 && (
+          <p>No pending contracts</p>
+        )}
+
+        {!contractsLoading && pendingContracts.length > 0 && (
+
+          <table border="1" cellPadding="8">
+
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Master</th>
+                <th>Share %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {pendingContracts.map((c) => (
+
+                <tr key={c.id}>
+                  <td>{c.id}</td>
+                  <td>{c.master_slug}</td>
+                  <td>{c.share_percent}</td>
+                  <td>{c.status}</td>
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        )}
+
       </section>
 
 
       <section>
         <h2>Settlement Rules</h2>
-        <p>Правила расчётов и распределения денег.</p>
+        <p>Settlement rules defined in contract terms.</p>
       </section>
 
 
       <section>
         <h2>Payout Method</h2>
-        <p>Методы выплат.</p>
+        <p>Payout configuration defined per contract.</p>
       </section>
 
 
       <section>
+
         <h2>Contract History</h2>
-        <p>История изменений контрактов.</p>
+
+        {contractsLoading && <p>Loading...</p>}
+
+        {!contractsLoading && contracts.length === 0 && (
+          <p>No contract history</p>
+        )}
+
+        {!contractsLoading && contracts.length > 0 && (
+
+          <table border="1" cellPadding="8">
+
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Master</th>
+                <th>Status</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {contracts.map((c) => (
+
+                <tr key={c.id}>
+                  <td>{c.id}</td>
+                  <td>{c.master_slug}</td>
+                  <td>{c.status}</td>
+                  <td>{c.created_at}</td>
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        )}
+
       </section>
 
 
