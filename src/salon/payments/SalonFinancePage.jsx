@@ -250,7 +250,7 @@ export default function SalonFinancePage() {
     const platformValue = Number(platformPercent)
 
     if (!masterIdNumber) {
-      setCreateContractError("Выбери мастера")
+      setCreateContractError("Выбри мастера")
       return
     }
 
@@ -336,7 +336,7 @@ export default function SalonFinancePage() {
 
     if (value === "active") return "Активный"
     if (value === "pending") return "Ожидает"
-    if (value === "archived") return "Архивный"
+    if (value === "archived") return "Аирхивный"
 
     return value || "-"
   }
@@ -362,6 +362,28 @@ export default function SalonFinancePage() {
   }
 
 
+  function getMasterName(contract) {
+
+    const contractMasterId = contract?.master_id
+    const contractMasterSlug = contract?.master_slug
+
+    const master = masters.find((item) => {
+      return (
+        String(item.id) === String(contractMasterId) ||
+        String(item.id) === String(contractMasterSlug) ||
+        String(item.slug) === String(contractMasterSlug)
+      )
+    })
+
+    if (!master) {
+      return contractMasterSlug || contractMasterId || "-"
+    }
+
+    return master.name || master.slug || master.id
+
+  }
+
+
   const activeContracts = contracts.filter(c => c.status === "active")
   const pendingContracts = contracts.filter(c => c.status === "pending")
 
@@ -382,8 +404,8 @@ export default function SalonFinancePage() {
           <tr>
             <th>Мастер</th>
             <th>Мастер %</th>
-            <th>Салон %</th>
-            <th>Платформа %</th>
+            <th>Салон </th>
+            <th>Полутформа %</th>
           </tr>
         </thead>
 
@@ -400,7 +422,7 @@ export default function SalonFinancePage() {
             return (
 
               <tr key={c.id}>
-                <td>{c.master_slug}</td>
+                <td>{getMasterName(c)}</td>
                 <td>{masterShare}</td>
                 <td>{salonShare}</td>
                 <td>{platformShare}</td>
@@ -436,8 +458,8 @@ export default function SalonFinancePage() {
             <th>Мастер</th>
             <th>График выплат</th>
             <th>Мастер %</th>
-            <th>Салон %</th>
-            <th>Платформа %</th>
+            <th>Салон </th>
+            <th>Полутформа %</th>
           </tr>
         </thead>
 
@@ -450,7 +472,7 @@ export default function SalonFinancePage() {
             return (
 
               <tr key={c.id}>
-                <td>{c.master_slug}</td>
+                <td>{getMasterName(c)}</td>
                 <td>{terms.payout_schedule || "вручную"}</td>
                 <td>{terms.master_percent ?? "-"}</td>
                 <td>{terms.salon_percent ?? "-"}</td>
@@ -529,7 +551,7 @@ export default function SalonFinancePage() {
 
                   <tr key={c.id}>
                     <td>{c.id}</td>
-                    <td>{c.master_slug}</td>
+                    <td>{getMasterName(c)}</td>
                     <td>{c.share_percent}</td>
                     <td>{formatStatus(c.status)}</td>
                   </tr>
@@ -547,6 +569,7 @@ export default function SalonFinancePage() {
       </section>
 
 
+
       <section>
 
         <h2>Ожидающие контракты</h2>
@@ -556,7 +579,7 @@ export default function SalonFinancePage() {
           {contractsLoading && <p>Загрузка...</p>}
 
           {!contractsLoading && pendingContracts.length === 0 && (
-            <p>Нет ожидающих контрактов</p>
+            <p>Нет ожидающих рконтрактов</p>
           )}
 
           {!contractsLoading && pendingContracts.length > 0 && (
@@ -578,7 +601,7 @@ export default function SalonFinancePage() {
 
                   <tr key={c.id}>
                     <td>{c.id}</td>
-                    <td>{c.master_slug}</td>
+                    <td>{getMasterName(c)}</td>
                     <td>{c.share_percent}</td>
                     <td>{formatStatus(c.status)}</td>
                   </tr>
@@ -736,6 +759,7 @@ export default function SalonFinancePage() {
       </section>
 
 
+
       <section>
 
         <h2>Способ выплат</h2>
@@ -778,7 +802,7 @@ export default function SalonFinancePage() {
 
                   <tr key={c.id}>
                     <td>{c.id}</td>
-                    <td>{c.master_slug}</td>
+                    <td>{getMasterName(c)}</td>
                     <td>{formatStatus(c.status)}</td>
                     <td>{c.created_at}</td>
                   </tr>
@@ -794,6 +818,7 @@ export default function SalonFinancePage() {
         </div>
 
       </section>
+
 
 
       <section>
@@ -813,6 +838,7 @@ export default function SalonFinancePage() {
       </section>
 
 
+
       <section>
 
         <h2>Платежи</h2>
@@ -822,7 +848,7 @@ export default function SalonFinancePage() {
           {loading && <p>Загрузка платежей...</p>}
 
           {!loading && payments.length === 0 && (
-            <p>Платежи не найдены</p>
+            <p>Полатежи не найдены</p>
           )}
 
           {!loading && payments.length > 0 && (
