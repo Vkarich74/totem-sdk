@@ -18,6 +18,7 @@ export default function SalonFinancePage() {
     loadWallet();
   }, []);
 
+
   async function loadPayments() {
     try {
 
@@ -39,6 +40,7 @@ export default function SalonFinancePage() {
       setLoading(false);
     }
   }
+
 
   async function loadLedger() {
     try {
@@ -62,6 +64,7 @@ export default function SalonFinancePage() {
     }
   }
 
+
   async function loadWallet() {
     try {
 
@@ -71,8 +74,8 @@ export default function SalonFinancePage() {
 
       const data = await res.json();
 
-      if (data.balance_cents !== undefined) {
-        setWalletBalance(data.balance_cents);
+      if (data.balance && data.balance.computed_balance_cents !== undefined) {
+        setWalletBalance(data.balance.computed_balance_cents);
       }
 
     } catch (err) {
@@ -82,45 +85,54 @@ export default function SalonFinancePage() {
     }
   }
 
+
   function formatAmount(cents) {
     if (!cents) return "-";
     return (Number(cents) / 100).toFixed(2);
   }
+
 
   return (
     <div style={{ padding: 20 }}>
 
       <h1>Finance</h1>
 
+
       <section>
         <h2>Contract Summary</h2>
         <p>Активные контракты с мастерами.</p>
       </section>
+
 
       <section>
         <h2>Master Contracts</h2>
         <p>Список контрактов мастеров.</p>
       </section>
 
+
       <section>
         <h2>Pending Contracts</h2>
         <p>Контракты ожидающие подтверждения.</p>
       </section>
+
 
       <section>
         <h2>Settlement Rules</h2>
         <p>Правила расчётов и распределения денег.</p>
       </section>
 
+
       <section>
         <h2>Payout Method</h2>
         <p>Методы выплат.</p>
       </section>
 
+
       <section>
         <h2>Contract History</h2>
         <p>История изменений контрактов.</p>
       </section>
+
 
       <section>
 
@@ -134,6 +146,7 @@ export default function SalonFinancePage() {
 
       </section>
 
+
       <section>
         <h2>Payments</h2>
 
@@ -144,7 +157,9 @@ export default function SalonFinancePage() {
         )}
 
         {!loading && payments.length > 0 && (
+
           <table border="1" cellPadding="8">
+
             <thead>
               <tr>
                 <th>ID</th>
@@ -154,6 +169,7 @@ export default function SalonFinancePage() {
                 <th>Status</th>
               </tr>
             </thead>
+
             <tbody>
               {payments.map((p) => (
                 <tr key={p.id}>
@@ -165,10 +181,13 @@ export default function SalonFinancePage() {
                 </tr>
               ))}
             </tbody>
+
           </table>
+
         )}
 
       </section>
+
 
       <section>
         <h2>Ledger</h2>
@@ -180,7 +199,9 @@ export default function SalonFinancePage() {
         )}
 
         {!ledgerLoading && ledger.length > 0 && (
+
           <table border="1" cellPadding="8">
+
             <thead>
               <tr>
                 <th>ID</th>
@@ -190,6 +211,7 @@ export default function SalonFinancePage() {
                 <th>Date</th>
               </tr>
             </thead>
+
             <tbody>
               {ledger.map((l) => (
                 <tr key={l.id}>
@@ -201,7 +223,9 @@ export default function SalonFinancePage() {
                 </tr>
               ))}
             </tbody>
+
           </table>
+
         )}
 
       </section>
