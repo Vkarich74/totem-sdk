@@ -227,6 +227,68 @@ export default function SalonFinancePage() {
   }
 
 
+  function renderPayoutMethod() {
+
+    if (contractsLoading) return <p>Loading payout rules...</p>
+
+    if (activeContracts.length === 0) {
+      return <p>No payout configuration</p>
+    }
+
+    return (
+
+      <table border="1" cellPadding="8">
+
+        <thead>
+          <tr>
+            <th>Master</th>
+            <th>Payout Schedule</th>
+            <th>Master %</th>
+            <th>Salon %</th>
+            <th>Platform %</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {activeContracts.map(c => {
+
+            let terms = {}
+
+            if (typeof c.terms_json === "object") {
+              terms = c.terms_json
+            }
+            else {
+              try {
+                terms = JSON.parse(c.terms_json || "{}")
+              } catch {
+                terms = {}
+              }
+            }
+
+            return (
+
+              <tr key={c.id}>
+                <td>{c.master_slug}</td>
+                <td>{terms.payout_schedule || "manual"}</td>
+                <td>{terms.master_percent ?? "-"}</td>
+                <td>{terms.salon_percent ?? "-"}</td>
+                <td>{terms.platform_percent ?? "-"}</td>
+              </tr>
+
+            )
+
+          })}
+
+        </tbody>
+
+      </table>
+
+    )
+
+  }
+
+
   return (
 
     <div style={{ padding: 20 }}>
@@ -354,7 +416,7 @@ export default function SalonFinancePage() {
 
         <h2>Payout Method</h2>
 
-        <p>Payout configuration defined in contract terms.</p>
+        {renderPayoutMethod()}
 
       </section>
 
@@ -408,11 +470,20 @@ export default function SalonFinancePage() {
 
         <h2>Wallet Balance</h2>
 
-        {walletLoading && <p>Loading wallet...</p>}
+        <div style={{
+          border: "1px solid #ddd",
+          padding: 20,
+          borderRadius: 8,
+          background: "#fafafa"
+        }}>
 
-        {!walletLoading && (
-          <h3>{formatAmount(walletBalance)} KGS</h3>
-        )}
+          {walletLoading && <p>Loading wallet...</p>}
+
+          {!walletLoading && (
+            <h3>{formatAmount(walletBalance)} KGS</h3>
+          )}
+
+        </div>
 
       </section>
 
