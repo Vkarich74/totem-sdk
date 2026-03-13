@@ -804,6 +804,67 @@ export default function SalonFinancePage() {
 
   const lastPayoutEntry = payoutEntries[0] || null
 
+  const withdrawMethodLabels = {
+    bank: "Банковский счёт",
+    card: "Карта",
+    wallet: "Электронный кошелёк",
+    xpay: "xPay"
+  }
+
+  const selectedWithdrawMethodLabel = withdrawMethodLabels[withdrawMethod] || withdrawMethod || "-"
+
+  const withdrawActivationChecklist = [
+    {
+      label: "Форма вывода",
+      status: withdrawRecipient.trim() && Number(withdrawAmount || 0) > 0 ? "ok" : "warn",
+      note:
+        withdrawRecipient.trim() && Number(withdrawAmount || 0) > 0
+          ? "Реквизит и сумма заполнены для предварительной заявки"
+          : "Заполни реквизит и сумму, чтобы подготовить заявку"
+    },
+    {
+      label: "Баланс кошелька",
+      status: walletReady ? "ok" : "loading",
+      note: walletReady
+        ? `Доступно ${formatAmount(walletBalance)} KGS`
+        : "Ожидается ответ wallet-balance"
+    },
+    {
+      label: "Backend endpoint",
+      status: "warn",
+      note: "Нужен endpoint salon withdraw для реального внешнего списания"
+    },
+    {
+      label: "Провайдер payout",
+      status: "warn",
+      note: "Ключи xPay ещё не получены, прямой вывод пока не активирован"
+    }
+  ]
+
+  const withdrawRouteSteps = [
+    {
+      title: "Источник средств",
+      value: "Кошелёк салона",
+      note: "Средства на внешний вывод должны списываться из wallet balance салона"
+    },
+    {
+      title: "Заявка на вывод",
+      value: selectedWithdrawMethodLabel,
+      note: "UI уже умеет собрать способ, реквизит, сумму и комментарий"
+    },
+    {
+      title: "Леджер",
+      value: payoutEntries.length > 0 ? `${payoutEntries.length} payout / withdraw` : "Пока нет операций",
+      note: "После активации backend каждая операция должна фиксироваться debit записью"
+    },
+    {
+      title: "Внешний получатель",
+      value: withdrawRecipient.trim() || "Не указан",
+      note: "Реквизит внешнего счёта, карты, кошелька или xPay ID"
+    }
+  ]
+
+
   const pipelineChecks = [
     {
       label: "Контракты",
@@ -1705,6 +1766,146 @@ export default function SalonFinancePage() {
           <Card style={{ marginTop: 14 }}>
             {renderWithdrawHistory()}
           </Card>
+        </SectionBlock>
+
+
+        <SectionBlock
+          title="Маршрут внешнего вывода"
+          hint="Полная схема вывода средств салона на внешний источник. Этот блок не отправляет деньги, а фиксирует готовность контура payout / withdraw."
+        >
+          <div style={threeColumnGridStyle}>
+            {withdrawRouteSteps.map((item) => (
+              <Card key={item.title} style={{ minHeight: 168 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    color: "#6b7280",
+                    fontWeight: 500
+                  }}
+                >
+                  {item.title}
+                </p>
+
+                <p
+                  style={{
+                    margin: "10px 0 0 0",
+                    fontSize: 24,
+                    fontWeight: 700,
+                    color: "#111827"
+                  }}
+                >
+                  {item.value}
+                </p>
+
+                <p
+                  style={{
+                    margin: "12px 0 0 0",
+                    fontSize: 13,
+                    color: "#6b7280",
+                    lineHeight: 1.5
+                  }}
+                >
+                  {item.note}
+                </p>
+              </Card>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(320px, 0.95fr)", gap: 16 }}>
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: "#111827"
+                    }}
+                  >
+                    Чек-лист активации внешнего вывода
+                  </h3>
+                  <p
+                    style={{
+                      margin: "6px 0 0 0",
+                      fontSize: 13,
+                      color: "#6b7280",
+                      lineHeight: 1.45
+                    }}
+                  >
+                    Что уже готово и что ещё требуется перед включением реального payout flow.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                {withdrawActivationChecklist.map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      padding: 12,
+                      borderRadius: 12,
+                      border: "1px solid #e5e7eb",
+                      background: "#ffffff"
+                    }}
+                  >
+                    <div>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: "#111827"
+                        }}
+                      >
+                        {item.label}
+                      </p>
+                      <p
+                        style={{
+                          margin: "6px 0 0 0",
+                          fontSize: 13,
+                          color: "#6b7280",
+                          lineHeight: 1.45
+                        }}
+                      >
+                        {item.note}
+                      </p>
+                    </div>
+
+                    <div>{renderPipelineBadge(item.status)}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card soft>
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  color: "#4b5563",
+                  fontSize: 14,
+                  lineHeight: 1.6
+                }}
+              >
+                Внешний вывод средств салона должен идти по цепочке:
+                <br />
+                <strong>кошелёк салона → заявка на вывод → backend withdraw endpoint → payout provider → debit в леджере.</strong>
+                <br />
+                <br />
+                Сейчас эта страница уже подготовила UX и контрольные блоки для такой схемы.
+                После подключения backend endpoint и ключей xPay здесь не нужно будет ломать структуру —
+                достаточно активировать выполнение заявки и связать её с реальным provider flow.
+              </div>
+            </Card>
+          </div>
         </SectionBlock>
 
         <SectionBlock
