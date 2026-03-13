@@ -1989,6 +1989,86 @@ export default function SalonFinancePage() {
         </SectionBlock>
 
         <SectionBlock
+          title="Готовность внешнего вывода"
+          hint="Финальная операционная секция перед включением реального salon withdraw. Здесь ничего не списывается и не меняет backend, блок только фиксирует состояние подготовки."
+        >
+          <div style={threeColumnGridStyle}>
+            <Card>
+              <InfoBox
+                label="Backend endpoint"
+                value="Не активирован"
+                note="POST /internal/salons/:slug/withdraw ещё не включён. До его появления выполняется только UI-подготовка."
+              />
+            </Card>
+
+            <Card>
+              <InfoBox
+                label="xPay ключи"
+                value="Ожидание"
+                note="Провайдер ещё не передал production credentials. До получения ключей внешний вывод намеренно выключен."
+              />
+            </Card>
+
+            <Card>
+              <InfoBox
+                label="Последний выбранный метод"
+                value={
+                  withdrawMethod === "bank"
+                    ? "Банковский счёт"
+                    : withdrawMethod === "card"
+                      ? "Карта"
+                      : withdrawMethod === "wallet"
+                        ? "Электронный кошелёк"
+                        : "xPay"
+                }
+                note="UI уже держит маршрут вывода и реквизит, поэтому после включения backend останется только подключить реальный запрос."
+              />
+            </Card>
+          </div>
+
+          <Card style={{ marginTop: 14 }}>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  color: "#374151",
+                  fontSize: 14,
+                  lineHeight: 1.55
+                }}
+              >
+                Готовность контура внешнего вывода сейчас выглядит так: баланс кошелька уже виден в UI, payout операции уже попадают в леджер,
+                история выводов уже отображается, а форма вывода уже собирает необходимые данные. Для полного запуска остался только backend endpoint
+                вывода и подключение ключей payout provider / xPay.
+              </div>
+
+              <div style={compactGridStyle}>
+                <InfoBox
+                  label="Баланс для вывода"
+                  value={walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
+                  note="Текущее доступное значение по API кошелька"
+                />
+
+                <InfoBox
+                  label="Заявленная сумма"
+                  value={withdrawAmount ? `${formatAmount(withdrawAmount)} KGS` : "Не указана"}
+                  note="Последнее значение в форме вывода средств"
+                />
+
+                <InfoBox
+                  label="История payout"
+                  value={ledgerLoading ? "..." : payoutEntries.length}
+                  note="Количество уже зафиксированных payout / withdraw операций"
+                />
+              </div>
+            </div>
+          </Card>
+        </SectionBlock>
+
+
+        <SectionBlock
           title="История контрактов"
           hint="Полный список созданных контрактов с датой создания и статусом."
         >
