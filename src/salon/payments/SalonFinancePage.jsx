@@ -1,7 +1,187 @@
-import React, { useEffect, useState } from "react"
+
+import React, { useEffect, useMemo, useState } from "react"
+
+function SectionBlock({ title, hint, right, children, style = {} }) {
+  return (
+    <section style={{ marginTop: 24, ...style }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 12,
+          flexWrap: "wrap"
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#111827"
+            }}
+          >
+            {title}
+          </h2>
+          {hint && (
+            <p
+              style={{
+                margin: "6px 0 0 0",
+                fontSize: 13,
+                color: "#6b7280",
+                lineHeight: 1.45
+              }}
+            >
+              {hint}
+            </p>
+          )}
+        </div>
+
+        {right && <div>{right}</div>}
+      </div>
+
+      {children}
+    </section>
+  )
+}
+
+function Card({ children, soft = false, style = {} }) {
+  return (
+    <div
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 16,
+        background: soft ? "#fbfcfe" : "#ffffff",
+        padding: 18,
+        boxShadow: "0 1px 2px rgba(16, 24, 40, 0.04)",
+        ...style
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function MetricCard({ label, value, note }) {
+  return (
+    <div
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 14,
+        padding: 18,
+        background: "#ffffff",
+        minHeight: 118,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between"
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 13,
+          color: "#6b7280",
+          fontWeight: 500
+        }}
+      >
+        {label}
+      </p>
+
+      <p
+        style={{
+          margin: "10px 0 0 0",
+          fontSize: 28,
+          fontWeight: 700,
+          lineHeight: 1.1,
+          color: "#111827"
+        }}
+      >
+        {value}
+      </p>
+
+      {note && (
+        <p
+          style={{
+            margin: "8px 0 0 0",
+            fontSize: 12,
+            color: "#9ca3af",
+            lineHeight: 1.4
+          }}
+        >
+          {note}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function InfoBox({ label, value, note }) {
+  return (
+    <div
+      style={{
+        border: "1px solid #eef2f7",
+        borderRadius: 12,
+        padding: 14,
+        background: "#ffffff"
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          color: "#6b7280"
+        }}
+      >
+        {label}
+      </p>
+
+      <p
+        style={{
+          margin: "6px 0 0 0",
+          fontSize: 22,
+          fontWeight: 700,
+          color: "#111827"
+        }}
+      >
+        {value}
+      </p>
+
+      {note && (
+        <p
+          style={{
+            margin: "6px 0 0 0",
+            fontSize: 12,
+            color: "#9ca3af",
+            lineHeight: 1.4
+          }}
+        >
+          {note}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function EmptyState({ text }) {
+  return (
+    <div
+      style={{
+        padding: "18px 16px",
+        border: "1px dashed #d1d5db",
+        borderRadius: 14,
+        background: "#f9fafb",
+        color: "#6b7280",
+        fontSize: 14
+      }}
+    >
+      {text}
+    </div>
+  )
+}
 
 export default function SalonFinancePage() {
-
   const [payments, setPayments] = useState([])
   const [ledger, setLedger] = useState([])
   const [walletBalance, setWalletBalance] = useState(null)
@@ -54,84 +234,14 @@ export default function SalonFinancePage() {
   const pageSubtitleStyle = {
     margin: "6px 0 0 0",
     fontSize: 14,
-    color: "#6b7280"
-  }
-
-  const sectionStyle = {
-    marginTop: 20
-  }
-
-  const sectionHeaderRowStyle = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 12,
-    flexWrap: "wrap"
-  }
-
-  const sectionTitleStyle = {
-    margin: 0,
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#111827"
-  }
-
-  const sectionHintStyle = {
-    margin: 0,
-    fontSize: 13,
-    color: "#6b7280"
-  }
-
-  const cardStyle = {
-    border: "1px solid #e5e7eb",
-    borderRadius: 16,
-    background: "#ffffff",
-    padding: 18,
-    boxShadow: "0 1px 2px rgba(16, 24, 40, 0.04)"
-  }
-
-  const softCardStyle = {
-    ...cardStyle,
-    background: "#fbfcfe"
+    color: "#6b7280",
+    lineHeight: 1.5
   }
 
   const overviewGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
     gap: 14
-  }
-
-  const overviewCardStyle = {
-    border: "1px solid #e5e7eb",
-    borderRadius: 14,
-    padding: 18,
-    background: "#ffffff",
-    minHeight: 116,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between"
-  }
-
-  const overviewLabelStyle = {
-    margin: 0,
-    fontSize: 13,
-    color: "#6b7280",
-    fontWeight: 500
-  }
-
-  const overviewValueStyle = {
-    margin: "10px 0 0 0",
-    fontSize: 28,
-    fontWeight: 700,
-    lineHeight: 1.1,
-    color: "#111827"
-  }
-
-  const overviewSubtleStyle = {
-    margin: "8px 0 0 0",
-    fontSize: 12,
-    color: "#9ca3af"
   }
 
   const twoColumnGridStyle = {
@@ -141,30 +251,22 @@ export default function SalonFinancePage() {
     alignItems: "start"
   }
 
-  const infoGridStyle = {
+  const threeColumnGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 12
+  }
+
+  const compactGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
     gap: 12
   }
 
-  const infoBoxStyle = {
-    border: "1px solid #eef2f7",
-    borderRadius: 12,
-    padding: 14,
-    background: "#ffffff"
-  }
-
-  const infoLabelStyle = {
-    margin: 0,
-    fontSize: 12,
-    color: "#6b7280"
-  }
-
-  const infoValueStyle = {
-    margin: "6px 0 0 0",
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#111827"
+  const formGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 12
   }
 
   const tableWrapStyle = {
@@ -185,10 +287,8 @@ export default function SalonFinancePage() {
     padding: "12px 14px",
     fontSize: 12,
     fontWeight: 700,
-    letterSpacing: "0.02em",
-    textTransform: "uppercase",
     color: "#6b7280",
-    background: "#f9fafb",
+    background: "#f8fafc",
     borderBottom: "1px solid #e5e7eb",
     whiteSpace: "nowrap"
   }
@@ -203,21 +303,28 @@ export default function SalonFinancePage() {
 
   const inputStyle = {
     width: "100%",
-    padding: "11px 12px",
+    padding: 10,
     border: "1px solid #d1d5db",
     borderRadius: 10,
     boxSizing: "border-box",
-    fontSize: 14,
     background: "#ffffff",
+    fontSize: 14,
     color: "#111827",
     outline: "none"
+  }
+
+  const disabledInputStyle = {
+    ...inputStyle,
+    background: "#f9fafb",
+    color: "#9ca3af",
+    cursor: "not-allowed"
   }
 
   const labelStyle = {
     display: "block",
     marginBottom: 6,
-    fontSize: 13,
     fontWeight: 600,
+    fontSize: 13,
     color: "#374151"
   }
 
@@ -225,13 +332,7 @@ export default function SalonFinancePage() {
     marginBottom: 14
   }
 
-  const formGridStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 14
-  }
-
-  const buttonStyle = {
+  const primaryButtonStyle = {
     padding: "11px 16px",
     border: "1px solid #111827",
     borderRadius: 10,
@@ -242,39 +343,27 @@ export default function SalonFinancePage() {
     fontWeight: 600
   }
 
-  const helperTextStyle = {
-    margin: "2px 0 0 0",
-    fontSize: 12,
-    color: "#6b7280"
-  }
-
-  const statusPillBaseStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 92,
-    padding: "6px 10px",
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 700,
-    border: "1px solid transparent"
+  const secondaryButtonStyle = {
+    padding: "11px 16px",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    background: "#ffffff",
+    color: "#374151",
+    cursor: "not-allowed",
+    fontSize: 14,
+    fontWeight: 600
   }
 
   useEffect(() => {
-
     loadPayments()
     loadLedger()
     loadWallet()
     loadContracts()
     loadMasters()
-
   }, [])
 
-
   async function loadPayments() {
-
     try {
-
       const res = await fetch(
         `https://api.totemv.com/internal/salons/${salonSlug}/payments`
       )
@@ -287,26 +376,17 @@ export default function SalonFinancePage() {
       else if (data.payments) {
         setPayments(data.payments)
       }
-
     }
     catch (err) {
-
       console.error("Payments load error:", err)
-
     }
     finally {
-
       setLoading(false)
-
     }
-
   }
 
-
   async function loadLedger() {
-
     try {
-
       const res = await fetch(
         `https://api.totemv.com/internal/salons/${salonSlug}/ledger`
       )
@@ -319,26 +399,17 @@ export default function SalonFinancePage() {
       else if (data.ledger) {
         setLedger(data.ledger)
       }
-
     }
     catch (err) {
-
       console.error("Ledger load error:", err)
-
     }
     finally {
-
       setLedgerLoading(false)
-
     }
-
   }
 
-
   async function loadWallet() {
-
     try {
-
       const res = await fetch(
         `https://api.totemv.com/internal/salons/${salonSlug}/wallet-balance`
       )
@@ -348,26 +419,17 @@ export default function SalonFinancePage() {
       if (data.balance !== undefined) {
         setWalletBalance(data.balance)
       }
-
     }
     catch (err) {
-
       console.error("Wallet load error:", err)
-
     }
     finally {
-
       setWalletLoading(false)
-
     }
-
   }
 
-
   async function loadContracts() {
-
     try {
-
       const res = await fetch(
         `https://api.totemv.com/internal/salons/${salonSlug}/contracts`
       )
@@ -380,26 +442,17 @@ export default function SalonFinancePage() {
       else if (data.contracts) {
         setContracts(data.contracts)
       }
-
     }
     catch (err) {
-
       console.error("Contracts load error:", err)
-
     }
     finally {
-
       setContractsLoading(false)
-
     }
-
   }
 
-
   async function loadMasters() {
-
     try {
-
       const res = await fetch(
         `https://api.totemv.com/internal/salons/${salonSlug}/masters`
       )
@@ -412,24 +465,16 @@ export default function SalonFinancePage() {
       else if (data.masters) {
         setMasters(data.masters)
       }
-
     }
     catch (err) {
-
       console.error("Masters load error:", err)
-
     }
     finally {
-
       setMastersLoading(false)
-
     }
-
   }
 
-
   async function createContract(event) {
-
     event.preventDefault()
 
     setCreateContractError("")
@@ -462,7 +507,6 @@ export default function SalonFinancePage() {
     setCreateContractLoading(true)
 
     try {
-
       const payload = {
         master_id: masterIdNumber,
         terms_json: {
@@ -497,83 +541,99 @@ export default function SalonFinancePage() {
 
       setCreateContractSuccess("Контракт создан в статусе ожидания")
       await loadContracts()
-
     }
     catch (err) {
-
       console.error("Create contract error:", err)
       setCreateContractError("Ошибка создания контракта")
-
     }
     finally {
-
       setCreateContractLoading(false)
-
     }
-
   }
-
 
   function formatAmount(value) {
-
     if (value === null || value === undefined) return "-"
-
     return Number(value)
-
   }
 
+  function formatDateTime(value) {
+    if (!value) return "-"
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value)
+    }
+
+    return date.toLocaleString("ru-RU", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    })
+  }
 
   function formatStatus(value) {
-
     if (value === "active") return "Активный"
     if (value === "pending") return "Ожидает"
     if (value === "archived") return "Архивный"
-
     return value || "-"
   }
 
-
-  function getStatusStyle(value) {
-
-    if (value === "active") {
+  function getStatusStyle(status) {
+    if (status === "active") {
       return {
-        ...statusPillBaseStyle,
-        background: "#ecfdf3",
-        color: "#027a48",
-        borderColor: "#abefc6"
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#166534",
+        background: "#dcfce7"
       }
     }
 
-    if (value === "pending") {
+    if (status === "pending") {
       return {
-        ...statusPillBaseStyle,
-        background: "#fffaeb",
-        color: "#b54708",
-        borderColor: "#fedf89"
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#92400e",
+        background: "#fef3c7"
       }
     }
 
-    if (value === "archived") {
+    if (status === "archived") {
       return {
-        ...statusPillBaseStyle,
-        background: "#f2f4f7",
-        color: "#475467",
-        borderColor: "#d0d5dd"
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#4b5563",
+        background: "#e5e7eb"
       }
     }
 
     return {
-      ...statusPillBaseStyle,
-      background: "#f2f4f7",
-      color: "#344054",
-      borderColor: "#d0d5dd"
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "4px 10px",
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 700,
+      color: "#374151",
+      background: "#f3f4f6"
     }
-
   }
 
-
   function getContractTerms(contract) {
-
     let terms = {}
 
     if (typeof contract?.terms_json === "object" && contract?.terms_json !== null) {
@@ -582,18 +642,16 @@ export default function SalonFinancePage() {
     else {
       try {
         terms = JSON.parse(contract?.terms_json || "{}")
-      } catch {
+      }
+      catch {
         terms = {}
       }
     }
 
     return terms
-
   }
 
-
   function getMasterName(contract) {
-
     const contractMasterId = contract?.master_id
     const contractMasterSlug = contract?.master_slug
 
@@ -610,12 +668,9 @@ export default function SalonFinancePage() {
     }
 
     return master.name || master.slug || master.id
-
   }
 
-
   function getContractMasterPercent(contract) {
-
     const terms = getContractTerms(contract)
 
     if (terms.master_percent !== undefined && terms.master_percent !== null) {
@@ -627,12 +682,9 @@ export default function SalonFinancePage() {
     }
 
     return "-"
-
   }
 
-
   function getRevenueByDays(days) {
-
     const now = new Date()
     const start = new Date(now)
     start.setHours(0, 0, 0, 0)
@@ -645,7 +697,6 @@ export default function SalonFinancePage() {
     }
 
     return ledger.reduce((sum, entry) => {
-
       const createdAt = entry?.created_at ? new Date(entry.created_at) : null
       const amount = Number(entry?.amount || 0)
       const direction = String(entry?.direction || "").toLowerCase()
@@ -663,45 +714,8 @@ export default function SalonFinancePage() {
       }
 
       return sum + amount
-
     }, 0)
-
   }
-
-
-  function formatDateTime(value) {
-
-    if (!value) return "-"
-
-    const date = new Date(value)
-
-    if (Number.isNaN(date.getTime())) {
-      return value
-    }
-
-    return date.toLocaleString("ru-RU", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    })
-
-  }
-
-
-  function renderTableEmpty(text) {
-    return (
-      <div style={{
-        padding: 18,
-        fontSize: 14,
-        color: "#6b7280"
-      }}>
-        {text}
-      </div>
-    )
-  }
-
 
   function renderCell(content, extraStyle = {}) {
     return (
@@ -711,28 +725,122 @@ export default function SalonFinancePage() {
     )
   }
 
+  const activeContracts = useMemo(
+    () => contracts.filter((c) => c.status === "active"),
+    [contracts]
+  )
 
-  const activeContracts = contracts.filter(c => c.status === "active")
-  const pendingContracts = contracts.filter(c => c.status === "pending")
+  const pendingContracts = useMemo(
+    () => contracts.filter((c) => c.status === "pending"),
+    [contracts]
+  )
 
   const todayRevenue = getRevenueByDays(1)
   const weekRevenue = getRevenueByDays(7)
   const monthRevenue = getRevenueByDays(30)
 
+  const contractSum = Number(masterPercent || 0) + Number(salonPercent || 0) + Number(platformPercent || 0)
 
-  function renderSettlementRules() {
+  const walletReady = !walletLoading && walletBalance !== null
+  const contractsReady = !contractsLoading
+  const settlementsReady = !contractsLoading && activeContracts.length > 0
+  const ledgerReady = !ledgerLoading && Array.isArray(ledger)
+  const paymentsReady = !loading && Array.isArray(payments)
 
-    if (contractsLoading) return <p>Загрузка правил...</p>
+  const pipelineChecks = [
+    {
+      label: "Контракты",
+      status: contractsReady ? "ok" : "loading",
+      value: contractsReady ? `${contracts.length}` : "...",
+      note: contractsReady ? "Контрактный слой загружен" : "Идёт загрузка контрактов"
+    },
+    {
+      label: "Правила расчётов",
+      status: settlementsReady ? "ok" : "warn",
+      value: settlementsReady ? `${activeContracts.length}` : "0",
+      note: settlementsReady ? "Есть активные правила распределения" : "Нет активных правил распределения"
+    },
+    {
+      label: "Леджер",
+      status: ledgerReady ? "ok" : "loading",
+      value: ledgerReady ? `${ledger.length}` : "...",
+      note: ledgerReady ? "Поток движения средств доступен" : "Идёт загрузка записей леджера"
+    },
+    {
+      label: "Кошелёк",
+      status: walletReady ? "ok" : "loading",
+      value: walletReady ? `${formatAmount(walletBalance)} KGS` : "...",
+      note: walletReady ? "Баланс кошелька получен" : "Идёт загрузка баланса"
+    }
+  ]
 
-    if (activeContracts.length === 0) {
-      return <p>Нет правил распределения</p>
+  function renderPipelineBadge(status) {
+    if (status === "ok") {
+      return (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "4px 10px",
+            borderRadius: 999,
+            background: "#dcfce7",
+            color: "#166534",
+            fontSize: 12,
+            fontWeight: 700
+          }}
+        >
+          OK
+        </span>
+      )
+    }
+
+    if (status === "warn") {
+      return (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "4px 10px",
+            borderRadius: 999,
+            background: "#fef3c7",
+            color: "#92400e",
+            fontSize: 12,
+            fontWeight: 700
+          }}
+        >
+          Проверить
+        </span>
+      )
     }
 
     return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "4px 10px",
+          borderRadius: 999,
+          background: "#e5e7eb",
+          color: "#4b5563",
+          fontSize: 12,
+          fontWeight: 700
+        }}
+      >
+        Загрузка
+      </span>
+    )
+  }
 
+  function renderSettlementRules() {
+    if (contractsLoading) return <p style={{ margin: 0, color: "#6b7280" }}>Загрузка правил...</p>
+
+    if (activeContracts.length === 0) {
+      return <EmptyState text="Нет правил распределения" />
+    }
+
+    return (
       <div style={tableWrapStyle}>
         <table style={tableStyle}>
-
           <thead>
             <tr>
               <th style={tableHeadCellStyle}>Мастер</th>
@@ -743,51 +851,35 @@ export default function SalonFinancePage() {
           </thead>
 
           <tbody>
-
             {activeContracts.map((c, index) => {
-
               const terms = getContractTerms(c)
-
-              const masterShare = terms.master_percent ?? "-"
-              const salonShare = terms.salon_percent ?? "-"
-              const platformShare = terms.platform_percent ?? "-"
+              const isLast = index === activeContracts.length - 1
 
               return (
-
                 <tr key={c.id}>
-                  {renderCell(getMasterName(c))}
-                  {renderCell(masterShare)}
-                  {renderCell(salonShare)}
-                  {renderCell(platformShare, index === activeContracts.length - 1 ? { borderBottom: "none" } : {})}
+                  {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(terms.master_percent ?? "-", isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(terms.salon_percent ?? "-", isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(terms.platform_percent ?? "-", isLast ? { borderBottom: "none" } : {})}
                 </tr>
-
               )
-
             })}
-
           </tbody>
-
         </table>
       </div>
-
     )
-
   }
 
-
   function renderPayoutMethod() {
-
-    if (contractsLoading) return <p>Загрузка правил выплат...</p>
+    if (contractsLoading) return <p style={{ margin: 0, color: "#6b7280" }}>Загрузка правил выплат...</p>
 
     if (activeContracts.length === 0) {
-      return <p>Нет настроек выплат</p>
+      return <EmptyState text="Нет настроек выплат" />
     }
 
     return (
-
       <div style={tableWrapStyle}>
         <table style={tableStyle}>
-
           <thead>
             <tr>
               <th style={tableHeadCellStyle}>Мастер</th>
@@ -799,14 +891,11 @@ export default function SalonFinancePage() {
           </thead>
 
           <tbody>
-
             {activeContracts.map((c, index) => {
-
               const terms = getContractTerms(c)
               const isLast = index === activeContracts.length - 1
 
               return (
-
                 <tr key={c.id}>
                   {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
                   {renderCell(terms.payout_schedule || "вручную", isLast ? { borderBottom: "none" } : {})}
@@ -814,119 +903,233 @@ export default function SalonFinancePage() {
                   {renderCell(terms.salon_percent ?? "-", isLast ? { borderBottom: "none" } : {})}
                   {renderCell(terms.platform_percent ?? "-", isLast ? { borderBottom: "none" } : {})}
                 </tr>
-
               )
-
             })}
-
           </tbody>
-
         </table>
       </div>
-
     )
-
   }
 
+  function renderContractsHistory() {
+    if (contractsLoading) return <p style={{ margin: 0, color: "#6b7280" }}>Загрузка...</p>
+
+    if (contracts.length === 0) {
+      return <EmptyState text="История контрактов пуста" />
+    }
+
+    return (
+      <div style={tableWrapStyle}>
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={tableHeadCellStyle}>ID</th>
+              <th style={tableHeadCellStyle}>Мастер</th>
+              <th style={tableHeadCellStyle}>Статус</th>
+              <th style={tableHeadCellStyle}>Создан</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {contracts.map((c, index) => {
+              const isLast = index === contracts.length - 1
+
+              return (
+                <tr key={c.id}>
+                  {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(
+                    <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
+                    isLast ? { borderBottom: "none" } : {}
+                  )}
+                  {renderCell(formatDateTime(c.created_at), isLast ? { borderBottom: "none" } : {})}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  function renderPaymentsTable() {
+    if (loading) return <p style={{ margin: 0, color: "#6b7280" }}>Загрузка платежей...</p>
+
+    if (payments.length === 0) {
+      return <EmptyState text="Платежи не найдены" />
+    }
+
+    return (
+      <div style={tableWrapStyle}>
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={tableHeadCellStyle}>ID</th>
+              <th style={tableHeadCellStyle}>Дата</th>
+              <th style={tableHeadCellStyle}>Клиент</th>
+              <th style={tableHeadCellStyle}>Сумма</th>
+              <th style={tableHeadCellStyle}>Статус</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {payments.map((p, index) => {
+              const isLast = index === payments.length - 1
+
+              return (
+                <tr key={p.id}>
+                  {renderCell(p.id, isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(formatDateTime(p.created_at), isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(p.client_name || "-", isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(p.amount, isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(p.status || "-", isLast ? { borderBottom: "none" } : {})}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  function renderLedgerTable() {
+    if (ledgerLoading) return <p style={{ margin: 0, color: "#6b7280" }}>Загрузка леджера...</p>
+
+    if (ledger.length === 0) {
+      return <EmptyState text="Нет записей леджера" />
+    }
+
+    return (
+      <div style={tableWrapStyle}>
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={tableHeadCellStyle}>ID</th>
+              <th style={tableHeadCellStyle}>Направление</th>
+              <th style={tableHeadCellStyle}>Сумма</th>
+              <th style={tableHeadCellStyle}>Источник</th>
+              <th style={tableHeadCellStyle}>Дата</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {ledger.map((l, index) => {
+              const isLast = index === ledger.length - 1
+
+              return (
+                <tr key={l.id}>
+                  {renderCell(l.id, isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(l.direction || "-", isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(formatAmount(l.amount), isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(l.reference_type || "-", isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(formatDateTime(l.created_at), isLast ? { borderBottom: "none" } : {})}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
 
   return (
-
     <div style={pageStyle}>
-
       <div style={shellStyle}>
-
         <div style={pageHeaderStyle}>
           <h1 style={pageTitleStyle}>Финансы салона</h1>
           <p style={pageSubtitleStyle}>
-            Единая страница финансов, контрактов, выплат и движения средств.
+            Финальная структура страницы: обзор, кошелёк, контракты, правила расчётов,
+            способы выплат, вывод средств, платежи и леджер — на одной странице без изменения API.
           </p>
         </div>
 
-
-        <section style={{ ...sectionStyle, marginTop: 0 }}>
-
-          <div style={sectionHeaderRowStyle}>
-            <div>
-              <h2 style={sectionTitleStyle}>Finance Overview</h2>
-              <p style={sectionHintStyle}>Ключевые показатели салона без дублирования блоков.</p>
-            </div>
-          </div>
-
+        <SectionBlock
+          title="Обзор финансов"
+          hint="Ключевые показатели салона и быстрый контроль текущего финансового состояния."
+          style={{ marginTop: 0 }}
+        >
           <div style={overviewGridStyle}>
+            <MetricCard
+              label="Баланс кошелька"
+              value={walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
+              note="Актуальное значение кошелька салона"
+            />
 
-            <div style={overviewCardStyle}>
-              <p style={overviewLabelStyle}>Баланс кошелька</p>
-              <p style={overviewValueStyle}>
-                {walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
-              </p>
-              <p style={overviewSubtleStyle}>Актуальное значение кошелька салона</p>
-            </div>
+            <MetricCard
+              label="Доход за сегодня"
+              value={ledgerLoading ? "..." : `${formatAmount(todayRevenue)} KGS`}
+              note="Все credit / in записи за текущий день"
+            />
 
-            <div style={overviewCardStyle}>
-              <p style={overviewLabelStyle}>Доход за сегодня</p>
-              <p style={overviewValueStyle}>
-                {ledgerLoading ? "..." : `${formatAmount(todayRevenue)} KGS`}
-              </p>
-              <p style={overviewSubtleStyle}>Все credit / in записи за текущий день</p>
-            </div>
+            <MetricCard
+              label="Доход за 7 дней"
+              value={ledgerLoading ? "..." : `${formatAmount(weekRevenue)} KGS`}
+              note="Срез по последним семи дням"
+            />
 
-            <div style={overviewCardStyle}>
-              <p style={overviewLabelStyle}>Доход за 7 дней</p>
-              <p style={overviewValueStyle}>
-                {ledgerLoading ? "..." : `${formatAmount(weekRevenue)} KGS`}
-              </p>
-              <p style={overviewSubtleStyle}>Срез за последнюю неделю</p>
-            </div>
-
-            <div style={overviewCardStyle}>
-              <p style={overviewLabelStyle}>Доход за 30 дней</p>
-              <p style={overviewValueStyle}>
-                {ledgerLoading ? "..." : `${formatAmount(monthRevenue)} KGS`}
-              </p>
-              <p style={overviewSubtleStyle}>Срез за последний месяц</p>
-            </div>
-
+            <MetricCard
+              label="Доход за 30 дней"
+              value={ledgerLoading ? "..." : `${formatAmount(monthRevenue)} KGS`}
+              note="Срез по последнему месяцу"
+            />
           </div>
+        </SectionBlock>
 
-        </section>
+        <SectionBlock
+          title="Кошелёк"
+          hint="Отдельный блок кошелька без дублирования и debug-оформления."
+        >
+          <div style={compactGridStyle}>
+            <InfoBox
+              label="Текущий баланс"
+              value={walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
+              note="Значение получено из wallet-balance endpoint"
+            />
 
+            <InfoBox
+              label="Статус кошелька"
+              value={walletReady ? "Готов" : "Загрузка"}
+              note="Используется как итоговая точка для движения средств"
+            />
 
-        <section style={sectionStyle}>
-
-          <div style={sectionHeaderRowStyle}>
-            <div>
-              <h2 style={sectionTitleStyle}>Contracts</h2>
-              <p style={sectionHintStyle}>Активные правила, ожидающие договоры и создание нового контракта.</p>
-            </div>
+            <InfoBox
+              label="Источники данных"
+              value="Wallet / Ledger"
+              note="Кошелёк сверяется с финансовым движением салона"
+            />
           </div>
+        </SectionBlock>
 
+        <SectionBlock
+          title="Контракты"
+          hint="Единый блок: сводка, активные и ожидающие контракты, создание нового контракта."
+        >
           <div style={twoColumnGridStyle}>
-
-            <div style={cardStyle}>
-
+            <Card>
               <div style={{ marginBottom: 16 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
                   Сводка по контрактам
                 </h3>
               </div>
 
-              <div style={infoGridStyle}>
+              <div style={compactGridStyle}>
+                <InfoBox
+                  label="Активные"
+                  value={contractsLoading ? "..." : activeContracts.length}
+                  note="Используются в текущих правилах расчётов"
+                />
 
-                <div style={infoBoxStyle}>
-                  <p style={infoLabelStyle}>Активные</p>
-                  <p style={infoValueStyle}>{contractsLoading ? "..." : activeContracts.length}</p>
-                </div>
+                <InfoBox
+                  label="Ожидающие"
+                  value={contractsLoading ? "..." : pendingContracts.length}
+                  note="Ожидают активации"
+                />
 
-                <div style={infoBoxStyle}>
-                  <p style={infoLabelStyle}>Ожидающие</p>
-                  <p style={infoValueStyle}>{contractsLoading ? "..." : pendingContracts.length}</p>
-                </div>
-
-                <div style={infoBoxStyle}>
-                  <p style={infoLabelStyle}>Всего</p>
-                  <p style={infoValueStyle}>{contractsLoading ? "..." : contracts.length}</p>
-                </div>
-
+                <InfoBox
+                  label="Всего"
+                  value={contractsLoading ? "..." : contracts.length}
+                  note="Полная история контрактов салона"
+                />
               </div>
 
               <div style={{ marginTop: 18 }}>
@@ -938,13 +1141,13 @@ export default function SalonFinancePage() {
                   <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
                 )}
 
-                {!contractsLoading && activeContracts.length === 0 && renderTableEmpty("Нет активных контрактов")}
+                {!contractsLoading && activeContracts.length === 0 && (
+                  <EmptyState text="Нет активных контрактов" />
+                )}
 
                 {!contractsLoading && activeContracts.length > 0 && (
-
                   <div style={tableWrapStyle}>
                     <table style={tableStyle}>
-
                       <thead>
                         <tr>
                           <th style={tableHeadCellStyle}>ID</th>
@@ -955,7 +1158,6 @@ export default function SalonFinancePage() {
                       </thead>
 
                       <tbody>
-
                         {activeContracts.map((c, index) => {
                           const isLast = index === activeContracts.length - 1
 
@@ -971,12 +1173,9 @@ export default function SalonFinancePage() {
                             </tr>
                           )
                         })}
-
                       </tbody>
-
                     </table>
                   </div>
-
                 )}
               </div>
 
@@ -989,13 +1188,13 @@ export default function SalonFinancePage() {
                   <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
                 )}
 
-                {!contractsLoading && pendingContracts.length === 0 && renderTableEmpty("Нет ожидающих контрактов")}
+                {!contractsLoading && pendingContracts.length === 0 && (
+                  <EmptyState text="Нет ожидающих контрактов" />
+                )}
 
                 {!contractsLoading && pendingContracts.length > 0 && (
-
                   <div style={tableWrapStyle}>
                     <table style={tableStyle}>
-
                       <thead>
                         <tr>
                           <th style={tableHeadCellStyle}>ID</th>
@@ -1006,7 +1205,6 @@ export default function SalonFinancePage() {
                       </thead>
 
                       <tbody>
-
                         {pendingContracts.map((c, index) => {
                           const isLast = index === pendingContracts.length - 1
 
@@ -1022,26 +1220,20 @@ export default function SalonFinancePage() {
                             </tr>
                           )
                         })}
-
                       </tbody>
-
                     </table>
                   </div>
-
                 )}
               </div>
+            </Card>
 
-            </div>
-
-
-            <div style={softCardStyle}>
-
+            <Card soft>
               <div style={{ marginBottom: 16 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
                   Создать контракт
                 </h3>
-                <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280" }}>
-                  Только UI и форма. Логика создания и API остаются без изменений.
+                <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+                  UI унифицирован под карточки кабинета. Логика создания и API остаются без изменений.
                 </p>
               </div>
 
@@ -1049,7 +1241,6 @@ export default function SalonFinancePage() {
 
               {!mastersLoading && (
                 <form onSubmit={createContract}>
-
                   <div style={fieldBlockStyle}>
                     <label style={labelStyle}>Мастер</label>
                     <select
@@ -1067,7 +1258,6 @@ export default function SalonFinancePage() {
                   </div>
 
                   <div style={formGridStyle}>
-
                     <div style={fieldBlockStyle}>
                       <label style={labelStyle}>Процент мастера</label>
                       <input
@@ -1097,7 +1287,6 @@ export default function SalonFinancePage() {
                         style={inputStyle}
                       />
                     </div>
-
                   </div>
 
                   <div style={fieldBlockStyle}>
@@ -1124,39 +1313,49 @@ export default function SalonFinancePage() {
                     />
                   </div>
 
-                  <div style={fieldBlockStyle}>
-                    <p style={{ margin: 0, fontSize: 14, color: "#374151" }}>
-                      Сумма процентов: {Number(masterPercent || 0) + Number(salonPercent || 0) + Number(platformPercent || 0)}
-                    </p>
-                    <p style={helperTextStyle}>
-                      Должна быть ровно 100.
-                    </p>
+                  <div
+                    style={{
+                      marginBottom: 14,
+                      padding: 12,
+                      borderRadius: 12,
+                      background: contractSum === 100 ? "#f0fdf4" : "#fffbeb",
+                      border: contractSum === 100 ? "1px solid #bbf7d0" : "1px solid #fde68a",
+                      color: contractSum === 100 ? "#166534" : "#92400e",
+                      fontSize: 14,
+                      fontWeight: 600
+                    }}
+                  >
+                    Сумма процентов: {contractSum}
                   </div>
 
                   {createContractError && (
-                    <div style={{
-                      marginBottom: 14,
-                      padding: 12,
-                      borderRadius: 10,
-                      border: "1px solid #fecdca",
-                      background: "#fef3f2",
-                      color: "#b42318",
-                      fontSize: 14
-                    }}>
+                    <div
+                      style={{
+                        marginBottom: 14,
+                        padding: 12,
+                        borderRadius: 12,
+                        border: "1px solid #fecaca",
+                        background: "#fef2f2",
+                        color: "#b91c1c",
+                        fontSize: 14
+                      }}
+                    >
                       {createContractError}
                     </div>
                   )}
 
                   {createContractSuccess && (
-                    <div style={{
-                      marginBottom: 14,
-                      padding: 12,
-                      borderRadius: 10,
-                      border: "1px solid #abefc6",
-                      background: "#ecfdf3",
-                      color: "#027a48",
-                      fontSize: 14
-                    }}>
+                    <div
+                      style={{
+                        marginBottom: 14,
+                        padding: 12,
+                        borderRadius: 12,
+                        border: "1px solid #bbf7d0",
+                        background: "#f0fdf4",
+                        color: "#166534",
+                        fontSize: 14
+                      }}
+                    >
                       {createContractSuccess}
                     </div>
                   )}
@@ -1164,259 +1363,227 @@ export default function SalonFinancePage() {
                   <button
                     type="submit"
                     disabled={createContractLoading}
-                    style={buttonStyle}
+                    style={{
+                      ...primaryButtonStyle,
+                      opacity: createContractLoading ? 0.7 : 1,
+                      cursor: createContractLoading ? "wait" : "pointer"
+                    }}
                   >
                     {createContractLoading ? "Создание..." : "Создать контракт"}
                   </button>
-
                 </form>
               )}
-
-            </div>
-
+            </Card>
           </div>
+        </SectionBlock>
 
-        </section>
-
-
-        <section style={sectionStyle}>
-
-          <div style={sectionHeaderRowStyle}>
-            <div>
-              <h2 style={sectionTitleStyle}>Settlement Rules</h2>
-              <p style={sectionHintStyle}>Правила распределения выручки по активным контрактам.</p>
-            </div>
-          </div>
-
-          <div style={cardStyle}>
+        <SectionBlock
+          title="Правила расчётов"
+          hint="Активные правила распределения дохода между мастером, салоном и платформой."
+        >
+          <Card>
             {renderSettlementRules()}
-          </div>
+          </Card>
+        </SectionBlock>
 
-        </section>
-
-
-        <section style={sectionStyle}>
-
-          <div style={sectionHeaderRowStyle}>
-            <div>
-              <h2 style={sectionTitleStyle}>Payout Method</h2>
-              <p style={sectionHintStyle}>График выплат и разбивка долей по активным договорам.</p>
-            </div>
-          </div>
-
-          <div style={cardStyle}>
+        <SectionBlock
+          title="Способы выплат"
+          hint="Графики выплат по активным контрактам. Этот блок использует текущие terms_json без изменения логики."
+        >
+          <Card>
             {renderPayoutMethod()}
-          </div>
+          </Card>
+        </SectionBlock>
 
-        </section>
+        <SectionBlock
+          title="Вывод средств"
+          hint="Внешний вывод средств подготовлен как UI-заготовка. Активация будет доступна после получения ключей провайдера xPay."
+        >
+          <div style={twoColumnGridStyle}>
+            <Card>
+              <div style={compactGridStyle}>
+                <InfoBox
+                  label="Статус интеграции"
+                  value="Ожидает ключи"
+                  note="xPay ещё не подключён к внешнему payout flow"
+                />
 
+                <InfoBox
+                  label="Источник средств"
+                  value="Кошелёк салона"
+                  note="После подключения провайдера вывод будет идти из wallet balance"
+                />
 
-        <section style={sectionStyle}>
-
-          <div style={sectionHeaderRowStyle}>
-            <div>
-              <h2 style={sectionTitleStyle}>History</h2>
-              <p style={sectionHintStyle}>Полная история контрактов салона.</p>
-            </div>
-          </div>
-
-          <div style={cardStyle}>
-
-            {contractsLoading && <p style={{ margin: 0, color: "#6b7280" }}>Загрузка...</p>}
-
-            {!contractsLoading && contracts.length === 0 && renderTableEmpty("История контрактов пуста")}
-
-            {!contractsLoading && contracts.length > 0 && (
-
-              <div style={tableWrapStyle}>
-                <table style={tableStyle}>
-
-                  <thead>
-                    <tr>
-                      <th style={tableHeadCellStyle}>ID</th>
-                      <th style={tableHeadCellStyle}>Мастер</th>
-                      <th style={tableHeadCellStyle}>Статус</th>
-                      <th style={tableHeadCellStyle}>Создан</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-
-                    {contracts.map((c, index) => {
-                      const isLast = index === contracts.length - 1
-
-                      return (
-                        <tr key={c.id}>
-                          {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(
-                            <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
-                            isLast ? { borderBottom: "none" } : {}
-                          )}
-                          {renderCell(formatDateTime(c.created_at), isLast ? { borderBottom: "none" } : {})}
-                        </tr>
-                      )
-                    })}
-
-                  </tbody>
-
-                </table>
+                <InfoBox
+                  label="Текущий баланс"
+                  value={walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
+                  note="Доступный остаток для будущего внешнего вывода"
+                />
               </div>
 
-            )}
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #dbeafe",
+                  background: "#eff6ff",
+                  color: "#1d4ed8",
+                  fontSize: 14,
+                  lineHeight: 1.5
+                }}
+              >
+                Инструмент вывода добавлен в структуру страницы, но намеренно не активирован:
+                внешние payout-операции нельзя включать до получения ключей и финального провайдерского контракта.
+              </div>
+            </Card>
 
+            <Card soft>
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>Куда выводить</label>
+                <select style={disabledInputStyle} disabled>
+                  <option>Банковский счёт (ожидает xPay)</option>
+                </select>
+              </div>
+
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>Сумма вывода</label>
+                <input
+                  type="text"
+                  value=""
+                  placeholder="Будет доступно после подключения провайдера"
+                  style={disabledInputStyle}
+                  disabled
+                  readOnly
+                />
+              </div>
+
+              <div style={fieldBlockStyle}>
+                <label style={labelStyle}>Комментарий</label>
+                <input
+                  type="text"
+                  value=""
+                  placeholder="Поле будет активировано после получения ключей"
+                  style={disabledInputStyle}
+                  disabled
+                  readOnly
+                />
+              </div>
+
+              <button type="button" style={secondaryButtonStyle} disabled>
+                Вывести средства
+              </button>
+            </Card>
           </div>
+        </SectionBlock>
 
-        </section>
+        <SectionBlock
+          title="Проверка пайплайна: Контракты → Расчёты → Кошелёк"
+          hint="Финальная визуальная сверка загрузки ключевых слоёв без изменения backend-логики."
+        >
+          <div style={threeColumnGridStyle}>
+            {pipelineChecks.map((item) => (
+              <Card key={item.label} style={{ minHeight: 158 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        color: "#6b7280",
+                        fontWeight: 500
+                      }}
+                    >
+                      {item.label}
+                    </p>
 
+                    <p
+                      style={{
+                        margin: "10px 0 0 0",
+                        fontSize: 26,
+                        fontWeight: 700,
+                        color: "#111827"
+                      }}
+                    >
+                      {item.value}
+                    </p>
+                  </div>
 
-        <section style={sectionStyle}>
+                  <div>
+                    {renderPipelineBadge(item.status)}
+                  </div>
+                </div>
 
-          <div style={sectionHeaderRowStyle}>
-            <div>
-              <h2 style={sectionTitleStyle}>Wallet</h2>
-              <p style={sectionHintStyle}>Отдельный компактный блок без повторения overview-карточек.</p>
-            </div>
-          </div>
-
-          <div style={cardStyle}>
-            {walletLoading && <p style={{ margin: 0, color: "#6b7280" }}>Загрузка кошелька...</p>}
-
-            {!walletLoading && (
-              <div>
-                <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>Баланс</p>
-                <p style={{ margin: "8px 0 0 0", fontSize: 32, fontWeight: 700, color: "#111827" }}>
-                  {formatAmount(walletBalance)} KGS
+                <p
+                  style={{
+                    margin: "14px 0 0 0",
+                    fontSize: 13,
+                    color: "#6b7280",
+                    lineHeight: 1.5
+                  }}
+                >
+                  {item.note}
                 </p>
-              </div>
-            )}
+              </Card>
+            ))}
           </div>
 
-        </section>
+          <Card style={{ marginTop: 14 }}>
+            <div style={compactGridStyle}>
+              <InfoBox
+                label="Платежи"
+                value={paymentsReady ? payments.length : "..."}
+                note="Поток входящих платёжных событий"
+              />
 
+              <InfoBox
+                label="Леджер"
+                value={ledgerReady ? ledger.length : "..."}
+                note="Транзакционный журнал движения средств"
+              />
 
-        <section style={sectionStyle}>
+              <InfoBox
+                label="Активные правила"
+                value={contractsReady ? activeContracts.length : "..."}
+                note="Правила, которые участвуют в распределении"
+              />
 
-          <div style={sectionHeaderRowStyle}>
-            <div>
-              <h2 style={sectionTitleStyle}>Payments</h2>
-              <p style={sectionHintStyle}>История платежей без изменений данных и endpoint-логики.</p>
+              <InfoBox
+                label="Итог"
+                value={walletReady && ledgerReady && contractsReady ? "Связка загружена" : "Проверка идёт"}
+                note="Визуальная проверка цепочки contracts → settlements → wallet"
+              />
             </div>
-          </div>
+          </Card>
+        </SectionBlock>
 
-          <div style={cardStyle}>
+        <SectionBlock
+          title="История контрактов"
+          hint="Полный список созданных контрактов с датой создания и статусом."
+        >
+          <Card>
+            {renderContractsHistory()}
+          </Card>
+        </SectionBlock>
 
-            {loading && <p style={{ margin: 0, color: "#6b7280" }}>Загрузка платежей...</p>}
+        <SectionBlock
+          title="Платежи"
+          hint="Входящие платёжные операции салона без изменения endpoint и структуры данных."
+        >
+          <Card>
+            {renderPaymentsTable()}
+          </Card>
+        </SectionBlock>
 
-            {!loading && payments.length === 0 && renderTableEmpty("Платежи не найдены")}
-
-            {!loading && payments.length > 0 && (
-
-              <div style={tableWrapStyle}>
-                <table style={tableStyle}>
-
-                  <thead>
-                    <tr>
-                      <th style={tableHeadCellStyle}>ID</th>
-                      <th style={tableHeadCellStyle}>Дата</th>
-                      <th style={tableHeadCellStyle}>Клиент</th>
-                      <th style={tableHeadCellStyle}>Сумма</th>
-                      <th style={tableHeadCellStyle}>Статус</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-
-                    {payments.map((p, index) => {
-                      const isLast = index === payments.length - 1
-
-                      return (
-                        <tr key={p.id}>
-                          {renderCell(p.id, isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(formatDateTime(p.created_at), isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(p.client_name || "-", isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(p.amount, isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(
-                            <span style={getStatusStyle(p.status)}>{p.status || "-"}</span>,
-                            isLast ? { borderBottom: "none" } : {}
-                          )}
-                        </tr>
-                      )
-                    })}
-
-                  </tbody>
-
-                </table>
-              </div>
-
-            )}
-
-          </div>
-
-        </section>
-
-
-        <section style={sectionStyle}>
-
-          <div style={sectionHeaderRowStyle}>
-            <div>
-              <h2 style={sectionTitleStyle}>Ledger</h2>
-              <p style={sectionHintStyle}>Движение средств и источники записей ledger.</p>
-            </div>
-          </div>
-
-          <div style={cardStyle}>
-
-            {ledgerLoading && <p style={{ margin: 0, color: "#6b7280" }}>Загрузка леджера...</p>}
-
-            {!ledgerLoading && ledger.length === 0 && renderTableEmpty("Нет записей леджера")}
-
-            {!ledgerLoading && ledger.length > 0 && (
-
-              <div style={tableWrapStyle}>
-                <table style={tableStyle}>
-
-                  <thead>
-                    <tr>
-                      <th style={tableHeadCellStyle}>ID</th>
-                      <th style={tableHeadCellStyle}>Направление</th>
-                      <th style={tableHeadCellStyle}>Сумма</th>
-                      <th style={tableHeadCellStyle}>Источник</th>
-                      <th style={tableHeadCellStyle}>Дата</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-
-                    {ledger.map((l, index) => {
-                      const isLast = index === ledger.length - 1
-
-                      return (
-                        <tr key={l.id}>
-                          {renderCell(l.id, isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(l.direction, isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(formatAmount(l.amount), isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(l.reference_type, isLast ? { borderBottom: "none" } : {})}
-                          {renderCell(formatDateTime(l.created_at), isLast ? { borderBottom: "none" } : {})}
-                        </tr>
-                      )
-                    })}
-
-                  </tbody>
-
-                </table>
-              </div>
-
-            )}
-
-          </div>
-
-        </section>
-
+        <SectionBlock
+          title="Леджер"
+          hint="Финальный журнал движения средств по салону."
+        >
+          <Card>
+            {renderLedgerTable()}
+          </Card>
+        </SectionBlock>
       </div>
-
     </div>
-
   )
-
 }
