@@ -197,117 +197,89 @@ export default function MasterFinancePage() {
             </div>
           </SectionCard>
 
-          <section style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h2 style={styles.cardTitle}>Contracts</h2>
-              <div style={styles.cardSubtitle}>
-                Активный контракт и история изменений
-              </div>
-            </div>
-
-            <div style={styles.cardBody}>
-              <div style={styles.twoColumn}>
-                <div style={styles.contractColumn}>
-                  <div style={styles.contractCard}>
-                    <div style={styles.contractHeader}>
-                      <div style={styles.contractStatusWrap}>
-                        <span
-                          style={{
-                            ...styles.badge,
-                            ...(contractIsActive ? styles.badgeSuccess : styles.badgeMuted)
-                          }}
-                        >
-                          {contractIsActive ? "ACTIVE" : "NO ACTIVE CONTRACT"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {contractIsActive ? (
-                      <div style={styles.infoGrid}>
-                        <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
-                        <InfoRow label="Model" value={activeContract?.model_type || "—"} />
-                        <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
-                      </div>
-                    ) : (
-                      <p style={styles.emptyText}>Активный контракт отсутствует</p>
-                    )}
-                  </div>
-                </div>
-
-                <div style={styles.contractColumn}>
-                  <div style={styles.noteBox}>
-                    <div style={styles.noteTitle}>Contract state</div>
-                    <div style={styles.noteText}>
-                      Блок вынесен в отдельную правую колонку по salon-архитектуре.
-                      Нижняя часть страницы больше не ломается, потому что двухколоночная
-                      сетка ограничена только секцией contracts.
-                    </div>
-                  </div>
-
-                  <div style={styles.noteBox}>
-                    <div style={styles.noteTitle}>Data source</div>
-                    <div style={styles.noteText}>
-                      Используются текущие contract endpoints без изменения backend и terms logic.
-                    </div>
-                  </div>
+          <SectionCard
+            title="Contracts"
+            subtitle="Активный контракт и история изменений"
+          >
+            <div style={styles.contractCard}>
+              <div style={styles.contractHeader}>
+                <div style={styles.contractStatusWrap}>
+                  <span
+                    style={{
+                      ...styles.badge,
+                      ...(contractIsActive ? styles.badgeSuccess : styles.badgeMuted)
+                    }}
+                  >
+                    {contractIsActive ? "ACTIVE" : "NO ACTIVE CONTRACT"}
+                  </span>
                 </div>
               </div>
 
-              <div style={styles.historyWrap}>
-                <div style={styles.subsectionTitle}>Contract History</div>
-
-                {history.length === 0 ? (
-                  <div style={styles.emptyPanel}>История контрактов отсутствует</div>
-                ) : (
-                  <div style={styles.tableWrap}>
-                    <table style={styles.table}>
-                      <thead>
-                        <tr>
-                          <th style={styles.th}>Contract ID</th>
-                          <th style={styles.th}>Status</th>
-                          <th style={styles.th}>Start Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {history.map((item, index) => {
-                          const isLast = index === history.length - 1;
-
-                          return (
-                            <tr key={item.contract_id}>
-                              <td
-                                style={{
-                                  ...styles.td,
-                                  ...(isLast ? styles.lastRowCell : null)
-                                }}
-                              >
-                                {item.contract_id || "—"}
-                              </td>
-                              <td
-                                style={{
-                                  ...styles.td,
-                                  ...(isLast ? styles.lastRowCell : null)
-                                }}
-                              >
-                                {item.status || "—"}
-                              </td>
-                              <td
-                                style={{
-                                  ...styles.td,
-                                  ...(isLast ? styles.lastRowCell : null)
-                                }}
-                              >
-                                {item.start_date || "—"}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+              {contractIsActive ? (
+                <div style={styles.infoGrid}>
+                  <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
+                  <InfoRow label="Model" value={activeContract?.model_type || "—"} />
+                  <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
+                </div>
+              ) : (
+                <p style={styles.emptyText}>Активный контракт отсутствует</p>
+              )}
             </div>
-          </section>
+
+            <div style={styles.historyWrap}>
+              <div style={styles.subsectionTitle}>Contract History</div>
+
+              {history.length === 0 ? (
+                <div style={styles.emptyPanel}>История контрактов отсутствует</div>
+              ) : (
+                <div style={styles.tableWrap}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Contract ID</th>
+                        <th style={styles.th}>Status</th>
+                        <th style={styles.th}>Start Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.map((item, index) => {
+                        const isLast = index === history.length - 1;
+
+                        return (
+                          <tr key={item.contract_id}>
+                            <td
+                              style={{
+                                ...styles.td,
+                                ...(isLast ? styles.lastRowCell : null)
+                              }}
+                            >
+                              {item.contract_id || "—"}
+                            </td>
+                            <td
+                              style={{
+                                ...styles.td,
+                                ...(isLast ? styles.lastRowCell : null)
+                              }}
+                            >
+                              {item.status || "—"}
+                            </td>
+                            <td
+                              style={{
+                                ...styles.td,
+                                ...(isLast ? styles.lastRowCell : null)
+                              }}
+                            >
+                              {item.start_date || "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </SectionCard>
 
           <SectionCard
             title="Settlements"
@@ -473,15 +445,6 @@ const styles = {
   stack: {
     display: "grid",
     gap: "20px"
-  },
-  twoColumn: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.8fr)",
-    gap: "16px",
-    alignItems: "start"
-  },
-  contractColumn: {
-    minWidth: 0
   },
   card: {
     background: "#ffffff",
