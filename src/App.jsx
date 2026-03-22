@@ -25,6 +25,7 @@ import SalonPayoutsPage from "./salon/payments/SalonPayoutsPage";
 
 /* NEW SALON FINANCE CONTROL PAGE */
 import SalonFinancePage from "./salon/payments/SalonFinancePage";
+import SalonContractsPage from "./salon/contracts/SalonContractsPage";
 
 /* MASTER */
 import MasterLayout from "./master/MasterLayout";
@@ -82,6 +83,7 @@ export default function App() {
 
             {/* SALON FINANCE CONTROL */}
             <Route path="finance" element={<SalonFinancePage />} />
+            <Route path="contracts" element={<SalonContractsPage />} />
 
             {/* SALON FINANCE */}
             <Route path="salon-money" element={<SalonMoneyPage />} />
