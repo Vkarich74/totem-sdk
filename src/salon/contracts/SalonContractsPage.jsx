@@ -133,7 +133,7 @@ function EmptyState({ text }) {
   )
 }
 
-function formatMoney(value) {
+function formatMoney(value, currency = "USD") {
   const amount = Number(value || 0)
 
   if (Number.isNaN(amount)) {
@@ -142,7 +142,7 @@ function formatMoney(value) {
 
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
-    currency: "USD",
+    currency: currency || "USD",
     maximumFractionDigits: 0
   }).format(amount)
 }
@@ -178,6 +178,10 @@ export default function SalonContractsPage() {
   const [createContractLoading, setCreateContractLoading] = useState(false)
   const [createContractError, setCreateContractError] = useState("")
   const [createContractSuccess, setCreateContractSuccess] = useState("")
+
+  const [contractActionLoadingId, setContractActionLoadingId] = useState("")
+  const [contractActionError, setContractActionError] = useState("")
+  const [contractActionSuccess, setContractActionSuccess] = useState("")
 
   const salonSlug = "totem-demo-salon"
 
@@ -248,7 +252,7 @@ export default function SalonContractsPage() {
   const tableStyle = {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: 760
+    minWidth: 980
   }
 
   const tableHeadCellStyle = {
@@ -304,6 +308,30 @@ export default function SalonContractsPage() {
     cursor: "pointer",
     fontSize: 14,
     fontWeight: 600
+  }
+
+  const secondaryButtonStyle = {
+    padding: "8px 12px",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    background: "#ffffff",
+    color: "#111827",
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 600,
+    whiteSpace: "nowrap"
+  }
+
+  const dangerButtonStyle = {
+    padding: "8px 12px",
+    border: "1px solid #fecaca",
+    borderRadius: 10,
+    background: "#fef2f2",
+    color: "#b91c1c",
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 600,
+    whiteSpace: "nowrap"
   }
 
   useEffect(() => {
@@ -368,6 +396,8 @@ export default function SalonContractsPage() {
   function resetMessages() {
     setCreateContractError("")
     setCreateContractSuccess("")
+    setContractActionError("")
+    setContractActionSuccess("")
   }
 
   function getContractTerms(contract) {
@@ -428,6 +458,26 @@ export default function SalonContractsPage() {
     if (value === "archived") return "Архивный"
     if (value === "draft") return "Черновик"
     return value || "-"
+  }
+
+  function formatDateTime(value) {
+    if (!value) {
+      return "-"
+    }
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+      return value
+    }
+
+    return new Intl.DateTimeFormat("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(date)
   }
 
   function getStatusStyle(status) {
@@ -493,6 +543,7 @@ export default function SalonContractsPage() {
   function getContractSummary(contract) {
     const terms = getContractTerms(contract)
     const model = getContractModel(contract)
+    const contractCurrency = terms.currency || currency || "USD"
 
     if (model === "percentage") {
       const masterValue = terms.master_percent ?? "-"
@@ -502,17 +553,17 @@ export default function SalonContractsPage() {
     }
 
     if (model === "fixed_rent") {
-      return `${formatMoney(terms.rent_amount)} · ${formatPeriodLabel(terms.rent_period)} · ${formatSettlementModeLabel(terms.settlement_mode)}`
+      return `${formatMoney(terms.rent_amount, contractCurrency)} · ${formatPeriodLabel(terms.rent_period)} · ${formatSettlementModeLabel(terms.settlement_mode)}`
     }
 
     if (model === "salary") {
       const bonusLabel = terms.bonus_percent ? ` · Бонус ${terms.bonus_percent}%` : ""
-      return `${formatMoney(terms.salary_amount)} · ${formatSalaryPeriodLabel(terms.salary_period)}${bonusLabel}`
+      return `${formatMoney(terms.salary_amount, contractCurrency)} · ${formatSalaryPeriodLabel(terms.salary_period)}${bonusLabel}`
     }
 
     if (model === "hybrid") {
       const baseTypeLabel = terms.base_type === "fixed_rent" ? "Аренда" : "Зарплата"
-      return `${baseTypeLabel} ${formatMoney(terms.base_amount)} + ${terms.master_percent ?? "-"}% мастеру`
+      return `${baseTypeLabel} ${formatMoney(terms.base_amount, contractCurrency)} + ${terms.master_percent ?? "-"}% мастеру`
     }
 
     return "-"
@@ -710,6 +761,68 @@ export default function SalonContractsPage() {
     }
   }
 
+  async function acceptContract(contractId) {
+    resetMessages()
+    setContractActionLoadingId(contractId)
+
+    try {
+      const res = await fetch(
+        `https://api.totemv.com/internal/contracts/${contractId}/accept`,
+        {
+          method: "POST"
+        }
+      )
+
+      const data = await res.json()
+
+      if (!res.ok || !data.ok) {
+        setContractActionError(data.error || "Не удалось принять контракт")
+        return
+      }
+
+      setContractActionSuccess("Контракт переведён в активный статус")
+      await loadContracts()
+    }
+    catch (err) {
+      console.error("Accept contract error:", err)
+      setContractActionError("Ошибка активации контракта")
+    }
+    finally {
+      setContractActionLoadingId("")
+    }
+  }
+
+  async function archiveContract(contractId) {
+    resetMessages()
+    setContractActionLoadingId(contractId)
+
+    try {
+      const res = await fetch(
+        `https://api.totemv.com/internal/contracts/${contractId}/archive`,
+        {
+          method: "POST"
+        }
+      )
+
+      const data = await res.json()
+
+      if (!res.ok || !data.ok) {
+        setContractActionError(data.error || "Не удалось архивировать контракт")
+        return
+      }
+
+      setContractActionSuccess("Контракт переведён в архив")
+      await loadContracts()
+    }
+    catch (err) {
+      console.error("Archive contract error:", err)
+      setContractActionError("Ошибка архивации контракта")
+    }
+    finally {
+      setContractActionLoadingId("")
+    }
+  }
+
   const activeContracts = useMemo(
     () => contracts.filter((c) => c.status === "active"),
     [contracts]
@@ -717,6 +830,11 @@ export default function SalonContractsPage() {
 
   const pendingContracts = useMemo(
     () => contracts.filter((c) => c.status === "pending"),
+    [contracts]
+  )
+
+  const archivedContracts = useMemo(
+    () => contracts.filter((c) => c.status === "archived"),
     [contracts]
   )
 
@@ -732,13 +850,13 @@ export default function SalonContractsPage() {
         <div style={pageHeaderStyle}>
           <h1 style={pageTitleStyle}>Контракты салона</h1>
           <p style={pageSubtitleStyle}>
-            Единый блок контрактов: сводка, активные и ожидающие контракты, модели договорённостей и создание нового контракта.
+            Единый блок контрактов: сводка, активные, ожидающие и архивные контракты, модели договорённостей и создание нового контракта.
           </p>
         </div>
 
         <SectionBlock
           title="Контракты"
-          hint="Единый блок: сводка, активные и ожидающие контракты, модели договорённостей и создание нового контракта."
+          hint="Единый блок: сводка, активные, ожидающие и архивные контракты, модели договорённостей и создание нового контракта."
           style={{ marginTop: 0 }}
         >
           <div style={pageStackStyle}>
@@ -763,11 +881,49 @@ export default function SalonContractsPage() {
                 />
 
                 <InfoBox
+                  label="Архивные"
+                  value={contractsLoading ? "..." : archivedContracts.length}
+                  note="История завершённых договорённостей"
+                />
+
+                <InfoBox
                   label="Всего"
                   value={contractsLoading ? "..." : contracts.length}
                   note="Полная история контрактов салона"
                 />
               </div>
+
+              {contractActionError && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #fecaca",
+                    background: "#fef2f2",
+                    color: "#b91c1c",
+                    fontSize: 14
+                  }}
+                >
+                  {contractActionError}
+                </div>
+              )}
+
+              {contractActionSuccess && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #bbf7d0",
+                    background: "#f0fdf4",
+                    color: "#166534",
+                    fontSize: 14
+                  }}
+                >
+                  {contractActionSuccess}
+                </div>
+              )}
 
               <div style={{ marginTop: 18 }}>
                 <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
@@ -791,13 +947,16 @@ export default function SalonContractsPage() {
                           <th style={tableHeadCellStyle}>Мастер</th>
                           <th style={tableHeadCellStyle}>Модель</th>
                           <th style={tableHeadCellStyle}>Условия</th>
+                          <th style={tableHeadCellStyle}>Дата начала</th>
                           <th style={tableHeadCellStyle}>Статус</th>
+                          <th style={tableHeadCellStyle}>Действия</th>
                         </tr>
                       </thead>
 
                       <tbody>
                         {activeContracts.map((c, index) => {
                           const isLast = index === activeContracts.length - 1
+                          const isBusy = contractActionLoadingId === c.id
 
                           return (
                             <tr key={c.id}>
@@ -805,8 +964,26 @@ export default function SalonContractsPage() {
                               {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(
                                 <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => archiveContract(c.id)}
+                                    disabled={isBusy}
+                                    style={{
+                                      ...dangerButtonStyle,
+                                      opacity: isBusy ? 0.7 : 1,
+                                      cursor: isBusy ? "wait" : "pointer"
+                                    }}
+                                  >
+                                    {isBusy ? "Обработка..." : "Архивировать"}
+                                  </button>
+                                </div>,
                                 isLast ? { borderBottom: "none" } : {}
                               )}
                             </tr>
@@ -840,13 +1017,16 @@ export default function SalonContractsPage() {
                           <th style={tableHeadCellStyle}>Мастер</th>
                           <th style={tableHeadCellStyle}>Модель</th>
                           <th style={tableHeadCellStyle}>Условия</th>
+                          <th style={tableHeadCellStyle}>Дата начала</th>
                           <th style={tableHeadCellStyle}>Статус</th>
+                          <th style={tableHeadCellStyle}>Действия</th>
                         </tr>
                       </thead>
 
                       <tbody>
                         {pendingContracts.map((c, index) => {
                           const isLast = index === pendingContracts.length - 1
+                          const isBusy = contractActionLoadingId === c.id
 
                           return (
                             <tr key={c.id}>
@@ -854,6 +1034,92 @@ export default function SalonContractsPage() {
                               {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(
+                                <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => acceptContract(c.id)}
+                                    disabled={isBusy}
+                                    style={{
+                                      ...primaryButtonStyle,
+                                      padding: "8px 12px",
+                                      width: "auto",
+                                      opacity: isBusy ? 0.7 : 1,
+                                      cursor: isBusy ? "wait" : "pointer"
+                                    }}
+                                  >
+                                    {isBusy ? "Обработка..." : "Принять"}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => archiveContract(c.id)}
+                                    disabled={isBusy}
+                                    style={{
+                                      ...secondaryButtonStyle,
+                                      opacity: isBusy ? 0.7 : 1,
+                                      cursor: isBusy ? "wait" : "pointer"
+                                    }}
+                                  >
+                                    Архивировать
+                                  </button>
+                                </div>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: 18 }}>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
+                  Архивные контракты
+                </h3>
+
+                {contractsLoading && (
+                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
+                )}
+
+                {!contractsLoading && archivedContracts.length === 0 && (
+                  <EmptyState text="Нет архивных контрактов" />
+                )}
+
+                {!contractsLoading && archivedContracts.length > 0 && (
+                  <div style={tableWrapStyle}>
+                    <table style={tableStyle}>
+                      <thead>
+                        <tr>
+                          <th style={tableHeadCellStyle}>ID</th>
+                          <th style={tableHeadCellStyle}>Мастер</th>
+                          <th style={tableHeadCellStyle}>Модель</th>
+                          <th style={tableHeadCellStyle}>Условия</th>
+                          <th style={tableHeadCellStyle}>Дата начала</th>
+                          <th style={tableHeadCellStyle}>Архивирован</th>
+                          <th style={tableHeadCellStyle}>Статус</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {archivedContracts.map((c, index) => {
+                          const isLast = index === archivedContracts.length - 1
+
+                          return (
+                            <tr key={c.id}>
+                              {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(formatDateTime(c.archived_at), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(
                                 <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
                                 isLast ? { borderBottom: "none" } : {}
