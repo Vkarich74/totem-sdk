@@ -133,6 +133,20 @@ function EmptyState({ text }) {
   )
 }
 
+function formatMoney(value) {
+  const amount = Number(value || 0)
+
+  if (Number.isNaN(amount)) {
+    return "-"
+  }
+
+  return new Intl.NumberFormat("ru-RU", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0
+  }).format(amount)
+}
+
 export default function SalonContractsPage() {
   const [contracts, setContracts] = useState([])
   const [contractsLoading, setContractsLoading] = useState(true)
@@ -141,11 +155,25 @@ export default function SalonContractsPage() {
   const [mastersLoading, setMastersLoading] = useState(true)
 
   const [selectedMasterId, setSelectedMasterId] = useState("")
+  const [contractModel, setContractModel] = useState("percentage")
   const [masterPercent, setMasterPercent] = useState("70")
   const [salonPercent, setSalonPercent] = useState("20")
   const [platformPercent, setPlatformPercent] = useState("10")
   const [payoutSchedule, setPayoutSchedule] = useState("manual")
   const [effectiveFrom, setEffectiveFrom] = useState("")
+  const [currency, setCurrency] = useState("USD")
+
+  const [rentAmount, setRentAmount] = useState("")
+  const [rentPeriod, setRentPeriod] = useState("monthly")
+  const [settlementMode, setSettlementMode] = useState("accrued")
+
+  const [salaryAmount, setSalaryAmount] = useState("")
+  const [salaryPeriod, setSalaryPeriod] = useState("monthly")
+  const [bonusPercent, setBonusPercent] = useState("")
+
+  const [hybridBaseType, setHybridBaseType] = useState("salary")
+  const [hybridBaseAmount, setHybridBaseAmount] = useState("")
+  const [hybridBasePeriod, setHybridBasePeriod] = useState("monthly")
 
   const [createContractLoading, setCreateContractLoading] = useState(false)
   const [createContractError, setCreateContractError] = useState("")
@@ -202,6 +230,13 @@ export default function SalonContractsPage() {
     gap: 12
   }
 
+  const modelGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+    gap: 10,
+    marginBottom: 14
+  }
+
   const tableWrapStyle = {
     overflowX: "auto",
     border: "1px solid #e5e7eb",
@@ -213,7 +248,7 @@ export default function SalonContractsPage() {
   const tableStyle = {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: 640
+    minWidth: 760
   }
 
   const tableHeadCellStyle = {
@@ -330,87 +365,68 @@ export default function SalonContractsPage() {
     }
   }
 
-  async function createContract(event) {
-    event.preventDefault()
-
+  function resetMessages() {
     setCreateContractError("")
     setCreateContractSuccess("")
+  }
 
-    const masterIdNumber = Number(selectedMasterId)
-    const masterValue = Number(masterPercent)
-    const salonValue = Number(salonPercent)
-    const platformValue = Number(platformPercent)
+  function getContractTerms(contract) {
+    let terms = {}
 
-    if (!masterIdNumber) {
-      setCreateContractError("Выбери мастера")
-      return
+    if (typeof contract?.terms_json === "object" && contract?.terms_json !== null) {
+      terms = contract.terms_json
     }
-
-    if (
-      Number.isNaN(masterValue) ||
-      Number.isNaN(salonValue) ||
-      Number.isNaN(platformValue)
-    ) {
-      setCreateContractError("Проценты должны быть числами")
-      return
-    }
-
-    if (masterValue + salonValue + platformValue !== 100) {
-      setCreateContractError("Сумма процентов должна быть ровно 100")
-      return
-    }
-
-    setCreateContractLoading(true)
-
-    try {
-      const payload = {
-        master_id: masterIdNumber,
-        terms_json: {
-          master_percent: masterValue,
-          salon_percent: salonValue,
-          platform_percent: platformValue,
-          payout_schedule: payoutSchedule || "manual"
-        }
+    else {
+      try {
+        terms = JSON.parse(contract?.terms_json || "{}")
       }
-
-      if (effectiveFrom) {
-        payload.effective_from = effectiveFrom
+      catch {
+        terms = {}
       }
+    }
 
-      const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        }
+    return terms
+  }
+
+  function getContractModel(contract) {
+    const terms = getContractTerms(contract)
+    return terms.model || "percentage"
+  }
+
+  function getContractModelLabel(contract) {
+    const model = typeof contract === "string" ? contract : getContractModel(contract)
+
+    if (model === "percentage") return "Процентный"
+    if (model === "fixed_rent") return "Фиксированная аренда"
+    if (model === "salary") return "Зарплата"
+    if (model === "hybrid") return "Гибридный"
+    return model || "-"
+  }
+
+  function getMasterName(contract) {
+    const contractMasterId = contract?.master_id
+    const contractMasterSlug = contract?.master_slug
+
+    const master = masters.find((item) => {
+      return (
+        String(item.id) === String(contractMasterId) ||
+        String(item.id) === String(contractMasterSlug) ||
+        String(item.slug) === String(contractMasterSlug)
       )
+    })
 
-      const data = await res.json()
+    if (!master) {
+      return contractMasterSlug || contractMasterId || "-"
+    }
 
-      if (!res.ok || !data.ok) {
-        setCreateContractError(data.error || "Не удалось создать контракт")
-        return
-      }
-
-      setCreateContractSuccess("Контракт создан в статусе ожидания")
-      await loadContracts()
-    }
-    catch (err) {
-      console.error("Create contract error:", err)
-      setCreateContractError("Ошибка создания контракта")
-    }
-    finally {
-      setCreateContractLoading(false)
-    }
+    return master.name || master.slug || master.id
   }
 
   function formatStatus(value) {
     if (value === "active") return "Активный"
     if (value === "pending") return "Ожидает"
     if (value === "archived") return "Архивный"
+    if (value === "draft") return "Черновик"
     return value || "-"
   }
 
@@ -466,63 +482,232 @@ export default function SalonContractsPage() {
     }
   }
 
-  function getContractTerms(contract) {
-    let terms = {}
-
-    if (typeof contract?.terms_json === "object" && contract?.terms_json !== null) {
-      terms = contract.terms_json
-    }
-    else {
-      try {
-        terms = JSON.parse(contract?.terms_json || "{}")
-      }
-      catch {
-        terms = {}
-      }
-    }
-
-    return terms
-  }
-
-  function getMasterName(contract) {
-    const contractMasterId = contract?.master_id
-    const contractMasterSlug = contract?.master_slug
-
-    const master = masters.find((item) => {
-      return (
-        String(item.id) === String(contractMasterId) ||
-        String(item.id) === String(contractMasterSlug) ||
-        String(item.slug) === String(contractMasterSlug)
-      )
-    })
-
-    if (!master) {
-      return contractMasterSlug || contractMasterId || "-"
-    }
-
-    return master.name || master.slug || master.id
-  }
-
-  function getContractMasterPercent(contract) {
-    const terms = getContractTerms(contract)
-
-    if (terms.master_percent !== undefined && terms.master_percent !== null) {
-      return terms.master_percent
-    }
-
-    if (contract?.share_percent !== undefined && contract?.share_percent !== null) {
-      return contract.share_percent
-    }
-
-    return "-"
-  }
-
   function renderCell(content, extraStyle = {}) {
     return (
       <td style={{ ...tableCellStyle, ...extraStyle }}>
         {content}
       </td>
     )
+  }
+
+  function getContractSummary(contract) {
+    const terms = getContractTerms(contract)
+    const model = getContractModel(contract)
+
+    if (model === "percentage") {
+      const masterValue = terms.master_percent ?? "-"
+      const salonValue = terms.salon_percent ?? "-"
+      const platformValue = terms.platform_percent ?? "-"
+      return `Мастер ${masterValue}% · Салон ${salonValue}% · Платформа ${platformValue}%`
+    }
+
+    if (model === "fixed_rent") {
+      return `${formatMoney(terms.rent_amount)} · ${formatPeriodLabel(terms.rent_period)} · ${formatSettlementModeLabel(terms.settlement_mode)}`
+    }
+
+    if (model === "salary") {
+      const bonusLabel = terms.bonus_percent ? ` · Бонус ${terms.bonus_percent}%` : ""
+      return `${formatMoney(terms.salary_amount)} · ${formatSalaryPeriodLabel(terms.salary_period)}${bonusLabel}`
+    }
+
+    if (model === "hybrid") {
+      const baseTypeLabel = terms.base_type === "fixed_rent" ? "Аренда" : "Зарплата"
+      return `${baseTypeLabel} ${formatMoney(terms.base_amount)} + ${terms.master_percent ?? "-"}% мастеру`
+    }
+
+    return "-"
+  }
+
+  function formatPeriodLabel(value) {
+    if (value === "daily") return "в день"
+    if (value === "weekly") return "в неделю"
+    if (value === "monthly") return "в месяц"
+    return value || "-"
+  }
+
+  function formatSalaryPeriodLabel(value) {
+    if (value === "weekly") return "еженедельно"
+    if (value === "biweekly") return "раз в две недели"
+    if (value === "monthly") return "ежемесячно"
+    return value || "-"
+  }
+
+  function formatSettlementModeLabel(value) {
+    if (value === "prepaid") return "предоплата"
+    if (value === "accrued") return "по факту"
+    return value || "-"
+  }
+
+  function buildTermsJson() {
+    if (contractModel === "percentage") {
+      return {
+        model: "percentage",
+        master_percent: Number(masterPercent),
+        salon_percent: Number(salonPercent),
+        platform_percent: Number(platformPercent),
+        payout_schedule: payoutSchedule || "manual"
+      }
+    }
+
+    if (contractModel === "fixed_rent") {
+      return {
+        model: "fixed_rent",
+        rent_amount: Number(rentAmount),
+        rent_period: rentPeriod,
+        currency,
+        payout_schedule: payoutSchedule || "manual",
+        settlement_mode: settlementMode
+      }
+    }
+
+    if (contractModel === "salary") {
+      return {
+        model: "salary",
+        salary_amount: Number(salaryAmount),
+        salary_period: salaryPeriod,
+        currency,
+        payout_schedule: payoutSchedule || "manual",
+        bonus_percent: bonusPercent === "" ? 0 : Number(bonusPercent)
+      }
+    }
+
+    return {
+      model: "hybrid",
+      base_type: hybridBaseType,
+      base_amount: Number(hybridBaseAmount),
+      base_period: hybridBasePeriod,
+      currency,
+      master_percent: Number(masterPercent),
+      salon_percent: Number(salonPercent),
+      platform_percent: Number(platformPercent),
+      payout_schedule: payoutSchedule || "manual"
+    }
+  }
+
+  function validateCreateForm() {
+    const masterIdNumber = Number(selectedMasterId)
+
+    if (!masterIdNumber) {
+      return "Выбери мастера"
+    }
+
+    if (contractModel === "percentage") {
+      const masterValue = Number(masterPercent)
+      const salonValue = Number(salonPercent)
+      const platformValue = Number(platformPercent)
+
+      if (
+        Number.isNaN(masterValue) ||
+        Number.isNaN(salonValue) ||
+        Number.isNaN(platformValue)
+      ) {
+        return "Проценты должны быть числами"
+      }
+
+      if (masterValue + salonValue + platformValue !== 100) {
+        return "Сумма процентов должна быть ровно 100"
+      }
+    }
+
+    if (contractModel === "fixed_rent") {
+      const rentValue = Number(rentAmount)
+
+      if (Number.isNaN(rentValue) || rentValue <= 0) {
+        return "Укажи корректную сумму аренды"
+      }
+    }
+
+    if (contractModel === "salary") {
+      const salaryValue = Number(salaryAmount)
+      const bonusValue = bonusPercent === "" ? 0 : Number(bonusPercent)
+
+      if (Number.isNaN(salaryValue) || salaryValue <= 0) {
+        return "Укажи корректную сумму зарплаты"
+      }
+
+      if (Number.isNaN(bonusValue) || bonusValue < 0) {
+        return "Бонус должен быть числом 0 или больше"
+      }
+    }
+
+    if (contractModel === "hybrid") {
+      const baseValue = Number(hybridBaseAmount)
+      const masterValue = Number(masterPercent)
+      const salonValue = Number(salonPercent)
+      const platformValue = Number(platformPercent)
+
+      if (Number.isNaN(baseValue) || baseValue <= 0) {
+        return "Укажи корректную базовую сумму"
+      }
+
+      if (
+        Number.isNaN(masterValue) ||
+        Number.isNaN(salonValue) ||
+        Number.isNaN(platformValue)
+      ) {
+        return "Проценты гибридного договора должны быть числами"
+      }
+
+      if (masterValue + salonValue + platformValue !== 100) {
+        return "Сумма процентов гибридного договора должна быть ровно 100"
+      }
+    }
+
+    return ""
+  }
+
+  async function createContract(event) {
+    event.preventDefault()
+
+    resetMessages()
+
+    const validationError = validateCreateForm()
+
+    if (validationError) {
+      setCreateContractError(validationError)
+      return
+    }
+
+    setCreateContractLoading(true)
+
+    try {
+      const payload = {
+        master_id: Number(selectedMasterId),
+        terms_json: buildTermsJson()
+      }
+
+      if (effectiveFrom) {
+        payload.effective_from = effectiveFrom
+      }
+
+      const res = await fetch(
+        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        }
+      )
+
+      const data = await res.json()
+
+      if (!res.ok || !data.ok) {
+        setCreateContractError(data.error || "Не удалось создать контракт")
+        return
+      }
+
+      setCreateContractSuccess("Контракт создан в статусе ожидания")
+      await loadContracts()
+    }
+    catch (err) {
+      console.error("Create contract error:", err)
+      setCreateContractError("Ошибка создания контракта")
+    }
+    finally {
+      setCreateContractLoading(false)
+    }
   }
 
   const activeContracts = useMemo(
@@ -536,6 +721,10 @@ export default function SalonContractsPage() {
   )
 
   const contractSum = Number(masterPercent || 0) + Number(salonPercent || 0) + Number(platformPercent || 0)
+  const isPercentModel = contractModel === "percentage"
+  const isRentModel = contractModel === "fixed_rent"
+  const isSalaryModel = contractModel === "salary"
+  const isHybridModel = contractModel === "hybrid"
 
   return (
     <div style={pageStyle}>
@@ -543,13 +732,13 @@ export default function SalonContractsPage() {
         <div style={pageHeaderStyle}>
           <h1 style={pageTitleStyle}>Контракты салона</h1>
           <p style={pageSubtitleStyle}>
-            Единый блок контрактов: сводка, активные и ожидающие контракты, создание нового контракта.
+            Единый блок контрактов: сводка, активные и ожидающие контракты, модели договорённостей и создание нового контракта.
           </p>
         </div>
 
         <SectionBlock
           title="Контракты"
-          hint="Единый блок: сводка, активные и ожидающие контракты, создание нового контракта."
+          hint="Единый блок: сводка, активные и ожидающие контракты, модели договорённостей и создание нового контракта."
           style={{ marginTop: 0 }}
         >
           <div style={pageStackStyle}>
@@ -600,7 +789,8 @@ export default function SalonContractsPage() {
                         <tr>
                           <th style={tableHeadCellStyle}>ID</th>
                           <th style={tableHeadCellStyle}>Мастер</th>
-                          <th style={tableHeadCellStyle}>Доля %</th>
+                          <th style={tableHeadCellStyle}>Модель</th>
+                          <th style={tableHeadCellStyle}>Условия</th>
                           <th style={tableHeadCellStyle}>Статус</th>
                         </tr>
                       </thead>
@@ -613,7 +803,8 @@ export default function SalonContractsPage() {
                             <tr key={c.id}>
                               {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
                               {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractMasterPercent(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(
                                 <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
                                 isLast ? { borderBottom: "none" } : {}
@@ -647,7 +838,8 @@ export default function SalonContractsPage() {
                         <tr>
                           <th style={tableHeadCellStyle}>ID</th>
                           <th style={tableHeadCellStyle}>Мастер</th>
-                          <th style={tableHeadCellStyle}>Доля %</th>
+                          <th style={tableHeadCellStyle}>Модель</th>
+                          <th style={tableHeadCellStyle}>Условия</th>
                           <th style={tableHeadCellStyle}>Статус</th>
                         </tr>
                       </thead>
@@ -660,7 +852,8 @@ export default function SalonContractsPage() {
                             <tr key={c.id}>
                               {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
                               {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractMasterPercent(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})}
+                              {renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(
                                 <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
                                 isLast ? { borderBottom: "none" } : {}
@@ -681,7 +874,7 @@ export default function SalonContractsPage() {
                   Создать контракт
                 </h3>
                 <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-                  UI унифицирован под карточки кабинета. Логика создания и API остаются без изменений.
+                  Существующая структура сохранена. Добавлены сценарии договорённостей через модель контракта и поля в terms_json.
                 </p>
               </div>
 
@@ -689,6 +882,44 @@ export default function SalonContractsPage() {
 
               {!mastersLoading && (
                 <form onSubmit={createContract}>
+                  <div style={fieldBlockStyle}>
+                    <label style={labelStyle}>Модель договора</label>
+                    <div style={modelGridStyle}>
+                      {[
+                        { value: "percentage", label: "Процентный" },
+                        { value: "fixed_rent", label: "Фиксированная аренда" },
+                        { value: "salary", label: "Зарплата" },
+                        { value: "hybrid", label: "Гибридный" }
+                      ].map((item) => {
+                        const isActive = contractModel === item.value
+
+                        return (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => {
+                              setContractModel(item.value)
+                              resetMessages()
+                            }}
+                            style={{
+                              padding: "12px 14px",
+                              borderRadius: 12,
+                              border: isActive ? "1px solid #111827" : "1px solid #d1d5db",
+                              background: isActive ? "#111827" : "#ffffff",
+                              color: isActive ? "#ffffff" : "#111827",
+                              fontSize: 14,
+                              fontWeight: 600,
+                              textAlign: "left",
+                              cursor: "pointer"
+                            }}
+                          >
+                            {item.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   <div style={fieldBlockStyle}>
                     <label style={labelStyle}>Мастер</label>
                     <select
@@ -705,76 +936,310 @@ export default function SalonContractsPage() {
                     </select>
                   </div>
 
-                  <div style={formGridStyle}>
+                  {(isRentModel || isSalaryModel || isHybridModel) && (
+                    <div style={formGridStyle}>
+                      <div style={fieldBlockStyle}>
+                        <label style={labelStyle}>Валюта</label>
+                        <select
+                          value={currency}
+                          onChange={(e) => setCurrency(e.target.value)}
+                          style={inputStyle}
+                        >
+                          <option value="USD">USD</option>
+                          <option value="KGS">KGS</option>
+                          <option value="EUR">EUR</option>
+                        </select>
+                      </div>
+
+                      <div style={fieldBlockStyle}>
+                        <label style={labelStyle}>График выплат</label>
+                        <select
+                          value={payoutSchedule}
+                          onChange={(e) => setPayoutSchedule(e.target.value)}
+                          style={inputStyle}
+                        >
+                          <option value="manual">Вручную</option>
+                          <option value="daily">Ежедневно</option>
+                          <option value="weekly">Еженедельно</option>
+                          <option value="monthly">Ежемесячно</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {isPercentModel && (
+                    <>
+                      <div style={formGridStyle}>
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Процент мастера</label>
+                          <input
+                            type="number"
+                            value={masterPercent}
+                            onChange={(e) => setMasterPercent(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Процент салона</label>
+                          <input
+                            type="number"
+                            value={salonPercent}
+                            onChange={(e) => setSalonPercent(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Процент платформы</label>
+                          <input
+                            type="number"
+                            value={platformPercent}
+                            onChange={(e) => setPlatformPercent(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={fieldBlockStyle}>
+                        <label style={labelStyle}>График выплат</label>
+                        <select
+                          value={payoutSchedule}
+                          onChange={(e) => setPayoutSchedule(e.target.value)}
+                          style={inputStyle}
+                        >
+                          <option value="manual">Вручную</option>
+                          <option value="daily">Ежедневно</option>
+                          <option value="weekly">Еженедельно</option>
+                          <option value="monthly">Ежемесячно</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {isRentModel && (
+                    <>
+                      <div style={formGridStyle}>
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Сумма аренды</label>
+                          <input
+                            type="number"
+                            value={rentAmount}
+                            onChange={(e) => setRentAmount(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Период аренды</label>
+                          <select
+                            value={rentPeriod}
+                            onChange={(e) => setRentPeriod(e.target.value)}
+                            style={inputStyle}
+                          >
+                            <option value="daily">Ежедневно</option>
+                            <option value="weekly">Еженедельно</option>
+                            <option value="monthly">Ежемесячно</option>
+                          </select>
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Режим расчёта</label>
+                          <select
+                            value={settlementMode}
+                            onChange={(e) => setSettlementMode(e.target.value)}
+                            style={inputStyle}
+                          >
+                            <option value="accrued">По факту</option>
+                            <option value="prepaid">Предоплата</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          marginBottom: 14,
+                          padding: 12,
+                          borderRadius: 12,
+                          border: "1px solid #dbeafe",
+                          background: "#eff6ff",
+                          color: "#1d4ed8",
+                          fontSize: 14,
+                          lineHeight: 1.5
+                        }}
+                      >
+                        Фиксированная аренда хранится как отдельная модель в terms_json и не ломает существующий процентный сценарий.
+                      </div>
+                    </>
+                  )}
+
+                  {isSalaryModel && (
+                    <>
+                      <div style={formGridStyle}>
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Сумма зарплаты</label>
+                          <input
+                            type="number"
+                            value={salaryAmount}
+                            onChange={(e) => setSalaryAmount(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Период зарплаты</label>
+                          <select
+                            value={salaryPeriod}
+                            onChange={(e) => setSalaryPeriod(e.target.value)}
+                            style={inputStyle}
+                          >
+                            <option value="weekly">Еженедельно</option>
+                            <option value="biweekly">Раз в две недели</option>
+                            <option value="monthly">Ежемесячно</option>
+                          </select>
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Бонус %</label>
+                          <input
+                            type="number"
+                            value={bonusPercent}
+                            onChange={(e) => setBonusPercent(e.target.value)}
+                            style={inputStyle}
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {isHybridModel && (
+                    <>
+                      <div style={formGridStyle}>
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Базовый тип</label>
+                          <select
+                            value={hybridBaseType}
+                            onChange={(e) => setHybridBaseType(e.target.value)}
+                            style={inputStyle}
+                          >
+                            <option value="salary">Зарплата</option>
+                            <option value="fixed_rent">Аренда</option>
+                          </select>
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Базовая сумма</label>
+                          <input
+                            type="number"
+                            value={hybridBaseAmount}
+                            onChange={(e) => setHybridBaseAmount(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Базовый период</label>
+                          <select
+                            value={hybridBasePeriod}
+                            onChange={(e) => setHybridBasePeriod(e.target.value)}
+                            style={inputStyle}
+                          >
+                            <option value="weekly">Еженедельно</option>
+                            <option value="monthly">Ежемесячно</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={formGridStyle}>
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Процент мастера</label>
+                          <input
+                            type="number"
+                            value={masterPercent}
+                            onChange={(e) => setMasterPercent(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Процент салона</label>
+                          <input
+                            type="number"
+                            value={salonPercent}
+                            onChange={(e) => setSalonPercent(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div style={fieldBlockStyle}>
+                          <label style={labelStyle}>Процент платформы</label>
+                          <input
+                            type="number"
+                            value={platformPercent}
+                            onChange={(e) => setPlatformPercent(e.target.value)}
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          marginBottom: 14,
+                          padding: 12,
+                          borderRadius: 12,
+                          background: contractSum === 100 ? "#f0fdf4" : "#fffbeb",
+                          border: contractSum === 100 ? "1px solid #bbf7d0" : "1px solid #fde68a",
+                          color: contractSum === 100 ? "#166534" : "#92400e",
+                          fontSize: 14,
+                          fontWeight: 600
+                        }}
+                      >
+                        Сумма процентов гибридного договора: {contractSum}
+                      </div>
+                    </>
+                  )}
+
+                  {!isRentModel && !isSalaryModel && (
                     <div style={fieldBlockStyle}>
-                      <label style={labelStyle}>Процент мастера</label>
+                      <label style={labelStyle}>Дата начала действия</label>
                       <input
-                        type="number"
-                        value={masterPercent}
-                        onChange={(e) => setMasterPercent(e.target.value)}
+                        type="datetime-local"
+                        value={effectiveFrom}
+                        onChange={(e) => setEffectiveFrom(e.target.value)}
                         style={inputStyle}
                       />
                     </div>
+                  )}
 
+                  {(isRentModel || isSalaryModel) && (
                     <div style={fieldBlockStyle}>
-                      <label style={labelStyle}>Процент салона</label>
+                      <label style={labelStyle}>Дата начала действия</label>
                       <input
-                        type="number"
-                        value={salonPercent}
-                        onChange={(e) => setSalonPercent(e.target.value)}
+                        type="datetime-local"
+                        value={effectiveFrom}
+                        onChange={(e) => setEffectiveFrom(e.target.value)}
                         style={inputStyle}
                       />
                     </div>
+                  )}
 
-                    <div style={fieldBlockStyle}>
-                      <label style={labelStyle}>Процент платформы</label>
-                      <input
-                        type="number"
-                        value={platformPercent}
-                        onChange={(e) => setPlatformPercent(e.target.value)}
-                        style={inputStyle}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={fieldBlockStyle}>
-                    <label style={labelStyle}>График выплат</label>
-                    <select
-                      value={payoutSchedule}
-                      onChange={(e) => setPayoutSchedule(e.target.value)}
-                      style={inputStyle}
+                  {isPercentModel && (
+                    <div
+                      style={{
+                        marginBottom: 14,
+                        padding: 12,
+                        borderRadius: 12,
+                        background: contractSum === 100 ? "#f0fdf4" : "#fffbeb",
+                        border: contractSum === 100 ? "1px solid #bbf7d0" : "1px solid #fde68a",
+                        color: contractSum === 100 ? "#166534" : "#92400e",
+                        fontSize: 14,
+                        fontWeight: 600
+                      }}
                     >
-                      <option value="manual">Вручную</option>
-                      <option value="daily">Ежедневно</option>
-                      <option value="weekly">Еженедельно</option>
-                      <option value="monthly">Ежемесячно</option>
-                    </select>
-                  </div>
-
-                  <div style={fieldBlockStyle}>
-                    <label style={labelStyle}>Дата начала действия</label>
-                    <input
-                      type="datetime-local"
-                      value={effectiveFrom}
-                      onChange={(e) => setEffectiveFrom(e.target.value)}
-                      style={inputStyle}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      marginBottom: 14,
-                      padding: 12,
-                      borderRadius: 12,
-                      background: contractSum === 100 ? "#f0fdf4" : "#fffbeb",
-                      border: contractSum === 100 ? "1px solid #bbf7d0" : "1px solid #fde68a",
-                      color: contractSum === 100 ? "#166534" : "#92400e",
-                      fontSize: 14,
-                      fontWeight: 600
-                    }}
-                  >
-                    Сумма процентов: {contractSum}
-                  </div>
+                      Сумма процентов: {contractSum}
+                    </div>
+                  )}
 
                   {createContractError && (
                     <div
