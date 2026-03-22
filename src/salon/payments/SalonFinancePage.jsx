@@ -195,8 +195,6 @@ export default function SalonFinancePage() {
   const [withdrawsLoading, setWithdrawsLoading] = useState(true)
   const [createWithdrawLoading, setCreateWithdrawLoading] = useState(false)
   const [retryWithdrawId, setRetryWithdrawId] = useState("")
-  const [refreshAllLoading, setRefreshAllLoading] = useState(false)
-  const [refreshAllNotice, setRefreshAllNotice] = useState("")
 
   const [selectedMasterId, setSelectedMasterId] = useState("")
   const [masterPercent, setMasterPercent] = useState("70")
@@ -546,31 +544,6 @@ export default function SalonFinancePage() {
     }
     finally {
       setWithdrawsLoading(false)
-    }
-  }
-
-  async function refreshAllFinanceData() {
-    setRefreshAllNotice("")
-    setRefreshAllLoading(true)
-
-    try {
-      await Promise.all([
-        loadPayments(),
-        loadLedger(),
-        loadWallet(),
-        loadContracts(),
-        loadMasters(),
-        loadWithdraws()
-      ])
-
-      setRefreshAllNotice("Финансовые данные и withdraw обновлены")
-    }
-    catch (err) {
-      console.error("Refresh all finance data error:", err)
-      setRefreshAllNotice("Не удалось полностью обновить финансовые данные")
-    }
-    finally {
-      setRefreshAllLoading(false)
     }
   }
 
@@ -1494,54 +1467,9 @@ export default function SalonFinancePage() {
         </div>
 
         <SectionBlock
-          title="Управление экраном withdraw"
-          hint="Добавленный верхний контрольный блок: быстрый refresh всех финансовых данных и явная сводка по withdraw."
-          style={{ marginTop: 0 }}
-          right={(
-            <button
-              type="button"
-              onClick={refreshAllFinanceData}
-              disabled={refreshAllLoading}
-              style={{
-                ...primaryButtonStyle,
-                cursor: refreshAllLoading ? "wait" : "pointer",
-                opacity: refreshAllLoading ? 0.7 : 1
-              }}
-            >
-              {refreshAllLoading ? "Обновление..." : "Обновить финансы"}
-            </button>
-          )}
-        >
-          <div style={compactGridStyle}>
-            <InfoBox
-              label="Withdraw заявок"
-              value={withdrawsLoading ? "..." : withdraws.length}
-              note="Количество заявок на вывод по салону"
-            />
-
-            <InfoBox
-              label="Failed для retry"
-              value={withdrawsLoading ? "..." : withdrawFailedCount}
-              note="Ошибочные заявки, которые можно перезапустить"
-            />
-
-            <InfoBox
-              label="Последний payout"
-              value={lastPayoutEntry ? formatDateTime(lastPayoutEntry.created_at) : "-"}
-              note={lastPayoutEntry ? `ID: ${lastPayoutEntry.id}` : "Пока нет payout / withdraw записей"}
-            />
-          </div>
-
-          {refreshAllNotice && (
-            <div style={{ ...successBoxStyle, marginTop: 14, marginBottom: 0 }}>
-              {refreshAllNotice}
-            </div>
-          )}
-        </SectionBlock>
-
-        <SectionBlock
           title="Обзор финансов"
           hint="Ключевые показатели салона и быстрый контроль текущего финансового состояния."
+          style={{ marginTop: 0 }}
         >
           <div style={overviewGridStyle}>
             <MetricCard
