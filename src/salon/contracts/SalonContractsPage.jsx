@@ -2,14 +2,14 @@ import React, { useEffect, useMemo, useState } from "react"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
-    <section style={{ marginTop: 28, ...style }}>
+    <section style={{ marginTop: 24, ...style }}>
       <div
         style={{
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          gap: 16,
-          marginBottom: 18,
+          gap: 12,
+          marginBottom: 12,
           flexWrap: "wrap"
         }}
       >
@@ -17,10 +17,9 @@ function SectionBlock({ title, hint, right, children, style = {} }) {
           <h2
             style={{
               margin: 0,
-              fontSize: 22,
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
-              color: "#18181b"
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#111827"
             }}
           >
             {title}
@@ -29,11 +28,11 @@ function SectionBlock({ title, hint, right, children, style = {} }) {
           {hint && (
             <p
               style={{
-                margin: "8px 0 0 0",
-                fontSize: 15,
-                color: "#71717a",
-                lineHeight: 1.6,
-                maxWidth: 860
+                margin: "6px 0 0 0",
+                fontSize: 13,
+                color: "#6b7280",
+                lineHeight: 1.45,
+                maxWidth: 760
               }}
             >
               {hint}
@@ -41,7 +40,7 @@ function SectionBlock({ title, hint, right, children, style = {} }) {
           )}
         </div>
 
-        {right && <div style={{ flexShrink: 0 }}>{right}</div>}
+        {right && <div>{right}</div>}
       </div>
 
       {children}
@@ -53,11 +52,11 @@ function Card({ children, soft = false, style = {} }) {
   return (
     <div
       style={{
-        border: soft ? "1px solid #e4e4e7" : "1px solid #e7e7ec",
-        borderRadius: 24,
-        background: soft ? "#fcfcfd" : "#ffffff",
-        padding: 24,
-        boxShadow: "0 12px 32px rgba(15, 23, 42, 0.06)",
+        border: "1px solid #e5e7eb",
+        borderRadius: 16,
+        background: soft ? "#fbfcfe" : "#ffffff",
+        padding: 18,
+        boxShadow: "0 1px 2px rgba(16, 24, 40, 0.04)",
         minWidth: 0,
         ...style
       }}
@@ -71,22 +70,18 @@ function InfoBox({ label, value, note }) {
   return (
     <div
       style={{
-        border: "1px solid #ececf2",
-        borderRadius: 20,
-        padding: 18,
+        border: "1px solid #eef2f7",
+        borderRadius: 12,
+        padding: 14,
         background: "#ffffff",
-        minWidth: 0,
-        boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)"
+        minWidth: 0
       }}
     >
       <p
         style={{
           margin: 0,
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#71717a",
-          textTransform: "uppercase",
-          letterSpacing: "0.04em"
+          fontSize: 12,
+          color: "#6b7280"
         }}
       >
         {label}
@@ -94,11 +89,11 @@ function InfoBox({ label, value, note }) {
 
       <p
         style={{
-          margin: "10px 0 0 0",
-          fontSize: 30,
-          fontWeight: 800,
-          color: "#18181b",
-          lineHeight: 1.05,
+          margin: "6px 0 0 0",
+          fontSize: 22,
+          fontWeight: 700,
+          color: "#111827",
+          lineHeight: 1.15,
           wordBreak: "break-word"
         }}
       >
@@ -108,10 +103,10 @@ function InfoBox({ label, value, note }) {
       {note && (
         <p
           style={{
-            margin: "8px 0 0 0",
-            fontSize: 13,
-            color: "#a1a1aa",
-            lineHeight: 1.5
+            margin: "6px 0 0 0",
+            fontSize: 12,
+            color: "#9ca3af",
+            lineHeight: 1.4
           }}
         >
           {note}
@@ -125,12 +120,12 @@ function EmptyState({ text }) {
   return (
     <div
       style={{
-        padding: "22px 18px",
-        border: "1px dashed #d4d4d8",
-        borderRadius: 20,
-        background: "#fafafa",
-        color: "#71717a",
-        fontSize: 15
+        padding: "18px 16px",
+        border: "1px dashed #d1d5db",
+        borderRadius: 14,
+        background: "#f9fafb",
+        color: "#6b7280",
+        fontSize: 14
       }}
     >
       {text}
@@ -201,66 +196,64 @@ export default function SalonContractsPage() {
 
   const pageStyle = {
     minHeight: "100%",
-    padding: "28px 24px 40px",
-    background: "#f4f4f5"
+    padding: 20,
+    background: "#f6f7fb"
   }
 
   const shellStyle = {
-    maxWidth: 1320,
+    maxWidth: 1080,
     margin: "0 auto"
   }
 
   const pageHeaderStyle = {
-    marginBottom: 22
+    marginBottom: 18
   }
 
   const pageTitleStyle = {
     margin: 0,
-    fontSize: 38,
-    fontWeight: 900,
-    letterSpacing: "-0.03em",
-    color: "#18181b",
-    lineHeight: 1.05
+    fontSize: 28,
+    fontWeight: 700,
+    color: "#111827"
   }
 
   const pageSubtitleStyle = {
-    margin: "12px 0 0 0",
-    fontSize: 16,
-    color: "#71717a",
-    lineHeight: 1.7,
-    maxWidth: 920
+    margin: "8px 0 0 0",
+    fontSize: 14,
+    color: "#6b7280",
+    lineHeight: 1.55,
+    maxWidth: 760
   }
 
   const pageStackStyle = {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1.4fr) minmax(360px, 0.9fr)",
-    gap: 20,
+    gridTemplateColumns: "minmax(0, 1fr)",
+    gap: 16,
     alignItems: "start"
   }
 
   const compactGridStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 14
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 12
   }
 
   const formGridStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 14
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 12
   }
 
   const modelGridStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 12,
-    marginBottom: 18
+    gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+    gap: 10,
+    marginBottom: 14
   }
 
   const tableWrapStyle = {
     overflowX: "auto",
-    border: "1px solid #ececf2",
-    borderRadius: 20,
+    border: "1px solid #e5e7eb",
+    borderRadius: 14,
     background: "#ffffff",
     maxWidth: "100%"
   }
@@ -268,88 +261,85 @@ export default function SalonContractsPage() {
   const tableStyle = {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: 1040
+    minWidth: 980
   }
 
   const tableHeadCellStyle = {
     textAlign: "left",
-    padding: "14px 16px",
-    fontSize: 13,
-    fontWeight: 800,
-    color: "#71717a",
-    background: "#fafafa",
-    borderBottom: "1px solid #ececf2",
-    whiteSpace: "nowrap",
-    textTransform: "uppercase",
-    letterSpacing: "0.04em"
+    padding: "12px 14px",
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#6b7280",
+    background: "#f8fafc",
+    borderBottom: "1px solid #e5e7eb",
+    whiteSpace: "nowrap"
   }
 
   const tableCellStyle = {
-    padding: "16px",
-    fontSize: 15,
-    color: "#18181b",
-    borderBottom: "1px solid #f1f1f4",
+    padding: "12px 14px",
+    fontSize: 14,
+    color: "#111827",
+    borderBottom: "1px solid #eef2f7",
     verticalAlign: "top",
-    wordBreak: "break-word",
-    lineHeight: 1.5
+    wordBreak: "break-word"
   }
 
   const inputStyle = {
     width: "100%",
-    padding: "14px 15px",
-    border: "1px solid #d4d4d8",
-    borderRadius: 14,
+    padding: 10,
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
     boxSizing: "border-box",
     background: "#ffffff",
-    fontSize: 15,
-    color: "#18181b",
+    fontSize: 14,
+    color: "#111827",
     outline: "none"
   }
 
   const labelStyle = {
     display: "block",
-    marginBottom: 8,
-    fontWeight: 700,
-    fontSize: 14,
-    color: "#3f3f46"
+    marginBottom: 6,
+    fontWeight: 600,
+    fontSize: 13,
+    color: "#374151"
   }
 
   const fieldBlockStyle = {
-    marginBottom: 16
+    marginBottom: 14
   }
 
   const primaryButtonStyle = {
-    padding: "13px 18px",
-    border: "1px solid #18181b",
-    borderRadius: 14,
-    background: "#18181b",
+    padding: "11px 16px",
+    border: "1px solid #111827",
+    borderRadius: 10,
+    background: "#111827",
     color: "#ffffff",
     cursor: "pointer",
     fontSize: 14,
-    fontWeight: 800
+    fontWeight: 600
   }
 
   const secondaryButtonStyle = {
-    padding: "11px 14px",
-    border: "1px solid #d4d4d8",
-    borderRadius: 14,
+    padding: "8px 12px",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
     background: "#ffffff",
-    color: "#18181b",
+    color: "#111827",
     cursor: "pointer",
-    fontSize: 14,
-    fontWeight: 700,
+    fontSize: 13,
+    fontWeight: 600,
     whiteSpace: "nowrap"
   }
 
   const dangerButtonStyle = {
-    padding: "11px 14px",
+    padding: "8px 12px",
     border: "1px solid #fecaca",
-    borderRadius: 14,
-    background: "#fff1f2",
-    color: "#be123c",
+    borderRadius: 10,
+    background: "#fef2f2",
+    color: "#b91c1c",
     cursor: "pointer",
-    fontSize: 14,
-    fontWeight: 700,
+    fontSize: 13,
+    fontWeight: 600,
     whiteSpace: "nowrap"
   }
 
@@ -534,10 +524,10 @@ export default function SalonContractsPage() {
       return {
         display: "inline-flex",
         alignItems: "center",
-        padding: "6px 12px",
+        padding: "4px 10px",
         borderRadius: 999,
         fontSize: 12,
-        fontWeight: 800,
+        fontWeight: 700,
         color: "#166534",
         background: "#dcfce7"
       }
@@ -547,10 +537,10 @@ export default function SalonContractsPage() {
       return {
         display: "inline-flex",
         alignItems: "center",
-        padding: "6px 12px",
+        padding: "4px 10px",
         borderRadius: 999,
         fontSize: 12,
-        fontWeight: 800,
+        fontWeight: 700,
         color: "#92400e",
         background: "#fef3c7"
       }
@@ -560,24 +550,24 @@ export default function SalonContractsPage() {
       return {
         display: "inline-flex",
         alignItems: "center",
-        padding: "6px 12px",
+        padding: "4px 10px",
         borderRadius: 999,
         fontSize: 12,
-        fontWeight: 800,
-        color: "#52525b",
-        background: "#e4e4e7"
+        fontWeight: 700,
+        color: "#4b5563",
+        background: "#e5e7eb"
       }
     }
 
     return {
       display: "inline-flex",
       alignItems: "center",
-      padding: "6px 12px",
+      padding: "4px 10px",
       borderRadius: 999,
       fontSize: 12,
-      fontWeight: 800,
-      color: "#3f3f46",
-      background: "#f4f4f5"
+      fontWeight: 700,
+      color: "#374151",
+      background: "#f3f4f6"
     }
   }
 
@@ -913,13 +903,13 @@ export default function SalonContractsPage() {
         <div style={pageHeaderStyle}>
           <h1 style={pageTitleStyle}>Контракты салона</h1>
           <p style={pageSubtitleStyle}>
-            Управление полным жизненным циклом контрактов: создание, активация, архивация и история договорённостей по мастерам.
+            Единый блок контрактов: сводка, активные, ожидающие и архивные контракты, модели договорённостей и создание нового контракта.
           </p>
         </div>
 
         <SectionBlock
-          title="Кабинет контрактов"
-          hint="Здесь собраны текущие, ожидающие и архивные контракты, а справа — форма создания нового контракта."
+          title="Контракты"
+          hint="Единый кабинет контрактов без разделения на две колонки."
           right={
             <button
               type="button"
@@ -938,8 +928,8 @@ export default function SalonContractsPage() {
         >
           <div style={pageStackStyle}>
             <Card>
-              <div style={{ marginBottom: 18 }}>
-                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#18181b" }}>
+              <div style={{ marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
                   Сводка по контрактам
                 </h3>
               </div>
@@ -973,13 +963,13 @@ export default function SalonContractsPage() {
               {contractActionError && (
                 <div
                   style={{
-                    marginTop: 18,
-                    padding: 14,
-                    borderRadius: 16,
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: 12,
                     border: "1px solid #fecaca",
-                    background: "#fff1f2",
-                    color: "#be123c",
-                    fontSize: 15
+                    background: "#fef2f2",
+                    color: "#b91c1c",
+                    fontSize: 14
                   }}
                 >
                   {contractActionError}
@@ -989,26 +979,26 @@ export default function SalonContractsPage() {
               {contractActionSuccess && (
                 <div
                   style={{
-                    marginTop: 18,
-                    padding: 14,
-                    borderRadius: 16,
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: 12,
                     border: "1px solid #bbf7d0",
                     background: "#f0fdf4",
                     color: "#166534",
-                    fontSize: 15
+                    fontSize: 14
                   }}
                 >
                   {contractActionSuccess}
                 </div>
               )}
 
-              <div style={{ marginTop: 22 }}>
-                <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 800, color: "#18181b" }}>
+              <div style={{ marginTop: 18 }}>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
                   Активные контракты
                 </h3>
 
                 {contractsLoading && (
-                  <div style={{ color: "#71717a", fontSize: 15 }}>Загрузка...</div>
+                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
                 )}
 
                 {!contractsLoading && activeContracts.length === 0 && (
@@ -1073,13 +1063,13 @@ export default function SalonContractsPage() {
                 )}
               </div>
 
-              <div style={{ marginTop: 22 }}>
-                <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 800, color: "#18181b" }}>
+              <div style={{ marginTop: 18 }}>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
                   Ожидающие контракты
                 </h3>
 
                 {contractsLoading && (
-                  <div style={{ color: "#71717a", fontSize: 15 }}>Загрузка...</div>
+                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
                 )}
 
                 {!contractsLoading && pendingContracts.length === 0 && (
@@ -1126,7 +1116,7 @@ export default function SalonContractsPage() {
                                     disabled={actionsLocked}
                                     style={{
                                       ...primaryButtonStyle,
-                                      padding: "11px 14px",
+                                      padding: "8px 12px",
                                       width: "auto",
                                       opacity: actionsLocked ? 0.7 : 1,
                                       cursor: actionsLocked ? "wait" : "pointer"
@@ -1159,13 +1149,13 @@ export default function SalonContractsPage() {
                 )}
               </div>
 
-              <div style={{ marginTop: 22 }}>
-                <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 800, color: "#18181b" }}>
+              <div style={{ marginTop: 18 }}>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
                   Архивные контракты
                 </h3>
 
                 {contractsLoading && (
-                  <div style={{ color: "#71717a", fontSize: 15 }}>Загрузка...</div>
+                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
                 )}
 
                 {!contractsLoading && archivedContracts.length === 0 && (
@@ -1214,16 +1204,16 @@ export default function SalonContractsPage() {
             </Card>
 
             <Card soft>
-              <div style={{ marginBottom: 18 }}>
-                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#18181b" }}>
+              <div style={{ marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
                   Создать контракт
                 </h3>
-                <p style={{ margin: "8px 0 0 0", fontSize: 14, color: "#71717a", lineHeight: 1.6 }}>
-                  Создание нового договора с сохранением текущей модели terms_json и всех рабочих сценариев backend.
+                <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+                  Существующая структура сохранена. Добавлены сценарии договорённостей через модель контракта и поля в terms_json.
                 </p>
               </div>
 
-              {mastersLoading && <p style={{ margin: 0, color: "#71717a", fontSize: 15 }}>Загрузка мастеров...</p>}
+              {mastersLoading && <p style={{ margin: 0, color: "#6b7280" }}>Загрузка мастеров...</p>}
 
               {!mastersLoading && !hasMasters && (
                 <EmptyState text="Нет мастеров для создания контракта" />
@@ -1251,13 +1241,13 @@ export default function SalonContractsPage() {
                               resetMessages()
                             }}
                             style={{
-                              padding: "14px 16px",
-                              borderRadius: 16,
-                              border: isActive ? "1px solid #18181b" : "1px solid #d4d4d8",
-                              background: isActive ? "#18181b" : "#ffffff",
-                              color: isActive ? "#ffffff" : "#18181b",
-                              fontSize: 15,
-                              fontWeight: 800,
+                              padding: "12px 14px",
+                              borderRadius: 12,
+                              border: isActive ? "1px solid #111827" : "1px solid #d1d5db",
+                              background: isActive ? "#111827" : "#ffffff",
+                              color: isActive ? "#ffffff" : "#111827",
+                              fontSize: 14,
+                              fontWeight: 600,
                               textAlign: "left",
                               cursor: "pointer"
                             }}
@@ -1407,14 +1397,14 @@ export default function SalonContractsPage() {
 
                       <div
                         style={{
-                          marginBottom: 16,
-                          padding: 14,
-                          borderRadius: 16,
+                          marginBottom: 14,
+                          padding: 12,
+                          borderRadius: 12,
                           border: "1px solid #dbeafe",
                           background: "#eff6ff",
                           color: "#1d4ed8",
                           fontSize: 14,
-                          lineHeight: 1.6
+                          lineHeight: 1.5
                         }}
                       >
                         Фиксированная аренда хранится как отдельная модель в terms_json и не ломает существующий процентный сценарий.
@@ -1534,14 +1524,14 @@ export default function SalonContractsPage() {
 
                       <div
                         style={{
-                          marginBottom: 16,
-                          padding: 14,
-                          borderRadius: 16,
+                          marginBottom: 14,
+                          padding: 12,
+                          borderRadius: 12,
                           background: contractSum === 100 ? "#f0fdf4" : "#fffbeb",
                           border: contractSum === 100 ? "1px solid #bbf7d0" : "1px solid #fde68a",
                           color: contractSum === 100 ? "#166534" : "#92400e",
                           fontSize: 14,
-                          fontWeight: 700
+                          fontWeight: 600
                         }}
                       >
                         Сумма процентов гибридного договора: {contractSum}
@@ -1576,14 +1566,14 @@ export default function SalonContractsPage() {
                   {isPercentModel && (
                     <div
                       style={{
-                        marginBottom: 16,
-                        padding: 14,
-                        borderRadius: 16,
+                        marginBottom: 14,
+                        padding: 12,
+                        borderRadius: 12,
                         background: contractSum === 100 ? "#f0fdf4" : "#fffbeb",
                         border: contractSum === 100 ? "1px solid #bbf7d0" : "1px solid #fde68a",
                         color: contractSum === 100 ? "#166534" : "#92400e",
                         fontSize: 14,
-                        fontWeight: 700
+                        fontWeight: 600
                       }}
                     >
                       Сумма процентов: {contractSum}
@@ -1593,13 +1583,13 @@ export default function SalonContractsPage() {
                   {createContractError && (
                     <div
                       style={{
-                        marginBottom: 16,
-                        padding: 14,
-                        borderRadius: 16,
+                        marginBottom: 14,
+                        padding: 12,
+                        borderRadius: 12,
                         border: "1px solid #fecaca",
-                        background: "#fff1f2",
-                        color: "#be123c",
-                        fontSize: 15
+                        background: "#fef2f2",
+                        color: "#b91c1c",
+                        fontSize: 14
                       }}
                     >
                       {createContractError}
@@ -1609,13 +1599,13 @@ export default function SalonContractsPage() {
                   {createContractSuccess && (
                     <div
                       style={{
-                        marginBottom: 16,
-                        padding: 14,
-                        borderRadius: 16,
+                        marginBottom: 14,
+                        padding: 12,
+                        borderRadius: 12,
                         border: "1px solid #bbf7d0",
                         background: "#f0fdf4",
                         color: "#166534",
-                        fontSize: 15
+                        fontSize: 14
                       }}
                     >
                       {createContractSuccess}
