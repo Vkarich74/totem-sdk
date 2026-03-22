@@ -171,145 +171,141 @@ export default function MasterFinancePage() {
           ))}
         </section>
 
-        <section style={styles.mainGrid}>
-          <div style={styles.leftColumn}>
-            <SectionCard
-              title="Overview"
-              subtitle="Общий статус финансового контура мастера"
-            >
-              <div style={styles.infoGrid}>
-                <InfoRow label="Активный контракт" value={contractIsActive ? "Да" : "Нет"} />
-                <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
-                <InfoRow label="Model Type" value={activeContract?.model_type || "—"} />
-                <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
-              </div>
-            </SectionCard>
+        <section style={styles.stack}>
+          <SectionCard
+            title="Overview"
+            subtitle="Общий статус финансового контура мастера"
+          >
+            <div style={styles.infoGrid}>
+              <InfoRow label="Активный контракт" value={contractIsActive ? "Да" : "Нет"} />
+              <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
+              <InfoRow label="Model Type" value={activeContract?.model_type || "—"} />
+              <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
+            </div>
+          </SectionCard>
 
-            <SectionCard
-              title="Wallet"
-              subtitle="Баланс и кошелёк мастера"
-            >
-              <div style={styles.placeholderBlock}>
-                <div style={styles.placeholderTitle}>Wallet section ready for sync</div>
-                <p style={styles.paragraph}>
-                  Блок подготовлен под единый dashboard layout. Источник данных не менялся.
-                  Подключение wallet-метрик остаётся на существующей backend-архитектуре.
-                </p>
-              </div>
-            </SectionCard>
+          <SectionCard
+            title="Wallet"
+            subtitle="Баланс и кошелёк мастера"
+          >
+            <div style={styles.placeholderBlock}>
+              <div style={styles.placeholderTitle}>Wallet section ready for sync</div>
+              <p style={styles.paragraph}>
+                Блок подготовлен под единый dashboard layout. Источник данных не менялся.
+                Подключение wallet-метрик остаётся на существующей backend-архитектуре.
+              </p>
+            </div>
+          </SectionCard>
 
-            <SectionCard
-              title="Contracts"
-              subtitle="Активный контракт и история изменений"
-            >
-              <div style={styles.contractCard}>
-                <div style={styles.contractHeader}>
-                  <div style={styles.contractStatusWrap}>
-                    <span
-                      style={{
-                        ...styles.badge,
-                        ...(contractIsActive ? styles.badgeSuccess : styles.badgeMuted)
-                      }}
-                    >
-                      {contractIsActive ? "ACTIVE" : "NO ACTIVE CONTRACT"}
-                    </span>
-                  </div>
+          <SectionCard
+            title="Contracts"
+            subtitle="Активный контракт и история изменений"
+          >
+            <div style={styles.contractCard}>
+              <div style={styles.contractHeader}>
+                <div style={styles.contractStatusWrap}>
+                  <span
+                    style={{
+                      ...styles.badge,
+                      ...(contractIsActive ? styles.badgeSuccess : styles.badgeMuted)
+                    }}
+                  >
+                    {contractIsActive ? "ACTIVE" : "NO ACTIVE CONTRACT"}
+                  </span>
                 </div>
-
-                {contractIsActive ? (
-                  <div style={styles.infoGrid}>
-                    <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
-                    <InfoRow label="Model" value={activeContract?.model_type || "—"} />
-                    <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
-                  </div>
-                ) : (
-                  <p style={styles.emptyText}>Активный контракт отсутствует</p>
-                )}
               </div>
 
-              <div style={styles.historyWrap}>
-                <div style={styles.subsectionTitle}>Contract History</div>
+              {contractIsActive ? (
+                <div style={styles.infoGrid}>
+                  <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
+                  <InfoRow label="Model" value={activeContract?.model_type || "—"} />
+                  <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
+                </div>
+              ) : (
+                <p style={styles.emptyText}>Активный контракт отсутствует</p>
+              )}
+            </div>
 
-                {history.length === 0 ? (
-                  <div style={styles.emptyPanel}>История контрактов отсутствует</div>
-                ) : (
-                  <div style={styles.tableWrap}>
-                    <table style={styles.table}>
-                      <thead>
-                        <tr>
-                          <th style={styles.th}>Contract ID</th>
-                          <th style={styles.th}>Status</th>
-                          <th style={styles.th}>Start Date</th>
+            <div style={styles.historyWrap}>
+              <div style={styles.subsectionTitle}>Contract History</div>
+
+              {history.length === 0 ? (
+                <div style={styles.emptyPanel}>История контрактов отсутствует</div>
+              ) : (
+                <div style={styles.tableWrap}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Contract ID</th>
+                        <th style={styles.th}>Status</th>
+                        <th style={styles.th}>Start Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.map((item) => (
+                        <tr key={item.contract_id}>
+                          <td style={styles.td}>{item.contract_id || "—"}</td>
+                          <td style={styles.td}>{item.status || "—"}</td>
+                          <td style={styles.td}>{item.start_date || "—"}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {history.map((item) => (
-                          <tr key={item.contract_id}>
-                            <td style={styles.td}>{item.contract_id || "—"}</td>
-                            <td style={styles.td}>{item.status || "—"}</td>
-                            <td style={styles.td}>{item.start_date || "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </SectionCard>
-          </div>
-
-          <div style={styles.rightColumn}>
-            <SectionCard
-              title="Settlements"
-              subtitle="Правила распределения и расчётов"
-            >
-              <p style={styles.paragraph}>
-                Правила распределения дохода определяются активным контрактом.
-                Блок сохранён в master-кабинете в той же архитектурной позиции,
-                что и в salon finance.
-              </p>
-
-              <div style={styles.noteBox}>
-                <div style={styles.noteTitle}>Settlement source</div>
-                <div style={styles.noteText}>
-                  Данные зависят от contract terms и backend settlement pipeline.
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+              )}
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Settlements"
+            subtitle="Правила распределения и расчётов"
+          >
+            <p style={styles.paragraph}>
+              Правила распределения дохода определяются активным контрактом.
+              Блок сохранён в master-кабинете в той же архитектурной позиции,
+              что и в salon finance.
+            </p>
+
+            <div style={styles.noteBox}>
+              <div style={styles.noteTitle}>Settlement source</div>
+              <div style={styles.noteText}>
+                Данные зависят от contract terms и backend settlement pipeline.
               </div>
-            </SectionCard>
+            </div>
+          </SectionCard>
 
-            <SectionCard
-              title="Payouts"
-              subtitle="Выплаты мастеру"
-            >
-              <p style={styles.paragraph}>
-                Метод выплат определяется настройками платформы и текущей финансовой конфигурацией.
-              </p>
+          <SectionCard
+            title="Payouts"
+            subtitle="Выплаты мастеру"
+          >
+            <p style={styles.paragraph}>
+              Метод выплат определяется настройками платформы и текущей финансовой конфигурацией.
+            </p>
 
-              <div style={styles.noteBox}>
-                <div style={styles.noteTitle}>Payout status</div>
-                <div style={styles.noteText}>
-                  UI выровнен. Бизнес-логика выплат и withdraw pipeline не изменялись.
-                </div>
+            <div style={styles.noteBox}>
+              <div style={styles.noteTitle}>Payout status</div>
+              <div style={styles.noteText}>
+                UI выровнен. Бизнес-логика выплат и withdraw pipeline не изменялись.
               </div>
-            </SectionCard>
+            </div>
+          </SectionCard>
 
-            <SectionCard
-              title="Ledger"
-              subtitle="Финансовый журнал"
-            >
-              <p style={styles.paragraph}>
-                Ledger layer остаётся системным источником истины. В этой версии блок
-                приведён к единому cabinet layout без вмешательства в ledger structure.
-              </p>
+          <SectionCard
+            title="Ledger"
+            subtitle="Финансовый журнал"
+          >
+            <p style={styles.paragraph}>
+              Ledger layer остаётся системным источником истины. В этой версии блок
+              приведён к единому cabinet layout без вмешательства в ledger structure.
+            </p>
 
-              <div style={styles.noteBox}>
-                <div style={styles.noteTitle}>Ledger integrity</div>
-                <div style={styles.noteText}>
-                  Double-entry механика, reference_type и backend ledger logic не изменялись.
-                </div>
+            <div style={styles.noteBox}>
+              <div style={styles.noteTitle}>Ledger integrity</div>
+              <div style={styles.noteText}>
+                Double-entry механика, reference_type и backend ledger logic не изменялись.
               </div>
-            </SectionCard>
-          </div>
+            </div>
+          </SectionCard>
         </section>
       </div>
     </div>
@@ -344,7 +340,7 @@ const styles = {
     padding: "24px"
   },
   container: {
-    maxWidth: "1400px",
+    maxWidth: "1200px",
     margin: "0 auto"
   },
   header: {
@@ -417,17 +413,7 @@ const styles = {
     color: "#111827",
     wordBreak: "break-word"
   },
-  mainGrid: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1.5fr) minmax(320px, 0.9fr)",
-    gap: "24px",
-    alignItems: "start"
-  },
-  leftColumn: {
-    display: "grid",
-    gap: "24px"
-  },
-  rightColumn: {
+  stack: {
     display: "grid",
     gap: "24px"
   },
