@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from "react"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
@@ -192,6 +191,13 @@ export default function SalonFinancePage() {
   const [masters, setMasters] = useState([])
   const [mastersLoading, setMastersLoading] = useState(true)
 
+  const [withdraws, setWithdraws] = useState([])
+  const [withdrawsLoading, setWithdrawsLoading] = useState(true)
+  const [createWithdrawLoading, setCreateWithdrawLoading] = useState(false)
+  const [retryWithdrawId, setRetryWithdrawId] = useState("")
+  const [refreshAllLoading, setRefreshAllLoading] = useState(false)
+  const [refreshAllNotice, setRefreshAllNotice] = useState("")
+
   const [selectedMasterId, setSelectedMasterId] = useState("")
   const [masterPercent, setMasterPercent] = useState("70")
   const [salonPercent, setSalonPercent] = useState("20")
@@ -214,6 +220,7 @@ export default function SalonFinancePage() {
   const [walletLoading, setWalletLoading] = useState(true)
 
   const salonSlug = "totem-demo-salon"
+  const apiBase = "https://api.totemv.com"
 
   const pageStyle = {
     minHeight: "100%",
@@ -319,13 +326,6 @@ export default function SalonFinancePage() {
     outline: "none"
   }
 
-  const disabledInputStyle = {
-    ...inputStyle,
-    background: "#f9fafb",
-    color: "#9ca3af",
-    cursor: "not-allowed"
-  }
-
   const labelStyle = {
     display: "block",
     marginBottom: 6,
@@ -355,9 +355,29 @@ export default function SalonFinancePage() {
     borderRadius: 10,
     background: "#ffffff",
     color: "#374151",
-    cursor: "not-allowed",
+    cursor: "pointer",
     fontSize: 14,
     fontWeight: 600
+  }
+
+  const errorBoxStyle = {
+    marginBottom: 14,
+    padding: 12,
+    borderRadius: 12,
+    border: "1px solid #fecaca",
+    background: "#fef2f2",
+    color: "#b91c1c",
+    fontSize: 14
+  }
+
+  const successBoxStyle = {
+    marginBottom: 14,
+    padding: 12,
+    borderRadius: 12,
+    border: "1px solid #bbf7d0",
+    background: "#f0fdf4",
+    color: "#166534",
+    fontSize: 14
   }
 
   useEffect(() => {
@@ -366,21 +386,34 @@ export default function SalonFinancePage() {
     loadWallet()
     loadContracts()
     loadMasters()
+    loadWithdraws()
   }, [])
+
+  async function readJsonSafe(res) {
+    try {
+      return await res.json()
+    }
+    catch {
+      return {}
+    }
+  }
 
   async function loadPayments() {
     try {
       const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/payments`
+        `${apiBase}/internal/salons/${salonSlug}/payments`
       )
 
-      const data = await res.json()
+      const data = await readJsonSafe(res)
 
       if (Array.isArray(data)) {
         setPayments(data)
       }
-      else if (data.payments) {
+      else if (Array.isArray(data.payments)) {
         setPayments(data.payments)
+      }
+      else {
+        setPayments([])
       }
     }
     catch (err) {
@@ -394,16 +427,19 @@ export default function SalonFinancePage() {
   async function loadLedger() {
     try {
       const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/ledger`
+        `${apiBase}/internal/salons/${salonSlug}/ledger`
       )
 
-      const data = await res.json()
+      const data = await readJsonSafe(res)
 
       if (Array.isArray(data)) {
         setLedger(data)
       }
-      else if (data.ledger) {
+      else if (Array.isArray(data.ledger)) {
         setLedger(data.ledger)
+      }
+      else {
+        setLedger([])
       }
     }
     catch (err) {
@@ -417,10 +453,10 @@ export default function SalonFinancePage() {
   async function loadWallet() {
     try {
       const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/wallet-balance`
+        `${apiBase}/internal/salons/${salonSlug}/wallet-balance`
       )
 
-      const data = await res.json()
+      const data = await readJsonSafe(res)
 
       if (data.balance !== undefined) {
         setWalletBalance(data.balance)
@@ -437,16 +473,19 @@ export default function SalonFinancePage() {
   async function loadContracts() {
     try {
       const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`
+        `${apiBase}/internal/salons/${salonSlug}/contracts`
       )
 
-      const data = await res.json()
+      const data = await readJsonSafe(res)
 
       if (Array.isArray(data)) {
         setContracts(data)
       }
-      else if (data.contracts) {
+      else if (Array.isArray(data.contracts)) {
         setContracts(data.contracts)
+      }
+      else {
+        setContracts([])
       }
     }
     catch (err) {
@@ -460,16 +499,19 @@ export default function SalonFinancePage() {
   async function loadMasters() {
     try {
       const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/masters`
+        `${apiBase}/internal/salons/${salonSlug}/masters`
       )
 
-      const data = await res.json()
+      const data = await readJsonSafe(res)
 
       if (Array.isArray(data)) {
         setMasters(data)
       }
-      else if (data.masters) {
+      else if (Array.isArray(data.masters)) {
         setMasters(data.masters)
+      }
+      else {
+        setMasters([])
       }
     }
     catch (err) {
@@ -477,6 +519,58 @@ export default function SalonFinancePage() {
     }
     finally {
       setMastersLoading(false)
+    }
+  }
+
+  async function loadWithdraws() {
+    try {
+      const res = await fetch(
+        `${apiBase}/internal/salons/${salonSlug}/withdraws`
+      )
+
+      const data = await readJsonSafe(res)
+
+      if (Array.isArray(data)) {
+        setWithdraws(data)
+      }
+      else if (Array.isArray(data.withdraws)) {
+        setWithdraws(data.withdraws)
+      }
+      else {
+        setWithdraws([])
+      }
+    }
+    catch (err) {
+      console.error("Withdraws load error:", err)
+      setWithdraws([])
+    }
+    finally {
+      setWithdrawsLoading(false)
+    }
+  }
+
+  async function refreshAllFinanceData() {
+    setRefreshAllNotice("")
+    setRefreshAllLoading(true)
+
+    try {
+      await Promise.all([
+        loadPayments(),
+        loadLedger(),
+        loadWallet(),
+        loadContracts(),
+        loadMasters(),
+        loadWithdraws()
+      ])
+
+      setRefreshAllNotice("Финансовые данные и withdraw обновлены")
+    }
+    catch (err) {
+      console.error("Refresh all finance data error:", err)
+      setRefreshAllNotice("Не удалось полностью обновить финансовые данные")
+    }
+    finally {
+      setRefreshAllLoading(false)
     }
   }
 
@@ -528,7 +622,7 @@ export default function SalonFinancePage() {
       }
 
       const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`,
+        `${apiBase}/internal/salons/${salonSlug}/contracts`,
         {
           method: "POST",
           headers: {
@@ -538,7 +632,7 @@ export default function SalonFinancePage() {
         }
       )
 
-      const data = await res.json()
+      const data = await readJsonSafe(res)
 
       if (!res.ok || !data.ok) {
         setCreateContractError(data.error || "Не удалось создать контракт")
@@ -557,7 +651,7 @@ export default function SalonFinancePage() {
     }
   }
 
-  function prepareWithdraw(event) {
+  async function createWithdraw(event) {
     event.preventDefault()
 
     setWithdrawError("")
@@ -580,14 +674,93 @@ export default function SalonFinancePage() {
       return
     }
 
-    setWithdrawNotice(
-      "Форма подготовки вывода заполнена корректно. Выполнение внешнего вывода будет активировано после получения ключей xPay и подключения backend endpoint для salon withdraw."
-    )
+    setCreateWithdrawLoading(true)
+
+    try {
+      const payload = {
+        method: withdrawMethod,
+        amount: amountValue,
+        recipient: withdrawRecipient.trim(),
+        comment: withdrawComment.trim()
+      }
+
+      const res = await fetch(
+        `${apiBase}/internal/salons/${salonSlug}/withdraws`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        }
+      )
+
+      const data = await readJsonSafe(res)
+
+      if (!res.ok || data?.ok === false) {
+        setWithdrawError(data.error || "Не удалось создать заявку на вывод")
+        return
+      }
+
+      setWithdrawNotice("Заявка на вывод создана")
+      setWithdrawAmount("")
+      setWithdrawComment("")
+      setWithdrawRecipient("")
+      await Promise.all([loadWithdraws(), loadWallet(), loadLedger()])
+    }
+    catch (err) {
+      console.error("Create withdraw error:", err)
+      setWithdrawError("Ошибка создания заявки на вывод")
+    }
+    finally {
+      setCreateWithdrawLoading(false)
+    }
+  }
+
+  async function retryWithdraw(withdrawId) {
+    setWithdrawError("")
+    setWithdrawNotice("")
+    setRetryWithdrawId(String(withdrawId))
+
+    try {
+      const res = await fetch(
+        `${apiBase}/internal/withdraws/${withdrawId}/retry`,
+        {
+          method: "POST"
+        }
+      )
+
+      const data = await readJsonSafe(res)
+
+      if (!res.ok || data?.ok === false) {
+        setWithdrawError(data.error || "Не удалось повторить вывод")
+        return
+      }
+
+      setWithdrawNotice(`Повторный запуск вывода ${withdrawId} отправлен`)
+      await Promise.all([loadWithdraws(), loadLedger(), loadWallet()])
+    }
+    catch (err) {
+      console.error("Retry withdraw error:", err)
+      setWithdrawError("Ошибка повторного запуска вывода")
+    }
+    finally {
+      setRetryWithdrawId("")
+    }
   }
 
   function formatAmount(value) {
-    if (value === null || value === undefined) return "-"
-    return Number(value)
+    if (value === null || value === undefined || value === "") return "-"
+    const number = Number(value)
+
+    if (Number.isNaN(number)) {
+      return String(value)
+    }
+
+    return number.toLocaleString("ru-RU", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })
   }
 
   function formatDateTime(value) {
@@ -611,12 +784,15 @@ export default function SalonFinancePage() {
   function formatStatus(value) {
     if (value === "active") return "Активный"
     if (value === "pending") return "Ожидает"
+    if (value === "processing") return "В обработке"
+    if (value === "completed") return "Завершён"
+    if (value === "failed") return "Ошибка"
     if (value === "archived") return "Архивный"
     return value || "-"
   }
 
   function getStatusStyle(status) {
-    if (status === "active") {
+    if (status === "active" || status === "completed") {
       return {
         display: "inline-flex",
         alignItems: "center",
@@ -639,6 +815,32 @@ export default function SalonFinancePage() {
         fontWeight: 700,
         color: "#92400e",
         background: "#fef3c7"
+      }
+    }
+
+    if (status === "processing") {
+      return {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#1d4ed8",
+        background: "#dbeafe"
+      }
+    }
+
+    if (status === "failed") {
+      return {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#b91c1c",
+        background: "#fee2e2"
       }
     }
 
@@ -759,6 +961,27 @@ export default function SalonFinancePage() {
     )
   }
 
+  function getWithdrawMethodLabel(methodValue) {
+    const withdrawMethodLabels = {
+      bank: "Банковский счёт",
+      card: "Карта",
+      wallet: "Электронный кошелёк",
+      xpay: "xPay"
+    }
+
+    return withdrawMethodLabels[methodValue] || methodValue || "-"
+  }
+
+  function getWithdrawRecipient(item) {
+    return (
+      item?.recipient ||
+      item?.recipient_value ||
+      item?.destination ||
+      item?.external_account ||
+      "-"
+    )
+  }
+
   const activeContracts = useMemo(
     () => contracts.filter((c) => c.status === "active"),
     [contracts]
@@ -767,6 +990,43 @@ export default function SalonFinancePage() {
   const pendingContracts = useMemo(
     () => contracts.filter((c) => c.status === "pending"),
     [contracts]
+  )
+
+  const sortedWithdraws = useMemo(
+    () =>
+      withdraws
+        .slice()
+        .sort((a, b) => {
+          const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0
+          const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0
+          return bTime - aTime
+        }),
+    [withdraws]
+  )
+
+  const withdrawPendingCount = useMemo(
+    () => withdraws.filter((item) => item?.status === "pending").length,
+    [withdraws]
+  )
+
+  const withdrawProcessingCount = useMemo(
+    () => withdraws.filter((item) => item?.status === "processing").length,
+    [withdraws]
+  )
+
+  const withdrawCompletedCount = useMemo(
+    () => withdraws.filter((item) => item?.status === "completed").length,
+    [withdraws]
+  )
+
+  const withdrawFailedCount = useMemo(
+    () => withdraws.filter((item) => item?.status === "failed").length,
+    [withdraws]
+  )
+
+  const withdrawAmountTotal = useMemo(
+    () => withdraws.reduce((sum, item) => sum + Number(item?.amount || 0), 0),
+    [withdraws]
   )
 
   const todayRevenue = getRevenueByDays(1)
@@ -803,15 +1063,7 @@ export default function SalonFinancePage() {
   )
 
   const lastPayoutEntry = payoutEntries[0] || null
-
-  const withdrawMethodLabels = {
-    bank: "Банковский счёт",
-    card: "Карта",
-    wallet: "Электронный кошелёк",
-    xpay: "xPay"
-  }
-
-  const selectedWithdrawMethodLabel = withdrawMethodLabels[withdrawMethod] || withdrawMethod || "-"
+  const selectedWithdrawMethodLabel = getWithdrawMethodLabel(withdrawMethod)
 
   const withdrawActivationChecklist = [
     {
@@ -819,8 +1071,8 @@ export default function SalonFinancePage() {
       status: withdrawRecipient.trim() && Number(withdrawAmount || 0) > 0 ? "ok" : "warn",
       note:
         withdrawRecipient.trim() && Number(withdrawAmount || 0) > 0
-          ? "Реквизит и сумма заполнены для предварительной заявки"
-          : "Заполни реквизит и сумму, чтобы подготовить заявку"
+          ? "Реквизит и сумма заполнены для заявки"
+          : "Заполни реквизит и сумму, чтобы создать заявку"
     },
     {
       label: "Баланс кошелька",
@@ -830,14 +1082,18 @@ export default function SalonFinancePage() {
         : "Ожидается ответ wallet-balance"
     },
     {
-      label: "Backend endpoint",
-      status: "warn",
-      note: "Нужен endpoint salon withdraw для реального внешнего списания"
+      label: "Список withdraw",
+      status: withdrawsLoading ? "loading" : "ok",
+      note: withdrawsLoading
+        ? "Идёт загрузка списка withdraw"
+        : `Загружено ${withdraws.length} заявок`
     },
     {
-      label: "Провайдер payout",
-      status: "warn",
-      note: "Ключи xPay ещё не получены, прямой вывод пока не активирован"
+      label: "Retry для failed",
+      status: withdrawFailedCount > 0 ? "warn" : "ok",
+      note: withdrawFailedCount > 0
+        ? `Есть ${withdrawFailedCount} failed заявок, доступен retry`
+        : "Failed заявок сейчас нет"
     }
   ]
 
@@ -850,12 +1106,12 @@ export default function SalonFinancePage() {
     {
       title: "Заявка на вывод",
       value: selectedWithdrawMethodLabel,
-      note: "UI уже умеет собрать способ, реквизит, сумму и комментарий"
+      note: "UI отправляет способ, реквизит, сумму и комментарий"
     },
     {
-      title: "Леджер",
-      value: payoutEntries.length > 0 ? `${payoutEntries.length} payout / withdraw` : "Пока нет операций",
-      note: "После активации backend каждая операция должна фиксироваться debit записью"
+      title: "Статусы",
+      value: `${withdrawPendingCount}/${withdrawProcessingCount}/${withdrawCompletedCount}/${withdrawFailedCount}`,
+      note: "pending / processing / completed / failed"
     },
     {
       title: "Внешний получатель",
@@ -863,7 +1119,6 @@ export default function SalonFinancePage() {
       note: "Реквизит внешнего счёта, карты, кошелька или xPay ID"
     }
   ]
-
 
   const pipelineChecks = [
     {
@@ -891,13 +1146,13 @@ export default function SalonFinancePage() {
       note: walletReady ? "Баланс кошелька получен" : "Идёт загрузка баланса"
     },
     {
-      label: "Внешний вывод",
-      status: payoutEntries.length > 0 ? "ok" : "warn",
-      value: payoutEntries.length > 0 ? `${payoutEntries.length}` : "0",
+      label: "Withdraw",
+      status: withdrawsLoading ? "loading" : "ok",
+      value: withdrawsLoading ? "..." : `${withdraws.length}`,
       note:
-        payoutEntries.length > 0
-          ? `Найдены payout / withdraw операции на ${formatAmount(payoutAmountTotal)} KGS`
-          : "История внешнего вывода пока не сформирована"
+        withdrawsLoading
+          ? "Идёт загрузка withdraw заявок"
+          : "Бизнес-слой withdraw подключён к UI"
     }
   ]
 
@@ -1080,13 +1335,13 @@ export default function SalonFinancePage() {
   }
 
   function renderWithdrawHistory() {
-    if (ledgerLoading) {
+    if (withdrawsLoading) {
       return <EmptyState text="Загрузка истории вывода средств..." />
     }
 
-    if (payoutEntries.length === 0) {
+    if (sortedWithdraws.length === 0) {
       return (
-        <EmptyState text="История вывода средств пока пуста. После подключения провайдера здесь появятся внешние payout / withdraw операции салона." />
+        <EmptyState text="Withdraw заявки пока не найдены" />
       )
     }
 
@@ -1096,27 +1351,51 @@ export default function SalonFinancePage() {
           <thead>
             <tr>
               <th style={tableHeadCellStyle}>ID</th>
-              <th style={tableHeadCellStyle}>Тип</th>
+              <th style={tableHeadCellStyle}>Статус</th>
+              <th style={tableHeadCellStyle}>Метод</th>
+              <th style={tableHeadCellStyle}>Получатель</th>
               <th style={tableHeadCellStyle}>Сумма</th>
-              <th style={tableHeadCellStyle}>Источник</th>
-              <th style={tableHeadCellStyle}>Дата</th>
+              <th style={tableHeadCellStyle}>Создан</th>
+              <th style={tableHeadCellStyle}>Действия</th>
             </tr>
           </thead>
 
           <tbody>
-            {payoutEntries.map((entry) => (
-              <tr key={entry.id}>
-                <td style={tableCellStyle}>{entry.id}</td>
-                <td style={tableCellStyle}>
-                  <span style={getStatusStyle("pending")}>
-                    {String(entry.reference_type || "").toLowerCase() === "withdraw" ? "withdraw" : "payout"}
-                  </span>
-                </td>
-                <td style={tableCellStyle}>{formatAmount(entry.amount)} KGS</td>
-                <td style={tableCellStyle}>{entry.reference_id || "-"}</td>
-                <td style={tableCellStyle}>{formatDateTime(entry.created_at)}</td>
-              </tr>
-            ))}
+            {sortedWithdraws.map((item, index) => {
+              const isLast = index === sortedWithdraws.length - 1
+              const retryDisabled = item?.status !== "failed" || retryWithdrawId === String(item.id)
+
+              return (
+                <tr key={item.id}>
+                  {renderCell(item.id, isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(
+                    <span style={getStatusStyle(item.status)}>{formatStatus(item.status)}</span>,
+                    isLast ? { borderBottom: "none" } : {}
+                  )}
+                  {renderCell(getWithdrawMethodLabel(item.method), isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(getWithdrawRecipient(item), isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(`${formatAmount(item.amount)} KGS`, isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(formatDateTime(item.created_at), isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(
+                    <button
+                      type="button"
+                      disabled={retryDisabled}
+                      onClick={() => retryWithdraw(item.id)}
+                      style={{
+                        ...secondaryButtonStyle,
+                        cursor: retryDisabled ? "not-allowed" : "pointer",
+                        opacity: retryDisabled ? 0.55 : 1,
+                        padding: "8px 12px",
+                        fontSize: 13
+                      }}
+                    >
+                      {retryWithdrawId === String(item.id) ? "Повтор..." : "Retry"}
+                    </button>,
+                    isLast ? { borderBottom: "none" } : {}
+                  )}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -1210,14 +1489,59 @@ export default function SalonFinancePage() {
           <h1 style={pageTitleStyle}>Финансы салона</h1>
           <p style={pageSubtitleStyle}>
             Финальная структура страницы: обзор, кошелёк, контракты, правила расчётов,
-            способы выплат, вывод средств, платежи и леджер — на одной странице без изменения API.
+            withdraw, платежи и леджер — на одной странице без изменения архитектуры backend.
           </p>
         </div>
 
         <SectionBlock
+          title="Управление экраном withdraw"
+          hint="Добавленный верхний контрольный блок: быстрый refresh всех финансовых данных и явная сводка по withdraw."
+          style={{ marginTop: 0 }}
+          right={(
+            <button
+              type="button"
+              onClick={refreshAllFinanceData}
+              disabled={refreshAllLoading}
+              style={{
+                ...primaryButtonStyle,
+                cursor: refreshAllLoading ? "wait" : "pointer",
+                opacity: refreshAllLoading ? 0.7 : 1
+              }}
+            >
+              {refreshAllLoading ? "Обновление..." : "Обновить финансы"}
+            </button>
+          )}
+        >
+          <div style={compactGridStyle}>
+            <InfoBox
+              label="Withdraw заявок"
+              value={withdrawsLoading ? "..." : withdraws.length}
+              note="Количество заявок на вывод по салону"
+            />
+
+            <InfoBox
+              label="Failed для retry"
+              value={withdrawsLoading ? "..." : withdrawFailedCount}
+              note="Ошибочные заявки, которые можно перезапустить"
+            />
+
+            <InfoBox
+              label="Последний payout"
+              value={lastPayoutEntry ? formatDateTime(lastPayoutEntry.created_at) : "-"}
+              note={lastPayoutEntry ? `ID: ${lastPayoutEntry.id}` : "Пока нет payout / withdraw записей"}
+            />
+          </div>
+
+          {refreshAllNotice && (
+            <div style={{ ...successBoxStyle, marginTop: 14, marginBottom: 0 }}>
+              {refreshAllNotice}
+            </div>
+          )}
+        </SectionBlock>
+
+        <SectionBlock
           title="Обзор финансов"
           hint="Ключевые показатели салона и быстрый контроль текущего финансового состояния."
-          style={{ marginTop: 0 }}
         >
           <div style={overviewGridStyle}>
             <MetricCard
@@ -1500,33 +1824,13 @@ export default function SalonFinancePage() {
                   </div>
 
                   {createContractError && (
-                    <div
-                      style={{
-                        marginBottom: 14,
-                        padding: 12,
-                        borderRadius: 12,
-                        border: "1px solid #fecaca",
-                        background: "#fef2f2",
-                        color: "#b91c1c",
-                        fontSize: 14
-                      }}
-                    >
+                    <div style={errorBoxStyle}>
                       {createContractError}
                     </div>
                   )}
 
                   {createContractSuccess && (
-                    <div
-                      style={{
-                        marginBottom: 14,
-                        padding: 12,
-                        borderRadius: 12,
-                        border: "1px solid #bbf7d0",
-                        background: "#f0fdf4",
-                        color: "#166534",
-                        fontSize: 14
-                      }}
-                    >
+                    <div style={successBoxStyle}>
                       {createContractSuccess}
                     </div>
                   )}
@@ -1568,56 +1872,67 @@ export default function SalonFinancePage() {
 
         <SectionBlock
           title="Вывод средств"
-          hint="Внешний вывод средств подготовлен как полноценный UI-блок. Выполнение payout останется закрытым до получения ключей xPay и backend endpoint."
+          hint="Рабочий бизнес-UI: create withdraw, список статусов и retry для failed."
         >
           <div style={twoColumnGridStyle}>
             <Card>
               <div style={compactGridStyle}>
                 <InfoBox
-                  label="Статус интеграции"
-                  value="Ожидает ключи"
-                  note="xPay ещё не подключён к внешнему payout flow"
+                  label="Pending"
+                  value={withdrawsLoading ? "..." : withdrawPendingCount}
+                  note="Новые заявки на вывод"
                 />
 
                 <InfoBox
-                  label="Источник средств"
-                  value="Кошелёк салона"
-                  note="После подключения провайдера вывод будет идти из wallet balance"
+                  label="Processing"
+                  value={withdrawsLoading ? "..." : withdrawProcessingCount}
+                  note="Заявки в обработке"
                 />
 
                 <InfoBox
-                  label="Текущий баланс"
-                  value={walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
-                  note="Доступный остаток для будущего внешнего вывода"
+                  label="Completed"
+                  value={withdrawsLoading ? "..." : withdrawCompletedCount}
+                  note="Успешно завершённые выводы"
                 />
 
                 <InfoBox
-                  label="История payout"
-                  value={ledgerLoading ? "..." : payoutEntries.length}
-                  note="Уже зафиксированные внешние списания в леджере"
+                  label="Failed"
+                  value={withdrawsLoading ? "..." : withdrawFailedCount}
+                  note="Ошибки вывода, доступен retry"
                 />
               </div>
 
-              <div
-                style={{
-                  marginTop: 16,
-                  padding: 14,
-                  borderRadius: 12,
-                  border: "1px solid #dbeafe",
-                  background: "#eff6ff",
-                  color: "#1d4ed8",
-                  fontSize: 14,
-                  lineHeight: 1.5
-                }}
-              >
-                Инструмент вывода добавлен в структуру страницы и подготовлен для работы с внешним payout provider.
-                Сейчас форма нужна для подготовки UX и финальной схемы вывода. Реальное списание намеренно выключено
-                до получения ключей и подтверждения backend endpoint для salon withdraw.
+              <div style={{ marginTop: 14 }}>
+                <div style={compactGridStyle}>
+                  <InfoBox
+                    label="Всего заявок"
+                    value={withdrawsLoading ? "..." : withdraws.length}
+                    note="Полный список withdraw по салону"
+                  />
+
+                  <InfoBox
+                    label="Сумма заявок"
+                    value={withdrawsLoading ? "..." : `${formatAmount(withdrawAmountTotal)} KGS`}
+                    note="Совокупный объём заявок на вывод"
+                  />
+
+                  <InfoBox
+                    label="Текущий баланс"
+                    value={walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
+                    note="Доступный остаток кошелька"
+                  />
+
+                  <InfoBox
+                    label="Ledger payout"
+                    value={ledgerLoading ? "..." : payoutEntries.length}
+                    note="Сверка с payout / withdraw в леджере"
+                  />
+                </div>
               </div>
             </Card>
 
             <Card soft>
-              <form onSubmit={prepareWithdraw}>
+              <form onSubmit={createWithdraw}>
                 <div style={fieldBlockStyle}>
                   <label style={labelStyle}>Куда выводить</label>
                   <select
@@ -1665,24 +1980,6 @@ export default function SalonFinancePage() {
                   />
                 </div>
 
-                <div style={fieldBlockStyle}>
-                  <div
-                    style={{
-                      padding: 12,
-                      borderRadius: 12,
-                      background: "#f9fafb",
-                      border: "1px solid #e5e7eb",
-                      color: "#4b5563",
-                      fontSize: 13,
-                      lineHeight: 1.5
-                    }}
-                  >
-                    Подготовка заявки не отправляет деньги наружу. Она проверяет данные формы и фиксирует,
-                    что UI готов к подключению провайдера.
-                    {withdrawComment ? ` Комментарий: ${withdrawComment}` : ""}
-                  </div>
-                </div>
-
                 {withdrawError && (
                   <div style={errorBoxStyle}>
                     {withdrawError}
@@ -1696,20 +1993,24 @@ export default function SalonFinancePage() {
                 )}
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button type="submit" style={secondaryButtonStyle}>
-                    Подготовить вывод
+                  <button
+                    type="submit"
+                    disabled={createWithdrawLoading}
+                    style={{
+                      ...primaryButtonStyle,
+                      cursor: createWithdrawLoading ? "wait" : "pointer",
+                      opacity: createWithdrawLoading ? 0.7 : 1
+                    }}
+                  >
+                    {createWithdrawLoading ? "Создание..." : "Вывести деньги"}
                   </button>
 
                   <button
                     type="button"
-                    style={{
-                      ...secondaryButtonStyle,
-                      opacity: 0.55,
-                      cursor: "not-allowed"
-                    }}
-                    disabled
+                    onClick={loadWithdraws}
+                    style={secondaryButtonStyle}
                   >
-                    Выполнить вывод
+                    Обновить список
                   </button>
                 </div>
               </form>
@@ -1719,59 +2020,16 @@ export default function SalonFinancePage() {
 
         <SectionBlock
           title="История вывода средств"
-          hint="Журнал debit / payout операций салона по данным леджера. Этот блок нужен для контроля внешних выводов и ручной сверки."
+          hint="Основной журнал withdraw со статусами pending / processing / completed / failed и retry для failed."
         >
-          <div style={twoColumnGridStyle}>
-            <Card>
-              <div style={compactGridStyle}>
-                <InfoBox
-                  label="Операций вывода"
-                  value={ledgerLoading ? "..." : payoutEntries.length}
-                  note="Количество payout / withdraw записей в леджере"
-                />
-
-                <InfoBox
-                  label="Сумма выводов"
-                  value={ledgerLoading ? "..." : `${formatAmount(payoutAmountTotal)} KGS`}
-                  note="Совокупный объём внешних списаний"
-                />
-
-                <InfoBox
-                  label="Последний вывод"
-                  value={lastPayoutEntry ? formatDateTime(lastPayoutEntry.created_at) : "-"}
-                  note={lastPayoutEntry ? `ID: ${lastPayoutEntry.id}` : "Пока нет завершённых payout / withdraw записей"}
-                />
-              </div>
-            </Card>
-
-            <Card soft>
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 12,
-                  border: "1px solid #e5e7eb",
-                  background: "#ffffff",
-                  color: "#4b5563",
-                  fontSize: 14,
-                  lineHeight: 1.55
-                }}
-              >
-                Этот блок не создаёт новые транзакции. Он только показывает историю выводов, уже попавших в леджер.
-                После активации backend endpoint для salon withdraw здесь можно будет сверять заявку на вывод,
-                факт списания и внешний payout provider в одном месте.
-              </div>
-            </Card>
-          </div>
-
-          <Card style={{ marginTop: 14 }}>
+          <Card>
             {renderWithdrawHistory()}
           </Card>
         </SectionBlock>
 
-
         <SectionBlock
           title="Маршрут внешнего вывода"
-          hint="Полная схема вывода средств салона на внешний источник. Этот блок не отправляет деньги, а фиксирует готовность контура payout / withdraw."
+          hint="Полная схема вывода средств салона на внешний источник."
         >
           <div style={threeColumnGridStyle}>
             {withdrawRouteSteps.map((item) => (
@@ -1895,14 +2153,13 @@ export default function SalonFinancePage() {
                   lineHeight: 1.6
                 }}
               >
-                Внешний вывод средств салона должен идти по цепочке:
+                Внешний вывод средств салона идёт по цепочке:
                 <br />
                 <strong>кошелёк салона → заявка на вывод → backend withdraw endpoint → payout provider → debit в леджере.</strong>
                 <br />
                 <br />
-                Сейчас эта страница уже подготовила UX и контрольные блоки для такой схемы.
-                После подключения backend endpoint и ключей xPay здесь не нужно будет ломать структуру —
-                достаточно активировать выполнение заявки и связать её с реальным provider flow.
+                Этот экран уже переведён из заглушки в рабочий business UI:
+                создание заявки, чтение списка withdraw, отображение статусов и retry для failed.
               </div>
             </Card>
           </div>
@@ -1989,86 +2246,6 @@ export default function SalonFinancePage() {
         </SectionBlock>
 
         <SectionBlock
-          title="Готовность внешнего вывода"
-          hint="Финальная операционная секция перед включением реального salon withdraw. Здесь ничего не списывается и не меняет backend, блок только фиксирует состояние подготовки."
-        >
-          <div style={threeColumnGridStyle}>
-            <Card>
-              <InfoBox
-                label="Backend endpoint"
-                value="Не активирован"
-                note="POST /internal/salons/:slug/withdraw ещё не включён. До его появления выполняется только UI-подготовка."
-              />
-            </Card>
-
-            <Card>
-              <InfoBox
-                label="xPay ключи"
-                value="Ожидание"
-                note="Провайдер ещё не передал production credentials. До получения ключей внешний вывод намеренно выключен."
-              />
-            </Card>
-
-            <Card>
-              <InfoBox
-                label="Последний выбранный метод"
-                value={
-                  withdrawMethod === "bank"
-                    ? "Банковский счёт"
-                    : withdrawMethod === "card"
-                      ? "Карта"
-                      : withdrawMethod === "wallet"
-                        ? "Электронный кошелёк"
-                        : "xPay"
-                }
-                note="UI уже держит маршрут вывода и реквизит, поэтому после включения backend останется только подключить реальный запрос."
-              />
-            </Card>
-          </div>
-
-          <Card style={{ marginTop: 14 }}>
-            <div style={{ display: "grid", gap: 12 }}>
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 12,
-                  border: "1px solid #e5e7eb",
-                  background: "#ffffff",
-                  color: "#374151",
-                  fontSize: 14,
-                  lineHeight: 1.55
-                }}
-              >
-                Готовность контура внешнего вывода сейчас выглядит так: баланс кошелька уже виден в UI, payout операции уже попадают в леджер,
-                история выводов уже отображается, а форма вывода уже собирает необходимые данные. Для полного запуска остался только backend endpoint
-                вывода и подключение ключей payout provider / xPay.
-              </div>
-
-              <div style={compactGridStyle}>
-                <InfoBox
-                  label="Баланс для вывода"
-                  value={walletLoading ? "..." : `${formatAmount(walletBalance)} KGS`}
-                  note="Текущее доступное значение по API кошелька"
-                />
-
-                <InfoBox
-                  label="Заявленная сумма"
-                  value={withdrawAmount ? `${formatAmount(withdrawAmount)} KGS` : "Не указана"}
-                  note="Последнее значение в форме вывода средств"
-                />
-
-                <InfoBox
-                  label="История payout"
-                  value={ledgerLoading ? "..." : payoutEntries.length}
-                  note="Количество уже зафиксированных payout / withdraw операций"
-                />
-              </div>
-            </div>
-          </Card>
-        </SectionBlock>
-
-
-        <SectionBlock
           title="История контрактов"
           hint="Полный список созданных контрактов с датой создания и статусом."
         >
@@ -2093,6 +2270,52 @@ export default function SalonFinancePage() {
           <Card>
             {renderLedgerTable()}
           </Card>
+        </SectionBlock>
+
+        <SectionBlock
+          title="Сверка payout по леджеру"
+          hint="Дополнительная сверка ledger payout / withdraw независимо от бизнес-списка withdraw."
+        >
+          <div style={twoColumnGridStyle}>
+            <Card>
+              <div style={compactGridStyle}>
+                <InfoBox
+                  label="Операций в леджере"
+                  value={ledgerLoading ? "..." : payoutEntries.length}
+                  note="Количество payout / withdraw записей"
+                />
+
+                <InfoBox
+                  label="Сумма в леджере"
+                  value={ledgerLoading ? "..." : `${formatAmount(payoutAmountTotal)} KGS`}
+                  note="Совокупный объём payout / withdraw в леджере"
+                />
+
+                <InfoBox
+                  label="Последняя запись"
+                  value={lastPayoutEntry ? formatDateTime(lastPayoutEntry.created_at) : "-"}
+                  note={lastPayoutEntry ? `ID: ${lastPayoutEntry.id}` : "Пока нет payout / withdraw записей"}
+                />
+              </div>
+            </Card>
+
+            <Card soft>
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  color: "#4b5563",
+                  fontSize: 14,
+                  lineHeight: 1.55
+                }}
+              >
+                Этот блок ничего не создаёт. Он нужен для ручной сверки:
+                бизнес-список withdraw сверху и леджер payout / withdraw снизу должны совпадать по факту движения денег.
+              </div>
+            </Card>
+          </div>
         </SectionBlock>
       </div>
     </div>
