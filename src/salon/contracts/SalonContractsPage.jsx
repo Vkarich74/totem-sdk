@@ -2,14 +2,14 @@ import React, { useEffect, useMemo, useState } from "react"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
-    <section style={{ marginTop: 24, ...style }}>
+    <section style={{ marginTop: 28, ...style }}>
       <div
         style={{
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          gap: 12,
-          marginBottom: 12,
+          gap: 16,
+          marginBottom: 14,
           flexWrap: "wrap"
         }}
       >
@@ -24,13 +24,15 @@ function SectionBlock({ title, hint, right, children, style = {} }) {
           >
             {title}
           </h2>
+
           {hint && (
             <p
               style={{
                 margin: "6px 0 0 0",
                 fontSize: 13,
                 color: "#6b7280",
-                lineHeight: 1.45
+                lineHeight: 1.5,
+                maxWidth: 760
               }}
             >
               {hint}
@@ -53,7 +55,7 @@ function Card({ children, soft = false, style = {} }) {
         border: "1px solid #e5e7eb",
         borderRadius: 16,
         background: soft ? "#fbfcfe" : "#ffffff",
-        padding: 18,
+        padding: 22,
         boxShadow: "0 1px 2px rgba(16, 24, 40, 0.04)",
         ...style
       }}
@@ -69,8 +71,9 @@ function InfoBox({ label, value, note }) {
       style={{
         border: "1px solid #eef2f7",
         borderRadius: 12,
-        padding: 14,
-        background: "#ffffff"
+        padding: 16,
+        background: "#ffffff",
+        minHeight: 122
       }}
     >
       <p
@@ -85,10 +88,11 @@ function InfoBox({ label, value, note }) {
 
       <p
         style={{
-          margin: "6px 0 0 0",
-          fontSize: 22,
+          margin: "8px 0 0 0",
+          fontSize: 24,
           fontWeight: 700,
-          color: "#111827"
+          color: "#111827",
+          lineHeight: 1.15
         }}
       >
         {value}
@@ -97,10 +101,10 @@ function InfoBox({ label, value, note }) {
       {note && (
         <p
           style={{
-            margin: "6px 0 0 0",
+            margin: "8px 0 0 0",
             fontSize: 12,
             color: "#9ca3af",
-            lineHeight: 1.4
+            lineHeight: 1.45
           }}
         >
           {note}
@@ -149,12 +153,12 @@ export default function SalonContractsPage() {
 
   const pageStyle = {
     minHeight: "100%",
-    padding: 24,
+    padding: 28,
     background: "#f6f7fb"
   }
 
   const shellStyle = {
-    maxWidth: 1400,
+    maxWidth: 1560,
     margin: "0 auto"
   }
 
@@ -164,35 +168,36 @@ export default function SalonContractsPage() {
 
   const pageTitleStyle = {
     margin: 0,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 700,
     color: "#111827"
   }
 
   const pageSubtitleStyle = {
-    margin: "6px 0 0 0",
+    margin: "8px 0 0 0",
     fontSize: 14,
     color: "#6b7280",
-    lineHeight: 1.5
+    lineHeight: 1.55,
+    maxWidth: 920
   }
 
   const twoColumnGridStyle = {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.8fr)",
-    gap: 16,
+    gridTemplateColumns: "minmax(0, 1.35fr) minmax(460px, 0.95fr)",
+    gap: 20,
     alignItems: "start"
   }
 
   const compactGridStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 12
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 14
   }
 
   const formGridStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 12
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 14
   }
 
   const tableWrapStyle = {
@@ -205,12 +210,12 @@ export default function SalonContractsPage() {
   const tableStyle = {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: 720
+    minWidth: 760
   }
 
   const tableHeadCellStyle = {
     textAlign: "left",
-    padding: "12px 14px",
+    padding: "13px 14px",
     fontSize: 12,
     fontWeight: 700,
     color: "#6b7280",
@@ -220,7 +225,7 @@ export default function SalonContractsPage() {
   }
 
   const tableCellStyle = {
-    padding: "12px 14px",
+    padding: "13px 14px",
     fontSize: 14,
     color: "#111827",
     borderBottom: "1px solid #eef2f7",
@@ -229,7 +234,7 @@ export default function SalonContractsPage() {
 
   const inputStyle = {
     width: "100%",
-    padding: 10,
+    padding: 11,
     border: "1px solid #d1d5db",
     borderRadius: 10,
     boxSizing: "border-box",
@@ -545,7 +550,7 @@ export default function SalonContractsPage() {
         >
           <div style={twoColumnGridStyle}>
             <Card>
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 18 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
                   Сводка по контрактам
                 </h3>
@@ -571,8 +576,8 @@ export default function SalonContractsPage() {
                 />
               </div>
 
-              <div style={{ marginTop: 18 }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
+              <div style={{ marginTop: 22 }}>
+                <h3 style={{ margin: "0 0 12px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
                   Активные контракты
                 </h3>
 
@@ -618,8 +623,8 @@ export default function SalonContractsPage() {
                 )}
               </div>
 
-              <div style={{ marginTop: 18 }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
+              <div style={{ marginTop: 22 }}>
+                <h3 style={{ margin: "0 0 12px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
                   Ожидающие контракты
                 </h3>
 
@@ -666,8 +671,8 @@ export default function SalonContractsPage() {
               </div>
             </Card>
 
-            <Card soft>
-              <div style={{ marginBottom: 16 }}>
+            <Card soft style={{ position: "sticky", top: 20 }}>
+              <div style={{ marginBottom: 18 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
                   Создать контракт
                 </h3>
@@ -755,7 +760,7 @@ export default function SalonContractsPage() {
                   <div
                     style={{
                       marginBottom: 14,
-                      padding: 12,
+                      padding: 14,
                       borderRadius: 12,
                       background: contractSum === 100 ? "#f0fdf4" : "#fffbeb",
                       border: contractSum === 100 ? "1px solid #bbf7d0" : "1px solid #fde68a",
@@ -805,7 +810,8 @@ export default function SalonContractsPage() {
                     style={{
                       ...primaryButtonStyle,
                       opacity: createContractLoading ? 0.7 : 1,
-                      cursor: createContractLoading ? "wait" : "pointer"
+                      cursor: createContractLoading ? "wait" : "pointer",
+                      width: "100%"
                     }}
                   >
                     {createContractLoading ? "Создание..." : "Создать контракт"}
