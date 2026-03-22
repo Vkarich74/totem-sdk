@@ -1,5 +1,7 @@
-import {useMemo} from "react"
-import {useMaster} from "./MasterContext"
+import { useMemo, useEffect, useState } from "react"
+import { useMaster } from "./MasterContext"
+
+const API = "https://api.totemv.com"
 
 function normalizeStatus(s){
 
@@ -74,7 +76,35 @@ export default function MasterMoneyPage(){
 
 const {metrics,bookings,master}=useMaster()
 
+const [wallet,setWallet]=useState(null)
+
 const masterName=master?.name
+const slug=master?.slug
+
+useEffect(()=>{
+
+if(!slug) return
+
+async function loadWallet(){
+
+try{
+
+const r=await fetch(API+"/internal/masters/"+slug+"/wallet-balance")
+const j=await r.json()
+
+if(j?.ok){
+setWallet(j.balance||0)
+}
+
+}catch(e){
+console.error("WALLET_LOAD_FAILED",e)
+}
+
+}
+
+loadWallet()
+
+},[slug])
 
 const recent=useMemo(()=>{
 
@@ -103,13 +133,8 @@ marginBottom:"16px"
 }}>
 
 <Card
-title="Доход сегодня"
-value={money(metrics.revenue_today)}
-/>
-
-<Card
-title="Доход месяц"
-value={money(metrics.revenue_month)}
+title="Баланс"
+value={wallet===null ? "..." : money(wallet)}
 />
 
 <Card
