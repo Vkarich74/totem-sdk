@@ -147,6 +147,15 @@ function formatMoney(value, currency = "USD") {
   }).format(amount)
 }
 
+async function safeReadJson(response) {
+  try {
+    return await response.json()
+  }
+  catch {
+    return {}
+  }
+}
+
 export default function SalonContractsPage() {
   const [contracts, setContracts] = useState([])
   const [contractsLoading, setContractsLoading] = useState(true)
@@ -335,9 +344,14 @@ export default function SalonContractsPage() {
   }
 
   useEffect(() => {
-    loadContracts()
-    loadMasters()
+    initializePage()
   }, [])
+
+  async function initializePage() {
+    setContractsLoading(true)
+    setMastersLoading(true)
+    await Promise.all([loadContracts(), loadMasters()])
+  }
 
   async function loadContracts() {
     try {
@@ -345,12 +359,12 @@ export default function SalonContractsPage() {
         `https://api.totemv.com/internal/salons/${salonSlug}/contracts`
       )
 
-      const data = await res.json()
+      const data = await safeReadJson(res)
 
       if (Array.isArray(data)) {
         setContracts(data)
       }
-      else if (data.contracts) {
+      else if (Array.isArray(data.contracts)) {
         setContracts(data.contracts)
       }
       else {
@@ -372,12 +386,12 @@ export default function SalonContractsPage() {
         `https://api.totemv.com/internal/salons/${salonSlug}/masters`
       )
 
-      const data = await res.json()
+      const data = await safeReadJson(res)
 
       if (Array.isArray(data)) {
         setMasters(data)
       }
-      else if (data.masters) {
+      else if (Array.isArray(data.masters)) {
         setMasters(data.masters)
       }
       else {
@@ -393,11 +407,36 @@ export default function SalonContractsPage() {
     }
   }
 
+  async function refreshContracts() {
+    setContractsLoading(true)
+    await loadContracts()
+  }
+
   function resetMessages() {
     setCreateContractError("")
     setCreateContractSuccess("")
     setContractActionError("")
     setContractActionSuccess("")
+  }
+
+  function resetCreateForm() {
+    setSelectedMasterId("")
+    setContractModel("percentage")
+    setMasterPercent("70")
+    setSalonPercent("20")
+    setPlatformPercent("10")
+    setPayoutSchedule("manual")
+    setEffectiveFrom("")
+    setCurrency("USD")
+    setRentAmount("")
+    setRentPeriod("monthly")
+    setSettlementMode("accrued")
+    setSalaryAmount("")
+    setSalaryPeriod("monthly")
+    setBonusPercent("")
+    setHybridBaseType("salary")
+    setHybridBaseAmount("")
+    setHybridBasePeriod("monthly")
   }
 
   function getContractTerms(contract) {
@@ -710,6 +749,10 @@ export default function SalonContractsPage() {
   async function createContract(event) {
     event.preventDefault()
 
+    if (createContractLoading) {
+      return
+    }
+
     resetMessages()
 
     const validationError = validateCreateForm()
@@ -742,7 +785,7 @@ export default function SalonContractsPage() {
         }
       )
 
-      const data = await res.json()
+      const data = await safeReadJson(res)
 
       if (!res.ok || !data.ok) {
         setCreateContractError(data.error || "Не удалось создать контракт")
@@ -750,7 +793,8 @@ export default function SalonContractsPage() {
       }
 
       setCreateContractSuccess("Контракт создан в статусе ожидания")
-      await loadContracts()
+      resetCreateForm()
+      await refreshContracts()
     }
     catch (err) {
       console.error("Create contract error:", err)
@@ -762,6 +806,10 @@ export default function SalonContractsPage() {
   }
 
   async function acceptContract(contractId) {
+    if (contractActionLoadingId) {
+      return
+    }
+
     resetMessages()
     setContractActionLoadingId(contractId)
 
@@ -773,7 +821,7 @@ export default function SalonContractsPage() {
         }
       )
 
-      const data = await res.json()
+      const data = await safeReadJson(res)
 
       if (!res.ok || !data.ok) {
         setContractActionError(data.error || "Не удалось принять контракт")
@@ -781,7 +829,7 @@ export default function SalonContractsPage() {
       }
 
       setContractActionSuccess("Контракт переведён в активный статус")
-      await loadContracts()
+      await refreshContracts()
     }
     catch (err) {
       console.error("Accept contract error:", err)
@@ -793,6 +841,10 @@ export default function SalonContractsPage() {
   }
 
   async function archiveContract(contractId) {
+    if (contractActionLoadingId) {
+      return
+    }
+
     resetMessages()
     setContractActionLoadingId(contractId)
 
@@ -804,7 +856,7 @@ export default function SalonContractsPage() {
         }
       )
 
-      const data = await res.json()
+      const data = await safeReadJson(res)
 
       if (!res.ok || !data.ok) {
         setContractActionError(data.error || "Не удалось архивировать контракт")
@@ -812,7 +864,7 @@ export default function SalonContractsPage() {
       }
 
       setContractActionSuccess("Контракт переведён в архив")
-      await loadContracts()
+      await refreshContracts()
     }
     catch (err) {
       console.error("Archive contract error:", err)
@@ -843,6 +895,7 @@ export default function SalonContractsPage() {
   const isRentModel = contractModel === "fixed_rent"
   const isSalaryModel = contractModel === "salary"
   const isHybridModel = contractModel === "hybrid"
+  const hasMasters = masters.length > 0
 
   return (
     <div style={pageStyle}>
@@ -857,6 +910,20 @@ export default function SalonContractsPage() {
         <SectionBlock
           title="Контракты"
           hint="Единый блок: сводка, активные, ожидающие и архивные контракты, модели договорённостей и создание нового контракта."
+          right={
+            <button
+              type="button"
+              onClick={refreshContracts}
+              disabled={contractsLoading || Boolean(contractActionLoadingId) || createContractLoading}
+              style={{
+                ...secondaryButtonStyle,
+                opacity: contractsLoading || contractActionLoadingId || createContractLoading ? 0.7 : 1,
+                cursor: contractsLoading || contractActionLoadingId || createContractLoading ? "wait" : "pointer"
+              }}
+            >
+              {contractsLoading ? "Обновление..." : "Обновить"}
+            </button>
+          }
           style={{ marginTop: 0 }}
         >
           <div style={pageStackStyle}>
@@ -957,6 +1024,7 @@ export default function SalonContractsPage() {
                         {activeContracts.map((c, index) => {
                           const isLast = index === activeContracts.length - 1
                           const isBusy = contractActionLoadingId === c.id
+                          const actionsLocked = Boolean(contractActionLoadingId)
 
                           return (
                             <tr key={c.id}>
@@ -974,11 +1042,11 @@ export default function SalonContractsPage() {
                                   <button
                                     type="button"
                                     onClick={() => archiveContract(c.id)}
-                                    disabled={isBusy}
+                                    disabled={actionsLocked}
                                     style={{
                                       ...dangerButtonStyle,
-                                      opacity: isBusy ? 0.7 : 1,
-                                      cursor: isBusy ? "wait" : "pointer"
+                                      opacity: actionsLocked ? 0.7 : 1,
+                                      cursor: actionsLocked ? "wait" : "pointer"
                                     }}
                                   >
                                     {isBusy ? "Обработка..." : "Архивировать"}
@@ -1027,6 +1095,7 @@ export default function SalonContractsPage() {
                         {pendingContracts.map((c, index) => {
                           const isLast = index === pendingContracts.length - 1
                           const isBusy = contractActionLoadingId === c.id
+                          const actionsLocked = Boolean(contractActionLoadingId)
 
                           return (
                             <tr key={c.id}>
@@ -1044,13 +1113,13 @@ export default function SalonContractsPage() {
                                   <button
                                     type="button"
                                     onClick={() => acceptContract(c.id)}
-                                    disabled={isBusy}
+                                    disabled={actionsLocked}
                                     style={{
                                       ...primaryButtonStyle,
                                       padding: "8px 12px",
                                       width: "auto",
-                                      opacity: isBusy ? 0.7 : 1,
-                                      cursor: isBusy ? "wait" : "pointer"
+                                      opacity: actionsLocked ? 0.7 : 1,
+                                      cursor: actionsLocked ? "wait" : "pointer"
                                     }}
                                   >
                                     {isBusy ? "Обработка..." : "Принять"}
@@ -1059,14 +1128,14 @@ export default function SalonContractsPage() {
                                   <button
                                     type="button"
                                     onClick={() => archiveContract(c.id)}
-                                    disabled={isBusy}
+                                    disabled={actionsLocked}
                                     style={{
                                       ...secondaryButtonStyle,
-                                      opacity: isBusy ? 0.7 : 1,
-                                      cursor: isBusy ? "wait" : "pointer"
+                                      opacity: actionsLocked ? 0.7 : 1,
+                                      cursor: actionsLocked ? "wait" : "pointer"
                                     }}
                                   >
-                                    Архивировать
+                                    {isBusy ? "Обработка..." : "Архивировать"}
                                   </button>
                                 </div>,
                                 isLast ? { borderBottom: "none" } : {}
@@ -1146,7 +1215,11 @@ export default function SalonContractsPage() {
 
               {mastersLoading && <p style={{ margin: 0, color: "#6b7280" }}>Загрузка мастеров...</p>}
 
-              {!mastersLoading && (
+              {!mastersLoading && !hasMasters && (
+                <EmptyState text="Нет мастеров для создания контракта" />
+              )}
+
+              {!mastersLoading && hasMasters && (
                 <form onSubmit={createContract}>
                   <div style={fieldBlockStyle}>
                     <label style={labelStyle}>Модель договора</label>
@@ -1541,11 +1614,11 @@ export default function SalonContractsPage() {
 
                   <button
                     type="submit"
-                    disabled={createContractLoading}
+                    disabled={createContractLoading || Boolean(contractActionLoadingId)}
                     style={{
                       ...primaryButtonStyle,
-                      opacity: createContractLoading ? 0.7 : 1,
-                      cursor: createContractLoading ? "wait" : "pointer",
+                      opacity: createContractLoading || contractActionLoadingId ? 0.7 : 1,
+                      cursor: createContractLoading || contractActionLoadingId ? "wait" : "pointer",
                       width: "100%"
                     }}
                   >
