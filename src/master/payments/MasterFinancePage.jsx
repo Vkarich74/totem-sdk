@@ -9,32 +9,100 @@ import {
   isContractActive
 } from "../../core/contracts/contractEngine";
 
+function getMasterSlug() {
+  if (window.MASTER_SLUG) {
+    return window.MASTER_SLUG;
+  }
+
+  const parts = window.location.pathname.split("/");
+
+  if (parts.length >= 3 && parts[1] === "master") {
+    return parts[2];
+  }
+
+  if (parts.length >= 3 && parts[1] === "salon") {
+    return parts[2];
+  }
+
+  return null;
+}
+
 export default function MasterFinancePage() {
   const [activeContract, setActiveContract] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const masterId = "current";
+  const masterId = getMasterSlug();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadFinance() {
       try {
-        const active = await fetchActiveContract(masterId);
-        const hist = await fetchContractHistory(masterId);
+        setLoading(true);
+        setError(null);
 
-        setActiveContract(active || null);
-        setHistory(Array.isArray(hist) ? hist : []);
+        if (!masterId) {
+          console.error("MASTER_SLUG_NOT_FOUND");
+          if (!cancelled) {
+            setActiveContract(null);
+            setHistory([]);
+            setError("Не найден master slug");
+          }
+          return;
+        }
+
+        const [activeResult, historyResult] = await Promise.allSettled([
+          fetchActiveContract(masterId),
+          fetchContractHistory(masterId)
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (activeResult.status === "fulfilled") {
+          setActiveContract(activeResult.value || null);
+        } else {
+          console.error("Active contract load error:", activeResult.reason);
+          setActiveContract(null);
+        }
+
+        if (historyResult.status === "fulfilled") {
+          setHistory(Array.isArray(historyResult.value) ? historyResult.value : []);
+        } else {
+          console.error("Contract history load error:", historyResult.reason);
+          setHistory([]);
+        }
+
+        if (
+          activeResult.status === "rejected" &&
+          historyResult.status === "rejected"
+        ) {
+          setError("Ошибка загрузки финансовых данных");
+        }
       } catch (err) {
         console.error("Finance load error:", err);
-        setError("Ошибка загрузки финансовых данных");
+
+        if (!cancelled) {
+          setActiveContract(null);
+          setHistory([]);
+          setError("Ошибка загрузки финансовых данных");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadFinance();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [masterId]);
 
   const contractIsActive = useMemo(() => {
     return activeContract ? isContractActive(activeContract) : false;
@@ -71,16 +139,6 @@ export default function MasterFinancePage() {
     );
   }
 
-  if (error) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <div style={styles.errorCard}>{error}</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={styles.page}>
       <div style={styles.container}>
@@ -94,6 +152,15 @@ export default function MasterFinancePage() {
             </p>
           </div>
         </header>
+
+        {error ? (
+          <section style={styles.warningBanner}>
+            <div style={styles.warningTitle}>Часть финансовых данных недоступна</div>
+            <div style={styles.warningText}>
+              Страница открыта в безопасном режиме. Проверь console и network по contract endpoint.
+            </div>
+          </section>
+        ) : null}
 
         <section style={styles.overviewGrid}>
           {overviewItems.map((item) => (
@@ -304,6 +371,24 @@ const styles = {
     lineHeight: 1.6,
     color: "#6b7280",
     maxWidth: "860px"
+  },
+  warningBanner: {
+    marginBottom: "20px",
+    padding: "16px 18px",
+    borderRadius: "16px",
+    border: "1px solid #fde68a",
+    background: "#fffbeb"
+  },
+  warningTitle: {
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#92400e",
+    marginBottom: "6px"
+  },
+  warningText: {
+    fontSize: "13px",
+    lineHeight: 1.6,
+    color: "#a16207"
   },
   overviewGrid: {
     display: "grid",
@@ -523,13 +608,5 @@ const styles = {
     padding: "20px",
     fontSize: "14px",
     color: "#374151"
-  },
-  errorCard: {
-    background: "#fff1f2",
-    border: "1px solid #fecdd3",
-    borderRadius: "16px",
-    padding: "20px",
-    fontSize: "14px",
-    color: "#9f1239"
   }
 };
