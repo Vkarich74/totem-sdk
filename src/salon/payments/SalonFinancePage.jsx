@@ -349,31 +349,26 @@ export default function SalonFinancePage() {
 
   const errorBoxStyle = {
     marginTop: 10,
+    marginBottom: 12,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     background: "#fef2f2",
     border: "1px solid #fecaca",
     color: "#991b1b",
-    fontSize: 13
+    fontSize: 13,
+    lineHeight: 1.45
   }
 
   const successBoxStyle = {
     marginTop: 10,
+    marginBottom: 12,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     background: "#ecfdf5",
     border: "1px solid #bbf7d0",
     color: "#065f46",
-    fontSize: 13
-  }
-    padding: "11px 16px",
-    border: "1px solid #d1d5db",
-    borderRadius: 10,
-    background: "#ffffff",
-    color: "#374151",
-    cursor: "not-allowed",
-    fontSize: 14,
-    fontWeight: 600
+    fontSize: 13,
+    lineHeight: 1.45
   }
 
   useEffect(() => {
@@ -603,6 +598,7 @@ export default function SalonFinancePage() {
   function getMasterName(contract) {
     const contractMasterId = contract?.master_id
     const contractMasterSlug = contract?.master_slug
+
     return contractMasterSlug || contractMasterId || "-"
   }
 
