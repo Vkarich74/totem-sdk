@@ -149,14 +149,22 @@ export default function MasterFinancePage() {
         }
 
         if (settlementsResult.status === "fulfilled") {
-          setSettlements(Array.isArray(settlementsResult.value?.periods) ? settlementsResult.value.periods : []);
+          setSettlements(
+            Array.isArray(settlementsResult.value?.periods)
+              ? settlementsResult.value.periods
+              : []
+          );
         } else {
           console.error("Settlements load error:", settlementsResult.reason);
           setSettlements([]);
         }
 
         if (ledgerResult.status === "fulfilled") {
-          setLedger(Array.isArray(ledgerResult.value?.ledger) ? ledgerResult.value.ledger : []);
+          setLedger(
+            Array.isArray(ledgerResult.value?.ledger)
+              ? ledgerResult.value.ledger
+              : []
+          );
         } else {
           console.error("Ledger load error:", ledgerResult.reason);
           setLedger([]);
@@ -220,6 +228,16 @@ export default function MasterFinancePage() {
     return sumAmounts(refundReverseEntries);
   }, [refundReverseEntries]);
 
+  const realIncomeTotal = useMemo(() => {
+    return sumAmounts(
+      ledger.filter(
+        (item) =>
+          item?.reference_type === "payout" &&
+          item?.direction === "credit"
+      )
+    );
+  }, [ledger]);
+
   const overviewItems = useMemo(() => {
     return [
       {
@@ -227,20 +245,20 @@ export default function MasterFinancePage() {
         value: wallet?.ok ? money(wallet.balance) : "—"
       },
       {
+        label: "Реальный доход",
+        value: money(realIncomeTotal)
+      },
+      {
+        label: "Текущие начисления",
+        value: money(settlementTotal)
+      },
+      {
         label: "Расчетных периодов",
         value: String(settlements.length)
       },
       {
-        label: "Начислено по settlement",
-        value: money(settlementTotal)
-      },
-      {
         label: "Выплат / payout",
         value: String(payoutEntries.length)
-      },
-      {
-        label: "Выведено",
-        value: money(payoutTotal)
       },
       {
         label: "Refund reverse",
@@ -257,10 +275,10 @@ export default function MasterFinancePage() {
     ];
   }, [
     wallet,
-    settlements.length,
+    realIncomeTotal,
     settlementTotal,
+    settlements.length,
     payoutEntries.length,
-    payoutTotal,
     refundReverseTotal,
     contractIsActive,
     activeContract
@@ -318,7 +336,8 @@ export default function MasterFinancePage() {
               <InfoRow label="Model Type" value={activeContract?.model_type || "—"} />
               <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
               <InfoRow label="Wallet Balance" value={wallet?.ok ? money(wallet.balance) : "—"} />
-              <InfoRow label="Settlement Total" value={money(settlementTotal)} />
+              <InfoRow label="Real Income" value={money(realIncomeTotal)} />
+              <InfoRow label="Current Settlements" value={money(settlementTotal)} />
               <InfoRow label="Payout Total" value={money(payoutTotal)} />
             </div>
           </SectionCard>
@@ -420,7 +439,7 @@ export default function MasterFinancePage() {
 
           <SectionCard
             title="Settlements"
-            subtitle="Начисления мастера по расчетным периодам"
+            subtitle="Текущие начисления мастера по расчетным периодам"
           >
             {settlements.length === 0 ? (
               <div style={styles.emptyPanel}>Расчетных периодов пока нет</div>
@@ -493,7 +512,7 @@ export default function MasterFinancePage() {
 
           <SectionCard
             title="Payouts"
-            subtitle="Фактические выводы мастеру из ledger"
+            subtitle="Фактические выплаты мастеру из ledger"
           >
             {payoutEntries.length === 0 ? (
               <div style={styles.emptyPanel}>Выплат пока нет</div>
