@@ -7,30 +7,29 @@ import EmptyState from "../../cabinet/EmptyState";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
-function resolveSlug() {
-  if (window.SALON_SLUG) return window.SALON_SLUG;
-  const parts = window.location.pathname.split("/");
-  return parts[2] || "totem-demo-salon";
+function resolveSlugFromHash() {
+  const hash = window.location.hash || "";
+  const clean = hash.replace(/^#\/?/, "");
+  const parts = clean.split("/");
+  return parts[1] || window.SALON_SLUG || "totem-demo-salon";
 }
 
-function statusLabel(status){
-  if(status === "active") return "Активен";
-  if(status === "pending") return "Ожидает";
-  if(status === "fired") return "Уволен";
+function statusLabel(status) {
+  if (status === "active") return "Активен";
+  if (status === "pending") return "Ожидает";
+  if (status === "fired") return "Уволен";
   return status;
 }
 
-export default function MastersPage(){
-
-  const slug = resolveSlug();
+export default function MastersPage(props) {
+  const slug = props?.slug || resolveSlugFromHash();
 
   const [masters, setMasters] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [search,setSearch] = useState("");
+  const [search, setSearch] = useState("");
   const [processingId, setProcessingId] = useState(null);
 
   async function loadMasters() {
-
     try {
       setLoading(true);
 
@@ -39,36 +38,30 @@ export default function MastersPage(){
 
       if (Array.isArray(data)) {
         setMasters(data);
-      }
-      else if (data && Array.isArray(data.masters)) {
+      } else if (data && Array.isArray(data.masters)) {
         setMasters(data.masters);
-      }
-      else {
+      } else {
         setMasters([]);
       }
-
     } catch (e) {
       console.error("LOAD_MASTERS_ERROR", e);
       setMasters([]);
     } finally {
       setLoading(false);
     }
-
   }
 
   useEffect(() => {
     loadMasters();
-  }, []);
+  }, [slug]);
 
-  // 🔥 НОВЫЙ terminate flow (главный)
   async function terminate(masterId) {
-
-    const confirmText = "Прекратить сотрудничество с мастером?\n\nЭто действие:\n- архивирует контракт\n- отключит услуги\n- уберёт мастера из салона";
+    const confirmText =
+      "Прекратить сотрудничество с мастером?\n\nЭто действие:\n- архивирует активные и ожидающие контракты\n- отключит услуги мастера\n- уберёт мастера из активного списка салона";
 
     if (!window.confirm(confirmText)) return;
 
     try {
-
       setProcessingId(masterId);
 
       const res = await fetch(
@@ -78,25 +71,21 @@ export default function MastersPage(){
 
       const data = await res.json();
 
-      if (!data.ok) {
-        alert("Ошибка при увольнении");
+      if (!res.ok || !data.ok) {
+        alert(data?.error || "Ошибка при прекращении сотрудничества");
         return;
       }
 
-      loadMasters();
-
+      await loadMasters();
     } catch (e) {
       console.error("TERMINATE_ERROR", e);
       alert("Ошибка сети");
     } finally {
       setProcessingId(null);
     }
-
   }
 
-  // старые методы оставляем (НЕ трогаем)
   async function fire(id) {
-
     await fetch(`${API_BASE}/internal/masters/fire`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -107,11 +96,9 @@ export default function MastersPage(){
     });
 
     loadMasters();
-
   }
 
   async function activate(id) {
-
     await fetch(`${API_BASE}/internal/masters/activate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,11 +109,9 @@ export default function MastersPage(){
     });
 
     loadMasters();
-
   }
 
   async function createMaster() {
-
     const name = prompt("Имя мастера");
     if (!name) return;
 
@@ -140,34 +125,27 @@ export default function MastersPage(){
     });
 
     loadMasters();
-
   }
 
   const stats = useMemo(() => {
-
     const total = masters.length;
-    const active = masters.filter(m => m.status === "active").length;
-    const pending = masters.filter(m => m.status === "pending").length;
+    const active = masters.filter((m) => m.status === "active").length;
+    const pending = masters.filter((m) => m.status === "pending").length;
 
     return { total, active, pending };
-
   }, [masters]);
 
-  const filtered = masters.filter(m => {
+  const filtered = masters.filter((m) => {
     const q = search.toLowerCase();
     return (m.name || "").toLowerCase().includes(q);
   });
 
-  const rows = filtered.map(m => ({
-
+  const rows = filtered.map((m) => ({
     id: m.id,
     name: m.name,
     status: statusLabel(m.status),
-
     actions: (
-
-      <div style={{display:"flex",gap:"8px"}}>
-
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
         {m.status === "pending" && (
           <button onClick={() => activate(m.id)}>
             Активировать
@@ -178,7 +156,7 @@ export default function MastersPage(){
           <button
             onClick={() => terminate(m.id)}
             disabled={processingId === m.id}
-            style={{background:"#ff4d4f",color:"#fff"}}
+            style={{ background: "#ff4d4f", color: "#fff" }}
           >
             {processingId === m.id ? "..." : "Прекратить"}
           </button>
@@ -189,17 +167,12 @@ export default function MastersPage(){
             Вернуть
           </button>
         )}
-
       </div>
-
     )
-
   }));
 
   return (
-
     <PageSection title="Мастера салона">
-
       <StatGrid
         items={[
           { label: "Всего мастеров", value: stats.total },
@@ -208,20 +181,18 @@ export default function MastersPage(){
         ]}
       />
 
-      <div style={{marginTop:20,marginBottom:20}}>
-
+      <div style={{ marginTop: 20, marginBottom: 20 }}>
         <input
           placeholder="Поиск мастера..."
           value={search}
-          onChange={(e)=>setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           style={{
-            padding:"10px",
-            width:"280px",
-            border:"1px solid #ddd",
-            borderRadius:"6px"
+            padding: "10px",
+            width: "280px",
+            border: "1px solid #ddd",
+            borderRadius: "6px"
           }}
         />
-
       </div>
 
       <button
@@ -234,16 +205,13 @@ export default function MastersPage(){
       {loading && <div>Загрузка...</div>}
 
       {!loading && filtered.length === 0 && (
-
         <EmptyState
           title="Мастеров пока нет"
           text="Пригласите первого мастера."
         />
-
       )}
 
       {!loading && filtered.length > 0 && (
-
         <TableSection
           columns={[
             { key: "id", label: "ID" },
@@ -253,11 +221,7 @@ export default function MastersPage(){
           ]}
           rows={rows}
         />
-
       )}
-
     </PageSection>
-
   );
-
 }
