@@ -5,25 +5,19 @@ import StatGrid from "../../cabinet/StatGrid";
 import TableSection from "../../cabinet/TableSection";
 import EmptyState from "../../cabinet/EmptyState";
 
-const API_BASE = import.meta.env.VITE_API_BASE
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 function resolveSlug() {
-
   if (window.SALON_SLUG) return window.SALON_SLUG;
-
   const parts = window.location.pathname.split("/");
   return parts[2] || "totem-demo-salon";
-
 }
 
 function statusLabel(status){
-
   if(status === "active") return "Активен";
   if(status === "pending") return "Ожидает";
   if(status === "fired") return "Уволен";
-
   return status;
-
 }
 
 export default function MastersPage(){
@@ -33,11 +27,11 @@ export default function MastersPage(){
   const [masters, setMasters] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search,setSearch] = useState("");
+  const [processingId, setProcessingId] = useState(null);
 
   async function loadMasters() {
 
     try {
-
       setLoading(true);
 
       const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
@@ -54,24 +48,53 @@ export default function MastersPage(){
       }
 
     } catch (e) {
-
       console.error("LOAD_MASTERS_ERROR", e);
       setMasters([]);
-
     } finally {
-
       setLoading(false);
-
     }
 
   }
 
   useEffect(() => {
-
     loadMasters();
-
   }, []);
 
+  // 🔥 НОВЫЙ terminate flow (главный)
+  async function terminate(masterId) {
+
+    const confirmText = "Прекратить сотрудничество с мастером?\n\nЭто действие:\n- архивирует контракт\n- отключит услуги\n- уберёт мастера из салона";
+
+    if (!window.confirm(confirmText)) return;
+
+    try {
+
+      setProcessingId(masterId);
+
+      const res = await fetch(
+        `${API_BASE}/internal/salons/${slug}/masters/${masterId}/terminate`,
+        { method: "POST" }
+      );
+
+      const data = await res.json();
+
+      if (!data.ok) {
+        alert("Ошибка при увольнении");
+        return;
+      }
+
+      loadMasters();
+
+    } catch (e) {
+      console.error("TERMINATE_ERROR", e);
+      alert("Ошибка сети");
+    } finally {
+      setProcessingId(null);
+    }
+
+  }
+
+  // старые методы оставляем (НЕ трогаем)
   async function fire(id) {
 
     await fetch(`${API_BASE}/internal/masters/fire`, {
@@ -105,7 +128,6 @@ export default function MastersPage(){
   async function createMaster() {
 
     const name = prompt("Имя мастера");
-
     if (!name) return;
 
     await fetch(`${API_BASE}/internal/masters/create`, {
@@ -132,11 +154,8 @@ export default function MastersPage(){
   }, [masters]);
 
   const filtered = masters.filter(m => {
-
     const q = search.toLowerCase();
-
     return (m.name || "").toLowerCase().includes(q);
-
   });
 
   const rows = filtered.map(m => ({
@@ -150,15 +169,25 @@ export default function MastersPage(){
       <div style={{display:"flex",gap:"8px"}}>
 
         {m.status === "pending" && (
-          <button onClick={() => activate(m.id)}>Активировать</button>
+          <button onClick={() => activate(m.id)}>
+            Активировать
+          </button>
         )}
 
         {m.status === "active" && (
-          <button onClick={() => fire(m.id)}>Уволить</button>
+          <button
+            onClick={() => terminate(m.id)}
+            disabled={processingId === m.id}
+            style={{background:"#ff4d4f",color:"#fff"}}
+          >
+            {processingId === m.id ? "..." : "Прекратить"}
+          </button>
         )}
 
         {m.status === "fired" && (
-          <button onClick={() => activate(m.id)}>Вернуть</button>
+          <button onClick={() => activate(m.id)}>
+            Вернуть
+          </button>
         )}
 
       </div>
