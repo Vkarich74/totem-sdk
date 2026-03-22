@@ -9,6 +9,8 @@ import {
   isContractActive
 } from "../../core/contracts/contractEngine";
 
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 function getMasterSlug() {
   if (window.MASTER_SLUG) {
     return window.MASTER_SLUG;
@@ -27,9 +29,43 @@ function getMasterSlug() {
   return null;
 }
 
+function money(value) {
+  const n = Number(value) || 0;
+  return new Intl.NumberFormat("ru-RU").format(n) + " сом";
+}
+
+function formatDate(iso) {
+  if (!iso) {
+    return "—";
+  }
+
+  const d = new Date(iso);
+
+  if (Number.isNaN(d.getTime())) {
+    return "—";
+  }
+
+  return (
+    d.toLocaleDateString("ru-RU") +
+    " " +
+    d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+  );
+}
+
+function sumAmounts(items) {
+  if (!Array.isArray(items)) {
+    return 0;
+  }
+
+  return items.reduce((acc, item) => acc + (Number(item?.amount) || 0), 0);
+}
+
 export default function MasterFinancePage() {
   const [activeContract, setActiveContract] = useState(null);
   const [history, setHistory] = useState([]);
+  const [wallet, setWallet] = useState(null);
+  const [settlements, setSettlements] = useState([]);
+  const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -45,17 +81,46 @@ export default function MasterFinancePage() {
 
         if (!masterId) {
           console.error("MASTER_SLUG_NOT_FOUND");
+
           if (!cancelled) {
             setActiveContract(null);
             setHistory([]);
+            setWallet(null);
+            setSettlements([]);
+            setLedger([]);
             setError("Не найден master slug");
           }
+
           return;
         }
 
-        const [activeResult, historyResult] = await Promise.allSettled([
+        const [
+          activeResult,
+          historyResult,
+          walletResult,
+          settlementsResult,
+          ledgerResult
+        ] = await Promise.allSettled([
           fetchActiveContract(masterId),
-          fetchContractHistory(masterId)
+          fetchContractHistory(masterId),
+          fetch(`${API_BASE}/internal/masters/${masterId}/wallet-balance`).then(async (r) => {
+            if (!r.ok) {
+              throw new Error("WALLET_FETCH_FAILED");
+            }
+            return r.json();
+          }),
+          fetch(`${API_BASE}/internal/masters/${masterId}/settlements`).then(async (r) => {
+            if (!r.ok) {
+              throw new Error("SETTLEMENTS_FETCH_FAILED");
+            }
+            return r.json();
+          }),
+          fetch(`${API_BASE}/internal/masters/${masterId}/ledger`).then(async (r) => {
+            if (!r.ok) {
+              throw new Error("LEDGER_FETCH_FAILED");
+            }
+            return r.json();
+          })
         ]);
 
         if (cancelled) {
@@ -76,9 +141,33 @@ export default function MasterFinancePage() {
           setHistory([]);
         }
 
+        if (walletResult.status === "fulfilled") {
+          setWallet(walletResult.value || null);
+        } else {
+          console.error("Wallet load error:", walletResult.reason);
+          setWallet(null);
+        }
+
+        if (settlementsResult.status === "fulfilled") {
+          setSettlements(Array.isArray(settlementsResult.value?.periods) ? settlementsResult.value.periods : []);
+        } else {
+          console.error("Settlements load error:", settlementsResult.reason);
+          setSettlements([]);
+        }
+
+        if (ledgerResult.status === "fulfilled") {
+          setLedger(Array.isArray(ledgerResult.value?.ledger) ? ledgerResult.value.ledger : []);
+        } else {
+          console.error("Ledger load error:", ledgerResult.reason);
+          setLedger([]);
+        }
+
         if (
           activeResult.status === "rejected" &&
-          historyResult.status === "rejected"
+          historyResult.status === "rejected" &&
+          walletResult.status === "rejected" &&
+          settlementsResult.status === "rejected" &&
+          ledgerResult.status === "rejected"
         ) {
           setError("Ошибка загрузки финансовых данных");
         }
@@ -88,6 +177,9 @@ export default function MasterFinancePage() {
         if (!cancelled) {
           setActiveContract(null);
           setHistory([]);
+          setWallet(null);
+          setSettlements([]);
+          setLedger([]);
           setError("Ошибка загрузки финансовых данных");
         }
       } finally {
@@ -108,8 +200,52 @@ export default function MasterFinancePage() {
     return activeContract ? isContractActive(activeContract) : false;
   }, [activeContract]);
 
+  const payoutEntries = useMemo(() => {
+    return ledger.filter((item) => item?.reference_type === "payout");
+  }, [ledger]);
+
+  const refundReverseEntries = useMemo(() => {
+    return ledger.filter((item) => item?.reference_type === "refund_reverse");
+  }, [ledger]);
+
+  const settlementTotal = useMemo(() => {
+    return sumAmounts(settlements);
+  }, [settlements]);
+
+  const payoutTotal = useMemo(() => {
+    return sumAmounts(payoutEntries);
+  }, [payoutEntries]);
+
+  const refundReverseTotal = useMemo(() => {
+    return sumAmounts(refundReverseEntries);
+  }, [refundReverseEntries]);
+
   const overviewItems = useMemo(() => {
     return [
+      {
+        label: "Баланс кошелька",
+        value: wallet?.ok ? money(wallet.balance) : "—"
+      },
+      {
+        label: "Расчетных периодов",
+        value: String(settlements.length)
+      },
+      {
+        label: "Начислено по settlement",
+        value: money(settlementTotal)
+      },
+      {
+        label: "Выплат / payout",
+        value: String(payoutEntries.length)
+      },
+      {
+        label: "Выведено",
+        value: money(payoutTotal)
+      },
+      {
+        label: "Refund reverse",
+        value: money(refundReverseTotal)
+      },
       {
         label: "Статус контракта",
         value: contractIsActive ? "Активен" : "Нет активного контракта"
@@ -117,17 +253,18 @@ export default function MasterFinancePage() {
       {
         label: "Contract ID",
         value: activeContract?.contract_id || "—"
-      },
-      {
-        label: "Модель",
-        value: activeContract?.model_type || "—"
-      },
-      {
-        label: "Дата старта",
-        value: activeContract?.start_date || "—"
       }
     ];
-  }, [activeContract, contractIsActive]);
+  }, [
+    wallet,
+    settlements.length,
+    settlementTotal,
+    payoutEntries.length,
+    payoutTotal,
+    refundReverseTotal,
+    contractIsActive,
+    activeContract
+  ]);
 
   if (loading) {
     return (
@@ -147,8 +284,7 @@ export default function MasterFinancePage() {
             <div style={styles.eyebrow}>MASTER CABINET</div>
             <h1 style={styles.title}>Finance</h1>
             <p style={styles.subtitle}>
-              Единая финансовая панель мастера. Архитектура выровнена под salon-уровень,
-              без изменения бизнес-логики.
+              Единая финансовая панель мастера. Контур собран на текущих backend endpoint без изменения бизнес-логики.
             </p>
           </div>
         </header>
@@ -157,7 +293,7 @@ export default function MasterFinancePage() {
           <section style={styles.warningBanner}>
             <div style={styles.warningTitle}>Часть финансовых данных недоступна</div>
             <div style={styles.warningText}>
-              Страница открыта в безопасном режиме. Проверь console и network по contract endpoint.
+              Страница открыта в безопасном режиме. Проверь console и network по master finance endpoint.
             </div>
           </section>
         ) : null}
@@ -181,6 +317,9 @@ export default function MasterFinancePage() {
               <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
               <InfoRow label="Model Type" value={activeContract?.model_type || "—"} />
               <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
+              <InfoRow label="Wallet Balance" value={wallet?.ok ? money(wallet.balance) : "—"} />
+              <InfoRow label="Settlement Total" value={money(settlementTotal)} />
+              <InfoRow label="Payout Total" value={money(payoutTotal)} />
             </div>
           </SectionCard>
 
@@ -188,12 +327,10 @@ export default function MasterFinancePage() {
             title="Wallet"
             subtitle="Баланс и кошелёк мастера"
           >
-            <div style={styles.placeholderBlock}>
-              <div style={styles.placeholderTitle}>Wallet section ready for sync</div>
-              <p style={styles.paragraph}>
-                Блок подготовлен под единый dashboard layout. Источник данных не менялся.
-                Подключение wallet-метрик остаётся на существующей backend-архитектуре.
-              </p>
+            <div style={styles.infoGrid}>
+              <InfoRow label="Wallet ID" value={wallet?.wallet_id || "—"} />
+              <InfoRow label="Баланс" value={wallet?.ok ? money(wallet.balance) : "—"} />
+              <InfoRow label="Валюта" value={wallet?.currency || "—"} />
             </div>
           </SectionCard>
 
@@ -246,7 +383,7 @@ export default function MasterFinancePage() {
                         const isLast = index === history.length - 1;
 
                         return (
-                          <tr key={item.contract_id}>
+                          <tr key={item.contract_id || index}>
                             <td
                               style={{
                                 ...styles.td,
@@ -283,53 +420,221 @@ export default function MasterFinancePage() {
 
           <SectionCard
             title="Settlements"
-            subtitle="Правила распределения и расчётов"
+            subtitle="Начисления мастера по расчетным периодам"
           >
-            <p style={styles.paragraph}>
-              Правила распределения дохода определяются активным контрактом.
-              Блок сохранён в master-кабинете в той же архитектурной позиции,
-              что и в salon finance.
-            </p>
+            {settlements.length === 0 ? (
+              <div style={styles.emptyPanel}>Расчетных периодов пока нет</div>
+            ) : (
+              <div style={styles.tableWrap}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Период</th>
+                      <th style={styles.th}>Начало</th>
+                      <th style={styles.th}>Конец</th>
+                      <th style={styles.th}>Сумма</th>
+                      <th style={styles.th}>Статус</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {settlements.map((item, index) => {
+                      const isLast = index === settlements.length - 1;
 
-            <div style={styles.noteBox}>
-              <div style={styles.noteTitle}>Settlement source</div>
-              <div style={styles.noteText}>
-                Данные зависят от contract terms и backend settlement pipeline.
+                      return (
+                        <tr key={item.id || index}>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {item.id || "—"}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {formatDate(item.start_date)}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {formatDate(item.end_date)}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {money(item.amount)}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {item.status || "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            )}
           </SectionCard>
 
           <SectionCard
             title="Payouts"
-            subtitle="Выплаты мастеру"
+            subtitle="Фактические выводы мастеру из ledger"
           >
-            <p style={styles.paragraph}>
-              Метод выплат определяется настройками платформы и текущей финансовой конфигурацией.
-            </p>
+            {payoutEntries.length === 0 ? (
+              <div style={styles.emptyPanel}>Выплат пока нет</div>
+            ) : (
+              <div style={styles.tableWrap}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Дата</th>
+                      <th style={styles.th}>Reference Type</th>
+                      <th style={styles.th}>Reference ID</th>
+                      <th style={styles.th}>Направление</th>
+                      <th style={styles.th}>Сумма</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payoutEntries.map((item, index) => {
+                      const isLast = index === payoutEntries.length - 1;
 
-            <div style={styles.noteBox}>
-              <div style={styles.noteTitle}>Payout status</div>
-              <div style={styles.noteText}>
-                UI выровнен. Бизнес-логика выплат и withdraw pipeline не изменялись.
+                      return (
+                        <tr key={item.id || index}>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {formatDate(item.created_at)}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {item.reference_type || "—"}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {item.reference_id || "—"}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {item.direction || "—"}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {money(item.amount)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            )}
           </SectionCard>
 
           <SectionCard
             title="Ledger"
-            subtitle="Финансовый журнал"
+            subtitle="Движения кошелька мастера"
           >
-            <p style={styles.paragraph}>
-              Ledger layer остаётся системным источником истины. В этой версии блок
-              приведён к единому cabinet layout без вмешательства в ledger structure.
-            </p>
+            {ledger.length === 0 ? (
+              <div style={styles.emptyPanel}>Проводок пока нет</div>
+            ) : (
+              <div style={styles.tableWrap}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Дата</th>
+                      <th style={styles.th}>Reference Type</th>
+                      <th style={styles.th}>Reference ID</th>
+                      <th style={styles.th}>Направление</th>
+                      <th style={styles.th}>Сумма</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledger.map((item, index) => {
+                      const isLast = index === ledger.length - 1;
 
-            <div style={styles.noteBox}>
-              <div style={styles.noteTitle}>Ledger integrity</div>
-              <div style={styles.noteText}>
-                Double-entry механика, reference_type и backend ledger logic не изменялись.
+                      return (
+                        <tr key={item.id || index}>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {formatDate(item.created_at)}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {item.reference_type || "—"}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {item.reference_id || "—"}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {item.direction || "—"}
+                          </td>
+                          <td
+                            style={{
+                              ...styles.td,
+                              ...(isLast ? styles.lastRowCell : null)
+                            }}
+                          >
+                            {money(item.amount)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            )}
           </SectionCard>
         </section>
       </div>
@@ -585,39 +890,6 @@ const styles = {
   },
   lastRowCell: {
     borderBottom: "none"
-  },
-  paragraph: {
-    margin: 0,
-    fontSize: "14px",
-    lineHeight: 1.7,
-    color: "#4b5563"
-  },
-  noteBox: {
-    marginTop: "12px",
-    padding: "14px",
-    borderRadius: "12px",
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb"
-  },
-  noteTitle: {
-    fontSize: "13px",
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: "6px"
-  },
-  noteText: {
-    fontSize: "13px",
-    lineHeight: 1.6,
-    color: "#6b7280"
-  },
-  placeholderBlock: {
-    display: "grid",
-    gap: "8px"
-  },
-  placeholderTitle: {
-    fontSize: "14px",
-    fontWeight: 700,
-    color: "#111827"
   },
   loadingCard: {
     padding: "20px",
