@@ -1,8 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import PageSection from "../../cabinet/PageSection";
 import StatGrid from "../../cabinet/StatGrid";
-import TableSection from "../../cabinet/TableSection";
 import EmptyState from "../../cabinet/EmptyState";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
@@ -18,7 +17,31 @@ function statusLabel(status) {
   if (status === "active") return "Активен";
   if (status === "pending") return "Ожидает";
   if (status === "fired") return "Уволен";
-  return status;
+  return status || "-";
+}
+
+function buttonStyle(kind = "default") {
+  const base = {
+    padding: "8px 12px",
+    borderRadius: "8px",
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    color: "#111827",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: 600
+  };
+
+  if (kind === "danger") {
+    return {
+      ...base,
+      border: "1px solid #dc2626",
+      background: "#dc2626",
+      color: "#ffffff"
+    };
+  }
+
+  return base;
 }
 
 export default function MastersPage(props) {
@@ -33,8 +56,8 @@ export default function MastersPage(props) {
     try {
       setLoading(true);
 
-      const r = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
-      const data = await r.json();
+      const response = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
+      const data = await response.json();
 
       if (Array.isArray(data)) {
         setMasters(data);
@@ -43,8 +66,8 @@ export default function MastersPage(props) {
       } else {
         setMasters([]);
       }
-    } catch (e) {
-      console.error("LOAD_MASTERS_ERROR", e);
+    } catch (error) {
+      console.error("LOAD_MASTERS_ERROR", error);
       setMasters([]);
     } finally {
       setLoading(false);
@@ -56,120 +79,96 @@ export default function MastersPage(props) {
   }, [slug]);
 
   async function terminate(masterId) {
-    const confirmText =
-      "Прекратить сотрудничество с мастером?\n\nЭто действие:\n- архивирует активные и ожидающие контракты\n- отключит услуги мастера\n- уберёт мастера из активного списка салона";
+    const confirmed = window.confirm(
+      "Прекратить сотрудничество с мастером?\n\nЭто действие:\n- архивирует активные и ожидающие контракты\n- отключит услуги мастера\n- уберёт мастера из активного списка салона"
+    );
 
-    if (!window.confirm(confirmText)) return;
+    if (!confirmed) return;
 
     try {
       setProcessingId(masterId);
 
-      const res = await fetch(
+      const response = await fetch(
         `${API_BASE}/internal/salons/${slug}/masters/${masterId}/terminate`,
         { method: "POST" }
       );
 
-      const data = await res.json();
+      const data = await response.json();
 
-      if (!res.ok || !data.ok) {
+      if (!response.ok || !data.ok) {
         alert(data?.error || "Ошибка при прекращении сотрудничества");
         return;
       }
 
       await loadMasters();
-    } catch (e) {
-      console.error("TERMINATE_ERROR", e);
+    } catch (error) {
+      console.error("TERMINATE_ERROR", error);
       alert("Ошибка сети");
     } finally {
       setProcessingId(null);
     }
   }
 
-  async function fire(id) {
-    await fetch(`${API_BASE}/internal/masters/fire`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        master_id: id,
-        salon_slug: slug
-      })
-    });
-
-    loadMasters();
-  }
-
   async function activate(id) {
-    await fetch(`${API_BASE}/internal/masters/activate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        master_id: id,
-        salon_slug: slug
-      })
-    });
+    try {
+      setProcessingId(id);
 
-    loadMasters();
+      await fetch(`${API_BASE}/internal/masters/activate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          master_id: id,
+          salon_slug: slug
+        })
+      });
+
+      await loadMasters();
+    } catch (error) {
+      console.error("ACTIVATE_MASTER_ERROR", error);
+      alert("Ошибка активации мастера");
+    } finally {
+      setProcessingId(null);
+    }
   }
 
   async function createMaster() {
-    const name = prompt("Имя мастера");
+    const name = window.prompt("Имя мастера");
     if (!name) return;
 
-    await fetch(`${API_BASE}/internal/masters/create`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        salon_slug: slug
-      })
-    });
+    try {
+      await fetch(`${API_BASE}/internal/masters/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          salon_slug: slug
+        })
+      });
 
-    loadMasters();
+      await loadMasters();
+    } catch (error) {
+      console.error("CREATE_MASTER_ERROR", error);
+      alert("Ошибка создания мастера");
+    }
   }
 
   const stats = useMemo(() => {
     const total = masters.length;
-    const active = masters.filter((m) => m.status === "active").length;
-    const pending = masters.filter((m) => m.status === "pending").length;
-
+    const active = masters.filter((master) => master.status === "active").length;
+    const pending = masters.filter((master) => master.status === "pending").length;
     return { total, active, pending };
   }, [masters]);
 
-  const filtered = masters.filter((m) => {
-    const q = search.toLowerCase();
-    return (m.name || "").toLowerCase().includes(q);
-  });
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-  const rows = filtered.map((m) => ({
-    id: m.id,
-    name: m.name,
-    status: statusLabel(m.status),
-    actions: (
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        {m.status === "pending" && (
-          <button onClick={() => activate(m.id)}>
-            Активировать
-          </button>
-        )}
+    if (!query) return masters;
 
-        {m.status === "active" && (
-          <button
-            onClick={() => terminate(m.id)}
-            disabled={processingId === m.id}
-            style={{ background: "#ff4d4f", color: "#fff" }}
-          >
-            {processingId === m.id ? "..." : "Прекратить"}
-          </button>
-        )}
-
-        {m.status === "fired" && (
-          <button onClick={() => activate(m.id)}>
-            Вернуть
-          </button>
-        )}
-      </div>
-    )
-  }));
+    return masters.filter((master) => {
+      const haystack = `${master.id ?? ""} ${master.name ?? ""} ${master.slug ?? ""}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [masters, search]);
 
   return (
     <PageSection title="Мастера салона">
@@ -185,7 +184,7 @@ export default function MastersPage(props) {
         <input
           placeholder="Поиск мастера..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
           style={{
             padding: "10px",
             width: "280px",
@@ -212,15 +211,183 @@ export default function MastersPage(props) {
       )}
 
       {!loading && filtered.length > 0 && (
-        <TableSection
-          columns={[
-            { key: "id", label: "ID" },
-            { key: "name", label: "Имя" },
-            { key: "status", label: "Статус" },
-            { key: "actions", label: "Действия" }
-          ]}
-          rows={rows}
-        />
+        <div
+          style={{
+            overflowX: "auto",
+            border: "1px solid #e5e7eb",
+            borderRadius: "12px",
+            background: "#ffffff"
+          }}
+        >
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              minWidth: "760px"
+            }}
+          >
+            <thead>
+              <tr>
+                <th
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 14px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#6b7280",
+                    background: "#f8fafc",
+                    borderBottom: "1px solid #e5e7eb"
+                  }}
+                >
+                  ID
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 14px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#6b7280",
+                    background: "#f8fafc",
+                    borderBottom: "1px solid #e5e7eb"
+                  }}
+                >
+                  Имя
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 14px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#6b7280",
+                    background: "#f8fafc",
+                    borderBottom: "1px solid #e5e7eb"
+                  }}
+                >
+                  Slug
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 14px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#6b7280",
+                    background: "#f8fafc",
+                    borderBottom: "1px solid #e5e7eb"
+                  }}
+                >
+                  Статус
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 14px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#6b7280",
+                    background: "#f8fafc",
+                    borderBottom: "1px solid #e5e7eb"
+                  }}
+                >
+                  Действия
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filtered.map((master, index) => {
+                const isLast = index === filtered.length - 1;
+
+                return (
+                  <tr key={master.id}>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontSize: "14px",
+                        color: "#111827",
+                        borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                      }}
+                    >
+                      {master.id}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontSize: "14px",
+                        color: "#111827",
+                        borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                      }}
+                    >
+                      {master.name || "-"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontSize: "14px",
+                        color: "#111827",
+                        borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                      }}
+                    >
+                      {master.slug || "-"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontSize: "14px",
+                        color: "#111827",
+                        borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                      }}
+                    >
+                      {statusLabel(master.status)}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontSize: "14px",
+                        color: "#111827",
+                        borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                      }}
+                    >
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        {master.status === "pending" && (
+                          <button
+                            onClick={() => activate(master.id)}
+                            disabled={processingId === master.id}
+                            style={buttonStyle()}
+                          >
+                            {processingId === master.id ? "..." : "Активировать"}
+                          </button>
+                        )}
+
+                        {master.status === "active" && (
+                          <button
+                            onClick={() => terminate(master.id)}
+                            disabled={processingId === master.id}
+                            style={buttonStyle("danger")}
+                          >
+                            {processingId === master.id ? "..." : "Прекратить"}
+                          </button>
+                        )}
+
+                        {master.status === "fired" && (
+                          <button
+                            onClick={() => activate(master.id)}
+                            disabled={processingId === master.id}
+                            style={buttonStyle()}
+                          >
+                            {processingId === master.id ? "..." : "Вернуть"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </PageSection>
   );
