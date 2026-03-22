@@ -189,25 +189,12 @@ export default function SalonFinancePage() {
   const [contracts, setContracts] = useState([])
   const [contractsLoading, setContractsLoading] = useState(true)
 
-  const [masters, setMasters] = useState([])
-  const [mastersLoading, setMastersLoading] = useState(true)
-
-  const [selectedMasterId, setSelectedMasterId] = useState("")
-  const [masterPercent, setMasterPercent] = useState("70")
-  const [salonPercent, setSalonPercent] = useState("20")
-  const [platformPercent, setPlatformPercent] = useState("10")
-  const [payoutSchedule, setPayoutSchedule] = useState("manual")
-  const [effectiveFrom, setEffectiveFrom] = useState("")
   const [withdrawMethod, setWithdrawMethod] = useState("bank")
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [withdrawComment, setWithdrawComment] = useState("")
   const [withdrawRecipient, setWithdrawRecipient] = useState("")
   const [withdrawError, setWithdrawError] = useState("")
   const [withdrawNotice, setWithdrawNotice] = useState("")
-
-  const [createContractLoading, setCreateContractLoading] = useState(false)
-  const [createContractError, setCreateContractError] = useState("")
-  const [createContractSuccess, setCreateContractSuccess] = useState("")
 
   const [loading, setLoading] = useState(true)
   const [ledgerLoading, setLedgerLoading] = useState(true)
@@ -365,7 +352,6 @@ export default function SalonFinancePage() {
     loadLedger()
     loadWallet()
     loadContracts()
-    loadMasters()
   }, [])
 
   async function loadPayments() {
@@ -454,106 +440,6 @@ export default function SalonFinancePage() {
     }
     finally {
       setContractsLoading(false)
-    }
-  }
-
-  async function loadMasters() {
-    try {
-      const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/masters`
-      )
-
-      const data = await res.json()
-
-      if (Array.isArray(data)) {
-        setMasters(data)
-      }
-      else if (data.masters) {
-        setMasters(data.masters)
-      }
-    }
-    catch (err) {
-      console.error("Masters load error:", err)
-    }
-    finally {
-      setMastersLoading(false)
-    }
-  }
-
-  async function createContract(event) {
-    event.preventDefault()
-
-    setCreateContractError("")
-    setCreateContractSuccess("")
-
-    const masterIdNumber = Number(selectedMasterId)
-    const masterValue = Number(masterPercent)
-    const salonValue = Number(salonPercent)
-    const platformValue = Number(platformPercent)
-
-    if (!masterIdNumber) {
-      setCreateContractError("Выбери мастера")
-      return
-    }
-
-    if (
-      Number.isNaN(masterValue) ||
-      Number.isNaN(salonValue) ||
-      Number.isNaN(platformValue)
-    ) {
-      setCreateContractError("Проценты должны быть числами")
-      return
-    }
-
-    if (masterValue + salonValue + platformValue !== 100) {
-      setCreateContractError("Сумма процентов должна быть ровно 100")
-      return
-    }
-
-    setCreateContractLoading(true)
-
-    try {
-      const payload = {
-        master_id: masterIdNumber,
-        terms_json: {
-          master_percent: masterValue,
-          salon_percent: salonValue,
-          platform_percent: platformValue,
-          payout_schedule: payoutSchedule || "manual"
-        }
-      }
-
-      if (effectiveFrom) {
-        payload.effective_from = effectiveFrom
-      }
-
-      const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        }
-      )
-
-      const data = await res.json()
-
-      if (!res.ok || !data.ok) {
-        setCreateContractError(data.error || "Не удалось создать контракт")
-        return
-      }
-
-      setCreateContractSuccess("Контракт создан в статусе ожидания")
-      await loadContracts()
-    }
-    catch (err) {
-      console.error("Create contract error:", err)
-      setCreateContractError("Ошибка создания контракта")
-    }
-    finally {
-      setCreateContractLoading(false)
     }
   }
 
@@ -704,20 +590,6 @@ export default function SalonFinancePage() {
     return master.name || master.slug || master.id
   }
 
-  function getContractMasterPercent(contract) {
-    const terms = getContractTerms(contract)
-
-    if (terms.master_percent !== undefined && terms.master_percent !== null) {
-      return terms.master_percent
-    }
-
-    if (contract?.share_percent !== undefined && contract?.share_percent !== null) {
-      return contract.share_percent
-    }
-
-    return "-"
-  }
-
   function getRevenueByDays(days) {
     const now = new Date()
     const start = new Date(now)
@@ -772,8 +644,6 @@ export default function SalonFinancePage() {
   const todayRevenue = getRevenueByDays(1)
   const weekRevenue = getRevenueByDays(7)
   const monthRevenue = getRevenueByDays(30)
-
-  const contractSum = Number(masterPercent || 0) + Number(salonPercent || 0) + Number(platformPercent || 0)
 
   const walletReady = !walletLoading && walletBalance !== null
   const contractsReady = !contractsLoading
@@ -863,7 +733,6 @@ export default function SalonFinancePage() {
       note: "Реквизит внешнего счёта, карты, кошелька или xPay ID"
     }
   ]
-
 
   const pipelineChecks = [
     {
@@ -1272,283 +1141,6 @@ export default function SalonFinancePage() {
         </SectionBlock>
 
         <SectionBlock
-          title="Контракты"
-          hint="Единый блок: сводка, активные и ожидающие контракты, создание нового контракта."
-        >
-          <div style={twoColumnGridStyle}>
-            <Card>
-              <div style={{ marginBottom: 16 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
-                  Сводка по контрактам
-                </h3>
-              </div>
-
-              <div style={compactGridStyle}>
-                <InfoBox
-                  label="Активные"
-                  value={contractsLoading ? "..." : activeContracts.length}
-                  note="Используются в текущих правилах расчётов"
-                />
-
-                <InfoBox
-                  label="Ожидающие"
-                  value={contractsLoading ? "..." : pendingContracts.length}
-                  note="Ожидают активации"
-                />
-
-                <InfoBox
-                  label="Всего"
-                  value={contractsLoading ? "..." : contracts.length}
-                  note="Полная история контрактов салона"
-                />
-              </div>
-
-              <div style={{ marginTop: 18 }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
-                  Активные контракты
-                </h3>
-
-                {contractsLoading && (
-                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
-                )}
-
-                {!contractsLoading && activeContracts.length === 0 && (
-                  <EmptyState text="Нет активных контрактов" />
-                )}
-
-                {!contractsLoading && activeContracts.length > 0 && (
-                  <div style={tableWrapStyle}>
-                    <table style={tableStyle}>
-                      <thead>
-                        <tr>
-                          <th style={tableHeadCellStyle}>ID</th>
-                          <th style={tableHeadCellStyle}>Мастер</th>
-                          <th style={tableHeadCellStyle}>Доля %</th>
-                          <th style={tableHeadCellStyle}>Статус</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {activeContracts.map((c, index) => {
-                          const isLast = index === activeContracts.length - 1
-
-                          return (
-                            <tr key={c.id}>
-                              {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractMasterPercent(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(
-                                <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginTop: 18 }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
-                  Ожидающие контракты
-                </h3>
-
-                {contractsLoading && (
-                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
-                )}
-
-                {!contractsLoading && pendingContracts.length === 0 && (
-                  <EmptyState text="Нет ожидающих контрактов" />
-                )}
-
-                {!contractsLoading && pendingContracts.length > 0 && (
-                  <div style={tableWrapStyle}>
-                    <table style={tableStyle}>
-                      <thead>
-                        <tr>
-                          <th style={tableHeadCellStyle}>ID</th>
-                          <th style={tableHeadCellStyle}>Мастер</th>
-                          <th style={tableHeadCellStyle}>Доля %</th>
-                          <th style={tableHeadCellStyle}>Статус</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {pendingContracts.map((c, index) => {
-                          const isLast = index === pendingContracts.length - 1
-
-                          return (
-                            <tr key={c.id}>
-                              {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractMasterPercent(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(
-                                <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            <Card soft>
-              <div style={{ marginBottom: 16 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
-                  Создать контракт
-                </h3>
-                <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-                  UI унифицирован под карточки кабинета. Логика создания и API остаются без изменений.
-                </p>
-              </div>
-
-              {mastersLoading && <p style={{ margin: 0, color: "#6b7280" }}>Загрузка мастеров...</p>}
-
-              {!mastersLoading && (
-                <form onSubmit={createContract}>
-                  <div style={fieldBlockStyle}>
-                    <label style={labelStyle}>Мастер</label>
-                    <select
-                      value={selectedMasterId}
-                      onChange={(e) => setSelectedMasterId(e.target.value)}
-                      style={inputStyle}
-                    >
-                      <option value="">Выбери мастера</option>
-                      {masters.map((master) => (
-                        <option key={master.id} value={master.id}>
-                          {master.name || master.slug || master.id}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div style={formGridStyle}>
-                    <div style={fieldBlockStyle}>
-                      <label style={labelStyle}>Процент мастера</label>
-                      <input
-                        type="number"
-                        value={masterPercent}
-                        onChange={(e) => setMasterPercent(e.target.value)}
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    <div style={fieldBlockStyle}>
-                      <label style={labelStyle}>Процент салона</label>
-                      <input
-                        type="number"
-                        value={salonPercent}
-                        onChange={(e) => setSalonPercent(e.target.value)}
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    <div style={fieldBlockStyle}>
-                      <label style={labelStyle}>Процент платформы</label>
-                      <input
-                        type="number"
-                        value={platformPercent}
-                        onChange={(e) => setPlatformPercent(e.target.value)}
-                        style={inputStyle}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={fieldBlockStyle}>
-                    <label style={labelStyle}>График выплат</label>
-                    <select
-                      value={payoutSchedule}
-                      onChange={(e) => setPayoutSchedule(e.target.value)}
-                      style={inputStyle}
-                    >
-                      <option value="manual">Вручную</option>
-                      <option value="daily">Ежедневно</option>
-                      <option value="weekly">Еженедельно</option>
-                      <option value="monthly">Ежемесячно</option>
-                    </select>
-                  </div>
-
-                  <div style={fieldBlockStyle}>
-                    <label style={labelStyle}>Дата начала действия</label>
-                    <input
-                      type="datetime-local"
-                      value={effectiveFrom}
-                      onChange={(e) => setEffectiveFrom(e.target.value)}
-                      style={inputStyle}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      marginBottom: 14,
-                      padding: 12,
-                      borderRadius: 12,
-                      background: contractSum === 100 ? "#f0fdf4" : "#fffbeb",
-                      border: contractSum === 100 ? "1px solid #bbf7d0" : "1px solid #fde68a",
-                      color: contractSum === 100 ? "#166534" : "#92400e",
-                      fontSize: 14,
-                      fontWeight: 600
-                    }}
-                  >
-                    Сумма процентов: {contractSum}
-                  </div>
-
-                  {createContractError && (
-                    <div
-                      style={{
-                        marginBottom: 14,
-                        padding: 12,
-                        borderRadius: 12,
-                        border: "1px solid #fecaca",
-                        background: "#fef2f2",
-                        color: "#b91c1c",
-                        fontSize: 14
-                      }}
-                    >
-                      {createContractError}
-                    </div>
-                  )}
-
-                  {createContractSuccess && (
-                    <div
-                      style={{
-                        marginBottom: 14,
-                        padding: 12,
-                        borderRadius: 12,
-                        border: "1px solid #bbf7d0",
-                        background: "#f0fdf4",
-                        color: "#166534",
-                        fontSize: 14
-                      }}
-                    >
-                      {createContractSuccess}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={createContractLoading}
-                    style={{
-                      ...primaryButtonStyle,
-                      opacity: createContractLoading ? 0.7 : 1,
-                      cursor: createContractLoading ? "wait" : "pointer"
-                    }}
-                  >
-                    {createContractLoading ? "Создание..." : "Создать контракт"}
-                  </button>
-                </form>
-              )}
-            </Card>
-          </div>
-        </SectionBlock>
-
-        <SectionBlock
           title="Правила расчётов"
           hint="Активные правила распределения дохода между мастером, салоном и платформой."
         >
@@ -1767,7 +1359,6 @@ export default function SalonFinancePage() {
             {renderWithdrawHistory()}
           </Card>
         </SectionBlock>
-
 
         <SectionBlock
           title="Маршрут внешнего вывода"
@@ -2066,7 +1657,6 @@ export default function SalonFinancePage() {
             </div>
           </Card>
         </SectionBlock>
-
 
         <SectionBlock
           title="История контрактов"
