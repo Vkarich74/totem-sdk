@@ -197,64 +197,117 @@ export default function MasterFinancePage() {
             </div>
           </SectionCard>
 
-          <SectionCard
-            title="Contracts"
-            subtitle="Активный контракт и история изменений"
-          >
-            <div style={styles.contractCard}>
-              <div style={styles.contractHeader}>
-                <div style={styles.contractStatusWrap}>
-                  <span
-                    style={{
-                      ...styles.badge,
-                      ...(contractIsActive ? styles.badgeSuccess : styles.badgeMuted)
-                    }}
-                  >
-                    {contractIsActive ? "ACTIVE" : "NO ACTIVE CONTRACT"}
-                  </span>
+          <section style={styles.card}>
+            <div style={styles.cardHeader}>
+              <h2 style={styles.cardTitle}>Contracts</h2>
+              <div style={styles.cardSubtitle}>
+                Активный контракт и история изменений
+              </div>
+            </div>
+
+            <div style={styles.cardBody}>
+              <div style={styles.twoColumn}>
+                <div style={styles.contractColumn}>
+                  <div style={styles.contractCard}>
+                    <div style={styles.contractHeader}>
+                      <div style={styles.contractStatusWrap}>
+                        <span
+                          style={{
+                            ...styles.badge,
+                            ...(contractIsActive ? styles.badgeSuccess : styles.badgeMuted)
+                          }}
+                        >
+                          {contractIsActive ? "ACTIVE" : "NO ACTIVE CONTRACT"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {contractIsActive ? (
+                      <div style={styles.infoGrid}>
+                        <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
+                        <InfoRow label="Model" value={activeContract?.model_type || "—"} />
+                        <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
+                      </div>
+                    ) : (
+                      <p style={styles.emptyText}>Активный контракт отсутствует</p>
+                    )}
+                  </div>
+                </div>
+
+                <div style={styles.contractColumn}>
+                  <div style={styles.noteBox}>
+                    <div style={styles.noteTitle}>Contract state</div>
+                    <div style={styles.noteText}>
+                      Блок вынесен в отдельную правую колонку по salon-архитектуре.
+                      Нижняя часть страницы больше не ломается, потому что двухколоночная
+                      сетка ограничена только секцией contracts.
+                    </div>
+                  </div>
+
+                  <div style={styles.noteBox}>
+                    <div style={styles.noteTitle}>Data source</div>
+                    <div style={styles.noteText}>
+                      Используются текущие contract endpoints без изменения backend и terms logic.
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {contractIsActive ? (
-                <div style={styles.infoGrid}>
-                  <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
-                  <InfoRow label="Model" value={activeContract?.model_type || "—"} />
-                  <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
-                </div>
-              ) : (
-                <p style={styles.emptyText}>Активный контракт отсутствует</p>
-              )}
-            </div>
+              <div style={styles.historyWrap}>
+                <div style={styles.subsectionTitle}>Contract History</div>
 
-            <div style={styles.historyWrap}>
-              <div style={styles.subsectionTitle}>Contract History</div>
-
-              {history.length === 0 ? (
-                <div style={styles.emptyPanel}>История контрактов отсутствует</div>
-              ) : (
-                <div style={styles.tableWrap}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Contract ID</th>
-                        <th style={styles.th}>Status</th>
-                        <th style={styles.th}>Start Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.map((item) => (
-                        <tr key={item.contract_id}>
-                          <td style={styles.td}>{item.contract_id || "—"}</td>
-                          <td style={styles.td}>{item.status || "—"}</td>
-                          <td style={styles.td}>{item.start_date || "—"}</td>
+                {history.length === 0 ? (
+                  <div style={styles.emptyPanel}>История контрактов отсутствует</div>
+                ) : (
+                  <div style={styles.tableWrap}>
+                    <table style={styles.table}>
+                      <thead>
+                        <tr>
+                          <th style={styles.th}>Contract ID</th>
+                          <th style={styles.th}>Status</th>
+                          <th style={styles.th}>Start Date</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody>
+                        {history.map((item, index) => {
+                          const isLast = index === history.length - 1;
+
+                          return (
+                            <tr key={item.contract_id}>
+                              <td
+                                style={{
+                                  ...styles.td,
+                                  ...(isLast ? styles.lastRowCell : null)
+                                }}
+                              >
+                                {item.contract_id || "—"}
+                              </td>
+                              <td
+                                style={{
+                                  ...styles.td,
+                                  ...(isLast ? styles.lastRowCell : null)
+                                }}
+                              >
+                                {item.status || "—"}
+                              </td>
+                              <td
+                                style={{
+                                  ...styles.td,
+                                  ...(isLast ? styles.lastRowCell : null)
+                                }}
+                              >
+                                {item.start_date || "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-          </SectionCard>
+          </section>
 
           <SectionCard
             title="Settlements"
@@ -336,15 +389,15 @@ function InfoRow({ label, value }) {
 const styles = {
   page: {
     minHeight: "100%",
-    background: "#f6f8fb",
+    background: "#f6f7fb",
     padding: "24px"
   },
   container: {
-    maxWidth: "1200px",
+    maxWidth: "1400px",
     margin: "0 auto"
   },
   header: {
-    marginBottom: "24px"
+    marginBottom: "20px"
   },
   eyebrow: {
     fontSize: "12px",
@@ -356,15 +409,15 @@ const styles = {
   },
   title: {
     margin: 0,
-    fontSize: "32px",
+    fontSize: "28px",
     lineHeight: 1.2,
     fontWeight: 700,
     color: "#111827"
   },
   subtitle: {
-    margin: "10px 0 0 0",
+    margin: "6px 0 0 0",
     fontSize: "14px",
-    lineHeight: 1.6,
+    lineHeight: 1.5,
     color: "#6b7280",
     maxWidth: "860px"
   },
@@ -389,59 +442,71 @@ const styles = {
   overviewGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "16px",
-    marginBottom: "24px"
+    gap: "14px",
+    marginBottom: "20px"
   },
   statCard: {
     background: "#ffffff",
     border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "18px 20px",
+    borderRadius: "14px",
+    padding: "18px",
+    minHeight: "118px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
     boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
   },
   statLabel: {
-    fontSize: "12px",
-    fontWeight: 600,
+    margin: 0,
+    fontSize: "13px",
     color: "#6b7280",
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
-    marginBottom: "8px"
+    fontWeight: 500
   },
   statValue: {
-    fontSize: "18px",
+    margin: "10px 0 0 0",
+    fontSize: "28px",
     fontWeight: 700,
+    lineHeight: 1.1,
     color: "#111827",
     wordBreak: "break-word"
   },
   stack: {
     display: "grid",
-    gap: "24px"
+    gap: "20px"
+  },
+  twoColumn: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.8fr)",
+    gap: "16px",
+    alignItems: "start"
+  },
+  contractColumn: {
+    minWidth: 0
   },
   card: {
     background: "#ffffff",
     border: "1px solid #e5e7eb",
-    borderRadius: "20px",
-    overflow: "hidden",
+    borderRadius: "16px",
+    padding: "18px",
     boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
   },
   cardHeader: {
-    padding: "20px 22px 14px 22px",
-    borderBottom: "1px solid #f0f2f5"
+    marginBottom: "12px"
   },
   cardTitle: {
     margin: 0,
-    fontSize: "20px",
+    fontSize: "18px",
     fontWeight: 700,
     color: "#111827"
   },
   cardSubtitle: {
     marginTop: "6px",
     fontSize: "13px",
-    lineHeight: 1.5,
+    lineHeight: 1.45,
     color: "#6b7280"
   },
   cardBody: {
-    padding: "20px 22px 22px 22px"
+    marginTop: "12px"
   },
   infoGrid: {
     display: "grid",
@@ -451,13 +516,13 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     gap: "16px",
-    padding: "12px 0",
+    padding: "10px 0",
     borderBottom: "1px solid #f3f4f6"
   },
   infoLabel: {
-    fontSize: "14px",
+    fontSize: "13px",
     color: "#6b7280",
-    fontWeight: 600
+    fontWeight: 500
   },
   infoValue: {
     fontSize: "14px",
@@ -467,7 +532,7 @@ const styles = {
     wordBreak: "break-word"
   },
   contractCard: {
-    border: "1px solid #edf0f3",
+    border: "1px solid #e5e7eb",
     borderRadius: "16px",
     padding: "16px",
     background: "#fbfcfe"
@@ -525,34 +590,38 @@ const styles = {
     padding: "18px",
     fontSize: "14px",
     color: "#6b7280",
-    background: "#fafafa"
+    background: "#f9fafb"
   },
   tableWrap: {
     overflowX: "auto",
-    border: "1px solid #edf0f3",
-    borderRadius: "14px"
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    background: "#ffffff"
   },
   table: {
     width: "100%",
-    borderCollapse: "collapse"
+    borderCollapse: "collapse",
+    minWidth: "640px"
   },
   th: {
     textAlign: "left",
-    padding: "14px 16px",
-    background: "#f9fafb",
-    color: "#6b7280",
+    padding: "12px 14px",
     fontSize: "12px",
     fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
-    borderBottom: "1px solid #edf0f3"
+    color: "#6b7280",
+    background: "#f8fafc",
+    borderBottom: "1px solid #e5e7eb",
+    whiteSpace: "nowrap"
   },
   td: {
-    padding: "14px 16px",
+    padding: "12px 14px",
     fontSize: "14px",
     color: "#111827",
-    borderBottom: "1px solid #f3f4f6",
+    borderBottom: "1px solid #eef2f7",
     verticalAlign: "top"
+  },
+  lastRowCell: {
+    borderBottom: "none"
   },
   paragraph: {
     margin: 0,
@@ -561,11 +630,11 @@ const styles = {
     color: "#4b5563"
   },
   noteBox: {
-    marginTop: "16px",
-    padding: "14px 16px",
-    borderRadius: "14px",
+    marginTop: "12px",
+    padding: "14px",
+    borderRadius: "12px",
     background: "#f9fafb",
-    border: "1px solid #edf0f3"
+    border: "1px solid #e5e7eb"
   },
   noteTitle: {
     fontSize: "13px",
@@ -588,10 +657,10 @@ const styles = {
     color: "#111827"
   },
   loadingCard: {
+    padding: "20px",
+    borderRadius: "16px",
     background: "#ffffff",
     border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "20px",
     fontSize: "14px",
     color: "#374151"
   }
