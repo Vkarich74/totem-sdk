@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 
-export default function SalonContractsPage({ slug }) {
+export default function SalonContractsPage() {
 
-  const API_BASE = window.API_BASE
+  const salonSlug = "totem-demo-salon"
 
   const [contracts, setContracts] = useState([])
   const [masters, setMasters] = useState([])
@@ -14,27 +14,30 @@ export default function SalonContractsPage({ slug }) {
   const [payoutSchedule, setPayoutSchedule] = useState("manual")
   const [effectiveFrom, setEffectiveFrom] = useState("")
 
-  const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   useEffect(() => {
-    loadData()
+    loadContracts()
+    loadMasters()
   }, [])
 
-  async function loadData() {
+  async function loadContracts() {
     try {
-      const [cRes, mRes] = await Promise.all([
-        fetch(`${API_BASE}/internal/salons/${slug}/contracts`),
-        fetch(`${API_BASE}/internal/salons/${slug}/masters`)
-      ])
+      const res = await fetch(`/internal/salons/${salonSlug}/contracts`)
+      const data = await res.json()
+      setContracts(data.contracts || [])
+    } catch {
+      setError("Ошибка загрузки")
+    }
+  }
 
-      const cData = await cRes.json()
-      const mData = await mRes.json()
-
-      setContracts(cData.contracts || [])
-      setMasters(mData.masters || [])
-
-    } catch (e) {
+  async function loadMasters() {
+    try {
+      const res = await fetch(`/internal/salons/${salonSlug}/masters`)
+      const data = await res.json()
+      setMasters(data.masters || [])
+    } catch {
       setError("Ошибка загрузки")
     }
   }
@@ -60,9 +63,9 @@ export default function SalonContractsPage({ slug }) {
     try {
       setLoading(true)
 
-      const res = await fetch(`${API_BASE}/internal/salons/${slug}/contracts`, {
+      const res = await fetch(`/internal/salons/${salonSlug}/contracts`, {
         method: "POST",
-        headers: {"Content-Type":"application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           master_id: selectedMasterId,
           effective_from: effectiveFrom || null,
@@ -82,7 +85,7 @@ export default function SalonContractsPage({ slug }) {
         return
       }
 
-      await loadData()
+      await loadContracts()
 
       setSelectedMasterId("")
       setMasterPercent("")
@@ -97,130 +100,77 @@ export default function SalonContractsPage({ slug }) {
     }
   }
 
-  const active = contracts.filter(c => c.status === "active")
-  const pending = contracts.filter(c => c.status === "pending")
+  const activeContracts = contracts.filter(c => c.status === "active")
+  const pendingContracts = contracts.filter(c => c.status === "pending")
 
-  function masterName(id) {
+  function getMasterName(id) {
     const m = masters.find(x => x.id === id)
     return m ? m.name : id
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 20 }}>
 
-      <h2 style={{ marginBottom: 20 }}>Контракты</h2>
+      <h2>Контракты</h2>
 
       {/* СВОДКА */}
-      <div style={{ display:"flex", gap:20, marginBottom:20 }}>
-
-        <div style={card}>
-          <div>Активные</div>
-          <b>{active.length}</b>
-          <small>Используются в расчётах</small>
-        </div>
-
-        <div style={card}>
-          <div>Ожидающие</div>
-          <b>{pending.length}</b>
-          <small>Ожидают активации</small>
-        </div>
-
-        <div style={card}>
-          <div>Всего</div>
-          <b>{contracts.length}</b>
-          <small>История контрактов</small>
-        </div>
-
+      <div style={{ display: "flex", gap: 20, marginBottom: 20 }}>
+        <div>Активные: {activeContracts.length}</div>
+        <div>Ожидающие: {pendingContracts.length}</div>
+        <div>Всего: {contracts.length}</div>
       </div>
 
       {/* СОЗДАНИЕ */}
-      <div style={block}>
-        <h3>Создать контракт</h3>
+      <form onSubmit={createContract}>
 
-        <form onSubmit={createContract}>
+        <div>
+          <select value={selectedMasterId} onChange={e => setSelectedMasterId(e.target.value)}>
+            <option value="">Выбери мастера</option>
+            {masters.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </div>
 
-          <div>
-            <select value={selectedMasterId} onChange={e=>setSelectedMasterId(e.target.value)}>
-              <option value="">Выбери мастера</option>
-              {masters.map(m=>(
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </div>
+        <input placeholder="Master %" value={masterPercent} onChange={e => setMasterPercent(e.target.value)} />
+        <input placeholder="Salon %" value={salonPercent} onChange={e => setSalonPercent(e.target.value)} />
+        <input placeholder="Platform %" value={platformPercent} onChange={e => setPlatformPercent(e.target.value)} />
 
-          <div style={{marginTop:10}}>
-            <input placeholder="Master %" value={masterPercent} onChange={e=>setMasterPercent(e.target.value)} />
-            <input placeholder="Salon %" value={salonPercent} onChange={e=>setSalonPercent(e.target.value)} />
-            <input placeholder="Platform %" value={platformPercent} onChange={e=>setPlatformPercent(e.target.value)} />
-          </div>
+        <div>
+          <select value={payoutSchedule} onChange={e => setPayoutSchedule(e.target.value)}>
+            <option value="manual">Вручную</option>
+            <option value="daily">Daily</option>
+          </select>
+        </div>
 
-          <div style={{marginTop:10}}>
-            <select value={payoutSchedule} onChange={e=>setPayoutSchedule(e.target.value)}>
-              <option value="manual">Вручную</option>
-              <option value="daily">Daily</option>
-            </select>
-          </div>
+        <input type="datetime-local" value={effectiveFrom} onChange={e => setEffectiveFrom(e.target.value)} />
 
-          <div style={{marginTop:10}}>
-            <input
-              type="datetime-local"
-              value={effectiveFrom}
-              onChange={e=>setEffectiveFrom(e.target.value)}
-            />
-          </div>
+        <div>
+          Сумма процентов: {Number(masterPercent||0)+Number(salonPercent||0)+Number(platformPercent||0)}
+        </div>
 
-          <button disabled={loading} style={{marginTop:10}}>Создать</button>
+        <button disabled={loading}>Создать</button>
 
-          <div style={{marginTop:10}}>
-            Сумма процентов: {Number(masterPercent||0)+Number(salonPercent||0)+Number(platformPercent||0)}
-          </div>
+        {error && <div style={{ color: "red" }}>{error}</div>}
 
-          {error && <div style={{color:"red"}}>{error}</div>}
-
-        </form>
-      </div>
+      </form>
 
       {/* АКТИВНЫЕ */}
-      <div style={block}>
-        <h3>Активные контракты</h3>
-
-        {active.map(c=>(
-          <div key={c.id} style={row}>
-            {c.id} — {masterName(c.master_id)} — {c.terms_json?.master_percent}% — Активный
-          </div>
-        ))}
-      </div>
+      <h3>Активные</h3>
+      {activeContracts.map(c => (
+        <div key={c.id}>
+          {c.id} — {getMasterName(c.master_id)} — {c.terms_json?.master_percent}% — Активный
+        </div>
+      ))}
 
       {/* ОЖИДАЮЩИЕ */}
-      <div style={block}>
-        <h3>Ожидающие контракты</h3>
-
-        {pending.map(c=>(
-          <div key={c.id} style={row}>
-            {c.id} — {masterName(c.master_id)} — {c.terms_json?.master_percent}% — Ожидает
-          </div>
-        ))}
-      </div>
+      <h3>Ожидают</h3>
+      {pendingContracts.map(c => (
+        <div key={c.id}>
+          {c.id} — {getMasterName(c.master_id)} — {c.terms_json?.master_percent}% — Ожидает
+        </div>
+      ))}
 
     </div>
   )
-}
-
-const card = {
-  border:"1px solid #eee",
-  padding:15,
-  borderRadius:8,
-  width:180
-}
-
-const block = {
-  border:"1px solid #eee",
-  padding:15,
-  borderRadius:8,
-  marginBottom:20
-}
-
-const row = {
-  borderBottom:"1px solid #eee",
-  padding:"8px 0"
 }
