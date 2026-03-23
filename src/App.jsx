@@ -34,6 +34,7 @@ import MasterBookingsPage from "./master/MasterBookingsPage";
 import MasterClientsPage from "./master/MasterClientsPage";
 import MasterSchedulePage from "./master/MasterSchedulePage";
 import MasterSettingsPage from "./master/MasterSettingsPage";
+import MasterServicesPage from "./master/MasterServicesPage";
 
 /* MASTER FINANCE */
 import MasterMoneyPage from "./master/payments/MasterMoneyPage";
@@ -107,6 +108,7 @@ export default function App() {
             <Route path="clients" element={<MasterClientsPage />} />
 
             <Route path="schedule" element={<MasterSchedulePage />} />
+            <Route path="services" element={<MasterServicesPage />} />
 
             {/* MASTER FINANCE CONTROL */}
             <Route path="finance" element={<MasterFinancePage />} />
