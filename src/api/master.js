@@ -52,7 +52,7 @@ export async function getMasterServices(slug) {
     API + "/internal/masters/" + slug + "/services"
   )
   const j = await r.json()
-  return normalize(j)
+  return j
 }
 
 export async function createMasterService(slug, payload) {
