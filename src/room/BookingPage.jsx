@@ -162,11 +162,8 @@ export default function BookingPage() {
         master_id: Number(selectedMaster),
         service_id: Number(selectedService), // ← ВАЖНО
         start_at: startAt,
-        client_id: null,
-        client_payload: {
-          name: clientName,
-          phone: clientPhone
-        }
+        client_name: clientName,
+        phone: clientPhone
       };
 
       const res = await fetch(`${API_BASE}/public/salons/${slug}/bookings`, {
@@ -179,10 +176,12 @@ export default function BookingPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error("Ошибка создания записи");
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || "Ошибка создания записи");
+      }
 
       setSuccessData({
-        bookingId: data.booking_id,
+        bookingId: data.booking_id || data?.booking?.id,
         masterName: selectedMasterName,
         date,
         time,
