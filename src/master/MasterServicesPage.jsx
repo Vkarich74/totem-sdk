@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
-import { createMasterService, getMasterServices, updateMasterService } from "../api/master"
+import {
+  createMasterService,
+  deleteMasterService,
+  getMasterServices,
+  updateMasterService
+} from "../api/master"
 
 const QUICK_TEMPLATES = [
   { name: "Женская стрижка", duration_min: 60, price: 0 },
@@ -91,6 +96,7 @@ export default function MasterServicesPage() {
   })
   const [editingId, setEditingId] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
 
   async function loadServices() {
     setLoading(true)
@@ -236,6 +242,43 @@ export default function MasterServicesPage() {
       setError(e?.message || "Не удалось изменить статус услуги")
     } finally {
       setTogglingId(null)
+    }
+  }
+
+  async function handleDelete(service) {
+    const serviceId = service?.id || service?.service_id
+
+    if (!serviceId) {
+      setError("Не найден id услуги")
+      setSuccess("")
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Удалить услугу "${service?.name || "Без названия"}"?`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setDeletingId(serviceId)
+    setError("")
+    setSuccess("")
+
+    try {
+      await deleteMasterService(slug, serviceId)
+
+      if (editingId === serviceId) {
+        resetForm()
+      }
+
+      setSuccess("Услуга удалена")
+      await loadServices()
+    } catch (e) {
+      setError(e?.message || "Не удалось удалить услугу")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -580,12 +623,15 @@ export default function MasterServicesPage() {
             }}
           >
             {services.map((service, index) => {
+              const serviceId = service?.id || service?.service_id
               const key = getServiceKey(service, index)
               const name = service?.name || "Без названия"
               const duration = service?.duration_min ?? service?.duration ?? service?.minutes
               const price = service?.price ?? service?.base_price ?? 0
               const statusValue = service?.active ?? service?.is_active
               const isActive = typeof statusValue === "boolean" ? statusValue : true
+              const isToggling = togglingId === serviceId
+              const isDeleting = deletingId === serviceId
 
               return (
                 <div
@@ -655,13 +701,14 @@ export default function MasterServicesPage() {
                     <button
                       type="button"
                       onClick={() => startEdit(service)}
+                      disabled={isDeleting}
                       style={{
                         padding: "10px 12px",
                         borderRadius: "10px",
                         border: "1px solid #d0d0d0",
                         background: "#fff",
                         color: "#111",
-                        cursor: "pointer",
+                        cursor: isDeleting ? "not-allowed" : "pointer",
                         fontWeight: "600"
                       }}
                     >
@@ -671,25 +718,39 @@ export default function MasterServicesPage() {
                     <button
                       type="button"
                       onClick={() => toggleActive(service)}
-                      disabled={togglingId === (service?.id || service?.service_id)}
+                      disabled={isToggling || isDeleting}
                       style={{
                         padding: "10px 12px",
                         borderRadius: "10px",
                         border: "1px solid #d0d0d0",
                         background: "#fff",
                         color: "#111",
-                        cursor:
-                          togglingId === (service?.id || service?.service_id)
-                            ? "not-allowed"
-                            : "pointer",
+                        cursor: isToggling || isDeleting ? "not-allowed" : "pointer",
                         fontWeight: "600"
                       }}
                     >
-                      {togglingId === (service?.id || service?.service_id)
+                      {isToggling
                         ? "Сохраняем..."
                         : isActive
                           ? "Скрыть"
                           : "Активировать"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(service)}
+                      disabled={isDeleting || isToggling}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "10px",
+                        border: "1px solid #f0c2c2",
+                        background: "#fff5f5",
+                        color: "#b42318",
+                        cursor: isDeleting || isToggling ? "not-allowed" : "pointer",
+                        fontWeight: "600"
+                      }}
+                    >
+                      {isDeleting ? "Удаляем..." : "Удалить"}
                     </button>
                   </div>
                 </div>
