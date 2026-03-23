@@ -48,6 +48,10 @@ export default function SalonSidebar({ slug }) {
         <NavLink style={menuStyle} to="/salon/masters">Мастера</NavLink>
         <NavLink style={menuStyle} to="/salon/clients">Клиенты</NavLink>
         <NavLink style={menuStyle} to="/salon/bookings">Записи</NavLink>
+
+        {/* ДОБАВЛЕНО — УСЛУГИ */}
+        <NavLink style={menuStyle} to="/salon/services">Услуги</NavLink>
+
       </nav>
 
       <div style={{fontSize:"12px",color:"#888",marginTop:"25px",marginBottom:"10px"}}>

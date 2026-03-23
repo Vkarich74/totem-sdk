@@ -16,6 +16,7 @@ import BookingsPage from "./salon/pages/BookingsPage";
 import CalendarPage from "./salon/pages/CalendarPage";
 import MoneyPage from "./salon/pages/MoneyPage";
 import SettingsPage from "./salon/pages/SettingsPage";
+import ServicesPage from "./salon/pages/ServicesPage";
 
 /* SALON FINANCE */
 import SalonMoneyPage from "./salon/payments/SalonMoneyPage";
@@ -46,8 +47,10 @@ import MasterPayoutsPage from "./master/payments/MasterPayoutsPage";
 import MasterFinancePage from "./master/payments/MasterFinancePage";
 
 function getSlugFromPath() {
-  const parts = window.location.pathname.split("/");
-  return parts[2] || null;
+  const hash = window.location.hash || "";
+  const clean = hash.replace(/^#\/?/, "");
+  const parts = clean.split("/");
+  return parts[1] || null;
 }
 
 export default function App() {
@@ -79,6 +82,40 @@ export default function App() {
             <Route path="clients" element={<ClientsPage slug={slug} />} />
 
             <Route path="bookings" element={<BookingsPage slug={slug} />} />
+
+            <Route path="services" element={<ServicesPage slug={slug} />} />
+
+            <Route path="money" element={<MoneyPage />} />
+
+            {/* SALON FINANCE CONTROL */}
+            <Route path="finance" element={<SalonFinancePage />} />
+            <Route path="contracts" element={<SalonContractsPage />} />
+
+            {/* SALON FINANCE */}
+            <Route path="salon-money" element={<SalonMoneyPage />} />
+            <Route path="transactions" element={<SalonTransactionsPage />} />
+            <Route path="settlements" element={<SalonSettlementsPage />} />
+            <Route path="payouts" element={<SalonPayoutsPage />} />
+
+            <Route path="settings" element={<SettingsPage />} />
+
+          </Route>
+
+          {/* SALON CABINET WITH SLUG */}
+          <Route path="salon/:slug" element={<OwnerLayout slug={slug} />}>
+
+            <Route index element={<DashboardPage slug={slug} />} />
+            <Route path="dashboard" element={<DashboardPage slug={slug} />} />
+
+            <Route path="calendar" element={<CalendarPage slug={slug} />} />
+
+            <Route path="masters" element={<MastersPage slug={slug} />} />
+
+            <Route path="clients" element={<ClientsPage slug={slug} />} />
+
+            <Route path="bookings" element={<BookingsPage slug={slug} />} />
+
+            <Route path="services" element={<ServicesPage slug={slug} />} />
 
             <Route path="money" element={<MoneyPage />} />
 
