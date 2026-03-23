@@ -11,7 +11,12 @@ function resolveSlugFromHash() {
   const hash = window.location.hash || "";
   const clean = hash.replace(/^#\/?/, "");
   const parts = clean.split("/");
-  return parts[1] || window.SALON_SLUG || "totem-demo-salon";
+
+  if (parts[0] === "salon" && parts[1] && parts[1] !== "services") {
+    return parts[1];
+  }
+
+  return window.SALON_SLUG || "totem-demo-salon";
 }
 
 function buttonStyle(kind = "default") {
@@ -56,7 +61,7 @@ export default function ServicesPage(props) {
       setLoading(true);
 
       const res = await fetch(`${API_BASE}/internal/salons/${slug}/services`);
-      if (!res.ok) throw new Error("LOAD_FAILED");
+      if (!res.ok) throw new Error(`LOAD_FAILED_${res.status}`);
 
       const data = await res.json();
 
@@ -77,7 +82,7 @@ export default function ServicesPage(props) {
   async function loadMaster() {
     try {
       const salonMastersRes = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
-      if (!salonMastersRes.ok) throw new Error("SALON_MASTERS_LOAD_FAILED");
+      if (!salonMastersRes.ok) throw new Error(`SALON_MASTERS_LOAD_FAILED_${salonMastersRes.status}`);
 
       const salonMastersData = await salonMastersRes.json();
       const activeSalonMasters = (salonMastersData?.masters || []).filter(
@@ -96,7 +101,7 @@ export default function ServicesPage(props) {
       }
 
       const res = await fetch(`${API_BASE}/internal/masters/${MASTER_SLUG}`);
-      if (!res.ok) throw new Error("MASTER_LOAD_FAILED");
+      if (!res.ok) throw new Error(`MASTER_LOAD_FAILED_${res.status}`);
 
       const data = await res.json();
       setMaster(data?.master || null);
@@ -110,7 +115,7 @@ export default function ServicesPage(props) {
   async function loadMasterServices() {
     try {
       const salonMastersRes = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
-      if (!salonMastersRes.ok) throw new Error("SALON_MASTERS_LOAD_FAILED");
+      if (!salonMastersRes.ok) throw new Error(`SALON_MASTERS_LOAD_FAILED_${salonMastersRes.status}`);
 
       const salonMastersData = await salonMastersRes.json();
       const activeSalonMasters = (salonMastersData?.masters || []).filter(
@@ -124,7 +129,7 @@ export default function ServicesPage(props) {
           activeSalonMasters.map(async (currentMaster) => {
             const res = await fetch(`${API_BASE}/internal/masters/${currentMaster.slug}/services`);
             if (!res.ok) {
-              throw new Error(`MASTER_SERVICES_LOAD_FAILED_${currentMaster.slug}`);
+              throw new Error(`MASTER_SERVICES_LOAD_FAILED_${currentMaster.slug}_${res.status}`);
             }
 
             const data = await res.json();
@@ -144,7 +149,7 @@ export default function ServicesPage(props) {
       }
 
       const res = await fetch(`${API_BASE}/internal/masters/${MASTER_SLUG}/services`);
-      if (!res.ok) throw new Error("MASTER_SERVICES_LOAD_FAILED");
+      if (!res.ok) throw new Error(`MASTER_SERVICES_LOAD_FAILED_${res.status}`);
 
       const data = await res.json();
       const fallbackServices = (data?.services || []).map((item) => ({
@@ -272,7 +277,9 @@ export default function ServicesPage(props) {
       return;
     }
 
-    if (!selected?.master_id && !master?.id) {
+    const targetMasterId = selected.master_id || master?.id;
+
+    if (!targetMasterId) {
       alert("Не удалось определить мастера");
       return;
     }
@@ -286,7 +293,7 @@ export default function ServicesPage(props) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          master_id: Number(selected.master_id || master.id),
+          master_id: Number(targetMasterId),
           service_pk: Number(selected.service_pk),
           price: Number(selected.price),
           duration_min: Number(selected.duration_min),
@@ -325,9 +332,9 @@ export default function ServicesPage(props) {
     );
 
     return masterServices.filter((item) => {
-      const currentMasterId = item.master_id || master?.id;
-      if (!currentMasterId) return true;
-      return !existingKeys.has(`${currentMasterId}:${item.service_pk}`);
+      const masterId = item.master_id || master?.id;
+      if (!masterId) return false;
+      return !existingKeys.has(`${masterId}:${item.service_pk}`);
     });
   }, [master, masterServices, services]);
 
@@ -358,21 +365,28 @@ export default function ServicesPage(props) {
 
             {availableMasterServices.map((s) => (
               <option key={`${s.master_id || "master"}-${s.id}`} value={s.id}>
-                {(s.master_name ? `${s.master_name} — ` : "") + `${s.name} — ${s.price} сом — ${s.duration_min} мин`}
+                {s.master_name ? `${s.master_name} — ` : ""}
+                {s.name} — {s.price} сом — {s.duration_min} мин
               </option>
             ))}
           </select>
 
           <button
             onClick={attachService}
-            disabled={attachLoading || (!master?.id && salonMasters.length === 0) || availableMasterServices.length === 0}
+            disabled={attachLoading || availableMasterServices.length === 0}
             style={buttonStyle()}
           >
             Добавить
           </button>
         </div>
 
-        {availableMasterServices.length === 0 && (
+        {salonMasters.length === 0 && (
+          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
+            В салоне нет активных мастеров
+          </div>
+        )}
+
+        {salonMasters.length > 0 && availableMasterServices.length === 0 && (
           <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
             Нет доступных услуг мастера для подключения
           </div>
