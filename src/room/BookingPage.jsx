@@ -321,7 +321,7 @@ export default function BookingPage() {
             <option value="">Выберите услугу</option>
             {filteredServices.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} — {s.price}₸
+                {s.name} — {s.price}сом
               </option>
             ))}
           </select>
