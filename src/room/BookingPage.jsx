@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-const API_BASE = import.meta.env.VITE_API_BASE
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 function generateKey() {
   return crypto.randomUUID();
@@ -58,8 +58,12 @@ export default function BookingPage() {
     null;
 
   const [masters, setMasters] = useState([]);
+  const [services, setServices] = useState([]);
+
   const [selectedMaster, setSelectedMaster] = useState("");
   const [selectedMasterName, setSelectedMasterName] = useState("");
+
+  const [selectedService, setSelectedService] = useState("");
 
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
@@ -82,19 +86,27 @@ export default function BookingPage() {
       return;
     }
 
-    async function loadMasters() {
+    async function loadData() {
       try {
-        const res = await fetch(`${API_BASE}/public/salons/${slug}/masters`);
-        const data = await res.json();
-        setMasters(data.masters || []);
+        const [mastersRes, servicesRes] = await Promise.all([
+          fetch(`${API_BASE}/public/salons/${slug}/masters`),
+          fetch(`${API_BASE}/internal/salons/${slug}/services`)
+        ]);
+
+        const mastersData = await mastersRes.json();
+        const servicesData = await servicesRes.json();
+
+        setMasters(mastersData.masters || []);
+        setServices(servicesData.services || []);
+
       } catch {
-        setError("Не удалось загрузить мастеров");
+        setError("Ошибка загрузки данных");
       } finally {
         setInitLoading(false);
       }
     }
 
-    loadMasters();
+    loadData();
   }, [slug]);
 
   function validatePhone(phone) {
@@ -119,7 +131,7 @@ export default function BookingPage() {
 
   function goToPreview(e) {
     e.preventDefault();
-    if (!selectedMaster || !date || !time || !clientName || !clientPhone) {
+    if (!selectedMaster || !selectedService || !date || !time || !clientName || !clientPhone) {
       setError("Заполните все поля");
       return;
     }
@@ -143,7 +155,7 @@ export default function BookingPage() {
 
       const bookingPayload = {
         master_id: Number(selectedMaster),
-        service_id: 3,
+        service_id: Number(selectedService), // ← ВАЖНО
         start_at: startAt,
         client_id: null,
         client_payload: {
@@ -187,6 +199,7 @@ export default function BookingPage() {
     setTime("");
     setSelectedMaster("");
     setSelectedMasterName("");
+    setSelectedService("");
     setClientName("");
     setClientPhone("");
     setError("");
@@ -291,6 +304,19 @@ export default function BookingPage() {
             {masters.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedService}
+            onChange={(e) => setSelectedService(e.target.value)}
+            style={styles.input}
+          >
+            <option value="">Выберите услугу</option>
+            {services.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} — {s.price}₸
               </option>
             ))}
           </select>
