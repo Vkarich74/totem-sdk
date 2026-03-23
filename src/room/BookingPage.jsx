@@ -113,6 +113,11 @@ export default function BookingPage() {
     return /^[0-9+\-\s()]{6,20}$/.test(phone);
   }
 
+  const filteredServices = useMemo(() => {
+    if (!selectedMaster) return [];
+    return services.filter((s) => String(s.master_id) === String(selectedMaster));
+  }, [services, selectedMaster]);
+
   const timeOptions = useMemo(() => {
     const options = generateTimeOptions(15);
     if (!date) return options;
@@ -297,6 +302,7 @@ export default function BookingPage() {
               setSelectedMaster(id);
               const master = masters.find((m) => String(m.id) === id);
               setSelectedMasterName(master?.name || "");
+              setSelectedService("");
             }}
             style={styles.input}
           >
@@ -314,7 +320,7 @@ export default function BookingPage() {
             style={styles.input}
           >
             <option value="">Выберите услугу</option>
-            {services.map((s) => (
+            {filteredServices.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} — {s.price}₸
               </option>
