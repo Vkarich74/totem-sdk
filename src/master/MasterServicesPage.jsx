@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { createMasterService, getMasterServices } from "../api/master"
+import { createMasterService, getMasterServices, updateMasterService } from "../api/master"
 
 const QUICK_TEMPLATES = [
   { name: "Женская стрижка", duration_min: 60, price: 0 },
@@ -89,6 +89,8 @@ export default function MasterServicesPage() {
     duration_min: "",
     price: ""
   })
+  const [editingId, setEditingId] = useState(null)
+  const [togglingId, setTogglingId] = useState(null)
 
   async function loadServices() {
     setLoading(true)
@@ -136,6 +138,7 @@ export default function MasterServicesPage() {
       duration_min: "",
       price: ""
     })
+    setEditingId(null)
   }
 
   function validate() {
@@ -174,19 +177,65 @@ export default function MasterServicesPage() {
     setSuccess("")
 
     try {
-      await createMasterService(slug, {
+      const payload = {
         name: String(form.name || "").trim(),
         duration_min: Number(form.duration_min),
         price: Number(form.price)
-      })
+      }
+
+      if (editingId) {
+        await updateMasterService(slug, editingId, payload)
+        setSuccess("Услуга обновлена")
+      } else {
+        await createMasterService(slug, payload)
+        setSuccess("Услуга добавлена")
+      }
 
       resetForm()
-      setSuccess("Услуга добавлена")
       await loadServices()
     } catch (e) {
       setError(e?.message || "Не удалось сохранить услугу")
     } finally {
       setSaving(false)
+    }
+  }
+
+  function startEdit(service) {
+    setError("")
+    setSuccess("")
+    setEditingId(service?.id || service?.service_id || null)
+    setForm({
+      name: String(service?.name || ""),
+      duration_min: String(service?.duration_min ?? service?.duration ?? service?.minutes ?? ""),
+      price: String(service?.price ?? service?.base_price ?? "")
+    })
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  async function toggleActive(service) {
+    const serviceId = service?.id || service?.service_id
+
+    if (!serviceId) {
+      setError("Не найден id услуги")
+      setSuccess("")
+      return
+    }
+
+    setTogglingId(serviceId)
+    setError("")
+    setSuccess("")
+
+    try {
+      await updateMasterService(slug, serviceId, {
+        active: !(service?.active ?? service?.is_active ?? true)
+      })
+
+      setSuccess("Статус услуги обновлён")
+      await loadServices()
+    } catch (e) {
+      setError(e?.message || "Не удалось изменить статус услуги")
+    } finally {
+      setTogglingId(null)
     }
   }
 
@@ -298,7 +347,7 @@ export default function MasterServicesPage() {
             color: "#111"
           }}
         >
-          Добавить услугу
+          {editingId ? "Редактировать услугу" : "Добавить услугу"}
         </div>
 
         <div
@@ -436,7 +485,7 @@ export default function MasterServicesPage() {
               fontWeight: "600"
             }}
           >
-            {saving ? "Сохраняем..." : "Добавить услугу"}
+            {saving ? "Сохраняем..." : editingId ? "Сохранить изменения" : "Добавить услугу"}
           </button>
 
           <button
@@ -453,7 +502,7 @@ export default function MasterServicesPage() {
               fontWeight: "600"
             }}
           >
-            Очистить
+            {editingId ? "Отмена" : "Очистить"}
           </button>
         </div>
       </form>
@@ -594,6 +643,54 @@ export default function MasterServicesPage() {
                   >
                     <div>Длительность: {formatDuration(duration)}</div>
                     <div>Цена: {formatPrice(price)}</div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      flexWrap: "wrap"
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => startEdit(service)}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "10px",
+                        border: "1px solid #d0d0d0",
+                        background: "#fff",
+                        color: "#111",
+                        cursor: "pointer",
+                        fontWeight: "600"
+                      }}
+                    >
+                      Редактировать
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleActive(service)}
+                      disabled={togglingId === (service?.id || service?.service_id)}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "10px",
+                        border: "1px solid #d0d0d0",
+                        background: "#fff",
+                        color: "#111",
+                        cursor:
+                          togglingId === (service?.id || service?.service_id)
+                            ? "not-allowed"
+                            : "pointer",
+                        fontWeight: "600"
+                      }}
+                    >
+                      {togglingId === (service?.id || service?.service_id)
+                        ? "Сохраняем..."
+                        : isActive
+                          ? "Скрыть"
+                          : "Активировать"}
+                    </button>
                   </div>
                 </div>
               )
