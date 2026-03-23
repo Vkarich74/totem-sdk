@@ -48,6 +48,7 @@ export default function MasterSidebar({ slug }) {
         <NavLink style={menuStyle} to="/master/bookings">Записи</NavLink>
         <NavLink style={menuStyle} to="/master/clients">Клиенты</NavLink>
         <NavLink style={menuStyle} to="/master/schedule">Расписание</NavLink>
+        <NavLink style={menuStyle} to="/master/services">Услуги</NavLink>
 
       </nav>
 
