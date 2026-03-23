@@ -2,6 +2,8 @@ import { NavLink } from "react-router-dom"
 
 export default function SalonSidebar({ slug }) {
 
+  const basePath = slug ? `/salon/${slug}` : "/salon";
+
   const menuStyle = ({ isActive }) => ({
     display: "block",
     padding: "6px 0",
@@ -43,14 +45,14 @@ export default function SalonSidebar({ slug }) {
       </div>
 
       <nav>
-        <NavLink style={menuStyle} to="/salon/dashboard">Dashboard</NavLink>
-        <NavLink style={menuStyle} to="/salon/calendar">Календарь</NavLink>
-        <NavLink style={menuStyle} to="/salon/masters">Мастера</NavLink>
-        <NavLink style={menuStyle} to="/salon/clients">Клиенты</NavLink>
-        <NavLink style={menuStyle} to="/salon/bookings">Записи</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/dashboard`}>Dashboard</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/calendar`}>Календарь</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/masters`}>Мастера</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/clients`}>Клиенты</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/bookings`}>Записи</NavLink>
 
         {/* ДОБАВЛЕНО — УСЛУГИ */}
-        <NavLink style={menuStyle} to="/salon/services">Услуги</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/services`}>Услуги</NavLink>
 
       </nav>
 
@@ -59,16 +61,16 @@ export default function SalonSidebar({ slug }) {
       </div>
 
       <nav>
-        <NavLink style={menuStyle} to="/salon/finance">Финансы</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/finance`}>Финансы</NavLink>
 
         {/* ДОБАВЛЕНО — КОНТРАКТЫ */}
-        <NavLink style={menuStyle} to="/salon/contracts">Контракты</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/contracts`}>Контракты</NavLink>
 
-        <NavLink style={menuStyle} to="/salon/money">Деньги</NavLink>
-        <NavLink style={menuStyle} to="/salon/salon-money">Финансы салона</NavLink>
-        <NavLink style={menuStyle} to="/salon/transactions">Транзакции</NavLink>
-        <NavLink style={menuStyle} to="/salon/settlements">Сеты</NavLink>
-        <NavLink style={menuStyle} to="/salon/payouts">Выплаты</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/money`}>Деньги</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/salon-money`}>Финансы салона</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/transactions`}>Транзакции</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/settlements`}>Сеты</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/payouts`}>Выплаты</NavLink>
       </nav>
 
       <div style={{fontSize:"12px",color:"#888",marginTop:"25px",marginBottom:"10px"}}>
@@ -76,7 +78,7 @@ export default function SalonSidebar({ slug }) {
       </div>
 
       <nav>
-        <NavLink style={menuStyle} to="/salon/settings">Настройки</NavLink>
+        <NavLink style={menuStyle} to={`${basePath}/settings`}>Настройки</NavLink>
       </nav>
 
     </div>
