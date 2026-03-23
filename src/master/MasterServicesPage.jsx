@@ -1,31 +1,14 @@
-import { useMemo, useState } from "react"
-import { createMasterService } from "../api/master"
+import { useEffect, useMemo, useState } from "react"
+import { createMasterService, getMasterServices } from "../api/master"
 
-const PRESET_SERVICES = [
-  { key: "service_1", label: "Услуга 1" },
-  { key: "service_2", label: "Услуга 2" },
-  { key: "service_3", label: "Услуга 3" },
-  { key: "service_4", label: "Услуга 4" },
-  { key: "service_5", label: "Услуга 5" },
-  { key: "service_6", label: "Услуга 6" },
-  { key: "service_7", label: "Услуга 7" },
-  { key: "service_8", label: "Услуга 8" },
-  { key: "service_9", label: "Услуга 9" },
-  { key: "service_10", label: "Услуга 10" }
+const QUICK_TEMPLATES = [
+  { name: "Женская стрижка", duration_min: 60, price: 0 },
+  { name: "Мужская стрижка", duration_min: 45, price: 0 },
+  { name: "Окрашивание", duration_min: 120, price: 0 },
+  { name: "Укладка", duration_min: 45, price: 0 },
+  { name: "Уход за волосами", duration_min: 60, price: 0 },
+  { name: "Мелирование", duration_min: 150, price: 0 }
 ]
-
-function buildInitialState() {
-  const state = {}
-
-  for (const item of PRESET_SERVICES) {
-    state[item.key] = {
-      checked: false,
-      duration_min: ""
-    }
-  }
-
-  return state
-}
 
 function getSlugFromHash() {
   const hash = window.location.hash || ""
@@ -34,48 +17,118 @@ function getSlugFromHash() {
   return parts[1] === "master" ? parts[2] || "" : ""
 }
 
+function normalizeServicesResponse(payload) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload?.services)) {
+    return payload.services
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data
+  }
+
+  return []
+}
+
+function formatPrice(value) {
+  const numberValue = Number(value)
+
+  if (!Number.isFinite(numberValue)) {
+    return "—"
+  }
+
+  return `${numberValue.toLocaleString("ru-RU")} сом`
+}
+
+function formatDuration(value) {
+  const numberValue = Number(value)
+
+  if (!Number.isFinite(numberValue) || numberValue <= 0) {
+    return "—"
+  }
+
+  return `${numberValue} мин`
+}
+
+function getServiceKey(service, index) {
+  return service?.id || service?.service_id || `${service?.name || "service"}-${index}`
+}
+
 export default function MasterServicesPage() {
-  const [form, setForm] = useState(buildInitialState())
+  const slug = useMemo(() => getSlugFromHash(), [])
+
+  const [services, setServices] = useState([])
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [form, setForm] = useState({
+    name: "",
+    duration_min: "",
+    price: ""
+  })
 
-  const slug = useMemo(() => getSlugFromHash(), [])
+  async function loadServices() {
+    if (!slug) {
+      setServices([])
+      setLoading(false)
+      setError("MASTER_SLUG_REQUIRED")
+      return
+    }
 
-  const selectedServices = useMemo(() => {
-    return PRESET_SERVICES.filter((item) => form[item.key]?.checked)
-  }, [form])
+    setLoading(true)
+    setError("")
 
-  const selectedCount = selectedServices.length
+    try {
+      const response = await getMasterServices(slug)
+      const normalized = normalizeServicesResponse(response)
 
-  function toggleService(key) {
+      setServices(normalized)
+    } catch (e) {
+      setError(e?.message || "Не удалось загрузить услуги")
+      setServices([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadServices()
+  }, [slug])
+
+  function updateForm(field, value) {
     setError("")
     setSuccess("")
 
     setForm((prev) => ({
       ...prev,
-      [key]: {
-        ...prev[key],
-        checked: !prev[key].checked
-      }
+      [field]: value
     }))
   }
 
-  function setDuration(key, value) {
+  function applyTemplate(template) {
     setError("")
     setSuccess("")
-
-    setForm((prev) => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        duration_min: value
-      }
-    }))
+    setForm({
+      name: template.name,
+      duration_min: String(template.duration_min),
+      price: String(template.price)
+    })
   }
 
   function resetForm() {
-    setForm(buildInitialState())
+    setForm({
+      name: "",
+      duration_min: "",
+      price: ""
+    })
   }
 
   function validate() {
@@ -83,22 +136,28 @@ export default function MasterServicesPage() {
       return "MASTER_SLUG_REQUIRED"
     }
 
-    if (selectedCount === 0) {
-      return "Выбери хотя бы одну услугу"
+    const name = String(form.name || "").trim()
+    const duration = Number(form.duration_min)
+    const price = Number(form.price)
+
+    if (!name) {
+      return "Укажи название услуги"
     }
 
-    for (const item of selectedServices) {
-      const duration = Number(form[item.key].duration_min)
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return "Укажи корректную длительность"
+    }
 
-      if (!Number.isFinite(duration) || duration <= 0) {
-        return `Укажи корректную длительность для: ${item.label}`
-      }
+    if (!Number.isFinite(price) || price < 0) {
+      return "Укажи корректную цену"
     }
 
     return ""
   }
 
-  async function handleSave() {
+  async function handleCreate(e) {
+    e.preventDefault()
+
     const validationError = validate()
 
     if (validationError) {
@@ -112,182 +171,433 @@ export default function MasterServicesPage() {
     setSuccess("")
 
     try {
-      for (const item of selectedServices) {
-        await createMasterService(slug, {
-          name: item.label,
-          duration_min: Number(form[item.key].duration_min),
-          price: 0
-        })
-      }
+      await createMasterService(slug, {
+        name: String(form.name || "").trim(),
+        duration_min: Number(form.duration_min),
+        price: Number(form.price)
+      })
 
-      setSuccess(`Сохранено услуг: ${selectedCount}`)
       resetForm()
-
+      setSuccess("Услуга добавлена")
+      await loadServices()
     } catch (e) {
-      setError(e?.message || "Ошибка сохранения услуг")
+      setError(e?.message || "Не удалось сохранить услугу")
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div style={{
-      padding: "24px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "20px"
-    }}>
-
+    <div
+      style={{
+        padding: "24px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px"
+      }}
+    >
       <div>
-        <h1 style={{
-          margin: 0,
-          fontSize: "28px",
-          lineHeight: 1.2
-        }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: "28px",
+            lineHeight: 1.2
+          }}
+        >
           Услуги
         </h1>
 
-        <div style={{
-          color: "#666",
-          marginTop: "8px",
-          fontSize: "14px"
-        }}>
-          Выбери услуги мастера для кабинета. Разрешён мультивыбор, у каждой услуги своё время.
+        <div
+          style={{
+            color: "#666",
+            marginTop: "8px",
+            fontSize: "14px"
+          }}
+        >
+          Управляй реальными услугами мастера: добавляй, смотри список и поддерживай актуальный каталог для профиля.
         </div>
       </div>
 
-      <div style={{
-        display: "grid",
-        gap: "14px"
-      }}>
-        {PRESET_SERVICES.map((item) => {
-          const row = form[item.key]
+      <div
+        style={{
+          border: "1px solid #e7e7e7",
+          borderRadius: "14px",
+          background: "#fff",
+          padding: "18px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px"
+        }}
+      >
+        <div
+          style={{
+            fontSize: "16px",
+            fontWeight: "600",
+            color: "#111"
+          }}
+        >
+          Быстро заполнить
+        </div>
 
-          return (
-            <div
-              key={item.key}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px"
+          }}
+        >
+          {QUICK_TEMPLATES.map((template) => (
+            <button
+              key={template.name}
+              type="button"
+              onClick={() => applyTemplate(template)}
               style={{
-                border: "1px solid #e7e7e7",
-                borderRadius: "14px",
-                background: "#fff",
-                padding: "16px"
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1px solid #d9d9d9",
+                background: "#fafafa",
+                color: "#111",
+                cursor: "pointer",
+                fontWeight: "500"
               }}
             >
-              <label style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                cursor: "pointer"
-              }}>
-                <input
-                  type="checkbox"
-                  checked={row.checked}
-                  onChange={() => toggleService(item.key)}
-                />
+              {template.name}
+            </button>
+          ))}
+        </div>
 
-                <span style={{
-                  fontSize: "16px",
-                  fontWeight: "600",
-                  color: "#111"
-                }}>
-                  {item.label}
-                </span>
-              </label>
-
-              {row.checked && (
-                <div style={{
-                  marginTop: "14px",
-                  paddingLeft: "28px"
-                }}>
-                  <div style={{
-                    fontSize: "13px",
-                    color: "#666",
-                    marginBottom: "6px"
-                  }}>
-                    Длительность
-                  </div>
-
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={row.duration_min}
-                    onChange={(e) => setDuration(item.key, e.target.value)}
-                    placeholder="Например 60"
-                    style={{
-                      width: "220px",
-                      padding: "10px 12px",
-                      border: "1px solid #d9d9d9",
-                      borderRadius: "10px",
-                      outline: "none"
-                    }}
-                  />
-
-                  <div style={{
-                    fontSize: "12px",
-                    color: "#888",
-                    marginTop: "8px"
-                  }}>
-                    Время задаётся отдельно для каждой выбранной услуги
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#777"
+          }}
+        >
+          Шаблон только заполняет форму. В систему сохраняется реальная услуга после нажатия кнопки добавления.
+        </div>
       </div>
 
-      <div style={{
-        border: "1px solid #e7e7e7",
-        borderRadius: "14px",
-        background: "#fafafa",
-        padding: "18px"
-      }}>
-        <div style={{
-          fontWeight: "600",
-          marginBottom: "10px"
-        }}>
-          Выбрано услуг: {selectedCount}
+      <form
+        onSubmit={handleCreate}
+        style={{
+          border: "1px solid #e7e7e7",
+          borderRadius: "14px",
+          background: "#fff",
+          padding: "18px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px"
+        }}
+      >
+        <div
+          style={{
+            fontSize: "18px",
+            fontWeight: "600",
+            color: "#111"
+          }}
+        >
+          Добавить услугу
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "14px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))"
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#666",
+                marginBottom: "6px"
+              }}
+            >
+              Название
+            </div>
+
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => updateForm("name", e.target.value)}
+              placeholder="Например, Окрашивание"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid #d9d9d9",
+                borderRadius: "10px",
+                outline: "none",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#666",
+                marginBottom: "6px"
+              }}
+            >
+              Длительность, мин
+            </div>
+
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.duration_min}
+              onChange={(e) => updateForm("duration_min", e.target.value)}
+              placeholder="Например, 60"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid #d9d9d9",
+                borderRadius: "10px",
+                outline: "none",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#666",
+                marginBottom: "6px"
+              }}
+            >
+              Цена
+            </div>
+
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={form.price}
+              onChange={(e) => updateForm("price", e.target.value)}
+              placeholder="Например, 1500"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid #d9d9d9",
+                borderRadius: "10px",
+                outline: "none",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
         </div>
 
         {error && (
-          <div style={{
-            marginBottom: "12px",
-            color: "#b42318",
-            fontSize: "14px"
-          }}>
+          <div
+            style={{
+              color: "#b42318",
+              fontSize: "14px"
+            }}
+          >
             {error}
           </div>
         )}
 
         {success && (
-          <div style={{
-            marginBottom: "12px",
-            color: "#067647",
-            fontSize: "14px"
-          }}>
+          <div
+            style={{
+              color: "#067647",
+              fontSize: "14px"
+            }}
+          >
             {success}
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
+        <div
           style={{
-            padding: "12px 16px",
-            borderRadius: "10px",
-            border: "1px solid #d0d0d0",
-            background: saving ? "#f2f2f2" : "#111",
-            color: saving ? "#777" : "#fff",
-            cursor: saving ? "not-allowed" : "pointer",
-            fontWeight: "600"
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap"
           }}
         >
-          {saving ? "Сохраняем..." : "Сохранить выбранные услуги"}
-        </button>
-      </div>
+          <button
+            type="submit"
+            disabled={saving}
+            style={{
+              padding: "12px 16px",
+              borderRadius: "10px",
+              border: "1px solid #d0d0d0",
+              background: saving ? "#f2f2f2" : "#111",
+              color: saving ? "#777" : "#fff",
+              cursor: saving ? "not-allowed" : "pointer",
+              fontWeight: "600"
+            }}
+          >
+            {saving ? "Сохраняем..." : "Добавить услугу"}
+          </button>
 
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={saving}
+            style={{
+              padding: "12px 16px",
+              borderRadius: "10px",
+              border: "1px solid #d0d0d0",
+              background: "#fff",
+              color: "#111",
+              cursor: saving ? "not-allowed" : "pointer",
+              fontWeight: "600"
+            }}
+          >
+            Очистить
+          </button>
+        </div>
+      </form>
+
+      <div
+        style={{
+          border: "1px solid #e7e7e7",
+          borderRadius: "14px",
+          background: "#fafafa",
+          padding: "18px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px"
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap"
+          }}
+        >
+          <div
+            style={{
+              fontWeight: "600",
+              color: "#111"
+            }}
+          >
+            Мои услуги
+          </div>
+
+          <button
+            type="button"
+            onClick={loadServices}
+            disabled={loading}
+            style={{
+              padding: "10px 12px",
+              borderRadius: "10px",
+              border: "1px solid #d0d0d0",
+              background: "#fff",
+              color: "#111",
+              cursor: loading ? "not-allowed" : "pointer",
+              fontWeight: "600"
+            }}
+          >
+            {loading ? "Обновляем..." : "Обновить список"}
+          </button>
+        </div>
+
+        {loading ? (
+          <div
+            style={{
+              color: "#666",
+              fontSize: "14px"
+            }}
+          >
+            Загружаем услуги...
+          </div>
+        ) : services.length === 0 ? (
+          <div
+            style={{
+              color: "#666",
+              fontSize: "14px"
+            }}
+          >
+            Пока нет ни одной услуги. Добавь первую услугу через форму выше.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gap: "12px"
+            }}
+          >
+            {services.map((service, index) => {
+              const key = getServiceKey(service, index)
+              const name = service?.name || "Без названия"
+              const duration = service?.duration_min ?? service?.duration ?? service?.minutes
+              const price = service?.price ?? service?.base_price ?? 0
+              const statusValue = service?.active ?? service?.is_active
+              const isActive = typeof statusValue === "boolean" ? statusValue : true
+
+              return (
+                <div
+                  key={key}
+                  style={{
+                    border: "1px solid #e7e7e7",
+                    borderRadius: "12px",
+                    background: "#fff",
+                    padding: "16px",
+                    display: "grid",
+                    gap: "8px"
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "12px",
+                      flexWrap: "wrap"
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        color: "#111"
+                      }}
+                    >
+                      {name}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        padding: "6px 10px",
+                        borderRadius: "999px",
+                        background: isActive ? "#ecfdf3" : "#f2f4f7",
+                        color: isActive ? "#067647" : "#667085",
+                        border: isActive ? "1px solid #abefc6" : "1px solid #d0d5dd"
+                      }}
+                    >
+                      {isActive ? "Активна" : "Скрыта"}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "16px",
+                      flexWrap: "wrap",
+                      color: "#666",
+                      fontSize: "14px"
+                    }}
+                  >
+                    <div>Длительность: {formatDuration(duration)}</div>
+                    <div>Цена: {formatPrice(price)}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
