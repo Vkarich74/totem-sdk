@@ -13,8 +13,23 @@ const QUICK_TEMPLATES = [
 function getSlugFromHash() {
   const hash = window.location.hash || ""
   const clean = hash.replace(/^#\/?/, "")
-  const parts = clean.split("/")
-  return parts[1] === "master" ? parts[2] || "" : ""
+  const parts = clean.split("/").filter(Boolean)
+
+  if (parts[0] === "master") {
+    if (parts[1] && parts[1] !== "services") {
+      return parts[1]
+    }
+
+    const storedSlug =
+      window.localStorage.getItem("totem_master_slug") ||
+      window.sessionStorage.getItem("totem_master_slug")
+
+    if (storedSlug) {
+      return storedSlug
+    }
+  }
+
+  return "totem-demo-master"
 }
 
 function normalizeServicesResponse(payload) {
@@ -76,20 +91,12 @@ export default function MasterServicesPage() {
   })
 
   async function loadServices() {
-    if (!slug) {
-      setServices([])
-      setLoading(false)
-      setError("MASTER_SLUG_REQUIRED")
-      return
-    }
-
     setLoading(true)
     setError("")
 
     try {
       const response = await getMasterServices(slug)
       const normalized = normalizeServicesResponse(response)
-
       setServices(normalized)
     } catch (e) {
       setError(e?.message || "Не удалось загрузить услуги")
@@ -132,10 +139,6 @@ export default function MasterServicesPage() {
   }
 
   function validate() {
-    if (!slug) {
-      return "MASTER_SLUG_REQUIRED"
-    }
-
     const name = String(form.name || "").trim()
     const duration = Number(form.duration_min)
     const price = Number(form.price)
