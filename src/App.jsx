@@ -70,20 +70,20 @@ export default function App() {
           <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
 
           {/* SALON CABINET */}
-          <Route path="salon" element={<OwnerLayout slug={slug} />}>
+          <Route path="salon" element={<OwnerLayout />}>
 
-            <Route index element={<DashboardPage slug={slug} />} />
-            <Route path="dashboard" element={<DashboardPage slug={slug} />} />
+            <Route index element={<DashboardPage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
 
-            <Route path="calendar" element={<CalendarPage slug={slug} />} />
+            <Route path="calendar" element={<CalendarPage />} />
 
-            <Route path="masters" element={<MastersPage slug={slug} />} />
+            <Route path="masters" element={<MastersPage />} />
 
-            <Route path="clients" element={<ClientsPage slug={slug} />} />
+            <Route path="clients" element={<ClientsPage />} />
 
-            <Route path="bookings" element={<BookingsPage slug={slug} />} />
+            <Route path="bookings" element={<BookingsPage />} />
 
-            <Route path="services" element={<ServicesPage slug={slug} />} />
+            <Route path="services" element={<ServicesPage />} />
 
             <Route path="money" element={<MoneyPage />} />
 
@@ -102,20 +102,20 @@ export default function App() {
           </Route>
 
           {/* SALON CABINET WITH SLUG */}
-          <Route path="salon/:slug" element={<OwnerLayout slug={slug} />}>
+          <Route path="salon/:slug" element={<OwnerLayout />}>
 
-            <Route index element={<DashboardPage slug={slug} />} />
-            <Route path="dashboard" element={<DashboardPage slug={slug} />} />
+            <Route index element={<DashboardPage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
 
-            <Route path="calendar" element={<CalendarPage slug={slug} />} />
+            <Route path="calendar" element={<CalendarPage />} />
 
-            <Route path="masters" element={<MastersPage slug={slug} />} />
+            <Route path="masters" element={<MastersPage />} />
 
-            <Route path="clients" element={<ClientsPage slug={slug} />} />
+            <Route path="clients" element={<ClientsPage />} />
 
-            <Route path="bookings" element={<BookingsPage slug={slug} />} />
+            <Route path="bookings" element={<BookingsPage />} />
 
-            <Route path="services" element={<ServicesPage slug={slug} />} />
+            <Route path="services" element={<ServicesPage />} />
 
             <Route path="money" element={<MoneyPage />} />
 
