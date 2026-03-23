@@ -1,50 +1,90 @@
 const API = "https://api.totemv.com"
 
 function normalize(res) {
-
   if (!res) return []
-
   if (Array.isArray(res)) return res
-
   if (Array.isArray(res.bookings)) return res.bookings
-
   if (Array.isArray(res.clients)) return res.clients
-
   if (Array.isArray(res.data)) return res.data
-
   return []
-
 }
+
+// ======================
+// METRICS
+// ======================
 
 export async function getMasterMetrics(slug) {
-
   const r = await fetch(API + "/internal/masters/" + slug + "/metrics")
   const j = await r.json()
-
   return j.metrics || j
-
 }
 
-export async function getMasterBookings(slug) {
+// ======================
+// BOOKINGS
+// ======================
 
+export async function getMasterBookings(slug) {
   const r = await fetch(
     API + "/internal/masters/" + slug + "/bookings"
   )
-
   const j = await r.json()
-
   return normalize(j)
-
 }
 
-export async function getMasterClients(slug) {
+// ======================
+// CLIENTS
+// ======================
 
+export async function getMasterClients(slug) {
   const r = await fetch(
     API + "/internal/masters/" + slug + "/clients"
   )
-
   const j = await r.json()
-
   return normalize(j)
+}
 
+// ======================
+// SERVICES (НОВЫЙ БЛОК)
+// ======================
+
+export async function getMasterServices(slug) {
+  const r = await fetch(
+    API + "/internal/masters/" + slug + "/services"
+  )
+  const j = await r.json()
+  return normalize(j)
+}
+
+export async function createMasterService(slug, payload) {
+  const r = await fetch(
+    API + "/internal/masters/" + slug + "/services",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  )
+  return r.json()
+}
+
+export async function updateMasterService(slug, id, payload) {
+  const r = await fetch(
+    API + "/internal/masters/" + slug + "/services/" + id,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  )
+  return r.json()
+}
+
+export async function deleteMasterService(slug, id) {
+  const r = await fetch(
+    API + "/internal/masters/" + slug + "/services/" + id,
+    {
+      method: "DELETE",
+    }
+  )
+  return r.json()
 }
