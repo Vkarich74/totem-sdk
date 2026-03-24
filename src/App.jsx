@@ -50,7 +50,8 @@ function getSlugFromPath() {
   const hash = window.location.hash || "";
   const clean = hash.replace(/^#\/?/, "");
   const parts = clean.split("/");
-  return parts[1] || null;
+  const globalSlug = window.SALON_SLUG || null;
+  return parts[1] || globalSlug;
 }
 
 export default function App() {
