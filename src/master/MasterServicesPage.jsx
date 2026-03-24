@@ -358,13 +358,15 @@ export default function MasterServicesPage() {
               key={template.name}
               type="button"
               onClick={() => applyTemplate(template)}
+              disabled={saving || loading || togglingId !== null || deletingId !== null}
               style={{
                 padding: "10px 12px",
                 borderRadius: "10px",
                 border: "1px solid #d9d9d9",
                 background: "#fafafa",
                 color: "#111",
-                cursor: "pointer",
+                cursor: saving || loading || togglingId !== null || deletingId !== null ? "not-allowed" : "pointer",
+                opacity: saving || loading || togglingId !== null || deletingId !== null ? 0.6 : 1,
                 fontWeight: "500"
               }}
             >
@@ -594,14 +596,14 @@ export default function MasterServicesPage() {
           <button
             type="button"
             onClick={loadServices}
-            disabled={loading}
+            disabled={loading || saving || togglingId !== null || deletingId !== null}
             style={{
               padding: "10px 12px",
               borderRadius: "10px",
               border: "1px solid #d0d0d0",
               background: "#fff",
               color: "#111",
-              cursor: loading ? "not-allowed" : "pointer",
+              cursor: loading || saving || togglingId !== null || deletingId !== null ? "not-allowed" : "pointer",
               fontWeight: "600"
             }}
           >
@@ -713,14 +715,14 @@ export default function MasterServicesPage() {
                     <button
                       type="button"
                       onClick={() => startEdit(service)}
-                      disabled={isDeleting}
+                      disabled={isDeleting || isToggling || saving}
                       style={{
                         padding: "10px 12px",
                         borderRadius: "10px",
                         border: "1px solid #d0d0d0",
                         background: "#fff",
                         color: "#111",
-                        cursor: isDeleting ? "not-allowed" : "pointer",
+                        cursor: isDeleting || isToggling || saving ? "not-allowed" : "pointer",
                         fontWeight: "600"
                       }}
                     >
@@ -730,14 +732,14 @@ export default function MasterServicesPage() {
                     <button
                       type="button"
                       onClick={() => toggleActive(service)}
-                      disabled={isToggling || isDeleting}
+                      disabled={isToggling || isDeleting || saving}
                       style={{
                         padding: "10px 12px",
                         borderRadius: "10px",
                         border: "1px solid #d0d0d0",
                         background: "#fff",
                         color: "#111",
-                        cursor: isToggling || isDeleting ? "not-allowed" : "pointer",
+                        cursor: isToggling || isDeleting || saving ? "not-allowed" : "pointer",
                         fontWeight: "600"
                       }}
                     >
@@ -751,14 +753,14 @@ export default function MasterServicesPage() {
                     <button
                       type="button"
                       onClick={() => handleDelete(service)}
-                      disabled={isDeleting || isToggling}
+                      disabled={isDeleting || isToggling || saving}
                       style={{
                         padding: "10px 12px",
                         borderRadius: "10px",
                         border: "1px solid #f0c2c2",
                         background: "#fff5f5",
                         color: "#b42318",
-                        cursor: isDeleting || isToggling ? "not-allowed" : "pointer",
+                        cursor: isDeleting || isToggling || saving ? "not-allowed" : "pointer",
                         fontWeight: "600"
                       }}
                     >
