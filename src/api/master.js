@@ -9,13 +9,23 @@ function normalize(res) {
   return []
 }
 
+async function handleResponse(r) {
+  const j = await r.json()
+
+  if (!r.ok) {
+    throw new Error(j?.error || j?.message || "API_ERROR")
+  }
+
+  return j
+}
+
 // ======================
 // METRICS
 // ======================
 
 export async function getMasterMetrics(slug) {
   const r = await fetch(API + "/internal/masters/" + slug + "/metrics")
-  const j = await r.json()
+  const j = await handleResponse(r)
   return j.metrics || j
 }
 
@@ -27,7 +37,7 @@ export async function getMasterBookings(slug) {
   const r = await fetch(
     API + "/internal/masters/" + slug + "/bookings"
   )
-  const j = await r.json()
+  const j = await handleResponse(r)
   return normalize(j)
 }
 
@@ -39,20 +49,19 @@ export async function getMasterClients(slug) {
   const r = await fetch(
     API + "/internal/masters/" + slug + "/clients"
   )
-  const j = await r.json()
+  const j = await handleResponse(r)
   return normalize(j)
 }
 
 // ======================
-// SERVICES (НОВЫЙ БЛОК)
+// SERVICES
 // ======================
 
 export async function getMasterServices(slug) {
   const r = await fetch(
     API + "/internal/masters/" + slug + "/services"
   )
-  const j = await r.json()
-  return j
+  return handleResponse(r)
 }
 
 export async function createMasterService(slug, payload) {
@@ -64,7 +73,7 @@ export async function createMasterService(slug, payload) {
       body: JSON.stringify(payload),
     }
   )
-  return r.json()
+  return handleResponse(r)
 }
 
 export async function updateMasterService(slug, id, payload) {
@@ -76,7 +85,7 @@ export async function updateMasterService(slug, id, payload) {
       body: JSON.stringify(payload),
     }
   )
-  return r.json()
+  return handleResponse(r)
 }
 
 export async function deleteMasterService(slug, id) {
@@ -86,5 +95,5 @@ export async function deleteMasterService(slug, id) {
       method: "DELETE",
     }
   )
-  return r.json()
+  return handleResponse(r)
 }
