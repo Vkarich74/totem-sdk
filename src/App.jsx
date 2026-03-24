@@ -3,6 +3,8 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import ErrorBoundary from "./core/ErrorBoundary";
 
 import PublicSalonPage from "./public/PublicSalonPage";
+import PublicMasterPage from "./public/PublicMasterPage";
+
 import BookingPage from "./room/BookingPage";
 import SalonBookingsPage from "./room/SalonBookingsPage";
 
@@ -50,23 +52,48 @@ function getSlugFromPath() {
   const hash = window.location.hash || "";
   const clean = hash.replace(/^#\/?/, "");
   const parts = clean.split("/");
-  const globalSlug = window.SALON_SLUG || null;
-  return parts[1] || globalSlug;
+
+  const globalSalonSlug = window.SALON_SLUG || null;
+  const globalMasterSlug = window.MASTER_SLUG || null;
+
+  return parts[1] || globalSalonSlug || globalMasterSlug;
+}
+
+function getPublicPage() {
+  const path = window.location.pathname || "";
+
+  if (path.startsWith("/master")) {
+    return "master";
+  }
+
+  if (path.startsWith("/salon")) {
+    return "salon";
+  }
+
+  return "salon";
 }
 
 export default function App() {
   const slug = getSlugFromPath();
+  const publicType = getPublicPage();
 
   return (
-
     <ErrorBoundary>
-
       <HashRouter>
-
         <Routes>
 
-          {/* PUBLIC */}
-          <Route index element={<PublicSalonPage slug={slug} />} />
+          {/* PUBLIC ROOT */}
+          <Route
+            index
+            element={
+              publicType === "master" ? (
+                <PublicMasterPage slug={slug} />
+              ) : (
+                <PublicSalonPage slug={slug} />
+              )
+            }
+          />
+
           <Route path="booking" element={<BookingPage slug={slug} />} />
           <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
 
@@ -77,13 +104,9 @@ export default function App() {
             <Route path="dashboard" element={<DashboardPage />} />
 
             <Route path="calendar" element={<CalendarPage />} />
-
             <Route path="masters" element={<MastersPage />} />
-
             <Route path="clients" element={<ClientsPage />} />
-
             <Route path="bookings" element={<BookingsPage />} />
-
             <Route path="services" element={<ServicesPage />} />
 
             <Route path="money" element={<MoneyPage />} />
@@ -109,13 +132,9 @@ export default function App() {
             <Route path="dashboard" element={<DashboardPage />} />
 
             <Route path="calendar" element={<CalendarPage />} />
-
             <Route path="masters" element={<MastersPage />} />
-
             <Route path="clients" element={<ClientsPage />} />
-
             <Route path="bookings" element={<BookingsPage />} />
-
             <Route path="services" element={<ServicesPage />} />
 
             <Route path="money" element={<MoneyPage />} />
@@ -134,7 +153,7 @@ export default function App() {
 
           </Route>
 
-          {/* MASTER */}
+          {/* MASTER CABINET */}
           <Route path="master" element={<MasterLayout />}>
 
             <Route index element={<MasterDashboard />} />
@@ -162,10 +181,7 @@ export default function App() {
           </Route>
 
         </Routes>
-
       </HashRouter>
-
     </ErrorBoundary>
-
   );
 }
