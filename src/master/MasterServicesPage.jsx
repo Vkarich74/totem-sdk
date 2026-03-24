@@ -98,6 +98,18 @@ export default function MasterServicesPage() {
   const [togglingId, setTogglingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
 
+  const visibleServices = useMemo(() => {
+    const map = new Map()
+    services.forEach((s) => {
+      const key = s?.service_pk || s?.catalog_service_id || s?.name
+      if (!key) return
+      // оставляем последнюю (новую)
+      map.set(key, s)
+    })
+    return Array.from(map.values())
+  }, [services])
+
+
   async function loadServices() {
     setLoading(true)
     setError("")
@@ -606,7 +618,7 @@ export default function MasterServicesPage() {
           >
             Загружаем услуги...
           </div>
-        ) : services.length === 0 ? (
+        ) : visibleServices.length === 0 ? (
           <div
             style={{
               color: "#666",
@@ -622,7 +634,7 @@ export default function MasterServicesPage() {
               gap: "12px"
             }}
           >
-            {services.map((service, index) => {
+            {visibleServices.map((service, index) => {
               const serviceId = service?.id || service?.service_id
               const key = getServiceKey(service, index)
               const name = service?.name || "Без названия"
