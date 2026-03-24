@@ -43,7 +43,7 @@ function splitParagraphs(text) {
     .split(/\n{2,}/)
     .map((item) => item.trim())
     .filter(Boolean)
-    .slice(0, 3);
+    .slice(0, 4);
 }
 
 function extractServices(salon) {
@@ -104,20 +104,109 @@ function createMapEmbedUrl(addressValue) {
   return `https://www.google.com/maps?q=${query}&z=16&output=embed`;
 }
 
-function createMapLink(addressValue) {
-  const query = encodeURIComponent(addressValue);
-  return `https://www.google.com/maps/search/?api=1&query=${query}`;
-}
-
 function getInitials(name) {
   const safe = normalizeText(name);
-  if (!safe) return "M";
+  if (!safe) return "MS";
   return safe
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
+}
+
+function getReviewData() {
+  return [
+    {
+      id: 1,
+      name: "Айгерим",
+      text: "Очень удобно, что можно посмотреть услуги, акции и сразу записаться с телефона. Всё понятно и без лишних звонков.",
+      rating: 5,
+    },
+    {
+      id: 2,
+      name: "Мария",
+      text: "Понравилась атмосфера и сервис. Запись заняла пару минут, а в салоне всё было спокойно и аккуратно.",
+      rating: 5,
+    },
+    {
+      id: 3,
+      name: "Асель",
+      text: "Хороший формат страницы: видны услуги, акции и контакты. Удобно выбрать подходящий вариант заранее.",
+      rating: 5,
+    },
+  ];
+}
+
+function getPromoData() {
+  return [
+    {
+      id: 1,
+      title: "Новый клиент — скидка 10%",
+      text: "Приятный старт для первого визита в салон. Подходит на популярные услуги и комплексные процедуры.",
+      badge: "Для новых клиентов",
+    },
+    {
+      id: 2,
+      title: "10 посещение бесплатно",
+      text: "Программа лояльности для постоянных гостей салона с заметной выгодой на регулярных визитах.",
+      badge: "Бонусная программа",
+    },
+    {
+      id: 3,
+      title: "Подарочный абонемент",
+      text: "Красивый и удобный формат подарка: уходовые процедуры, бьюти-сервисы и персональные предложения.",
+      badge: "Подарок",
+    },
+    {
+      id: 4,
+      title: "Абонементы на курс услуг",
+      text: "Выгодные пакеты на несколько посещений для тех, кто хочет планировать уход заранее.",
+      badge: "Выгодно",
+    },
+  ];
+}
+
+function getBenefitsData() {
+  return [
+    {
+      id: 1,
+      title: "Онлайн запись 24/7",
+      text: "Клиент может выбрать услугу и удобное время без звонков и ожидания.",
+    },
+    {
+      id: 2,
+      title: "Понятные цены и услуги",
+      text: "Вся информация о стоимости, длительности и предложениях собрана на одной странице.",
+    },
+    {
+      id: 3,
+      title: "Акции и бонусы",
+      text: "Скидки, абонементы и подарочные предложения помогают возвращать клиентов снова.",
+    },
+    {
+      id: 4,
+      title: "Удобно с телефона",
+      text: "Страница адаптирована под мобильный сценарий, где приходит большая часть клиентов.",
+    },
+  ];
+}
+
+function getServiceCatalogData(services) {
+  if (services.length > 0) {
+    return services.slice(0, 12);
+  }
+
+  return [
+    { id: "demo-1", name: "Женская стрижка", price: 1200, durationMin: 60, description: "Стрижка и лёгкая укладка." },
+    { id: "demo-2", name: "Окрашивание волос", price: 3500, durationMin: 150, description: "Подбор оттенка и окрашивание." },
+    { id: "demo-3", name: "Маникюр", price: 1000, durationMin: 60, description: "Уход и аккуратное покрытие." },
+    { id: "demo-4", name: "Педикюр", price: 1400, durationMin: 75, description: "Комфортный уход для ногтей и стоп." },
+    { id: "demo-5", name: "Укладка", price: 900, durationMin: 45, description: "Быстрая укладка для повседневного образа." },
+    { id: "demo-6", name: "Уход за волосами", price: 1800, durationMin: 60, description: "Восстановление и питание волос." },
+    { id: "demo-7", name: "Оформление бровей", price: 700, durationMin: 30, description: "Форма и аккуратная коррекция." },
+    { id: "demo-8", name: "Вечерний макияж", price: 2200, durationMin: 75, description: "Под мероприятие или фотосессию." },
+  ];
 }
 
 export default function PublicSalonPage({ slug }) {
@@ -131,6 +220,7 @@ export default function PublicSalonPage({ slug }) {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth <= 768 : true,
   );
+  const [teamOpen, setTeamOpen] = useState(false);
 
   useEffect(() => {
     function handleResize() {
@@ -164,17 +254,14 @@ export default function PublicSalonPage({ slug }) {
         setMasters(Array.isArray(mastersData) ? mastersData : []);
         setMetrics(metricsData || null);
 
+        const title = "Демо Салон";
         const description =
-          pickFirstString(
-            salonData.description,
-            salonData.about,
-            salonData.subtitle,
-          ) || "Профессиональные услуги красоты. Онлайн запись без звонков.";
+          "Демо-страница салона в TOTEM: услуги, акции, отзывы, карта и удобная онлайн запись для клиентов.";
 
-        document.title = `${salonData.name} | Онлайн запись`;
+        document.title = `${title} | Онлайн запись`;
 
         setMeta("description", description);
-        setMeta("og:title", salonData.name, true);
+        setMeta("og:title", title, true);
         setMeta("og:description", description, true);
         setMeta("og:type", "website", true);
         setCanonical(window.location.href);
@@ -182,15 +269,11 @@ export default function PublicSalonPage({ slug }) {
         setJSONLD({
           "@context": "https://schema.org",
           "@type": "BeautySalon",
-          name: salonData.name,
+          name: title,
           description,
           url: window.location.href,
-          telephone: pickFirstString(salonData.phone, salonData.phone_number),
-          address: pickFirstString(
-            salonData.address,
-            salonData.location,
-            salonData.district,
-          ),
+          telephone: "+996 700 123 456",
+          address: "Киевская улица, 148, Первомайский район, Бишкек",
         });
       } catch (err) {
         console.error(err);
@@ -216,22 +299,16 @@ export default function PublicSalonPage({ slug }) {
     );
   }
 
-  const salonName = pickFirstString(salon.name) || "TOTEM Salon";
+  const salonName = "Демо Салон";
+  const slogan = "Красота, сервис и онлайн-запись в одном месте";
   const subtitle =
-    pickFirstString(salon.subtitle, salon.tagline, salon.short_description) ||
-    "Салон красоты с удобной онлайн записью в Бишкеке.";
-  const district =
-    pickFirstString(salon.district, salon.area, salon.region) ||
-    "Первомайский район, Бишкек";
-  const address =
-    pickFirstString(salon.address, salon.location, salon.full_address) ||
-    "Киевская улица, 148";
-  const phone =
-    pickFirstString(salon.phone, salon.phone_number, salon.contact_phone) ||
-    "+996 700 123 456";
-  const scheduleText =
-    pickFirstString(salon.schedule_text, salon.working_hours, salon.hours) ||
-    "Ежедневно, 10:00–20:00";
+    "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.";
+  const district = "Первомайский район, Бишкек";
+  const address = "Киевская улица, 148";
+  const phone = "+996 700 123 456";
+  const scheduleText = "Ежедневно, 10:00–20:00";
+  const ratingValue = "4.9";
+  const reviewCount = "127+";
 
   const defaultMapAddress = `${address}, ${district}`;
   const mapEmbedUrl =
@@ -241,20 +318,13 @@ export default function PublicSalonPage({ slug }) {
       salon.map_url,
     ) || createMapEmbedUrl(defaultMapAddress);
 
-  const mapLink =
-    pickFirstString(
-      salon.map_link,
-      salon.google_maps_url,
-      salon.location_url,
-    ) || createMapLink(defaultMapAddress);
-
   const aboutParagraphs = splitParagraphs(
     pickFirstString(
       salon.about,
       salon.description,
-      "Современный салон красоты в Бишкеке с удобной онлайн записью.",
-      "Услуги для повседневного ухода и аккуратного обновления образа.",
-      "Выберите мастера и удобное время без звонков и ожидания.",
+      "Демо Салон — это пример современной публичной страницы салона в TOTEM, которая помогает красиво показать услуги, акции, отзывы и удобный способ записи.",
+      "Такой формат делает страницу не просто визиткой, а полноценной витриной для привлечения клиентов и повышения доверия к салону.",
+      "Владелец салона получает красивую мобильную страницу, а клиент — понятный путь от первого просмотра до записи на услугу.",
     ),
   );
 
@@ -262,7 +332,12 @@ export default function PublicSalonPage({ slug }) {
     ? masters.filter((master) => !!pickFirstString(master?.name)).slice(0, 6)
     : [];
 
-  const servicesForView = services.slice(0, isMobile ? 6 : 8);
+  const popularServices = getServiceCatalogData(services).slice(0, isMobile ? 4 : 6);
+  const fullServiceList = getServiceCatalogData(services);
+  const reviews = getReviewData();
+  const promos = getPromoData();
+  const benefits = getBenefitsData();
+
   const completedBookings = pickFirstNumber(
     metrics?.completed,
     metrics?.completed_bookings,
@@ -276,18 +351,20 @@ export default function PublicSalonPage({ slug }) {
     textSecondary: "#706860",
     border: "#EAE2D8",
     accent: "#C8A97E",
-    accentSoft: "#F3E8DA",
-    accentHover: "#B89668",
-    button: "#3C342E",
+    accentSoft: "#F6EBDD",
+    button: "#4A4038",
     buttonText: "#FFFFFF",
     avatarBg: "#EFE7DE",
+    star: "#D39B36",
+    promo: "#FFF6EB",
+    review: "#FFFDF9",
   };
 
   const pagePaddingBottom = isMobile ? 88 : 32;
 
   const container = {
     width: "100%",
-    maxWidth: 1120,
+    maxWidth: 1140,
     margin: "0 auto",
     padding: isMobile ? "0 16px" : "0 24px",
     boxSizing: "border-box",
@@ -295,8 +372,8 @@ export default function PublicSalonPage({ slug }) {
 
   const sectionTitle = {
     margin: 0,
-    fontSize: isMobile ? 20 : 28,
-    lineHeight: 1.2,
+    fontSize: isMobile ? 21 : 30,
+    lineHeight: 1.18,
     fontWeight: 600,
     letterSpacing: "-0.2px",
     color: palette.textMain,
@@ -305,7 +382,7 @@ export default function PublicSalonPage({ slug }) {
   const sectionText = {
     margin: 0,
     fontSize: 14,
-    lineHeight: 1.55,
+    lineHeight: 1.6,
     color: palette.textSecondary,
   };
 
@@ -378,6 +455,10 @@ export default function PublicSalonPage({ slug }) {
     );
   }
 
+  function renderStars(count = 5) {
+    return "★".repeat(count);
+  }
+
   return (
     <div
       style={{
@@ -388,25 +469,21 @@ export default function PublicSalonPage({ slug }) {
         paddingBottom: pagePaddingBottom,
       }}
     >
-      <section
-        style={{
-          padding: isMobile ? "18px 0 14px" : "36px 0 18px",
-        }}
-      >
+      <section style={{ padding: isMobile ? "18px 0 12px" : "34px 0 16px" }}>
         <div style={container}>
           <div
             style={{
               ...cardStyle,
               background:
                 "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
-              padding: isMobile ? 18 : 28,
+              padding: isMobile ? 18 : 30,
             }}
           >
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: isMobile ? 14 : 16,
+                gap: 14,
                 alignItems: "flex-start",
               }}
             >
@@ -422,29 +499,40 @@ export default function PublicSalonPage({ slug }) {
                   fontWeight: 600,
                 }}
               >
-                Онлайн запись в салон
+                Витрина салона в TOTEM
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <h1
                   style={{
                     margin: 0,
-                    fontSize: isMobile ? 24 : 38,
-                    lineHeight: 1.12,
+                    fontSize: isMobile ? 28 : 42,
+                    lineHeight: 1.08,
                     fontWeight: 600,
-                    letterSpacing: "-0.2px",
+                    letterSpacing: "-0.25px",
                     color: palette.textMain,
                   }}
                 >
                   {salonName}
                 </h1>
 
+                <div
+                  style={{
+                    fontSize: isMobile ? 16 : 18,
+                    lineHeight: 1.45,
+                    color: palette.textMain,
+                    fontWeight: 500,
+                  }}
+                >
+                  {slogan}
+                </div>
+
                 <p
                   style={{
                     margin: 0,
-                    maxWidth: 700,
-                    fontSize: isMobile ? 14 : 15,
-                    lineHeight: 1.55,
+                    maxWidth: 760,
+                    fontSize: 14,
+                    lineHeight: 1.6,
                     color: palette.textSecondary,
                   }}
                 >
@@ -455,40 +543,134 @@ export default function PublicSalonPage({ slug }) {
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                {[
+                  "Онлайн запись 24/7",
+                  "Акции и абонементы",
+                  "Удобно с телефона",
+                  "Современная витрина услуг",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    style={{
+                      padding: "8px 11px",
+                      borderRadius: 999,
+                      background: palette.card,
+                      border: `1px solid ${palette.border}`,
+                      fontSize: 12,
+                      color: palette.textMain,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr",
+                  gap: 12,
                   width: "100%",
                 }}
               >
                 <div
                   style={{
-                    fontSize: 14,
-                    lineHeight: 1.55,
-                    color: palette.textMain,
-                    fontWeight: 500,
+                    ...cardStyle,
+                    padding: 14,
+                    background: palette.card,
                   }}
                 >
-                  {address}, {district}
+                  <div style={{ fontSize: 12, color: palette.textSecondary }}>
+                    Адрес
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 14,
+                      lineHeight: 1.55,
+                      fontWeight: 600,
+                      color: palette.textMain,
+                    }}
+                  >
+                    {address}, {district}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                      color: palette.textSecondary,
+                    }}
+                  >
+                    {scheduleText}
+                  </div>
                 </div>
+
                 <div
                   style={{
-                    fontSize: 13,
-                    lineHeight: 1.5,
-                    color: palette.textSecondary,
+                    ...cardStyle,
+                    padding: 14,
+                    background: palette.review,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    justifyContent: "center",
                   }}
                 >
-                  {scheduleText}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    lineHeight: 1.5,
-                    color: palette.textSecondary,
-                  }}
-                >
-                  {completedBookings > 0
-                    ? `${completedBookings} завершённых записей`
-                    : "Быстрая запись без звонков и ожидания"}
+                  <div style={{ fontSize: 12, color: palette.textSecondary }}>
+                    Рейтинг и отзывы
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 20,
+                        fontWeight: 700,
+                        color: palette.textMain,
+                      }}
+                    >
+                      {ratingValue}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        color: palette.star,
+                        letterSpacing: "1px",
+                      }}
+                    >
+                      {renderStars(5)}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: palette.textSecondary,
+                      }}
+                    >
+                      {reviewCount} отзывов
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: palette.textSecondary,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {completedBookings > 0
+                      ? `${completedBookings}+ завершённых записей через платформу`
+                      : "Клиент сразу видит услуги, акции и удобный путь до записи"}
+                  </div>
                 </div>
               </div>
 
@@ -501,14 +683,14 @@ export default function PublicSalonPage({ slug }) {
                 }}
               >
                 <button onClick={goToBooking} style={primaryButton}>
-                  Записаться
+                  Записаться онлайн
                 </button>
 
                 <button
-                  onClick={() => scrollToSection("public-salon-services")}
+                  onClick={() => scrollToSection("popular-services")}
                   style={secondaryButton}
                 >
-                  Услуги
+                  Смотреть услуги
                 </button>
               </div>
             </div>
@@ -516,112 +698,245 @@ export default function PublicSalonPage({ slug }) {
         </div>
       </section>
 
-      {servicesForView.length > 0 && (
-        <section
-          id="public-salon-services"
-          style={{ padding: isMobile ? "10px 0 8px" : "18px 0 12px" }}
-        >
-          <div style={container}>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                marginBottom: 12,
-              }}
-            >
-              <h2 style={sectionTitle}>Услуги</h2>
-              <p style={sectionText}>
-                Выберите услугу и запишитесь на удобное время онлайн.
-              </p>
-            </div>
+      <section style={{ padding: isMobile ? "10px 0 8px" : "16px 0 12px" }}>
+        <div style={container}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              marginBottom: 12,
+            }}
+          >
+            <h2 style={sectionTitle}>Почему выбирают этот салон</h2>
+            <p style={sectionText}>
+              Страница показывает не просто услуги, а готовый формат привлечения клиентов для современного салона.
+            </p>
+          </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile
-                  ? "1fr"
-                  : "repeat(2, minmax(0, 1fr))",
-                gap: 10,
-              }}
-            >
-              {servicesForView.map((service) => (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0, 1fr))",
+              gap: 10,
+            }}
+          >
+            {benefits.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  ...cardStyle,
+                  padding: 14,
+                  background: palette.card,
+                }}
+              >
                 <div
-                  key={service.id}
                   style={{
-                    ...cardStyle,
-                    padding: 14,
+                    fontSize: 15,
+                    lineHeight: 1.35,
+                    fontWeight: 600,
+                    color: palette.textMain,
+                  }}
+                >
+                  {item.title}
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  {item.text}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="popular-services"
+        style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}
+      >
+        <div style={container}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              marginBottom: 12,
+            }}
+          >
+            <h2 style={sectionTitle}>Популярные услуги</h2>
+            <p style={sectionText}>
+              Самые востребованные процедуры, которые клиенты выбирают чаще всего.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+              gap: 10,
+            }}
+          >
+            {popularServices.map((service) => (
+              <div
+                key={service.id}
+                style={{
+                  ...cardStyle,
+                  padding: 14,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                <div
+                  style={{
                     display: "flex",
-                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
                     gap: 10,
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      gap: 10,
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <h3
-                        style={{
-                          margin: 0,
-                          fontSize: 15,
-                          lineHeight: 1.4,
-                          fontWeight: 600,
-                          color: palette.textMain,
-                        }}
-                      >
-                        {service.name}
-                      </h3>
-
-                      {service.description && (
-                        <p
-                          style={{
-                            margin: "6px 0 0",
-                            fontSize: 13,
-                            lineHeight: 1.5,
-                            color: palette.textSecondary,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {service.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div
+                  <div style={{ minWidth: 0 }}>
+                    <h3
                       style={{
-                        flexShrink: 0,
-                        padding: "6px 9px",
-                        borderRadius: 10,
-                        background: palette.accentSoft,
-                        fontSize: 12,
+                        margin: 0,
+                        fontSize: 16,
+                        lineHeight: 1.35,
                         fontWeight: 600,
                         color: palette.textMain,
-                        whiteSpace: "nowrap",
                       }}
                     >
-                      {formatPrice(service.price)}
-                    </div>
+                      {service.name}
+                    </h3>
+
+                    {service.description && (
+                      <p
+                        style={{
+                          margin: "6px 0 0",
+                          fontSize: 13,
+                          lineHeight: 1.55,
+                          color: palette.textSecondary,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {service.description}
+                      </p>
+                    )}
                   </div>
 
                   <div
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 10,
-                      flexWrap: "wrap",
+                      flexShrink: 0,
+                      padding: "6px 9px",
+                      borderRadius: 10,
+                      background: palette.accentSoft,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: palette.textMain,
+                      whiteSpace: "nowrap",
                     }}
                   >
+                    {formatPrice(service.price)}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                      color: palette.textSecondary,
+                    }}
+                  >
+                    {service.durationMin > 0
+                      ? formatDuration(service.durationMin)
+                      : "Длительность уточняется"}
+                  </div>
+
+                  <button
+                    onClick={goToBooking}
+                    style={{
+                      ...secondaryButton,
+                      width: "auto",
+                      minHeight: 38,
+                      padding: "9px 14px",
+                      fontSize: 13,
+                    }}
+                  >
+                    Выбрать
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}>
+        <div style={container}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              marginBottom: 12,
+            }}
+          >
+            <h2 style={sectionTitle}>Полный перечень услуг</h2>
+            <p style={sectionText}>
+              Полная витрина услуг салона для клиента и владельца салона, который оценивает возможности страницы.
+            </p>
+          </div>
+
+          <div style={{ ...cardStyle, padding: isMobile ? 14 : 16 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+                gap: 10,
+              }}
+            >
+              {fullServiceList.map((service) => (
+                <div
+                  key={`catalog-${service.id}`}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    padding: "10px 0",
+                    borderBottom: `1px solid ${palette.border}`,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
                     <div
                       style={{
+                        fontSize: 14,
+                        lineHeight: 1.45,
+                        color: palette.textMain,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {service.name}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 3,
                         fontSize: 12,
                         lineHeight: 1.45,
                         color: palette.textSecondary,
@@ -631,167 +946,224 @@ export default function PublicSalonPage({ slug }) {
                         ? formatDuration(service.durationMin)
                         : "Длительность уточняется"}
                     </div>
+                  </div>
 
-                    <button
-                      onClick={goToBooking}
-                      style={{
-                        ...secondaryButton,
-                        width: "auto",
-                        minHeight: 38,
-                        padding: "9px 14px",
-                        fontSize: 13,
-                      }}
-                    >
-                      Выбрать
-                    </button>
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      fontSize: 13,
+                      lineHeight: 1.4,
+                      color: palette.textMain,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatPrice(service.price)}
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {visibleMasters.length > 0 && (
-        <section style={{ padding: isMobile ? "12px 0 8px" : "20px 0 12px" }}>
-          <div style={container}>
+      <section style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}>
+        <div style={container}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              marginBottom: 12,
+            }}
+          >
+            <h2 style={sectionTitle}>Акции и предложения</h2>
+            <p style={sectionText}>
+              Промо-механики, которые помогают владельцу салона продавать больше, а клиенту — быстрее принять решение.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+              gap: 10,
+            }}
+          >
+            {promos.map((promo) => (
+              <div
+                key={promo.id}
+                style={{
+                  ...cardStyle,
+                  background: palette.promo,
+                  padding: 14,
+                }}
+              >
+                <div
+                  style={{
+                    display: "inline-flex",
+                    padding: "6px 9px",
+                    borderRadius: 999,
+                    background: palette.card,
+                    border: `1px solid ${palette.border}`,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: palette.textMain,
+                  }}
+                >
+                  {promo.badge}
+                </div>
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 16,
+                    lineHeight: 1.35,
+                    color: palette.textMain,
+                    fontWeight: 600,
+                  }}
+                >
+                  {promo.title}
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  {promo.text}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}>
+        <div style={container}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              marginBottom: 12,
+            }}
+          >
+            <h2 style={sectionTitle}>Отзывы клиентов</h2>
+            <p style={sectionText}>
+              Короткие отзывы усиливают доверие и показывают, как страница работает как инструмент продаж.
+            </p>
+          </div>
+
+          <div
+            style={{
+              ...cardStyle,
+              padding: isMobile ? 14 : 16,
+              background: palette.review,
+              marginBottom: 10,
+            }}
+          >
             <div
               style={{
                 display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                marginBottom: 12,
-              }}
-            >
-              <h2 style={sectionTitle}>Мастера</h2>
-              <p style={sectionText}>
-                Выберите мастера и удобный формат записи.
-              </p>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile
-                  ? "1fr"
-                  : "repeat(2, minmax(0, 1fr))",
+                flexDirection: isMobile ? "column" : "row",
+                alignItems: isMobile ? "flex-start" : "center",
+                justifyContent: "space-between",
                 gap: 10,
               }}
             >
-              {visibleMasters.map((master) => {
-                const masterSubtitle = renderMasterSubtitle(master);
-                const masterBio = renderMasterBio(master);
-
-                return (
-                  <div
-                    key={master.id || master.slug || master.name}
-                    style={{
-                      ...cardStyle,
-                      padding: 14,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 12,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: "50%",
-                          background: palette.avatarBg,
-                          color: palette.textMain,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 14,
-                          fontWeight: 700,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {getInitials(master.name)}
-                      </div>
-
-                      <div style={{ minWidth: 0 }}>
-                        <h3
-                          style={{
-                            margin: 0,
-                            fontSize: 15,
-                            lineHeight: 1.4,
-                            fontWeight: 600,
-                            color: palette.textMain,
-                          }}
-                        >
-                          {master.name}
-                        </h3>
-
-                        <div
-                          style={{
-                            marginTop: 4,
-                            fontSize: 13,
-                            lineHeight: 1.45,
-                            color: palette.textSecondary,
-                          }}
-                        >
-                          {masterSubtitle}
-                        </div>
-
-                        {masterBio && (
-                          <p
-                            style={{
-                              margin: "6px 0 0",
-                              fontSize: 13,
-                              lineHeight: 1.5,
-                              color: palette.textSecondary,
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {masterBio}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <button
-                        onClick={goToBooking}
-                        style={{
-                          ...secondaryButton,
-                          width: isMobile ? "100%" : "auto",
-                          minHeight: 38,
-                          padding: "9px 14px",
-                          fontSize: 13,
-                        }}
-                      >
-                        Записаться
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              <div>
+                <div
+                  style={{
+                    fontSize: 30,
+                    lineHeight: 1,
+                    fontWeight: 700,
+                    color: palette.textMain,
+                  }}
+                >
+                  {ratingValue}
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 16,
+                    color: palette.star,
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {renderStars(5)}
+                </div>
+              </div>
+              <div
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  color: palette.textSecondary,
+                  maxWidth: 520,
+                }}
+              >
+                Реалистичный блок отзывов делает страницу убедительнее и помогает владельцу салона представить, как его витрина будет выглядеть для клиентов.
+              </div>
             </div>
           </div>
-        </section>
-      )}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+              gap: 10,
+            }}
+          >
+            {reviews.map((review) => (
+              <div
+                key={review.id}
+                style={{
+                  ...cardStyle,
+                  padding: 14,
+                  background: palette.card,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    color: palette.star,
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {renderStars(review.rating)}
+                </div>
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  {review.text}
+                </div>
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 13,
+                    lineHeight: 1.4,
+                    color: palette.textMain,
+                    fontWeight: 600,
+                  }}
+                >
+                  {review.name}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {aboutParagraphs.length > 0 && (
-        <section style={{ padding: isMobile ? "12px 0 8px" : "20px 0 12px" }}>
+        <section style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}>
           <div style={container}>
-            <div
-              style={{
-                ...cardStyle,
-                padding: isMobile ? 16 : 20,
-              }}
-            >
+            <div style={{ ...cardStyle, padding: isMobile ? 16 : 20 }}>
               <div
                 style={{
                   display: "flex",
@@ -802,7 +1174,7 @@ export default function PublicSalonPage({ slug }) {
               >
                 <h2 style={sectionTitle}>О салоне</h2>
                 <p style={sectionText}>
-                  Коротко о формате, атмосфере и удобстве записи.
+                  Блок, который показывает владельцу салона готовую продающую историю, а клиенту — понятное позиционирование.
                 </p>
               </div>
 
@@ -838,7 +1210,168 @@ export default function PublicSalonPage({ slug }) {
         </section>
       )}
 
-      <section style={{ padding: isMobile ? "12px 0 20px" : "20px 0 32px" }}>
+      <section style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}>
+        <div style={container}>
+          <div style={{ ...cardStyle, padding: isMobile ? 14 : 16 }}>
+            <button
+              onClick={() => setTeamOpen((prev) => !prev)}
+              style={{
+                width: "100%",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                textAlign: "left",
+                cursor: "pointer",
+                color: palette.textMain,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <div style={sectionTitle}>Команда салона</div>
+                  <p style={{ ...sectionText, marginTop: 6 }}>
+                    Компактный раскрывающийся блок вместо тяжёлой отдельной секции с мастерами.
+                  </p>
+                </div>
+                <div
+                  style={{
+                    flexShrink: 0,
+                    width: 34,
+                    height: 34,
+                    borderRadius: "50%",
+                    background: palette.accentSoft,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 18,
+                    color: palette.textMain,
+                    fontWeight: 600,
+                  }}
+                >
+                  {teamOpen ? "−" : "+"}
+                </div>
+              </div>
+            </button>
+
+            {teamOpen && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+                  gap: 10,
+                  marginTop: 14,
+                }}
+              >
+                {visibleMasters.length > 0 ? (
+                  visibleMasters.map((master) => {
+                    const masterSubtitle = renderMasterSubtitle(master);
+                    const masterBio = renderMasterBio(master);
+
+                    return (
+                      <div
+                        key={master.id || master.slug || master.name}
+                        style={{
+                          ...cardStyle,
+                          padding: 14,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 12,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: "50%",
+                              background: palette.avatarBg,
+                              color: palette.textMain,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 14,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {getInitials(master.name)}
+                          </div>
+
+                          <div style={{ minWidth: 0 }}>
+                            <h3
+                              style={{
+                                margin: 0,
+                                fontSize: 15,
+                                lineHeight: 1.4,
+                                fontWeight: 600,
+                                color: palette.textMain,
+                              }}
+                            >
+                              {master.name}
+                            </h3>
+
+                            <div
+                              style={{
+                                marginTop: 4,
+                                fontSize: 13,
+                                lineHeight: 1.45,
+                                color: palette.textSecondary,
+                              }}
+                            >
+                              {masterSubtitle}
+                            </div>
+
+                            {masterBio && (
+                              <p
+                                style={{
+                                  margin: "6px 0 0",
+                                  fontSize: 13,
+                                  lineHeight: 1.5,
+                                  color: palette.textSecondary,
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {masterBio}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div
+                    style={{
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                      color: palette.textSecondary,
+                    }}
+                  >
+                    Команда салона может отображаться здесь в компактном формате, чтобы не перегружать страницу в верхней части.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section style={{ padding: isMobile ? "12px 0 20px" : "18px 0 32px" }}>
         <div style={container}>
           <div
             style={{
@@ -864,20 +1397,14 @@ export default function PublicSalonPage({ slug }) {
                   gap: 6,
                 }}
               >
-                <h2 style={sectionTitle}>Контакты</h2>
+                <h2 style={sectionTitle}>Контакты и локация</h2>
                 <p style={sectionText}>
-                  Адрес, график и встроенная карта для быстрого ориентирования.
+                  Встроенная карта, адрес и контакты должны быть видны сразу, без лишних переходов.
                 </p>
               </div>
 
               <div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    lineHeight: 1.4,
-                    color: palette.textSecondary,
-                  }}
-                >
+                <div style={{ fontSize: 12, lineHeight: 1.4, color: palette.textSecondary }}>
                   Адрес
                 </div>
                 <div
@@ -904,13 +1431,7 @@ export default function PublicSalonPage({ slug }) {
               </div>
 
               <div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    lineHeight: 1.4,
-                    color: palette.textSecondary,
-                  }}
-                >
+                <div style={{ fontSize: 12, lineHeight: 1.4, color: palette.textSecondary }}>
                   График
                 </div>
                 <div
@@ -927,13 +1448,7 @@ export default function PublicSalonPage({ slug }) {
               </div>
 
               <div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    lineHeight: 1.4,
-                    color: palette.textSecondary,
-                  }}
-                >
+                <div style={{ fontSize: 12, lineHeight: 1.4, color: palette.textSecondary }}>
                   Телефон
                 </div>
                 <div
@@ -949,32 +1464,10 @@ export default function PublicSalonPage({ slug }) {
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: isMobile ? "column" : "row",
-                  gap: 10,
-                }}
-              >
+              <div>
                 <button onClick={goToBooking} style={primaryButton}>
                   Записаться
                 </button>
-
-                <a
-                  href={mapLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    ...secondaryButton,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    textDecoration: "none",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  Маршрут
-                </a>
               </div>
             </div>
 
@@ -982,18 +1475,18 @@ export default function PublicSalonPage({ slug }) {
               style={{
                 ...cardStyle,
                 overflow: "hidden",
-                minHeight: isMobile ? 240 : 100,
+                minHeight: isMobile ? 260 : 100,
               }}
             >
               <iframe
                 title={`${salonName} map`}
                 src={mapEmbedUrl}
                 width="100%"
-                height={isMobile ? "240" : "100%"}
+                height={isMobile ? "260" : "100%"}
                 style={{
                   border: "none",
                   display: "block",
-                  minHeight: isMobile ? 240 : 100,
+                  minHeight: isMobile ? 260 : 100,
                 }}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -1017,7 +1510,7 @@ export default function PublicSalonPage({ slug }) {
             borderTop: `1px solid ${palette.border}`,
           }}
         >
-          <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+          <div style={{ maxWidth: 1140, margin: "0 auto" }}>
             <button
               onClick={goToBooking}
               style={{
