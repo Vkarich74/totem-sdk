@@ -19,28 +19,117 @@ function resolveSlugFromHash() {
   return window.SALON_SLUG || "totem-demo-salon";
 }
 
-function buttonStyle(kind = "default") {
+function buttonStyle(kind = "default", disabled = false) {
   const base = {
-    padding: "8px 12px",
-    borderRadius: "8px",
-    border: "1px solid #d1d5db",
+    padding: "10px 14px",
+    borderRadius: "10px",
+    border: "1px solid #d0d5dd",
     background: "#ffffff",
     color: "#111827",
-    cursor: "pointer",
+    cursor: disabled ? "not-allowed" : "pointer",
     fontSize: "13px",
-    fontWeight: 600
+    fontWeight: 600,
+    opacity: disabled ? 0.6 : 1,
+    transition: "all 0.15s ease"
   };
 
-  if (kind === "danger") {
+  if (kind === "primary") {
     return {
       ...base,
-      border: "1px solid #dc2626",
-      background: "#dc2626",
+      border: "1px solid #111827",
+      background: "#111827",
       color: "#ffffff"
     };
   }
 
+  if (kind === "danger") {
+    return {
+      ...base,
+      border: "1px solid #f04438",
+      background: "#fff5f5",
+      color: "#b42318"
+    };
+  }
+
   return base;
+}
+
+function cardStyle() {
+  return {
+    border: "1px solid #e7e7e7",
+    borderRadius: "14px",
+    background: "#ffffff",
+    padding: "18px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px"
+  };
+}
+
+function sectionTitleStyle() {
+  return {
+    fontSize: "18px",
+    fontWeight: 600,
+    color: "#111827",
+    margin: 0
+  };
+}
+
+function labelStyle() {
+  return {
+    fontSize: "13px",
+    color: "#667085",
+    marginBottom: "6px"
+  };
+}
+
+function inputStyle() {
+  return {
+    width: "100%",
+    padding: "11px 12px",
+    border: "1px solid #d0d5dd",
+    borderRadius: "10px",
+    outline: "none",
+    boxSizing: "border-box",
+    fontSize: "14px",
+    background: "#ffffff",
+    color: "#111827"
+  };
+}
+
+function badgeStyle(active) {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "12px",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    background: active ? "#ecfdf3" : "#f2f4f7",
+    color: active ? "#067647" : "#667085",
+    border: active ? "1px solid #abefc6" : "1px solid #d0d5dd",
+    fontWeight: 600
+  };
+}
+
+function formatMoney(value) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return "—";
+  }
+
+  return `${numberValue.toLocaleString("ru-RU")} сом`;
+}
+
+function formatDuration(value) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue) || numberValue <= 0) {
+    return "—";
+  }
+
+  return `${numberValue} мин`;
 }
 
 export default function ServicesPage(props) {
@@ -346,128 +435,236 @@ export default function ServicesPage(props) {
 
   return (
     <PageSection title="Услуги салона">
-      <StatGrid
-        items={[
-          { label: "Всего услуг", value: stats.total },
-          { label: "Активные", value: stats.active }
-        ]}
-      />
-
-      <div style={{ marginBottom: 20 }}>
-        <h3>Добавить услугу мастера</h3>
-
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <select
-            value={selectedServiceId}
-            onChange={(e) => setSelectedServiceId(e.target.value)}
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div>
+          <div
+            style={{
+              color: "#667085",
+              marginTop: "-8px",
+              fontSize: "14px",
+              lineHeight: 1.5
+            }}
           >
-            <option value="">Выбери услугу</option>
-
-            {availableMasterServices.map((s) => (
-              <option key={`${s.master_id || "master"}-${s.id}`} value={s.id}>
-                {s.master_name ? `${s.master_name} — ` : ""}
-                {s.name} — {s.price} сом — {s.duration_min} мин
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={attachService}
-            disabled={attachLoading || availableMasterServices.length === 0}
-            style={buttonStyle()}
-          >
-            Добавить
-          </button>
+            Управляй витриной услуг салона: подключай услуги мастеров, меняй цену и длительность,
+            включай и отключай продажу без выхода из кабинета.
+          </div>
         </div>
 
-        {salonMasters.length === 0 && (
-          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
-            В салоне нет активных мастеров
+        <StatGrid
+          items={[
+            { label: "Всего услуг", value: stats.total },
+            { label: "Активные", value: stats.active }
+          ]}
+        />
+
+        <div style={cardStyle()}>
+          <h3 style={sectionTitleStyle()}>Подключить услугу мастера</h3>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gap: "14px",
+              alignItems: "end"
+            }}
+          >
+            <div>
+              <div style={labelStyle()}>Доступные услуги</div>
+              <select
+                value={selectedServiceId}
+                onChange={(e) => setSelectedServiceId(e.target.value)}
+                style={inputStyle()}
+                disabled={attachLoading || availableMasterServices.length === 0}
+              >
+                <option value="">Выбери услугу</option>
+
+                {availableMasterServices.map((s) => (
+                  <option key={`${s.master_id || "master"}-${s.id}`} value={s.id}>
+                    {s.master_name ? `${s.master_name} — ` : ""}
+                    {s.name} — {s.price} сом — {s.duration_min} мин
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap"
+              }}
+            >
+              <button
+                onClick={attachService}
+                disabled={attachLoading || availableMasterServices.length === 0}
+                style={buttonStyle("primary", attachLoading || availableMasterServices.length === 0)}
+              >
+                {attachLoading ? "Подключаем..." : "Добавить"}
+              </button>
+
+              <button
+                onClick={loadServices}
+                disabled={loading || attachLoading || processingId !== null}
+                style={buttonStyle("default", loading || attachLoading || processingId !== null)}
+              >
+                {loading ? "Обновляем..." : "Обновить"}
+              </button>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap"
+            }}
+          >
+            <div style={badgeStyle(salonMasters.length > 0)}>
+              Активных мастеров: {salonMasters.length}
+            </div>
+
+            <div style={badgeStyle(availableMasterServices.length > 0)}>
+              Доступно для подключения: {availableMasterServices.length}
+            </div>
+          </div>
+
+          {salonMasters.length === 0 && (
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#667085"
+              }}
+            >
+              В салоне нет активных мастеров.
+            </div>
+          )}
+
+          {salonMasters.length > 0 && availableMasterServices.length === 0 && (
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#667085"
+              }}
+            >
+              Нет доступных услуг мастеров для подключения.
+            </div>
+          )}
+        </div>
+
+        {loading && (
+          <div style={cardStyle()}>
+            <div style={{ color: "#667085", fontSize: "14px" }}>Загрузка услуг...</div>
           </div>
         )}
 
-        {salonMasters.length > 0 && availableMasterServices.length === 0 && (
-          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
-            Нет доступных услуг мастера для подключения
+        {!loading && services.length === 0 && (
+          <EmptyState
+            title="Услуг пока нет"
+            text="Подключите услуги мастеров и начните управлять витриной салона"
+          />
+        )}
+
+        {!loading && services.length > 0 && (
+          <div style={cardStyle()}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+                flexWrap: "wrap"
+              }}
+            >
+              <h3 style={sectionTitleStyle()}>Подключённые услуги</h3>
+
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#667085"
+                }}
+              >
+                Все изменения применяются сразу после действия.
+              </div>
+            </div>
+
+            <div
+              style={{
+                overflowX: "auto",
+                border: "1px solid #eaecf0",
+                borderRadius: "12px",
+                background: "#ffffff"
+              }}
+            >
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "840px" }}>
+                <thead>
+                  <tr style={{ background: "#f9fafb" }}>
+                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>ID</th>
+                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Мастер</th>
+                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Услуга</th>
+                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Цена</th>
+                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Длительность</th>
+                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Статус</th>
+                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Действия</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {services.map((s, index) => {
+                    const isProcessing = processingId === s.id;
+
+                    return (
+                      <tr
+                        key={s.id}
+                        style={{
+                          borderTop: index === 0 ? "none" : "1px solid #eaecf0"
+                        }}
+                      >
+                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px", fontWeight: 600 }}>{s.id}</td>
+                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px" }}>{s.master_name || "—"}</td>
+                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px", fontWeight: 500 }}>{s.name}</td>
+                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px" }}>{formatMoney(s.price)}</td>
+                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px" }}>{formatDuration(s.duration_min)}</td>
+                        <td style={{ padding: "16px 12px" }}>
+                          <span style={badgeStyle(!!s.active)}>
+                            {s.active ? "Активна" : "Отключена"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "16px 12px" }}>
+                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                            <button
+                              onClick={() => toggleActive(s)}
+                              disabled={isProcessing || attachLoading}
+                              style={buttonStyle("default", isProcessing || attachLoading)}
+                            >
+                              {s.active ? "Выключить" : "Включить"}
+                            </button>
+
+                            <button
+                              onClick={() => updatePrice(s)}
+                              disabled={isProcessing || attachLoading}
+                              style={buttonStyle("default", isProcessing || attachLoading)}
+                            >
+                              Цена
+                            </button>
+
+                            <button
+                              onClick={() => updateDuration(s)}
+                              disabled={isProcessing || attachLoading}
+                              style={buttonStyle("default", isProcessing || attachLoading)}
+                            >
+                              Длительность
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
-
-      {loading && <div>Загрузка...</div>}
-
-      {!loading && services.length === 0 && (
-        <EmptyState
-          title="Услуг пока нет"
-          text="Подключите услуги мастеров"
-        />
-      )}
-
-      {!loading && services.length > 0 && (
-        <div
-          style={{
-            overflowX: "auto",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            background: "#ffffff"
-          }}
-        >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={{ padding: 12 }}>ID</th>
-                <th style={{ padding: 12 }}>Мастер</th>
-                <th style={{ padding: 12 }}>Услуга</th>
-                <th style={{ padding: 12 }}>Цена</th>
-                <th style={{ padding: 12 }}>Длительность</th>
-                <th style={{ padding: 12 }}>Статус</th>
-                <th style={{ padding: 12 }}>Действия</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {services.map((s) => (
-                <tr key={s.id}>
-                  <td style={{ padding: 12 }}>{s.id}</td>
-                  <td style={{ padding: 12 }}>{s.master_name}</td>
-                  <td style={{ padding: 12 }}>{s.name}</td>
-                  <td style={{ padding: 12 }}>{s.price}</td>
-                  <td style={{ padding: 12 }}>{s.duration_min} мин</td>
-                  <td style={{ padding: 12 }}>
-                    {s.active ? "Активна" : "Отключена"}
-                  </td>
-                  <td style={{ padding: 12 }}>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button
-                        onClick={() => toggleActive(s)}
-                        disabled={processingId === s.id}
-                        style={buttonStyle()}
-                      >
-                        {s.active ? "Выключить" : "Включить"}
-                      </button>
-
-                      <button
-                        onClick={() => updatePrice(s)}
-                        disabled={processingId === s.id}
-                        style={buttonStyle()}
-                      >
-                        Цена
-                      </button>
-
-                      <button
-                        onClick={() => updateDuration(s)}
-                        disabled={processingId === s.id}
-                        style={buttonStyle()}
-                      >
-                        Длительность
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </PageSection>
   );
 }
