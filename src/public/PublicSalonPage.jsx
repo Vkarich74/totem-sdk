@@ -43,7 +43,7 @@ function splitParagraphs(text) {
     .split(/\n{2,}/)
     .map((item) => item.trim())
     .filter(Boolean)
-    .slice(0, 4);
+    .slice(0, 3);
 }
 
 function extractServices(salon) {
@@ -97,6 +97,27 @@ function extractServices(salon) {
       };
     })
     .filter((service) => service.name && service.active);
+}
+
+function createMapEmbedUrl(addressValue) {
+  const query = encodeURIComponent(addressValue);
+  return `https://www.google.com/maps?q=${query}&z=16&output=embed`;
+}
+
+function createMapLink(addressValue) {
+  const query = encodeURIComponent(addressValue);
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+function getInitials(name) {
+  const safe = normalizeText(name);
+  if (!safe) return "M";
+  return safe
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
 }
 
 export default function PublicSalonPage({ slug }) {
@@ -195,90 +216,78 @@ export default function PublicSalonPage({ slug }) {
     );
   }
 
-  const salonName = pickFirstString(salon.name) || "Салон";
+  const salonName = pickFirstString(salon.name) || "TOTEM Salon";
   const subtitle =
     pickFirstString(salon.subtitle, salon.tagline, salon.short_description) ||
-    "Услуги салона с удобной онлайн записью без звонков и ожидания.";
-  const description =
-    pickFirstString(salon.description, salon.about) ||
-    "Профессиональные услуги красоты. Онлайн запись без звонков.";
-  const district = pickFirstString(salon.district, salon.area, salon.region);
-  const address = pickFirstString(
-    salon.address,
-    salon.location,
-    salon.full_address,
-  );
-  const phone = pickFirstString(
-    salon.phone,
-    salon.phone_number,
-    salon.contact_phone,
-  );
-  const scheduleText = pickFirstString(
-    salon.schedule_text,
-    salon.working_hours,
-    salon.hours,
-  );
-  const mapEmbedUrl = pickFirstString(
-    salon.map_embed_url,
-    salon.google_map_embed_url,
-    salon.map_url,
-  );
-  const mapLink = pickFirstString(
-    salon.map_link,
-    salon.google_maps_url,
-    salon.location_url,
-  );
+    "Салон красоты с удобной онлайн записью в Бишкеке.";
+  const district =
+    pickFirstString(salon.district, salon.area, salon.region) ||
+    "Первомайский район, Бишкек";
+  const address =
+    pickFirstString(salon.address, salon.location, salon.full_address) ||
+    "Киевская улица, 148";
+  const phone =
+    pickFirstString(salon.phone, salon.phone_number, salon.contact_phone) ||
+    "+996 700 123 456";
+  const scheduleText =
+    pickFirstString(salon.schedule_text, salon.working_hours, salon.hours) ||
+    "Ежедневно, 10:00–20:00";
+
+  const defaultMapAddress = `${address}, ${district}`;
+  const mapEmbedUrl =
+    pickFirstString(
+      salon.map_embed_url,
+      salon.google_map_embed_url,
+      salon.map_url,
+    ) || createMapEmbedUrl(defaultMapAddress);
+
+  const mapLink =
+    pickFirstString(
+      salon.map_link,
+      salon.google_maps_url,
+      salon.location_url,
+    ) || createMapLink(defaultMapAddress);
 
   const aboutParagraphs = splitParagraphs(
-    pickFirstString(salon.about, salon.description),
+    pickFirstString(
+      salon.about,
+      salon.description,
+      "Современный салон красоты в Бишкеке с удобной онлайн записью.",
+      "Услуги для повседневного ухода и аккуратного обновления образа.",
+      "Выберите мастера и удобное время без звонков и ожидания.",
+    ),
   );
 
   const visibleMasters = Array.isArray(masters)
-    ? masters.filter((master) => !!pickFirstString(master?.name))
+    ? masters.filter((master) => !!pickFirstString(master?.name)).slice(0, 6)
     : [];
 
+  const servicesForView = services.slice(0, isMobile ? 6 : 8);
   const completedBookings = pickFirstNumber(
     metrics?.completed,
     metrics?.completed_bookings,
     metrics?.bookings_completed,
   );
 
-  const trustItems = [
-    services.length > 0
-      ? { label: "Услуги", value: `${services.length}` }
-      : null,
-    visibleMasters.length > 0
-      ? { label: "Мастера", value: `${visibleMasters.length}` }
-      : null,
-    completedBookings > 0
-      ? { label: "Записи", value: `${completedBookings}` }
-      : null,
-    scheduleText ? { label: "График", value: scheduleText } : null,
-    { label: "Формат", value: "Онлайн запись" },
-  ]
-    .filter(Boolean)
-    .slice(0, 4);
-
-  const showTrustStrip = trustItems.length >= 2;
-
   const palette = {
-    bg: "#F7F5F2",
+    bg: "#F8F5F1",
     card: "#FFFFFF",
-    textMain: "#1A1A1A",
-    textSecondary: "#6B6B6B",
-    primary: "#C8A97E",
-    primaryHover: "#B89668",
-    border: "#E8E5E1",
-    cta: "#111111",
-    ctaText: "#FFFFFF",
-    soft: "#F1ECE6",
+    textMain: "#23201C",
+    textSecondary: "#706860",
+    border: "#EAE2D8",
+    accent: "#C8A97E",
+    accentSoft: "#F3E8DA",
+    accentHover: "#B89668",
+    button: "#3C342E",
+    buttonText: "#FFFFFF",
+    avatarBg: "#EFE7DE",
   };
 
-  const pagePaddingBottom = isMobile ? 96 : 32;
+  const pagePaddingBottom = isMobile ? 88 : 32;
 
   const container = {
     width: "100%",
-    maxWidth: 1180,
+    maxWidth: 1120,
     margin: "0 auto",
     padding: isMobile ? "0 16px" : "0 24px",
     boxSizing: "border-box",
@@ -287,7 +296,7 @@ export default function PublicSalonPage({ slug }) {
   const sectionTitle = {
     margin: 0,
     fontSize: isMobile ? 20 : 28,
-    lineHeight: 1.25,
+    lineHeight: 1.2,
     fontWeight: 600,
     letterSpacing: "-0.2px",
     color: palette.textMain,
@@ -296,18 +305,18 @@ export default function PublicSalonPage({ slug }) {
   const sectionText = {
     margin: 0,
     fontSize: 14,
-    lineHeight: 1.6,
+    lineHeight: 1.55,
     color: palette.textSecondary,
   };
 
   const primaryButton = {
     width: isMobile ? "100%" : "auto",
-    minHeight: 48,
-    padding: "14px 20px",
+    minHeight: 46,
+    padding: isMobile ? "13px 18px" : "13px 20px",
     borderRadius: 12,
     border: "none",
-    background: palette.cta,
-    color: palette.ctaText,
+    background: palette.button,
+    color: palette.buttonText,
     fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
@@ -315,8 +324,8 @@ export default function PublicSalonPage({ slug }) {
 
   const secondaryButton = {
     width: isMobile ? "100%" : "auto",
-    minHeight: 48,
-    padding: "14px 20px",
+    minHeight: 46,
+    padding: isMobile ? "13px 18px" : "13px 20px",
     borderRadius: 12,
     border: `1px solid ${palette.border}`,
     background: palette.card,
@@ -330,7 +339,7 @@ export default function PublicSalonPage({ slug }) {
     background: palette.card,
     border: `1px solid ${palette.border}`,
     borderRadius: 16,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+    boxShadow: "0 2px 8px rgba(35,32,28,0.04)",
     boxSizing: "border-box",
   };
 
@@ -348,11 +357,13 @@ export default function PublicSalonPage({ slug }) {
   }
 
   function renderMasterSubtitle(master) {
-    return pickFirstString(
-      master?.role,
-      master?.specialization,
-      master?.title,
-      master?.position,
+    return (
+      pickFirstString(
+        master?.role,
+        master?.specialization,
+        master?.title,
+        master?.position,
+      ) || "Мастер салона"
     );
   }
 
@@ -379,7 +390,7 @@ export default function PublicSalonPage({ slug }) {
     >
       <section
         style={{
-          padding: isMobile ? "24px 0 20px" : "48px 0 32px",
+          padding: isMobile ? "18px 0 14px" : "36px 0 18px",
         }}
       >
         <div style={container}>
@@ -387,15 +398,15 @@ export default function PublicSalonPage({ slug }) {
             style={{
               ...cardStyle,
               background:
-                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(241,236,230,0.92) 100%)",
-              padding: isMobile ? 20 : 36,
+                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
+              padding: isMobile ? 18 : 28,
             }}
           >
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 16,
+                gap: isMobile ? 14 : 16,
                 alignItems: "flex-start",
               }}
             >
@@ -403,9 +414,9 @@ export default function PublicSalonPage({ slug }) {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  padding: "8px 12px",
+                  padding: "7px 11px",
                   borderRadius: 999,
-                  background: palette.soft,
+                  background: palette.accentSoft,
                   color: palette.textMain,
                   fontSize: 12,
                   fontWeight: 600,
@@ -414,12 +425,12 @@ export default function PublicSalonPage({ slug }) {
                 Онлайн запись в салон
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <h1
                   style={{
                     margin: 0,
-                    fontSize: isMobile ? 24 : 42,
-                    lineHeight: 1.15,
+                    fontSize: isMobile ? 24 : 38,
+                    lineHeight: 1.12,
                     fontWeight: 600,
                     letterSpacing: "-0.2px",
                     color: palette.textMain,
@@ -431,9 +442,9 @@ export default function PublicSalonPage({ slug }) {
                 <p
                   style={{
                     margin: 0,
-                    maxWidth: 720,
-                    fontSize: isMobile ? 14 : 16,
-                    lineHeight: 1.6,
+                    maxWidth: 700,
+                    fontSize: isMobile ? 14 : 15,
+                    lineHeight: 1.55,
                     color: palette.textSecondary,
                   }}
                 >
@@ -443,114 +454,61 @@ export default function PublicSalonPage({ slug }) {
 
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-                  gap: 12,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
                   width: "100%",
                 }}
               >
-                {(district || address) && (
-                  <div
-                    style={{
-                      ...cardStyle,
-                      padding: 14,
-                      background: "rgba(255,255,255,0.78)",
-                    }}
-                  >
-                    <div style={{ fontSize: 12, color: palette.textSecondary }}>
-                      Локация
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {district || address}
-                    </div>
-                    {district && address && district !== address && (
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 12,
-                          lineHeight: 1.5,
-                          color: palette.textSecondary,
-                        }}
-                      >
-                        {address}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {scheduleText && (
-                  <div
-                    style={{
-                      ...cardStyle,
-                      padding: 14,
-                      background: "rgba(255,255,255,0.78)",
-                    }}
-                  >
-                    <div style={{ fontSize: 12, color: palette.textSecondary }}>
-                      График
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {scheduleText}
-                    </div>
-                  </div>
-                )}
-
-                {phone && (
-                  <div
-                    style={{
-                      ...cardStyle,
-                      padding: 14,
-                      background: "rgba(255,255,255,0.78)",
-                    }}
-                  >
-                    <div style={{ fontSize: 12, color: palette.textSecondary }}>
-                      Контакты
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {phone}
-                    </div>
-                  </div>
-                )}
+                <div
+                  style={{
+                    fontSize: 14,
+                    lineHeight: 1.55,
+                    color: palette.textMain,
+                    fontWeight: 500,
+                  }}
+                >
+                  {address}, {district}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  {scheduleText}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  {completedBookings > 0
+                    ? `${completedBookings} завершённых записей`
+                    : "Быстрая запись без звонков и ожидания"}
+                </div>
               </div>
 
               <div
                 style={{
                   display: "flex",
                   flexDirection: isMobile ? "column" : "row",
-                  gap: 12,
+                  gap: 10,
                   width: "100%",
                 }}
               >
                 <button onClick={goToBooking} style={primaryButton}>
-                  Записаться онлайн
+                  Записаться
                 </button>
 
                 <button
                   onClick={() => scrollToSection("public-salon-services")}
                   style={secondaryButton}
                 >
-                  Смотреть услуги
+                  Услуги
                 </button>
               </div>
             </div>
@@ -558,71 +516,23 @@ export default function PublicSalonPage({ slug }) {
         </div>
       </section>
 
-      {showTrustStrip && (
-        <section style={{ padding: "0 0 12px" }}>
-          <div style={container}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile
-                  ? "repeat(2, minmax(0, 1fr))"
-                  : `repeat(${trustItems.length}, minmax(0, 1fr))`,
-                gap: 12,
-              }}
-            >
-              {trustItems.map((item) => (
-                <div
-                  key={`${item.label}-${item.value}`}
-                  style={{
-                    ...cardStyle,
-                    padding: 14,
-                    textAlign: "left",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      lineHeight: 1.4,
-                      color: palette.textSecondary,
-                    }}
-                  >
-                    {item.label}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: item.label === "График" ? 14 : 18,
-                      fontWeight: 600,
-                      lineHeight: 1.4,
-                      color: palette.textMain,
-                    }}
-                  >
-                    {item.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {services.length > 0 && (
+      {servicesForView.length > 0 && (
         <section
           id="public-salon-services"
-          style={{ padding: isMobile ? "20px 0 12px" : "28px 0 20px" }}
+          style={{ padding: isMobile ? "10px 0 8px" : "18px 0 12px" }}
         >
           <div style={container}>
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
-                marginBottom: 16,
+                gap: 6,
+                marginBottom: 12,
               }}
             >
               <h2 style={sectionTitle}>Услуги</h2>
               <p style={sectionText}>
-                Выберите подходящую услугу и запишитесь онлайн в удобное время.
+                Выберите услугу и запишитесь на удобное время онлайн.
               </p>
             </div>
 
@@ -632,18 +542,18 @@ export default function PublicSalonPage({ slug }) {
                 gridTemplateColumns: isMobile
                   ? "1fr"
                   : "repeat(2, minmax(0, 1fr))",
-                gap: 12,
+                gap: 10,
               }}
             >
-              {services.map((service) => (
+              {servicesForView.map((service) => (
                 <div
                   key={service.id}
                   style={{
                     ...cardStyle,
-                    padding: 16,
+                    padding: 14,
                     display: "flex",
                     flexDirection: "column",
-                    gap: 12,
+                    gap: 10,
                   }}
                 >
                   <div
@@ -651,15 +561,15 @@ export default function PublicSalonPage({ slug }) {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "flex-start",
-                      gap: 12,
+                      gap: 10,
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
                       <h3
                         style={{
                           margin: 0,
-                          fontSize: 16,
-                          lineHeight: 1.45,
+                          fontSize: 15,
+                          lineHeight: 1.4,
                           fontWeight: 600,
                           color: palette.textMain,
                         }}
@@ -670,9 +580,9 @@ export default function PublicSalonPage({ slug }) {
                       {service.description && (
                         <p
                           style={{
-                            margin: "8px 0 0",
-                            fontSize: 14,
-                            lineHeight: 1.55,
+                            margin: "6px 0 0",
+                            fontSize: 13,
+                            lineHeight: 1.5,
                             color: palette.textSecondary,
                             display: "-webkit-box",
                             WebkitLineClamp: 2,
@@ -688,12 +598,13 @@ export default function PublicSalonPage({ slug }) {
                     <div
                       style={{
                         flexShrink: 0,
-                        padding: "8px 10px",
-                        borderRadius: 12,
-                        background: palette.soft,
-                        fontSize: 13,
+                        padding: "6px 9px",
+                        borderRadius: 10,
+                        background: palette.accentSoft,
+                        fontSize: 12,
                         fontWeight: 600,
                         color: palette.textMain,
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {formatPrice(service.price)}
@@ -705,24 +616,33 @@ export default function PublicSalonPage({ slug }) {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      gap: 12,
+                      gap: 10,
                       flexWrap: "wrap",
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 13,
-                        lineHeight: 1.5,
+                        fontSize: 12,
+                        lineHeight: 1.45,
                         color: palette.textSecondary,
                       }}
                     >
                       {service.durationMin > 0
-                        ? `Длительность: ${formatDuration(service.durationMin)}`
-                        : "Уточните длительность при записи"}
+                        ? formatDuration(service.durationMin)
+                        : "Длительность уточняется"}
                     </div>
 
-                    <button onClick={goToBooking} style={secondaryButton}>
-                      Записаться
+                    <button
+                      onClick={goToBooking}
+                      style={{
+                        ...secondaryButton,
+                        width: "auto",
+                        minHeight: 38,
+                        padding: "9px 14px",
+                        fontSize: 13,
+                      }}
+                    >
+                      Выбрать
                     </button>
                   </div>
                 </div>
@@ -733,19 +653,19 @@ export default function PublicSalonPage({ slug }) {
       )}
 
       {visibleMasters.length > 0 && (
-        <section style={{ padding: isMobile ? "20px 0 12px" : "28px 0 20px" }}>
+        <section style={{ padding: isMobile ? "12px 0 8px" : "20px 0 12px" }}>
           <div style={container}>
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
-                marginBottom: 16,
+                gap: 6,
+                marginBottom: 12,
               }}
             >
               <h2 style={sectionTitle}>Мастера</h2>
               <p style={sectionText}>
-                Познакомьтесь с мастерами салона и выберите удобный формат записи.
+                Выберите мастера и удобный формат записи.
               </p>
             </div>
 
@@ -755,7 +675,7 @@ export default function PublicSalonPage({ slug }) {
                 gridTemplateColumns: isMobile
                   ? "1fr"
                   : "repeat(2, minmax(0, 1fr))",
-                gap: 12,
+                gap: 10,
               }}
             >
               {visibleMasters.map((master) => {
@@ -767,59 +687,92 @@ export default function PublicSalonPage({ slug }) {
                     key={master.id || master.slug || master.name}
                     style={{
                       ...cardStyle,
-                      padding: 16,
+                      padding: 14,
                       display: "flex",
                       flexDirection: "column",
-                      gap: 12,
+                      gap: 10,
                     }}
                   >
-                    <div>
-                      <h3
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 12,
+                      }}
+                    >
+                      <div
                         style={{
-                          margin: 0,
-                          fontSize: 16,
-                          lineHeight: 1.45,
-                          fontWeight: 600,
+                          width: 44,
+                          height: 44,
+                          borderRadius: "50%",
+                          background: palette.avatarBg,
                           color: palette.textMain,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          flexShrink: 0,
                         }}
                       >
-                        {master.name}
-                      </h3>
+                        {getInitials(master.name)}
+                      </div>
 
-                      {masterSubtitle && (
+                      <div style={{ minWidth: 0 }}>
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: 15,
+                            lineHeight: 1.4,
+                            fontWeight: 600,
+                            color: palette.textMain,
+                          }}
+                        >
+                          {master.name}
+                        </h3>
+
                         <div
                           style={{
-                            marginTop: 6,
+                            marginTop: 4,
                             fontSize: 13,
-                            lineHeight: 1.5,
+                            lineHeight: 1.45,
                             color: palette.textSecondary,
                           }}
                         >
                           {masterSubtitle}
                         </div>
-                      )}
+
+                        {masterBio && (
+                          <p
+                            style={{
+                              margin: "6px 0 0",
+                              fontSize: 13,
+                              lineHeight: 1.5,
+                              color: palette.textSecondary,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {masterBio}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    {masterBio && (
-                      <p
+                    <div>
+                      <button
+                        onClick={goToBooking}
                         style={{
-                          margin: 0,
-                          fontSize: 14,
-                          lineHeight: 1.55,
-                          color: palette.textSecondary,
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
+                          ...secondaryButton,
+                          width: isMobile ? "100%" : "auto",
+                          minHeight: 38,
+                          padding: "9px 14px",
+                          fontSize: 13,
                         }}
                       >
-                        {masterBio}
-                      </p>
-                    )}
-
-                    <div>
-                      <button onClick={goToBooking} style={secondaryButton}>
-                        Выбрать мастера
+                        Записаться
                       </button>
                     </div>
                   </div>
@@ -831,25 +784,25 @@ export default function PublicSalonPage({ slug }) {
       )}
 
       {aboutParagraphs.length > 0 && (
-        <section style={{ padding: isMobile ? "20px 0 12px" : "28px 0 20px" }}>
+        <section style={{ padding: isMobile ? "12px 0 8px" : "20px 0 12px" }}>
           <div style={container}>
             <div
               style={{
                 ...cardStyle,
-                padding: isMobile ? 18 : 24,
+                padding: isMobile ? 16 : 20,
               }}
             >
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: 8,
-                  marginBottom: 14,
+                  gap: 6,
+                  marginBottom: 10,
                 }}
               >
                 <h2 style={sectionTitle}>О салоне</h2>
                 <p style={sectionText}>
-                  Коротко о подходе, атмосфере и формате работы салона.
+                  Коротко о формате, атмосфере и удобстве записи.
                 </p>
               </div>
 
@@ -857,7 +810,7 @@ export default function PublicSalonPage({ slug }) {
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: 12,
+                  gap: 10,
                 }}
               >
                 {aboutParagraphs.map((paragraph, index) => (
@@ -866,7 +819,7 @@ export default function PublicSalonPage({ slug }) {
                     style={{
                       margin: 0,
                       fontSize: 14,
-                      lineHeight: 1.7,
+                      lineHeight: 1.65,
                       color: palette.textSecondary,
                     }}
                   >
@@ -874,268 +827,181 @@ export default function PublicSalonPage({ slug }) {
                   </p>
                 ))}
               </div>
+
+              <div style={{ marginTop: 14 }}>
+                <button onClick={goToBooking} style={primaryButton}>
+                  Записаться онлайн
+                </button>
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      <section style={{ padding: isMobile ? "20px 0 12px" : "28px 0 20px" }}>
+      <section style={{ padding: isMobile ? "12px 0 20px" : "20px 0 32px" }}>
         <div style={container}>
           <div
             style={{
-              ...cardStyle,
-              padding: isMobile ? 18 : 28,
-              background: palette.textMain,
-              color: palette.ctaText,
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "0.92fr 1.08fr",
+              gap: 10,
+              alignItems: "stretch",
             }}
           >
             <div
               style={{
+                ...cardStyle,
+                padding: isMobile ? 16 : 20,
                 display: "flex",
                 flexDirection: "column",
                 gap: 12,
               }}
             >
-              <h2
+              <div
                 style={{
-                  margin: 0,
-                  fontSize: isMobile ? 20 : 28,
-                  lineHeight: 1.25,
-                  fontWeight: 600,
-                  letterSpacing: "-0.2px",
-                  color: palette.ctaText,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
                 }}
               >
-                Запишитесь в салон онлайн
-              </h2>
+                <h2 style={sectionTitle}>Контакты</h2>
+                <p style={sectionText}>
+                  Адрес, график и встроенная карта для быстрого ориентирования.
+                </p>
+              </div>
 
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                  color: "rgba(255,255,255,0.82)",
-                  maxWidth: 680,
-                }}
-              >
-                Выберите услугу и удобное время без звонков и ожидания. Вся запись
-                проходит быстро и понятно с мобильного телефона.
-              </p>
+              <div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 1.4,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  Адрес
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    fontWeight: 600,
+                    color: palette.textMain,
+                  }}
+                >
+                  {address}
+                </div>
+                <div
+                  style={{
+                    marginTop: 2,
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  {district}
+                </div>
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 1.4,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  График
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    fontWeight: 600,
+                    color: palette.textMain,
+                  }}
+                >
+                  {scheduleText}
+                </div>
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 1.4,
+                    color: palette.textSecondary,
+                  }}
+                >
+                  Телефон
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    fontWeight: 600,
+                    color: palette.textMain,
+                  }}
+                >
+                  {phone}
+                </div>
+              </div>
 
               <div
                 style={{
                   display: "flex",
                   flexDirection: isMobile ? "column" : "row",
-                  gap: 12,
+                  gap: 10,
                 }}
               >
-                <button
-                  onClick={goToBooking}
-                  style={{
-                    ...primaryButton,
-                    background: palette.card,
-                    color: palette.textMain,
-                  }}
-                >
-                  Записаться онлайн
+                <button onClick={goToBooking} style={primaryButton}>
+                  Записаться
                 </button>
 
-                {services.length > 0 && (
-                  <button
-                    onClick={() => scrollToSection("public-salon-services")}
-                    style={{
-                      ...secondaryButton,
-                      background: "transparent",
-                      color: palette.ctaText,
-                      border: "1px solid rgba(255,255,255,0.24)",
-                    }}
-                  >
-                    Смотреть услуги
-                  </button>
-                )}
+                <a
+                  href={mapLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    ...secondaryButton,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  Маршрут
+                </a>
               </div>
+            </div>
+
+            <div
+              style={{
+                ...cardStyle,
+                overflow: "hidden",
+                minHeight: isMobile ? 240 : 100,
+              }}
+            >
+              <iframe
+                title={`${salonName} map`}
+                src={mapEmbedUrl}
+                width="100%"
+                height={isMobile ? "240" : "100%"}
+                style={{
+                  border: "none",
+                  display: "block",
+                  minHeight: isMobile ? 240 : 100,
+                }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
           </div>
         </div>
       </section>
-
-      {(address || district || phone || scheduleText || mapEmbedUrl || mapLink) && (
-        <section style={{ padding: isMobile ? "20px 0 20px" : "28px 0 32px" }}>
-          <div style={container}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "1fr 1.1fr",
-                gap: 12,
-              }}
-            >
-              <div
-                style={{
-                  ...cardStyle,
-                  padding: isMobile ? 18 : 24,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 14,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                  }}
-                >
-                  <h2 style={sectionTitle}>Контакты</h2>
-                  <p style={sectionText}>
-                    Вся основная информация для визита и связи с салоном.
-                  </p>
-                </div>
-
-                {(district || address) && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        lineHeight: 1.4,
-                        color: palette.textSecondary,
-                      }}
-                    >
-                      Адрес
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        fontSize: 14,
-                        lineHeight: 1.6,
-                        fontWeight: 600,
-                        color: palette.textMain,
-                      }}
-                    >
-                      {district || address}
-                    </div>
-                    {district && address && district !== address && (
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 13,
-                          lineHeight: 1.6,
-                          color: palette.textSecondary,
-                        }}
-                      >
-                        {address}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {scheduleText && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        lineHeight: 1.4,
-                        color: palette.textSecondary,
-                      }}
-                    >
-                      График
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        fontSize: 14,
-                        lineHeight: 1.6,
-                        fontWeight: 600,
-                        color: palette.textMain,
-                      }}
-                    >
-                      {scheduleText}
-                    </div>
-                  </div>
-                )}
-
-                {phone && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        lineHeight: 1.4,
-                        color: palette.textSecondary,
-                      }}
-                    >
-                      Телефон
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        fontSize: 14,
-                        lineHeight: 1.6,
-                        fontWeight: 600,
-                        color: palette.textMain,
-                      }}
-                    >
-                      {phone}
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: isMobile ? "column" : "row",
-                    gap: 12,
-                  }}
-                >
-                  <button onClick={goToBooking} style={primaryButton}>
-                    Записаться
-                  </button>
-
-                  {mapLink && (
-                    <a
-                      href={mapLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        ...secondaryButton,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        textDecoration: "none",
-                        boxSizing: "border-box",
-                      }}
-                    >
-                      Открыть карту
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              {mapEmbedUrl && (
-                <div
-                  style={{
-                    ...cardStyle,
-                    overflow: "hidden",
-                    minHeight: isMobile ? 220 : 100,
-                  }}
-                >
-                  <iframe
-                    title={`${salonName} map`}
-                    src={mapEmbedUrl}
-                    width="100%"
-                    height={isMobile ? "220" : "100%"}
-                    style={{
-                      border: "none",
-                      display: "block",
-                      minHeight: isMobile ? 220 : 100,
-                    }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
 
       {isMobile && (
         <div
@@ -1146,18 +1012,18 @@ export default function PublicSalonPage({ slug }) {
             bottom: 0,
             zIndex: 20,
             padding: 12,
-            background: "rgba(247,245,242,0.96)",
+            background: "rgba(248,245,241,0.96)",
             backdropFilter: "blur(10px)",
             borderTop: `1px solid ${palette.border}`,
           }}
         >
-          <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <div style={{ maxWidth: 1120, margin: "0 auto" }}>
             <button
               onClick={goToBooking}
               style={{
                 ...primaryButton,
                 width: "100%",
-                boxShadow: "0 -2px 10px rgba(0,0,0,0.06)",
+                boxShadow: "0 -2px 10px rgba(35,32,28,0.06)",
               }}
             >
               Записаться онлайн
