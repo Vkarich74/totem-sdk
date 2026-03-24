@@ -15,15 +15,21 @@ function getMasterSlug() {
 
   const hash = window.location.hash
 
-  if (!hash) {
-    return null
+  if (hash) {
+    const clean = hash.replace("#/", "")
+    const parts = clean.split("/")
+
+    if (parts.length >= 2 && parts[0] === "master") {
+      return parts[1]
+    }
   }
 
-  const clean = hash.replace("#/", "")
-  const parts = clean.split("/")
+  const storedSlug =
+    window.localStorage.getItem("totem_master_slug") ||
+    window.sessionStorage.getItem("totem_master_slug")
 
-  if (parts.length >= 2 && parts[0] === "master") {
-    return parts[1]
+  if (storedSlug) {
+    return storedSlug
   }
 
   return null
@@ -88,6 +94,10 @@ export default function MasterLayout() {
   const slug = getMasterSlug()
 
   useEffect(() => {
+    if (slug) {
+      window.localStorage.setItem("totem_master_slug", slug)
+      window.sessionStorage.setItem("totem_master_slug", slug)
+    }
 
     loadOdooPanel()
 
@@ -97,7 +107,7 @@ export default function MasterLayout() {
       window.removeEventListener("hashchange", loadOdooPanel)
     }
 
-  }, [])
+  }, [slug])
 
   function logout() {
     window.location.href = "/"
