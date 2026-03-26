@@ -17,20 +17,21 @@ const DEMO_VISUALS = {
     "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_800/v1774523481/Manicir_aw0qld.png",
     "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_800/v1774514966/care_jijbdw.png",
     "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_800/v1774514662/color_ca67ww.png",
-    "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_800/v1774514323/haircut_lbikyy.png"
+    "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_800/v1774514323/haircut_lbikyy.png",
   ],
   masters: [
     "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_700/v1774515325/master-1_ooxsvg.png",
     "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_700/v1774515610/master-2_c8xyxp.png",
     "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_700/v1774516005/master-3_u6pois.png",
-    "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_700/v1774516063/master-4_vikzad.png"
+    "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_700/v1774516063/master-4_vikzad.png",
   ],
   gallery: [
     "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1000/v1774516334/interior-1_cyhcpd.png",
     "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1000/v1774516574/work-1_zrzkau.png",
-    "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1000/v1774516827/result-1_sb8uki.png"
+    "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1000/v1774516827/result-1_sb8uki.png",
   ],
 };
+
 
 const DEMO_MASTER_FALLBACKS = [
   {
@@ -266,38 +267,6 @@ function getServiceCatalogData(services) {
 
 function pickDemoServiceImage(service, index) {
   return DEMO_VISUALS.services[index % DEMO_VISUALS.services.length];
-} ${description}`;
-
-  if (
-    combined.includes("окраш") ||
-    combined.includes("блонд") ||
-    combined.includes("color")
-  ) {
-    return DEMO_VISUALS.services.color;
-  }
-
-  if (
-    combined.includes("уход") ||
-    combined.includes("восстанов") ||
-    combined.includes("маск") ||
-    combined.includes("spa")
-  ) {
-    return DEMO_VISUALS.services.care;
-  }
-
-  if (
-    combined.includes("стриж") ||
-    combined.includes("уклад") ||
-    combined.includes("hair")
-  ) {
-    return DEMO_VISUALS.services.haircut;
-  }
-
-  return [
-    DEMO_VISUALS.services.haircut,
-    DEMO_VISUALS.services.color,
-    DEMO_VISUALS.services.care,
-  ][index % 3];
 }
 
 export default function PublicSalonPage({ slug }) {
