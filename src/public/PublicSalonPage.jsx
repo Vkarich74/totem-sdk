@@ -5,6 +5,60 @@ import { getSalon, getMasters, getMetrics } from "../api/publicApi";
 import { setMeta, setCanonical, setJSONLD } from "../api/seo";
 import Skeleton from "../layout/Skeleton";
 
+
+const DEMO_SLUG = "totem-demo-salon";
+
+const DEMO_VISUALS = {
+  hero:
+    "https://res.cloudinary.com/dgcec21nz/image/upload/v1774513655/hero_bx77pj.png",
+  services: {
+    haircut:
+      "https://res.cloudinary.com/dgcec21nz/image/upload/v1774514323/haircut_lbikyy.png",
+    color:
+      "https://res.cloudinary.com/dgcec21nz/image/upload/v1774514662/color_ca67ww.png",
+    care:
+      "https://res.cloudinary.com/dgcec21nz/image/upload/v1774514966/care_jijbdw.png",
+  },
+  masters: [
+    "https://res.cloudinary.com/dgcec21nz/image/upload/v1774515325/master-1_ooxsvg.png",
+    "https://res.cloudinary.com/dgcec21nz/image/upload/v1774515610/master-2_c8xyxp.png",
+    "https://res.cloudinary.com/dgcec21nz/image/upload/v1774516005/master-3_u6pois.png",
+    "https://res.cloudinary.com/dgcec21nz/image/upload/v1774516063/master-4_vikzad.png",
+  ],
+  gallery: [
+    "https://res.cloudinary.com/dgcec21nz/image/upload/v1774516334/interior-1_cyhcpd.png",
+    "https://res.cloudinary.com/dgcec21nz/image/upload/v1774516574/work-1_zrzkau.png",
+    "https://res.cloudinary.com/dgcec21nz/image/upload/v1774516827/result-1_sb8uki.png",
+  ],
+};
+
+const DEMO_MASTER_FALLBACKS = [
+  {
+    id: "demo-master-1",
+    name: "Алексей",
+    role: "Старший стилист",
+    bio: "Точные стрижки, мужские и женские формы, аккуратная работа с текстурой и укладкой.",
+  },
+  {
+    id: "demo-master-2",
+    name: "Алина",
+    role: "Колорист",
+    bio: "Сложные окрашивания, мягкие переходы оттенков и работа с дорогим светлым блондом.",
+  },
+  {
+    id: "demo-master-3",
+    name: "Мадина",
+    role: "Топ-мастер",
+    bio: "Собирает образ целиком: укладка, финальная подача и премиальный клиентский сервис.",
+  },
+  {
+    id: "demo-master-4",
+    name: "Елена",
+    role: "Стилист по уходу",
+    bio: "Уходовые процедуры, восстановление волос и комфортный салонный ритуал для клиента.",
+  },
+];
+
 function pickFirstString(...values) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) return value.trim();
@@ -209,6 +263,44 @@ function getServiceCatalogData(services) {
   ];
 }
 
+
+function pickDemoServiceImage(service, index) {
+  const name = normalizeText(service?.name).toLowerCase();
+  const description = normalizeText(service?.description).toLowerCase();
+  const combined = `${name} ${description}`;
+
+  if (
+    combined.includes("окраш") ||
+    combined.includes("блонд") ||
+    combined.includes("color")
+  ) {
+    return DEMO_VISUALS.services.color;
+  }
+
+  if (
+    combined.includes("уход") ||
+    combined.includes("восстанов") ||
+    combined.includes("маск") ||
+    combined.includes("spa")
+  ) {
+    return DEMO_VISUALS.services.care;
+  }
+
+  if (
+    combined.includes("стриж") ||
+    combined.includes("уклад") ||
+    combined.includes("hair")
+  ) {
+    return DEMO_VISUALS.services.haircut;
+  }
+
+  return [
+    DEMO_VISUALS.services.haircut,
+    DEMO_VISUALS.services.color,
+    DEMO_VISUALS.services.care,
+  ][index % 3];
+}
+
 export default function PublicSalonPage({ slug }) {
   const navigate = useNavigate();
 
@@ -221,6 +313,8 @@ export default function PublicSalonPage({ slug }) {
     typeof window !== "undefined" ? window.innerWidth <= 768 : true,
   );
   const [teamOpen, setTeamOpen] = useState(false);
+
+  const isDemoSalon = slug === DEMO_SLUG;
 
   useEffect(() => {
     function handleResize() {
@@ -254,9 +348,12 @@ export default function PublicSalonPage({ slug }) {
         setMasters(Array.isArray(mastersData) ? mastersData : []);
         setMetrics(metricsData || null);
 
-        const title = "Демо Салон";
-        const description =
-          "Демо-страница салона в TOTEM: услуги, акции, отзывы, карта и удобная онлайн запись для клиентов.";
+        const title = isDemoSalon
+          ? "TOTEM Демо Салон"
+          : pickFirstString(salonData?.name, "Салон");
+        const description = isDemoSalon
+          ? "TOTEM Демо Салон: премиальная витрина салона с услугами, командой, галереей, картой и удобной онлайн записью."
+          : "Публичная страница салона в TOTEM: услуги, команда, контакты и удобная онлайн запись.";
 
         document.title = `${title} | Онлайн запись`;
 
@@ -274,6 +371,7 @@ export default function PublicSalonPage({ slug }) {
           url: window.location.href,
           telephone: "+996 700 123 456",
           address: "Киевская улица, 148, Первомайский район, Бишкек",
+          image: isDemoSalon ? DEMO_VISUALS.hero : undefined,
         });
       } catch (err) {
         console.error(err);
@@ -284,7 +382,7 @@ export default function PublicSalonPage({ slug }) {
     }
 
     load();
-  }, [slug]);
+  }, [slug, isDemoSalon]);
 
   const services = useMemo(() => extractServices(salon), [salon]);
 
@@ -299,10 +397,13 @@ export default function PublicSalonPage({ slug }) {
     );
   }
 
-  const salonName = "Демо Салон";
-  const slogan = "Красота, сервис и онлайн-запись в одном месте";
-  const subtitle =
-    "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.";
+  const salonName = isDemoSalon ? "TOTEM Демо Салон" : pickFirstString(salon?.name, "Салон");
+  const slogan = isDemoSalon
+    ? "Премиальная витрина салона с живым визуалом и онлайн-записью"
+    : "Красота, сервис и онлайн-запись в одном месте";
+  const subtitle = isDemoSalon
+    ? "Современная публичная страница салона в TOTEM: услуги, команда, галерея, акции, отзывы и понятный путь от первого впечатления до записи."
+    : "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.";
   const district = "Первомайский район, Бишкек";
   const address = "Киевская улица, 148";
   const phone = "+996 700 123 456";
@@ -322,21 +423,40 @@ export default function PublicSalonPage({ slug }) {
     pickFirstString(
       salon.about,
       salon.description,
-      "Демо Салон — это пример современной публичной страницы салона в TOTEM, которая помогает красиво показать услуги, акции, отзывы и удобный способ записи.",
-      "Такой формат делает страницу не просто визиткой, а полноценной витриной для привлечения клиентов и повышения доверия к салону.",
-      "Владелец салона получает красивую мобильную страницу, а клиент — понятный путь от первого просмотра до записи на услугу.",
+      "TOTEM Демо Салон — это эталон современной витрины салона: премиальный визуальный образ, понятная подача услуг, команда, отзывы и быстрый переход к записи.",
+      "Такая страница работает не как обычная визитка, а как полноценная продуктовая витрина, которая помогает салону вызывать доверие и продавать услуги с мобильного телефона.",
+      "Клиент видит атмосферу, процесс, результат и понятную структуру услуг, а владелец получает красивую публичную страницу, которую не стыдно показывать и использовать как рабочий продукт.",
     ),
   );
 
-  const visibleMasters = Array.isArray(masters)
-    ? masters.filter((master) => !!pickFirstString(master?.name)).slice(0, 6)
-    : [];
+  const visibleMasters = (() => {
+    const apiMasters = Array.isArray(masters)
+      ? masters.filter((master) => !!pickFirstString(master?.name)).slice(0, 4)
+      : [];
+
+    if (apiMasters.length > 0) {
+      return apiMasters.map((master, index) => ({
+        ...master,
+        imageUrl: isDemoSalon ? DEMO_VISUALS.masters[index] || "" : "",
+      }));
+    }
+
+    if (isDemoSalon) {
+      return DEMO_MASTER_FALLBACKS.map((master, index) => ({
+        ...master,
+        imageUrl: DEMO_VISUALS.masters[index] || "",
+      }));
+    }
+
+    return [];
+  })();
 
   const popularServices = getServiceCatalogData(services).slice(0, isMobile ? 4 : 6);
   const fullServiceList = getServiceCatalogData(services);
   const reviews = getReviewData();
   const promos = getPromoData();
   const benefits = getBenefitsData();
+  const galleryImages = isDemoSalon ? DEMO_VISUALS.gallery : [];
 
   const completedBookings = pickFirstNumber(
     metrics?.completed,
@@ -358,6 +478,7 @@ export default function PublicSalonPage({ slug }) {
     star: "#D39B36",
     promo: "#FFF6EB",
     review: "#FFFDF9",
+    heroOverlay: "linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(35,32,28,0.04) 100%)",
   };
 
   const pagePaddingBottom = isMobile ? 88 : 32;
@@ -481,218 +602,261 @@ export default function PublicSalonPage({ slug }) {
           >
             <div
               style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-                alignItems: "flex-start",
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1.05fr 0.95fr",
+                gap: isMobile ? 16 : 22,
+                alignItems: "stretch",
               }}
             >
               <div
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  padding: "7px 11px",
-                  borderRadius: 999,
-                  background: palette.accentSoft,
-                  color: palette.textMain,
-                  fontSize: 12,
-                  fontWeight: 600,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 14,
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
                 }}
               >
-                Витрина салона в TOTEM
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: isMobile ? 28 : 42,
-                    lineHeight: 1.08,
-                    fontWeight: 600,
-                    letterSpacing: "-0.25px",
-                    color: palette.textMain,
-                  }}
-                >
-                  {salonName}
-                </h1>
-
                 <div
                   style={{
-                    fontSize: isMobile ? 16 : 18,
-                    lineHeight: 1.45,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    padding: "7px 11px",
+                    borderRadius: 999,
+                    background: palette.accentSoft,
                     color: palette.textMain,
-                    fontWeight: 500,
+                    fontSize: 12,
+                    fontWeight: 600,
                   }}
                 >
-                  {slogan}
+                  Витрина салона в TOTEM
                 </div>
 
-                <p
-                  style={{
-                    margin: 0,
-                    maxWidth: 760,
-                    fontSize: 14,
-                    lineHeight: 1.6,
-                    color: palette.textSecondary,
-                  }}
-                >
-                  {subtitle}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 8,
-                }}
-              >
-                {[
-                  "Онлайн запись 24/7",
-                  "Акции и абонементы",
-                  "Удобно с телефона",
-                  "Современная витрина услуг",
-                ].map((item) => (
-                  <div
-                    key={item}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <h1
                     style={{
-                      padding: "8px 11px",
-                      borderRadius: 999,
-                      background: palette.card,
-                      border: `1px solid ${palette.border}`,
-                      fontSize: 12,
+                      margin: 0,
+                      fontSize: isMobile ? 28 : 42,
+                      lineHeight: 1.08,
+                      fontWeight: 600,
+                      letterSpacing: "-0.25px",
+                      color: palette.textMain,
+                    }}
+                  >
+                    {salonName}
+                  </h1>
+
+                  <div
+                    style={{
+                      fontSize: isMobile ? 16 : 18,
+                      lineHeight: 1.45,
                       color: palette.textMain,
                       fontWeight: 500,
                     }}
                   >
-                    {item}
+                    {slogan}
                   </div>
-                ))}
-              </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr",
-                  gap: 12,
-                  width: "100%",
-                }}
-              >
-                <div
-                  style={{
-                    ...cardStyle,
-                    padding: 14,
-                    background: palette.card,
-                  }}
-                >
-                  <div style={{ fontSize: 12, color: palette.textSecondary }}>
-                    Адрес
-                  </div>
-                  <div
+                  <p
                     style={{
-                      marginTop: 4,
+                      margin: 0,
+                      maxWidth: 760,
                       fontSize: 14,
-                      lineHeight: 1.55,
-                      fontWeight: 600,
-                      color: palette.textMain,
-                    }}
-                  >
-                    {address}, {district}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 13,
-                      lineHeight: 1.5,
+                      lineHeight: 1.6,
                       color: palette.textSecondary,
                     }}
                   >
-                    {scheduleText}
-                  </div>
+                    {subtitle}
+                  </p>
                 </div>
 
                 <div
                   style={{
-                    ...cardStyle,
-                    padding: 14,
-                    background: palette.review,
                     display: "flex",
-                    flexDirection: "column",
-                    gap: 4,
-                    justifyContent: "center",
+                    flexWrap: "wrap",
+                    gap: 8,
                   }}
                 >
-                  <div style={{ fontSize: 12, color: palette.textSecondary }}>
-                    Рейтинг и отзывы
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      flexWrap: "wrap",
-                    }}
-                  >
+                  {[
+                    "Онлайн запись 24/7",
+                    "Акции и абонементы",
+                    "Удобно с телефона",
+                    isDemoSalon ? "Премиальная витрина услуг" : "Современная витрина услуг",
+                  ].map((item) => (
                     <div
+                      key={item}
                       style={{
-                        fontSize: 20,
-                        fontWeight: 700,
+                        padding: "8px 11px",
+                        borderRadius: 999,
+                        background: palette.card,
+                        border: `1px solid ${palette.border}`,
+                        fontSize: 12,
                         color: palette.textMain,
+                        fontWeight: 500,
                       }}
                     >
-                      {ratingValue}
+                      {item}
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr",
+                    gap: 12,
+                    width: "100%",
+                  }}
+                >
+                  <div
+                    style={{
+                      ...cardStyle,
+                      padding: 14,
+                      background: palette.card,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, color: palette.textSecondary }}>
+                      Адрес
                     </div>
                     <div
                       style={{
-                        fontSize: 15,
-                        color: palette.star,
-                        letterSpacing: "1px",
+                        marginTop: 4,
+                        fontSize: 14,
+                        lineHeight: 1.55,
+                        fontWeight: 600,
+                        color: palette.textMain,
                       }}
                     >
-                      {renderStars(5)}
+                      {address}, {district}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: 13,
+                        lineHeight: 1.5,
+                        color: palette.textSecondary,
+                      }}
+                    >
+                      {scheduleText}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      ...cardStyle,
+                      padding: 14,
+                      background: palette.review,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, color: palette.textSecondary }}>
+                      Рейтинг и отзывы
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 700,
+                          color: palette.textMain,
+                        }}
+                      >
+                        {ratingValue}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 15,
+                          color: palette.star,
+                          letterSpacing: "1px",
+                        }}
+                      >
+                        {renderStars(5)}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: palette.textSecondary,
+                        }}
+                      >
+                        {reviewCount} отзывов
+                      </div>
                     </div>
                     <div
                       style={{
                         fontSize: 13,
                         color: palette.textSecondary,
+                        lineHeight: 1.5,
                       }}
                     >
-                      {reviewCount} отзывов
+                      {completedBookings > 0
+                        ? `${completedBookings}+ завершённых записей через платформу`
+                        : isDemoSalon
+                          ? "Клиент сразу видит атмосферу, процесс и результат — не только описание услуг"
+                          : "Клиент сразу видит услуги, акции и удобный путь до записи"}
                     </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: palette.textSecondary,
-                      lineHeight: 1.5,
-                    }}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: isMobile ? "column" : "row",
+                    gap: 12,
+                    width: "100%",
+                  }}
+                >
+                  <button onClick={goToBooking} style={primaryButton}>
+                    Записаться онлайн
+                  </button>
+
+                  <button
+                    onClick={() => scrollToSection("popular-services")}
+                    style={secondaryButton}
                   >
-                    {completedBookings > 0
-                      ? `${completedBookings}+ завершённых записей через платформу`
-                      : "Клиент сразу видит услуги, акции и удобный путь до записи"}
-                  </div>
+                    Смотреть услуги
+                  </button>
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: isMobile ? "column" : "row",
-                  gap: 10,
-                  width: "100%",
-                }}
-              >
-                <button onClick={goToBooking} style={primaryButton}>
-                  Записаться онлайн
-                </button>
-
-                <button
-                  onClick={() => scrollToSection("popular-services")}
-                  style={secondaryButton}
+              {isDemoSalon ? (
+                <div
+                  style={{
+                    position: "relative",
+                    minHeight: isMobile ? 280 : 560,
+                    borderRadius: 20,
+                    overflow: "hidden",
+                    background: "#ECE4DB",
+                  }}
                 >
-                  Смотреть услуги
-                </button>
-              </div>
+                  <img
+                    src={DEMO_VISUALS.hero}
+                    alt={`${salonName} — интерьер`}
+                    loading="eager"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "block",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: palette.heroOverlay,
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -782,108 +946,137 @@ export default function PublicSalonPage({ slug }) {
               gap: 10,
             }}
           >
-            {popularServices.map((service) => (
-              <div
-                key={service.id}
-                style={{
-                  ...cardStyle,
-                  padding: 14,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
+            {popularServices.map((service, index) => {
+              const serviceImage = isDemoSalon ? pickDemoServiceImage(service, index) : "";
+
+              return (
                 <div
+                  key={service.id}
                   style={{
+                    ...cardStyle,
+                    padding: 14,
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
+                    flexDirection: "column",
                     gap: 10,
+                    overflow: "hidden",
                   }}
                 >
-                  <div style={{ minWidth: 0 }}>
-                    <h3
+                  {serviceImage && (
+                    <div
                       style={{
-                        margin: 0,
-                        fontSize: 16,
-                        lineHeight: 1.35,
-                        fontWeight: 600,
-                        color: palette.textMain,
+                        width: "100%",
+                        aspectRatio: "4 / 3",
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        background: "#EEE7DE",
                       }}
                     >
-                      {service.name}
-                    </h3>
-
-                    {service.description && (
-                      <p
+                      <img
+                        src={serviceImage}
+                        alt={service.name}
+                        loading="lazy"
                         style={{
-                          margin: "6px 0 0",
-                          fontSize: 13,
-                          lineHeight: 1.55,
-                          color: palette.textSecondary,
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
+                          width: "100%",
+                          height: "100%",
+                          display: "block",
+                          objectFit: "cover",
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: 16,
+                          lineHeight: 1.35,
+                          fontWeight: 600,
+                          color: palette.textMain,
                         }}
                       >
-                        {service.description}
-                      </p>
-                    )}
+                        {service.name}
+                      </h3>
+
+                      {service.description && (
+                        <p
+                          style={{
+                            margin: "6px 0 0",
+                            fontSize: 13,
+                            lineHeight: 1.55,
+                            color: palette.textSecondary,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {service.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        flexShrink: 0,
+                        padding: "6px 9px",
+                        borderRadius: 10,
+                        background: palette.accentSoft,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: palette.textMain,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {formatPrice(service.price)}
+                    </div>
                   </div>
 
                   <div
                     style={{
-                      flexShrink: 0,
-                      padding: "6px 9px",
-                      borderRadius: 10,
-                      background: palette.accentSoft,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: palette.textMain,
-                      whiteSpace: "nowrap",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 10,
+                      flexWrap: "wrap",
                     }}
                   >
-                    {formatPrice(service.price)}
+                    <div
+                      style={{
+                        fontSize: 12,
+                        lineHeight: 1.45,
+                        color: palette.textSecondary,
+                      }}
+                    >
+                      {service.durationMin > 0
+                        ? formatDuration(service.durationMin)
+                        : "Длительность уточняется"}
+                    </div>
+
+                    <button
+                      onClick={goToBooking}
+                      style={{
+                        ...secondaryButton,
+                        width: "auto",
+                        minHeight: 38,
+                        padding: "9px 14px",
+                        fontSize: 13,
+                      }}
+                    >
+                      Выбрать
+                    </button>
                   </div>
                 </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 10,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      lineHeight: 1.45,
-                      color: palette.textSecondary,
-                    }}
-                  >
-                    {service.durationMin > 0
-                      ? formatDuration(service.durationMin)
-                      : "Длительность уточняется"}
-                  </div>
-
-                  <button
-                    onClick={goToBooking}
-                    style={{
-                      ...secondaryButton,
-                      width: "auto",
-                      minHeight: 38,
-                      padding: "9px 14px",
-                      fontSize: 13,
-                    }}
-                  >
-                    Выбрать
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -1039,6 +1232,89 @@ export default function PublicSalonPage({ slug }) {
           </div>
         </div>
       </section>
+
+      {isDemoSalon && galleryImages.length > 0 && (
+        <section style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}>
+          <div style={container}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                marginBottom: 12,
+              }}
+            >
+              <h2 style={sectionTitle}>Галерея салона</h2>
+              <p style={sectionText}>
+                Интерьер, процесс и результат в одной секции — именно так витрина начинает продавать глазами.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.9fr",
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  ...cardStyle,
+                  overflow: "hidden",
+                  minHeight: isMobile ? 240 : 420,
+                }}
+              >
+                <img
+                  src={galleryImages[0]}
+                  alt={`${salonName} — интерьер салона`}
+                  loading="lazy"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                    objectFit: "cover",
+                  }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateRows: "repeat(2, minmax(0, 1fr))",
+                  gap: 10,
+                }}
+              >
+                {galleryImages.slice(1).map((image, index) => (
+                  <div
+                    key={image}
+                    style={{
+                      ...cardStyle,
+                      overflow: "hidden",
+                      minHeight: isMobile ? 220 : 205,
+                    }}
+                  >
+                    <img
+                      src={image}
+                      alt={
+                        index === 0
+                          ? `${salonName} — процесс работы`
+                          : `${salonName} — результат услуги`
+                      }
+                      loading="lazy"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "block",
+                        objectFit: "cover",
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}>
         <div style={container}>
@@ -1269,9 +1545,12 @@ export default function PublicSalonPage({ slug }) {
                 }}
               >
                 {visibleMasters.length > 0 ? (
-                  visibleMasters.map((master) => {
+                  visibleMasters.map((master, index) => {
                     const masterSubtitle = renderMasterSubtitle(master);
                     const masterBio = renderMasterBio(master);
+                    const masterImage =
+                      pickFirstString(master?.imageUrl, master?.image_url) ||
+                      (isDemoSalon ? DEMO_VISUALS.masters[index] || "" : "");
 
                     return (
                       <div
@@ -1291,23 +1570,40 @@ export default function PublicSalonPage({ slug }) {
                             gap: 12,
                           }}
                         >
-                          <div
-                            style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: "50%",
-                              background: palette.avatarBg,
-                              color: palette.textMain,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 14,
-                              fontWeight: 700,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {getInitials(master.name)}
-                          </div>
+                          {masterImage ? (
+                            <img
+                              src={masterImage}
+                              alt={master.name}
+                              loading="lazy"
+                              style={{
+                                width: 72,
+                                height: 72,
+                                borderRadius: 16,
+                                objectFit: "cover",
+                                display: "block",
+                                flexShrink: 0,
+                                background: palette.avatarBg,
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 72,
+                                height: 72,
+                                borderRadius: 16,
+                                background: palette.avatarBg,
+                                color: palette.textMain,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 18,
+                                fontWeight: 700,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {getInitials(master.name)}
+                            </div>
+                          )}
 
                           <div style={{ minWidth: 0 }}>
                             <h3
@@ -1341,7 +1637,7 @@ export default function PublicSalonPage({ slug }) {
                                   lineHeight: 1.5,
                                   color: palette.textSecondary,
                                   display: "-webkit-box",
-                                  WebkitLineClamp: 2,
+                                  WebkitLineClamp: 3,
                                   WebkitBoxOrient: "vertical",
                                   overflow: "hidden",
                                 }}

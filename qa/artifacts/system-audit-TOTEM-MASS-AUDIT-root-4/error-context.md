@@ -1,0 +1,225 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e7]:
+    - generic [ref=e8]: Витрина салона в TOTEM
+    - generic [ref=e9]:
+      - heading "Демо Салон" [level=1] [ref=e10]
+      - generic [ref=e11]: Красота, сервис и онлайн-запись в одном месте
+      - paragraph [ref=e12]: "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона."
+    - generic [ref=e13]:
+      - generic [ref=e14]: Онлайн запись 24/7
+      - generic [ref=e15]: Акции и абонементы
+      - generic [ref=e16]: Удобно с телефона
+      - generic [ref=e17]: Современная витрина услуг
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]: Адрес
+        - generic [ref=e21]: Киевская улица, 148, Первомайский район, Бишкек
+        - generic [ref=e22]: Ежедневно, 10:00–20:00
+      - generic [ref=e23]:
+        - generic [ref=e24]: Рейтинг и отзывы
+        - generic [ref=e25]:
+          - generic [ref=e26]: "4.9"
+          - generic [ref=e27]: ★★★★★
+          - generic [ref=e28]: 127+ отзывов
+        - generic [ref=e29]: Клиент сразу видит услуги, акции и удобный путь до записи
+    - generic [ref=e30]:
+      - button "Записаться онлайн" [ref=e31] [cursor=pointer]
+      - button "Смотреть услуги" [ref=e32] [cursor=pointer]
+  - generic [ref=e34]:
+    - generic [ref=e35]:
+      - heading "Почему выбирают этот салон" [level=2] [ref=e36]
+      - paragraph [ref=e37]: Страница показывает не просто услуги, а готовый формат привлечения клиентов для современного салона.
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]: Онлайн запись 24/7
+        - generic [ref=e41]: Клиент может выбрать услугу и удобное время без звонков и ожидания.
+      - generic [ref=e42]:
+        - generic [ref=e43]: Понятные цены и услуги
+        - generic [ref=e44]: Вся информация о стоимости, длительности и предложениях собрана на одной странице.
+      - generic [ref=e45]:
+        - generic [ref=e46]: Акции и бонусы
+        - generic [ref=e47]: Скидки, абонементы и подарочные предложения помогают возвращать клиентов снова.
+      - generic [ref=e48]:
+        - generic [ref=e49]: Удобно с телефона
+        - generic [ref=e50]: Страница адаптирована под мобильный сценарий, где приходит большая часть клиентов.
+  - generic [ref=e52]:
+    - generic [ref=e53]:
+      - heading "Популярные услуги" [level=2] [ref=e54]
+      - paragraph [ref=e55]: Самые востребованные процедуры, которые клиенты выбирают чаще всего.
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - heading "Женская стрижка" [level=3] [ref=e60]
+            - paragraph [ref=e61]: Стрижка и лёгкая укладка.
+          - generic [ref=e62]: 1 200 KGS
+        - generic [ref=e63]:
+          - generic [ref=e64]: 60 мин
+          - button "Выбрать" [ref=e65] [cursor=pointer]
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - heading "Окрашивание волос" [level=3] [ref=e69]
+            - paragraph [ref=e70]: Подбор оттенка и окрашивание.
+          - generic [ref=e71]: 3 500 KGS
+        - generic [ref=e72]:
+          - generic [ref=e73]: 150 мин
+          - button "Выбрать" [ref=e74] [cursor=pointer]
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - heading "Маникюр" [level=3] [ref=e78]
+            - paragraph [ref=e79]: Уход и аккуратное покрытие.
+          - generic [ref=e80]: 1 000 KGS
+        - generic [ref=e81]:
+          - generic [ref=e82]: 60 мин
+          - button "Выбрать" [ref=e83] [cursor=pointer]
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - heading "Педикюр" [level=3] [ref=e87]
+            - paragraph [ref=e88]: Комфортный уход для ногтей и стоп.
+          - generic [ref=e89]: 1 400 KGS
+        - generic [ref=e90]:
+          - generic [ref=e91]: 75 мин
+          - button "Выбрать" [ref=e92] [cursor=pointer]
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - heading "Укладка" [level=3] [ref=e96]
+            - paragraph [ref=e97]: Быстрая укладка для повседневного образа.
+          - generic [ref=e98]: 900 KGS
+        - generic [ref=e99]:
+          - generic [ref=e100]: 45 мин
+          - button "Выбрать" [ref=e101] [cursor=pointer]
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - heading "Уход за волосами" [level=3] [ref=e105]
+            - paragraph [ref=e106]: Восстановление и питание волос.
+          - generic [ref=e107]: 1 800 KGS
+        - generic [ref=e108]:
+          - generic [ref=e109]: 60 мин
+          - button "Выбрать" [ref=e110] [cursor=pointer]
+  - generic [ref=e112]:
+    - generic [ref=e113]:
+      - heading "Полный перечень услуг" [level=2] [ref=e114]
+      - paragraph [ref=e115]: Полная витрина услуг салона для клиента и владельца салона, который оценивает возможности страницы.
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - generic [ref=e120]: Женская стрижка
+          - generic [ref=e121]: 60 мин
+        - generic [ref=e122]: 1 200 KGS
+      - generic [ref=e123]:
+        - generic [ref=e124]:
+          - generic [ref=e125]: Окрашивание волос
+          - generic [ref=e126]: 150 мин
+        - generic [ref=e127]: 3 500 KGS
+      - generic [ref=e128]:
+        - generic [ref=e129]:
+          - generic [ref=e130]: Маникюр
+          - generic [ref=e131]: 60 мин
+        - generic [ref=e132]: 1 000 KGS
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - generic [ref=e135]: Педикюр
+          - generic [ref=e136]: 75 мин
+        - generic [ref=e137]: 1 400 KGS
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - generic [ref=e140]: Укладка
+          - generic [ref=e141]: 45 мин
+        - generic [ref=e142]: 900 KGS
+      - generic [ref=e143]:
+        - generic [ref=e144]:
+          - generic [ref=e145]: Уход за волосами
+          - generic [ref=e146]: 60 мин
+        - generic [ref=e147]: 1 800 KGS
+      - generic [ref=e148]:
+        - generic [ref=e149]:
+          - generic [ref=e150]: Оформление бровей
+          - generic [ref=e151]: 30 мин
+        - generic [ref=e152]: 700 KGS
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - generic [ref=e155]: Вечерний макияж
+          - generic [ref=e156]: 75 мин
+        - generic [ref=e157]: 2 200 KGS
+  - generic [ref=e159]:
+    - generic [ref=e160]:
+      - heading "Акции и предложения" [level=2] [ref=e161]
+      - paragraph [ref=e162]: Промо-механики, которые помогают владельцу салона продавать больше, а клиенту — быстрее принять решение.
+    - generic [ref=e163]:
+      - generic [ref=e164]:
+        - generic [ref=e165]: Для новых клиентов
+        - generic [ref=e166]: Новый клиент — скидка 10%
+        - generic [ref=e167]: Приятный старт для первого визита в салон. Подходит на популярные услуги и комплексные процедуры.
+      - generic [ref=e168]:
+        - generic [ref=e169]: Бонусная программа
+        - generic [ref=e170]: 10 посещение бесплатно
+        - generic [ref=e171]: Программа лояльности для постоянных гостей салона с заметной выгодой на регулярных визитах.
+      - generic [ref=e172]:
+        - generic [ref=e173]: Подарок
+        - generic [ref=e174]: Подарочный абонемент
+        - generic [ref=e175]: "Красивый и удобный формат подарка: уходовые процедуры, бьюти-сервисы и персональные предложения."
+      - generic [ref=e176]:
+        - generic [ref=e177]: Выгодно
+        - generic [ref=e178]: Абонементы на курс услуг
+        - generic [ref=e179]: Выгодные пакеты на несколько посещений для тех, кто хочет планировать уход заранее.
+  - generic [ref=e181]:
+    - generic [ref=e182]:
+      - heading "Отзывы клиентов" [level=2] [ref=e183]
+      - paragraph [ref=e184]: Короткие отзывы усиливают доверие и показывают, как страница работает как инструмент продаж.
+    - generic [ref=e186]:
+      - generic [ref=e187]:
+        - generic [ref=e188]: "4.9"
+        - generic [ref=e189]: ★★★★★
+      - generic [ref=e190]: Реалистичный блок отзывов делает страницу убедительнее и помогает владельцу салона представить, как его витрина будет выглядеть для клиентов.
+    - generic [ref=e191]:
+      - generic [ref=e192]:
+        - generic [ref=e193]: ★★★★★
+        - generic [ref=e194]: Очень удобно, что можно посмотреть услуги, акции и сразу записаться с телефона. Всё понятно и без лишних звонков.
+        - generic [ref=e195]: Айгерим
+      - generic [ref=e196]:
+        - generic [ref=e197]: ★★★★★
+        - generic [ref=e198]: Понравилась атмосфера и сервис. Запись заняла пару минут, а в салоне всё было спокойно и аккуратно.
+        - generic [ref=e199]: Мария
+      - generic [ref=e200]:
+        - generic [ref=e201]: ★★★★★
+        - generic [ref=e202]: "Хороший формат страницы: видны услуги, акции и контакты. Удобно выбрать подходящий вариант заранее."
+        - generic [ref=e203]: Асель
+  - generic [ref=e206]:
+    - generic [ref=e207]:
+      - heading "О салоне" [level=2] [ref=e208]
+      - paragraph [ref=e209]: Блок, который показывает владельцу салона готовую продающую историю, а клиенту — понятное позиционирование.
+    - paragraph [ref=e211]: Демо Салон — это пример современной публичной страницы салона в TOTEM, которая помогает красиво показать услуги, акции, отзывы и удобный способ записи.
+    - button "Записаться онлайн" [ref=e213] [cursor=pointer]
+  - button "Команда салона Компактный раскрывающийся блок вместо тяжёлой отдельной секции с мастерами. +" [ref=e217] [cursor=pointer]:
+    - generic [ref=e218]:
+      - generic [ref=e219]:
+        - generic [ref=e220]: Команда салона
+        - paragraph [ref=e221]: Компактный раскрывающийся блок вместо тяжёлой отдельной секции с мастерами.
+      - generic [ref=e222]: +
+  - generic [ref=e225]:
+    - generic [ref=e226]:
+      - generic [ref=e227]:
+        - heading "Контакты и локация" [level=2] [ref=e228]
+        - paragraph [ref=e229]: Встроенная карта, адрес и контакты должны быть видны сразу, без лишних переходов.
+      - generic [ref=e230]:
+        - generic [ref=e231]: Адрес
+        - generic [ref=e232]: Киевская улица, 148
+        - generic [ref=e233]: Первомайский район, Бишкек
+      - generic [ref=e234]:
+        - generic [ref=e235]: График
+        - generic [ref=e236]: Ежедневно, 10:00–20:00
+      - generic [ref=e237]:
+        - generic [ref=e238]: Телефон
+        - generic [ref=e239]: +996 700 123 456
+      - button "Записаться" [ref=e241] [cursor=pointer]
+    - iframe [ref=e243]:
+      
+```

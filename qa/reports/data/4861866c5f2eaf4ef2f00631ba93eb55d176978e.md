@@ -1,0 +1,68 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]: TOTEM
+    - generic [ref=e6]:
+      - generic [ref=e7]: totem-demo-master
+      - button "Выйти" [ref=e8] [cursor=pointer]
+  - generic [ref=e9]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - strong [ref=e13]: Кабинет
+        - generic [ref=e14]: totem-demo-master
+      - generic [ref=e15]: Основное
+      - navigation [ref=e16]:
+        - link "Главная" [ref=e17] [cursor=pointer]:
+          - /url: "#/master/dashboard"
+        - link "Записи" [ref=e18] [cursor=pointer]:
+          - /url: "#/master/bookings"
+        - link "Клиенты" [ref=e19] [cursor=pointer]:
+          - /url: "#/master/clients"
+        - link "Расписание" [ref=e20] [cursor=pointer]:
+          - /url: "#/master/schedule"
+        - link "Услуги" [ref=e21] [cursor=pointer]:
+          - /url: "#/master/services"
+      - generic [ref=e22]: Финансы
+      - navigation [ref=e23]:
+        - link "Финансы" [ref=e24] [cursor=pointer]:
+          - /url: "#/master/finance"
+        - link "Доход" [ref=e25] [cursor=pointer]:
+          - /url: "#/master/money"
+        - link "Транзакции" [ref=e26] [cursor=pointer]:
+          - /url: "#/master/transactions"
+        - link "Сеты" [ref=e27] [cursor=pointer]:
+          - /url: "#/master/settlements"
+        - link "Выплаты" [ref=e28] [cursor=pointer]:
+          - /url: "#/master/payouts"
+      - generic [ref=e29]: Аккаунт
+      - navigation [ref=e30]:
+        - link "Настройки" [ref=e31] [cursor=pointer]:
+          - /url: "#/master/settings"
+    - generic [ref=e34]:
+      - heading "Клиенты" [level=2] [ref=e37]
+      - table [ref=e41]:
+        - rowgroup [ref=e42]:
+          - row "Имя Телефон Визитов" [ref=e43]:
+            - columnheader "Имя" [ref=e44]
+            - columnheader "Телефон" [ref=e45]
+            - columnheader "Визитов" [ref=e46]
+        - rowgroup [ref=e47]:
+          - row "Клиент — 0" [ref=e48]:
+            - cell "Клиент" [ref=e49]
+            - cell "—" [ref=e50]
+            - cell "0" [ref=e51]
+          - row "Odoo Test +996700000002 0" [ref=e52]:
+            - cell "Odoo Test" [ref=e53]
+            - cell "+996700000002" [ref=e54]
+            - cell "0" [ref=e55]
+          - row "Test Client +996700000001 0" [ref=e56]:
+            - cell "Test Client" [ref=e57]
+            - cell "+996700000001" [ref=e58]
+            - cell "0" [ref=e59]
+          - row "Pipeline Test — 0" [ref=e60]:
+            - cell "Pipeline Test" [ref=e61]
+            - cell "—" [ref=e62]
+            - cell "0" [ref=e63]
+```

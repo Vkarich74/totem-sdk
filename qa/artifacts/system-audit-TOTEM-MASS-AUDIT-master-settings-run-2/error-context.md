@@ -1,0 +1,120 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]: TOTEM
+    - generic [ref=e6]:
+      - generic [ref=e7]: totem-demo-master
+      - button "Выйти" [ref=e8] [cursor=pointer]
+  - generic [ref=e9]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - strong [ref=e13]: Кабинет
+        - generic [ref=e14]: totem-demo-master
+      - generic [ref=e15]: Основное
+      - navigation [ref=e16]:
+        - link "Главная" [ref=e17] [cursor=pointer]:
+          - /url: "#/master/dashboard"
+        - link "Записи" [ref=e18] [cursor=pointer]:
+          - /url: "#/master/bookings"
+        - link "Клиенты" [ref=e19] [cursor=pointer]:
+          - /url: "#/master/clients"
+        - link "Расписание" [ref=e20] [cursor=pointer]:
+          - /url: "#/master/schedule"
+        - link "Услуги" [ref=e21] [cursor=pointer]:
+          - /url: "#/master/services"
+      - generic [ref=e22]: Финансы
+      - navigation [ref=e23]:
+        - link "Финансы" [ref=e24] [cursor=pointer]:
+          - /url: "#/master/finance"
+        - link "Доход" [ref=e25] [cursor=pointer]:
+          - /url: "#/master/money"
+        - link "Транзакции" [ref=e26] [cursor=pointer]:
+          - /url: "#/master/transactions"
+        - link "Сеты" [ref=e27] [cursor=pointer]:
+          - /url: "#/master/settlements"
+        - link "Выплаты" [ref=e28] [cursor=pointer]:
+          - /url: "#/master/payouts"
+      - generic [ref=e29]: Аккаунт
+      - navigation [ref=e30]:
+        - link "Настройки" [ref=e31] [cursor=pointer]:
+          - /url: "#/master/settings"
+    - generic [ref=e33]:
+      - heading "Настройки мастера" [level=2] [ref=e36]
+      - generic [ref=e37]:
+        - heading "Настройки мастера" [level=3] [ref=e38]
+        - generic [ref=e39]:
+          - text: Контакты
+          - generic [ref=e40]:
+            - generic [ref=e41]:
+              - generic [ref=e42]: Телефон
+              - textbox [ref=e43]
+            - generic [ref=e44]:
+              - generic [ref=e45]: Email
+              - textbox [ref=e46]
+            - generic [ref=e47]:
+              - generic [ref=e48]: WhatsApp
+              - textbox [ref=e49]
+        - generic [ref=e50]:
+          - text: Профиль
+          - generic [ref=e51]:
+            - generic [ref=e52]:
+              - generic [ref=e53]: Имя
+              - textbox [ref=e54]
+            - generic [ref=e55]:
+              - generic [ref=e56]: Фото (URL)
+              - textbox [ref=e57]
+            - generic [ref=e58]:
+              - generic [ref=e59]: Описание
+              - textbox [ref=e60]
+        - generic [ref=e61]:
+          - text: Услуги
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - textbox "Название услуги" [ref=e64]: Стрижка
+              - spinbutton [ref=e65]: "800"
+              - spinbutton [ref=e66]: "30"
+            - generic [ref=e67]:
+              - textbox "Название услуги" [ref=e68]: Маникюр
+              - spinbutton [ref=e69]: "1200"
+              - spinbutton [ref=e70]: "60"
+            - button "Добавить услугу" [ref=e71]
+        - generic [ref=e72]:
+          - text: Рабочие часы
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - generic [ref=e75]: Понедельник
+              - textbox [ref=e76]: 09:00-19:00
+            - generic [ref=e77]:
+              - generic [ref=e78]: Вторник
+              - textbox [ref=e79]: 09:00-19:00
+            - generic [ref=e80]:
+              - generic [ref=e81]: Среда
+              - textbox [ref=e82]
+            - generic [ref=e83]:
+              - generic [ref=e84]: Четверг
+              - textbox [ref=e85]: 09:00-19:00
+            - generic [ref=e86]:
+              - generic [ref=e87]: Пятница
+              - textbox [ref=e88]: 09:00-19:00
+            - generic [ref=e89]:
+              - generic [ref=e90]: Суббота
+              - textbox [ref=e91]: 10:00-18:00
+            - generic [ref=e92]:
+              - generic [ref=e93]: Воскресенье
+              - textbox [ref=e94]
+        - generic [ref=e95]:
+          - text: Бронирование
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - generic [ref=e98]: Шаг слота (мин)
+              - spinbutton [ref=e99]: "15"
+            - generic [ref=e100]:
+              - generic [ref=e101]: Минимум до записи (мин)
+              - spinbutton [ref=e102]: "60"
+            - generic [ref=e103]:
+              - generic [ref=e104]: Максимум вперед (дней)
+              - spinbutton [ref=e105]: "30"
+        - button "Сохранить" [ref=e106] [cursor=pointer]
+```
