@@ -419,7 +419,7 @@ export default function PublicSalonPage({ slug }) {
     return [];
   })();
 
-  const popularServices = getServiceCatalogData(services).slice(0, isMobile ? 4 : 6);
+  const popularServices = getServiceCatalogData(services);
   const fullServiceList = getServiceCatalogData(services);
   const reviews = getReviewData();
   const promos = getPromoData();
