@@ -253,12 +253,12 @@ function getServiceCatalogData(services) {
   }
 
   return [
-    { id: "demo-1", name: "Женская стрижка", price: 1200, durationMin: 60, description: "Стрижка и лёгкая укладка." },
-    { id: "demo-2", name: "Окрашивание волос", price: 3500, durationMin: 150, description: "Подбор оттенка и окрашивание." },
+    { id: "demo-1", name: "Укладка", price: 1200, durationMin: 60, description: "Стрижка и лёгкая укладка." },
+    { id: "demo-2", name: "Педикюр", price: 3500, durationMin: 150, description: "Подбор оттенка и окрашивание." },
     { id: "demo-3", name: "Маникюр", price: 1000, durationMin: 60, description: "Уход и аккуратное покрытие." },
-    { id: "demo-4", name: "Педикюр", price: 1400, durationMin: 75, description: "Комфортный уход для ногтей и стоп." },
-    { id: "demo-5", name: "Укладка", price: 900, durationMin: 45, description: "Быстрая укладка для повседневного образа." },
-    { id: "demo-6", name: "Уход за волосами", price: 1800, durationMin: 60, description: "Восстановление и питание волос." },
+    { id: "demo-4", name: "Маска для лица", price: 1400, durationMin: 75, description: "Комфортный уход для ногтей и стоп." },
+    { id: "demo-5", name: "Уход за волосами", price: 900, durationMin: 45, description: "Быстрая укладка для повседневного образа." },
+    { id: "demo-6", name: "Мужская стрижка", price: 1800, durationMin: 60, description: "Восстановление и питание волос." },
     { id: "demo-7", name: "Оформление бровей", price: 700, durationMin: 30, description: "Форма и аккуратная коррекция." },
     { id: "demo-8", name: "Вечерний макияж", price: 2200, durationMin: 75, description: "Под мероприятие или фотосессию." },
   ];
