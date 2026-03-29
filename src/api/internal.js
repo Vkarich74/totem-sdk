@@ -4,6 +4,44 @@ import { getSalonSlug, getMasterSlug } from "../utils/slug";
 const API_BASE = "https://api.totemv.com/internal";
 
 /* ===============================
+   BILLING GUARDS
+================================ */
+
+export function canWriteByBilling(billingAccess){
+  if (!billingAccess) return true;
+  if (billingAccess.exists === false) return true;
+  return billingAccess.can_write !== false;
+}
+
+export function canWithdrawByBilling(billingAccess){
+  if (!billingAccess) return true;
+  if (billingAccess.exists === false) return true;
+  return billingAccess.can_withdraw !== false;
+}
+
+export function getBillingBlockReason(billingAccess){
+  if (!billingAccess) return null;
+
+  if (billingAccess.access_state === "blocked") {
+    return "BILLING_BLOCKED";
+  }
+
+  if (billingAccess.can_withdraw === false && billingAccess.access_state === "grace") {
+    return "WITHDRAW_DISABLED_IN_GRACE";
+  }
+
+  if (billingAccess.can_write === false) {
+    return "WRITE_DISABLED_BY_BILLING";
+  }
+
+  if (billingAccess.can_withdraw === false) {
+    return "WITHDRAW_DISABLED_BY_BILLING";
+  }
+
+  return null;
+}
+
+/* ===============================
    SALON (OWNER) API
 ================================ */
 
@@ -155,4 +193,70 @@ export async function moveBooking(id,start_at){
 
   return { ok:true, booking:j.booking };
 
+}
+
+/* ===============================
+   WITHDRAWS (FIXED)
+================================ */
+
+export async function createSalonWithdraw(amount, billingAccess, salonSlug = getSalonSlug()){
+
+  if (!canWithdrawByBilling(billingAccess)) {
+    return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
+  }
+
+  const r = await safeJson(
+    `${API_BASE}/salons/${salonSlug}/withdraw`,
+    {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ amount })
+    }
+  );
+
+  if(!r.ok) return { ok:false, error:"SALON_WITHDRAW_FETCH_FAILED", detail:r };
+
+  const j = r.json;
+
+  if(!j || !j.ok) return { ok:false, error:"SALON_WITHDRAW_API_NOT_OK", detail:j };
+
+  return {
+    ok:true,
+    withdraw_id: j.withdraw_id || null,
+    amount: j.amount,
+    status: j.status || null,
+    billing_access: j.billing_access || null,
+    result: j
+  };
+}
+
+export async function createMasterWithdraw(amount, billingAccess, masterSlug = getMasterSlug()){
+
+  if (!canWithdrawByBilling(billingAccess)) {
+    return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
+  }
+
+  const r = await safeJson(
+    `${API_BASE}/masters/${masterSlug}/withdraw`,
+    {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ amount })
+    }
+  );
+
+  if(!r.ok) return { ok:false, error:"MASTER_WITHDRAW_FETCH_FAILED", detail:r };
+
+  const j = r.json;
+
+  if(!j || !j.ok) return { ok:false, error:"MASTER_WITHDRAW_API_NOT_OK", detail:j };
+
+  return {
+    ok:true,
+    withdraw_id: j.withdraw_id || null,
+    amount: j.amount,
+    status: j.status || null,
+    billing_access: j.billing_access || null,
+    result: j
+  };
 }

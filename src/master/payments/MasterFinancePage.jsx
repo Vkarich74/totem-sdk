@@ -60,6 +60,36 @@ function sumAmounts(items) {
   return items.reduce((acc, item) => acc + (Number(item?.amount) || 0), 0);
 }
 
+function getBillingSnapshot() {
+  const snapshot = window.__TOTEM_MASTER_BILLING__ || {};
+
+  return {
+    billing: snapshot.billing || null,
+    billingLoading: Boolean(snapshot.billingLoading),
+    canWrite: typeof snapshot.canWrite === "boolean" ? snapshot.canWrite : true,
+    canWithdraw: typeof snapshot.canWithdraw === "boolean" ? snapshot.canWithdraw : true,
+    billingBlockReason: snapshot.billingBlockReason || null
+  };
+}
+
+function formatBillingState(billing, billingLoading) {
+  if (billingLoading) {
+    return "Проверка";
+  }
+
+  const state = billing?.access_state || billing?.subscription_status || "active";
+
+  if (state === "active") return "Активен";
+  if (state === "grace") return "Grace";
+  if (state === "blocked") return "Blocked";
+
+  return String(state);
+}
+
+function formatAccessFlag(value) {
+  return value ? "Разрешено" : "Ограничено";
+}
+
 export default function MasterFinancePage() {
   const [activeContract, setActiveContract] = useState(null);
   const [history, setHistory] = useState([]);
@@ -238,6 +268,20 @@ export default function MasterFinancePage() {
     );
   }, [ledger]);
 
+  const billingSnapshot = getBillingSnapshot();
+  const billing = billingSnapshot.billing;
+  const billingLoading = billingSnapshot.billingLoading;
+  const canWrite = billingSnapshot.canWrite;
+  const canWithdraw = billingSnapshot.canWithdraw;
+  const billingBlockReason = billingSnapshot.billingBlockReason;
+
+  const billingStateLabel = useMemo(() => {
+    return formatBillingState(billing, billingLoading);
+  }, [billing, billingLoading]);
+
+  const isBillingBlocked = billing?.access_state === "blocked";
+  const isBillingGrace = billing?.access_state === "grace";
+
   const overviewItems = useMemo(() => {
     return [
       {
@@ -271,6 +315,18 @@ export default function MasterFinancePage() {
       {
         label: "Contract ID",
         value: activeContract?.contract_id || "—"
+      },
+      {
+        label: "Billing state",
+        value: billingStateLabel
+      },
+      {
+        label: "Write доступ",
+        value: formatAccessFlag(canWrite)
+      },
+      {
+        label: "Withdraw доступ",
+        value: formatAccessFlag(canWithdraw)
       }
     ];
   }, [
@@ -281,7 +337,10 @@ export default function MasterFinancePage() {
     payoutEntries.length,
     refundReverseTotal,
     contractIsActive,
-    activeContract
+    activeContract,
+    billingStateLabel,
+    canWrite,
+    canWithdraw
   ]);
 
   if (loading) {
@@ -316,6 +375,25 @@ export default function MasterFinancePage() {
           </section>
         ) : null}
 
+        {isBillingGrace ? (
+          <section style={styles.warningBanner}>
+            <div style={styles.warningTitle}>Billing: grace period</div>
+            <div style={styles.warningText}>
+              Доступ частично ограничен. Проверь оплату подписки, чтобы не перейти в blocked.
+            </div>
+          </section>
+        ) : null}
+
+        {isBillingBlocked ? (
+          <section style={styles.blockedBanner}>
+            <div style={styles.blockedTitle}>Billing: доступ ограничен</div>
+            <div style={styles.blockedText}>
+              Финансовые действия мастера заблокированы.
+              {billingBlockReason ? ` Причина: ${billingBlockReason}` : ""}
+            </div>
+          </section>
+        ) : null}
+
         <section style={styles.overviewGrid}>
           {overviewItems.map((item) => (
             <div key={item.label} style={styles.statCard}>
@@ -339,6 +417,9 @@ export default function MasterFinancePage() {
               <InfoRow label="Real Income" value={money(realIncomeTotal)} />
               <InfoRow label="Current Settlements" value={money(settlementTotal)} />
               <InfoRow label="Payout Total" value={money(payoutTotal)} />
+              <InfoRow label="Billing State" value={billingStateLabel} />
+              <InfoRow label="Write Access" value={formatAccessFlag(canWrite)} />
+              <InfoRow label="Withdraw Access" value={formatAccessFlag(canWithdraw)} />
             </div>
           </SectionCard>
 
@@ -734,6 +815,24 @@ const styles = {
     fontSize: "13px",
     lineHeight: 1.6,
     color: "#a16207"
+  },
+  blockedBanner: {
+    marginBottom: "20px",
+    padding: "16px 18px",
+    borderRadius: "16px",
+    border: "1px solid #fecaca",
+    background: "#fef2f2"
+  },
+  blockedTitle: {
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#991b1b",
+    marginBottom: "6px"
+  },
+  blockedText: {
+    fontSize: "13px",
+    lineHeight: 1.6,
+    color: "#b91c1c"
   },
   overviewGrid: {
     display: "grid",

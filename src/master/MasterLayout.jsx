@@ -1,9 +1,15 @@
 import { Outlet } from "react-router-dom"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { MasterProvider } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
 import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
+import {
+  getMaster,
+  canWriteByBilling,
+  canWithdrawByBilling,
+  getBillingBlockReason
+} from "../api/internal"
 
 const ODOO_BASE = "https://www.totemv.com/odoo"
 
@@ -92,6 +98,8 @@ async function loadOdooPanel() {
 export default function MasterLayout() {
 
   const slug = getMasterSlug()
+  const [billing, setBilling] = useState(null)
+  const [billingLoading, setBillingLoading] = useState(true)
 
   useEffect(() => {
     if (slug) {
@@ -99,6 +107,30 @@ export default function MasterLayout() {
       window.sessionStorage.setItem("totem_master_slug", slug)
     }
 
+    async function loadBilling() {
+      if (!slug) {
+        setBilling(null)
+        setBillingLoading(false)
+        return
+      }
+
+      try {
+        const r = await getMaster(slug)
+
+        if (r.ok) {
+          setBilling(r.billing_access || null)
+        } else {
+          setBilling(null)
+        }
+      } catch (e) {
+        console.error("MASTER BILLING LOAD ERROR", e)
+        setBilling(null)
+      } finally {
+        setBillingLoading(false)
+      }
+    }
+
+    loadBilling()
     loadOdooPanel()
 
     window.addEventListener("hashchange", loadOdooPanel)
@@ -113,37 +145,103 @@ export default function MasterLayout() {
     window.location.href = "/"
   }
 
+  const billingState = billing?.access_state || null
+  const isBlocked = billingState === "blocked"
+  const isGrace = billingState === "grace"
+
+  const canWrite = canWriteByBilling(billing)
+  const canWithdraw = canWithdrawByBilling(billing)
+  const billingBlockReason = getBillingBlockReason(billing)
+
+  window.__TOTEM_MASTER_BILLING__ = {
+    billing,
+    billingLoading,
+    canWrite,
+    canWithdraw,
+    billingBlockReason
+  }
+
   return (
 
     <MasterProvider>
 
-      <CabinetLayout
+      <div style={{ position: "relative", height: "100%" }}>
 
-        header={
-          <CabinetHeader slug={slug} onLogout={logout} />
-        }
+        {isGrace && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            background: "#ffcc00",
+            color: "#000",
+            padding: "10px",
+            textAlign: "center",
+            zIndex: 1000,
+            fontWeight: "bold"
+          }}>
+            Внимание: истекает подписка. Пополните баланс.
+          </div>
+        )}
 
-        sidebar={
-          <MasterSidebar slug={slug} />
-        }
+        <CabinetLayout
 
-        page={
-          <Outlet/>
-        }
+          header={
+            <CabinetHeader slug={slug} onLogout={logout} />
+          }
 
-        odoo={
-          <div
-            id="odoo-content"
-            style={{
-              width: "30%",
-              overflow: "auto",
-              padding: "20px",
-              minHeight: 0
-            }}
-          />
-        }
+          sidebar={
+            <MasterSidebar slug={slug} />
+          }
 
-      />
+          page={
+            <Outlet />
+          }
+
+          odoo={
+            <div
+              id="odoo-content"
+              style={{
+                width: "30%",
+                overflow: "auto",
+                padding: "20px",
+                minHeight: 0
+              }}
+            />
+          }
+
+        />
+
+        {isBlocked && (
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            fontSize: "20px",
+            fontWeight: "bold",
+            textAlign: "center",
+            padding: "24px"
+          }}>
+            <div>
+              <div>Доступ ограничен. Оплатите подписку.</div>
+              {billingBlockReason && (
+                <div style={{ marginTop: "10px", fontSize: "14px", fontWeight: "normal" }}>
+                  {billingBlockReason}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+      </div>
 
     </MasterProvider>
 

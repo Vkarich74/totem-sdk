@@ -1,5 +1,9 @@
-
 import React, { useEffect, useMemo, useState } from "react"
+import {
+  canWriteByBilling,
+  canWithdrawByBilling,
+  getBillingBlockReason
+} from "../../api/internal"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
@@ -181,6 +185,30 @@ function EmptyState({ text }) {
   )
 }
 
+function normalizeBillingAccess(input) {
+  if (!input || typeof input !== "object") return null
+  return input
+}
+
+function getBillingState(billingAccess) {
+  const billing = normalizeBillingAccess(billingAccess)
+
+  if (!billing) return "loading"
+
+  if (billing.access_state) {
+    return String(billing.access_state).toLowerCase()
+  }
+
+  if (billing.billing?.access_state) {
+    return String(billing.billing.access_state).toLowerCase()
+  }
+
+  if (billing.subscription_status === "grace") return "grace"
+  if (billing.subscription_status === "blocked") return "blocked"
+
+  return "active"
+}
+
 export default function SalonFinancePage() {
   const [payments, setPayments] = useState([])
   const [ledger, setLedger] = useState([])
@@ -188,6 +216,9 @@ export default function SalonFinancePage() {
 
   const [contracts, setContracts] = useState([])
   const [contractsLoading, setContractsLoading] = useState(true)
+
+  const [billingAccess, setBillingAccess] = useState(null)
+  const [billingLoading, setBillingLoading] = useState(true)
 
   const [withdrawMethod, setWithdrawMethod] = useState("bank")
   const [withdrawAmount, setWithdrawAmount] = useState("")
@@ -251,12 +282,6 @@ export default function SalonFinancePage() {
   }
 
   const compactGridStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 12
-  }
-
-  const formGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
     gap: 12
@@ -342,9 +367,15 @@ export default function SalonFinancePage() {
     borderRadius: 10,
     background: "#ffffff",
     color: "#374151",
-    cursor: "not-allowed",
+    cursor: "pointer",
     fontSize: 14,
     fontWeight: 600
+  }
+
+  const disabledButtonStyle = {
+    ...secondaryButtonStyle,
+    opacity: 0.55,
+    cursor: "not-allowed"
   }
 
   const errorBoxStyle = {
@@ -371,11 +402,24 @@ export default function SalonFinancePage() {
     lineHeight: 1.45
   }
 
+  const billingInfoBoxStyle = {
+    marginTop: 10,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    background: "#fff7ed",
+    border: "1px solid #fdba74",
+    color: "#9a3412",
+    fontSize: 13,
+    lineHeight: 1.45
+  }
+
   useEffect(() => {
     loadPayments()
     loadLedger()
     loadWallet()
     loadContracts()
+    loadBillingAccess()
   }, [])
 
   async function loadPayments() {
@@ -467,11 +511,53 @@ export default function SalonFinancePage() {
     }
   }
 
+  async function loadBillingAccess() {
+    try {
+      const res = await fetch(
+        `https://api.totemv.com/internal/salons/${salonSlug}`
+      )
+
+      const data = await res.json()
+
+      if (data?.billing_access) {
+        setBillingAccess(data.billing_access)
+      }
+      else if (data?.salon?.billing_access) {
+        setBillingAccess(data.salon.billing_access)
+      }
+      else {
+        setBillingAccess({})
+      }
+    }
+    catch (err) {
+      console.error("Billing access load error:", err)
+      setBillingAccess({})
+    }
+    finally {
+      setBillingLoading(false)
+    }
+  }
+
   function prepareWithdraw(event) {
     event.preventDefault()
 
     setWithdrawError("")
     setWithdrawNotice("")
+
+    if (billingLoading) {
+      setWithdrawError("Billing ещё загружается. Подожди завершения проверки.")
+      return
+    }
+
+    if (!canWithdrawByBilling(billingAccess)) {
+      setWithdrawError(getBillingBlockReason(billingAccess))
+      return
+    }
+
+    if (!canWriteByBilling(billingAccess)) {
+      setWithdrawError(getBillingBlockReason(billingAccess))
+      return
+    }
 
     const amountValue = Number(withdrawAmount)
 
@@ -487,6 +573,11 @@ export default function SalonFinancePage() {
 
     if (walletBalance !== null && amountValue > Number(walletBalance)) {
       setWithdrawError("Сумма вывода превышает доступный баланс кошелька")
+      return
+    }
+
+    if (!canWithdrawByBilling(billingAccess)) {
+      setWithdrawError("Операция заблокирована billing-контролем")
       return
     }
 
@@ -648,11 +739,6 @@ export default function SalonFinancePage() {
     [contracts]
   )
 
-  const pendingContracts = useMemo(
-    () => contracts.filter((c) => c.status === "pending"),
-    [contracts]
-  )
-
   const todayRevenue = getRevenueByDays(1)
   const weekRevenue = getRevenueByDays(7)
   const monthRevenue = getRevenueByDays(30)
@@ -662,6 +748,11 @@ export default function SalonFinancePage() {
   const settlementsReady = !contractsLoading && activeContracts.length > 0
   const ledgerReady = !ledgerLoading && Array.isArray(ledger)
   const paymentsReady = !loading && Array.isArray(payments)
+
+  const billingState = getBillingState(billingAccess)
+  const billingWriteAllowed = canWriteByBilling(billingAccess)
+  const billingWithdrawAllowed = canWithdrawByBilling(billingAccess)
+  const billingBlockReason = getBillingBlockReason(billingAccess)
 
   const payoutEntries = useMemo(
     () =>
@@ -697,12 +788,26 @@ export default function SalonFinancePage() {
 
   const withdrawActivationChecklist = [
     {
+      label: "Billing доступ",
+      status: billingLoading ? "loading" : (billingWithdrawAllowed ? "ok" : "warn"),
+      note: billingLoading
+        ? "Идёт проверка billing_access"
+        : billingWithdrawAllowed
+          ? "Вывод средств разрешён текущим billing state"
+          : billingBlockReason || "Вывод средств сейчас запрещён"
+    },
+    {
       label: "Форма вывода",
-      status: withdrawRecipient.trim() && Number(withdrawAmount || 0) > 0 ? "ok" : "warn",
+      status:
+        !billingWithdrawAllowed
+          ? "warn"
+          : (withdrawRecipient.trim() && Number(withdrawAmount || 0) > 0 ? "ok" : "warn"),
       note:
-        withdrawRecipient.trim() && Number(withdrawAmount || 0) > 0
-          ? "Реквизит и сумма заполнены для предварительной заявки"
-          : "Заполни реквизит и сумму, чтобы подготовить заявку"
+        !billingWithdrawAllowed
+          ? billingBlockReason || "Сначала нужен доступ по billing"
+          : (withdrawRecipient.trim() && Number(withdrawAmount || 0) > 0
+            ? "Реквизит и сумма заполнены для предварительной заявки"
+            : "Заполни реквизит и сумму, чтобы подготовить заявку")
     },
     {
       label: "Баланс кошелька",
@@ -730,6 +835,15 @@ export default function SalonFinancePage() {
       note: "Средства на внешний вывод должны списываться из wallet balance салона"
     },
     {
+      title: "Billing state",
+      value: billingLoading ? "Проверка..." : billingState,
+      note: billingLoading
+        ? "Проверяется состояние доступа к финансовым действиям"
+        : (billingWithdrawAllowed
+          ? "Вывод средств сейчас разрешён"
+          : billingBlockReason || "Вывод средств сейчас ограничен")
+    },
+    {
       title: "Заявка на вывод",
       value: selectedWithdrawMethodLabel,
       note: "UI уже умеет собрать способ, реквизит, сумму и комментарий"
@@ -747,6 +861,16 @@ export default function SalonFinancePage() {
   ]
 
   const pipelineChecks = [
+    {
+      label: "Billing",
+      status: billingLoading ? "loading" : (billingWriteAllowed ? "ok" : "warn"),
+      value: billingLoading ? "..." : billingState,
+      note: billingLoading
+        ? "Проверяется billing_access"
+        : (billingWriteAllowed
+          ? "Общий write-доступ открыт"
+          : billingBlockReason || "Write-доступ ограничен")
+    },
     {
       label: "Контракты",
       status: contractsReady ? "ok" : "loading",
@@ -985,19 +1109,24 @@ export default function SalonFinancePage() {
           </thead>
 
           <tbody>
-            {payoutEntries.map((entry) => (
-              <tr key={entry.id}>
-                <td style={tableCellStyle}>{entry.id}</td>
-                <td style={tableCellStyle}>
-                  <span style={getStatusStyle("pending")}>
-                    {String(entry.reference_type || "").toLowerCase() === "withdraw" ? "withdraw" : "payout"}
-                  </span>
-                </td>
-                <td style={tableCellStyle}>{formatAmount(entry.amount)} KGS</td>
-                <td style={tableCellStyle}>{entry.reference_id || "-"}</td>
-                <td style={tableCellStyle}>{formatDateTime(entry.created_at)}</td>
-              </tr>
-            ))}
+            {payoutEntries.map((entry, index) => {
+              const isLast = index === payoutEntries.length - 1
+
+              return (
+                <tr key={entry.id}>
+                  {renderCell(entry.id, isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(
+                    <span style={getStatusStyle("pending")}>
+                      {String(entry.reference_type || "").toLowerCase() === "withdraw" ? "withdraw" : "payout"}
+                    </span>,
+                    isLast ? { borderBottom: "none" } : {}
+                  )}
+                  {renderCell(`${formatAmount(entry.amount)} KGS`, isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(entry.reference_id || "-", isLast ? { borderBottom: "none" } : {})}
+                  {renderCell(formatDateTime(entry.created_at), isLast ? { borderBottom: "none" } : {})}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -1149,6 +1278,18 @@ export default function SalonFinancePage() {
               value="Wallet / Ledger"
               note="Кошелёк сверяется с финансовым движением салона"
             />
+
+            <InfoBox
+              label="Billing state"
+              value={billingLoading ? "Проверка..." : billingState}
+              note={
+                billingLoading
+                  ? "Идёт загрузка billing_access"
+                  : billingWithdrawAllowed
+                    ? "Финансовые действия разрешены"
+                    : billingBlockReason || "Финансовые действия ограничены"
+              }
+            />
           </div>
         </SectionBlock>
 
@@ -1218,6 +1359,12 @@ export default function SalonFinancePage() {
                 Сейчас форма нужна для подготовки UX и финальной схемы вывода. Реальное списание намеренно выключено
                 до получения ключей и подтверждения backend endpoint для salon withdraw.
               </div>
+
+              {!billingLoading && !billingWithdrawAllowed && (
+                <div style={billingInfoBoxStyle}>
+                  {billingBlockReason}
+                </div>
+              )}
             </Card>
 
             <Card soft>
@@ -1227,7 +1374,8 @@ export default function SalonFinancePage() {
                   <select
                     value={withdrawMethod}
                     onChange={(event) => setWithdrawMethod(event.target.value)}
-                    style={inputStyle}
+                    style={billingWithdrawAllowed ? inputStyle : disabledInputStyle}
+                    disabled={!billingWithdrawAllowed}
                   >
                     <option value="bank">Банковский счёт</option>
                     <option value="card">Карта</option>
@@ -1243,7 +1391,8 @@ export default function SalonFinancePage() {
                     value={withdrawRecipient}
                     onChange={(event) => setWithdrawRecipient(event.target.value)}
                     placeholder="Счёт / карта / кошелёк / xPay ID"
-                    style={inputStyle}
+                    style={billingWithdrawAllowed ? inputStyle : disabledInputStyle}
+                    disabled={!billingWithdrawAllowed}
                   />
                 </div>
 
@@ -1254,7 +1403,8 @@ export default function SalonFinancePage() {
                     value={withdrawAmount}
                     onChange={(event) => setWithdrawAmount(event.target.value)}
                     placeholder="0"
-                    style={inputStyle}
+                    style={billingWithdrawAllowed ? inputStyle : disabledInputStyle}
+                    disabled={!billingWithdrawAllowed}
                   />
                 </div>
 
@@ -1265,7 +1415,8 @@ export default function SalonFinancePage() {
                     value={withdrawComment}
                     onChange={(event) => setWithdrawComment(event.target.value)}
                     placeholder="Например: вывод на расчётный счёт салона"
-                    style={inputStyle}
+                    style={billingWriteAllowed ? inputStyle : disabledInputStyle}
+                    disabled={!billingWriteAllowed}
                   />
                 </div>
 
@@ -1281,8 +1432,9 @@ export default function SalonFinancePage() {
                       lineHeight: 1.5
                     }}
                   >
-                    Подготовка заявки не отправляет деньги наружу. Она проверяет данные формы и фиксирует,
-                    что UI готов к подключению провайдера.
+                    {!billingLoading && !billingWithdrawAllowed
+                      ? `Действие заблокировано billing-контролем. Причина: ${billingBlockReason}`
+                      : "Подготовка заявки не отправляет деньги наружу. Она проверяет данные формы и фиксирует, что UI готов к подключению провайдера."}
                     {withdrawComment ? ` Комментарий: ${withdrawComment}` : ""}
                   </div>
                 </div>
@@ -1300,18 +1452,20 @@ export default function SalonFinancePage() {
                 )}
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button type="submit" style={secondaryButtonStyle}>
+                  <button
+                    type="submit"
+                    style={billingWithdrawAllowed ? primaryButtonStyle : disabledButtonStyle}
+                    disabled={!billingWithdrawAllowed}
+                    title={!billingWithdrawAllowed ? billingBlockReason : ""}
+                  >
                     Подготовить вывод
                   </button>
 
                   <button
                     type="button"
-                    style={{
-                      ...secondaryButtonStyle,
-                      opacity: 0.55,
-                      cursor: "not-allowed"
-                    }}
+                    style={disabledButtonStyle}
                     disabled
+                    title={!billingWithdrawAllowed ? billingBlockReason : "Реальный вывод пока не активирован"}
                   >
                     Выполнить вывод
                   </button>
@@ -1512,7 +1666,7 @@ export default function SalonFinancePage() {
         </SectionBlock>
 
         <SectionBlock
-          title="Проверка пайплайна: Контракты → Расчёты → Кошелёк"
+          title="Проверка пайплайна: Billing → Контракты → Расчёты → Кошелёк"
           hint="Финальная визуальная сверка загрузки ключевых слоёв без изменения backend-логики."
         >
           <div style={threeColumnGridStyle}>
@@ -1584,8 +1738,8 @@ export default function SalonFinancePage() {
 
               <InfoBox
                 label="Итог"
-                value={walletReady && ledgerReady && contractsReady ? "Связка загружена" : "Проверка идёт"}
-                note="Визуальная проверка цепочки contracts → settlements → wallet"
+                value={walletReady && ledgerReady && contractsReady && !billingLoading ? "Связка загружена" : "Проверка идёт"}
+                note="Визуальная проверка цепочки billing → contracts → settlements → wallet"
               />
             </div>
           </Card>
@@ -1624,7 +1778,11 @@ export default function SalonFinancePage() {
                         ? "Электронный кошелёк"
                         : "xPay"
                 }
-                note="UI уже держит маршрут вывода и реквизит, поэтому после включения backend останется только подключить реальный запрос."
+                note={
+                  !billingLoading && !billingWithdrawAllowed
+                    ? billingBlockReason || "Метод выбран, но действие заблокировано billing"
+                    : "UI уже держит маршрут вывода и реквизит, поэтому после включения backend останется только подключить реальный запрос."
+                }
               />
             </Card>
           </div>

@@ -1,5 +1,4 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
-
 import ErrorBoundary from "./core/ErrorBoundary";
 
 import PublicSalonPage from "./public/PublicSalonPage";
@@ -8,7 +7,7 @@ import PublicMasterPage from "./public/PublicMasterPage";
 import BookingPage from "./room/BookingPage";
 import SalonBookingsPage from "./room/SalonBookingsPage";
 
-import OwnerLayout from "./owner_backup/OwnerLayout";
+import SalonLayout from "./salon/SalonLayout";
 
 /* SALON PAGES */
 import DashboardPage from "./salon/pages/DashboardPage";
@@ -98,8 +97,7 @@ export default function App() {
           <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
 
           {/* SALON CABINET */}
-          <Route path="salon" element={<OwnerLayout />}>
-
+          <Route path="salon" element={<SalonLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
 
@@ -111,23 +109,19 @@ export default function App() {
 
             <Route path="money" element={<MoneyPage />} />
 
-            {/* SALON FINANCE CONTROL */}
             <Route path="finance" element={<SalonFinancePage />} />
             <Route path="contracts" element={<SalonContractsPage />} />
 
-            {/* SALON FINANCE */}
             <Route path="salon-money" element={<SalonMoneyPage />} />
             <Route path="transactions" element={<SalonTransactionsPage />} />
             <Route path="settlements" element={<SalonSettlementsPage />} />
             <Route path="payouts" element={<SalonPayoutsPage />} />
 
             <Route path="settings" element={<SettingsPage />} />
-
           </Route>
 
           {/* SALON CABINET WITH SLUG */}
-          <Route path="salon/:slug" element={<OwnerLayout />}>
-
+          <Route path="salon/:slug" element={<SalonLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
 
@@ -139,23 +133,19 @@ export default function App() {
 
             <Route path="money" element={<MoneyPage />} />
 
-            {/* SALON FINANCE CONTROL */}
             <Route path="finance" element={<SalonFinancePage />} />
             <Route path="contracts" element={<SalonContractsPage />} />
 
-            {/* SALON FINANCE */}
             <Route path="salon-money" element={<SalonMoneyPage />} />
             <Route path="transactions" element={<SalonTransactionsPage />} />
             <Route path="settlements" element={<SalonSettlementsPage />} />
             <Route path="payouts" element={<SalonPayoutsPage />} />
 
             <Route path="settings" element={<SettingsPage />} />
-
           </Route>
 
           {/* MASTER CABINET */}
           <Route path="master" element={<MasterLayout />}>
-
             <Route index element={<MasterDashboard />} />
             <Route path="dashboard" element={<MasterDashboard />} />
 
@@ -167,17 +157,14 @@ export default function App() {
             <Route path="schedule" element={<MasterSchedulePage />} />
             <Route path="services" element={<MasterServicesPage />} />
 
-            {/* MASTER FINANCE CONTROL */}
             <Route path="finance" element={<MasterFinancePage />} />
 
-            {/* MASTER FINANCE */}
             <Route path="money" element={<MasterMoneyPage />} />
             <Route path="transactions" element={<MasterTransactionsPage />} />
             <Route path="settlements" element={<MasterSettlementsPage />} />
             <Route path="payouts" element={<MasterPayoutsPage />} />
 
             <Route path="settings" element={<MasterSettingsPage />} />
-
           </Route>
 
         </Routes>
