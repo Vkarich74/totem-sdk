@@ -9,21 +9,37 @@ import {
   isContractActive
 } from "../../core/contracts/contractEngine";
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  window.API_BASE ||
+  "https://totem-p0-api-production.up.railway.app";
 
 function getMasterSlug() {
   if (window.MASTER_SLUG) {
     return window.MASTER_SLUG;
   }
 
-  const parts = window.location.pathname.split("/");
+  if (window.location.hash) {
+    const hash = window.location.hash.replace(/^#/, "");
+    const parts = hash.split("/").filter(Boolean);
 
-  if (parts.length >= 3 && parts[1] === "master") {
-    return parts[2];
+    if (parts.length >= 2 && parts[0] === "master") {
+      return parts[1];
+    }
+
+    if (parts.length >= 2 && parts[0] === "salon") {
+      return parts[1];
+    }
   }
 
-  if (parts.length >= 3 && parts[1] === "salon") {
-    return parts[2];
+  const parts = window.location.pathname.split("/").filter(Boolean);
+
+  if (parts.length >= 2 && parts[0] === "master") {
+    return parts[1];
+  }
+
+  if (parts.length >= 2 && parts[0] === "salon") {
+    return parts[1];
   }
 
   return null;
