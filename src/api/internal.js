@@ -7,6 +7,20 @@ const API_BASE = "https://api.totemv.com/internal";
    SALON (OWNER) API
 ================================ */
 
+export async function getSalon(salonSlug = getSalonSlug()){
+  const r = await safeJson(`${API_BASE}/salons/${salonSlug}`);
+  if(!r.ok) return { ok:false, error:"SALON_FETCH_FAILED", detail:r };
+
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_API_NOT_OK", detail:j };
+
+  return {
+    ok:true,
+    salon: j.salon,
+    billing_access: j.billing_access || null
+  };
+}
+
 export async function getMetrics(salonSlug = getSalonSlug()){
   const r = await safeJson(`${API_BASE}/salons/${salonSlug}/metrics`);
   if(!r.ok) return { ok:false, error:"METRICS_FETCH_FAILED", detail:r };
@@ -46,9 +60,15 @@ export async function getClients(salonSlug = getSalonSlug()){
 export async function getMaster(masterSlug = getMasterSlug()){
   const r = await safeJson(`${API_BASE}/masters/${masterSlug}`);
   if(!r.ok) return { ok:false, error:"MASTER_FETCH_FAILED", detail:r };
+
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_API_NOT_OK", detail:j };
-  return { ok:true, master: j.master };
+
+  return {
+    ok:true,
+    master: j.master,
+    billing_access: j.billing_access || null
+  };
 }
 
 export async function getMasterMetrics(masterSlug = getMasterSlug()){

@@ -1,8 +1,9 @@
 import { Outlet } from "react-router-dom"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import SalonSidebar from "./SalonSidebar"
 import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
+import { getSalon } from "../api/internal"
 
 const ODOO_BASE = "https://www.totemv.com/odoo"
 
@@ -78,6 +79,24 @@ export default function SalonLayout() {
 
   const slug = getSalonSlug()
 
+  const [billing, setBilling] = useState(null)
+
+  useEffect(() => {
+
+    async function loadBilling() {
+      if (!slug) return
+
+      const r = await getSalon(slug)
+
+      if (r.ok) {
+        setBilling(r.billing_access || null)
+      }
+    }
+
+    loadBilling()
+
+  }, [slug])
+
   useEffect(() => {
 
     loadOdooPanel()
@@ -94,35 +113,79 @@ export default function SalonLayout() {
     window.location.href = "/"
   }
 
+  const isBlocked = billing?.access_state === "blocked"
+  const isGrace = billing?.access_state === "grace"
+
   return (
 
-    <CabinetLayout
+    <div style={{ position:"relative", height:"100%" }}>
 
-      header={
-        <CabinetHeader slug={slug} onLogout={logout} />
-      }
+      {isGrace && (
+        <div style={{
+          position:"fixed",
+          top:0,
+          left:0,
+          right:0,
+          background:"#ffcc00",
+          color:"#000",
+          padding:"10px",
+          textAlign:"center",
+          zIndex:1000,
+          fontWeight:"bold"
+        }}>
+          Внимание: истекает подписка. Пополните баланс.
+        </div>
+      )}
 
-      sidebar={
-        <SalonSidebar slug={slug} />
-      }
+      <CabinetLayout
 
-      page={
-        <Outlet/>
-      }
+        header={
+          <CabinetHeader slug={slug} onLogout={logout} />
+        }
 
-      odoo={
-        <div
-          id="odoo-content"
-          style={{
-            width: "30%",
-            overflow: "auto",
-            padding: "20px",
-            minHeight: 0
-          }}
-        />
-      }
+        sidebar={
+          <SalonSidebar slug={slug} />
+        }
 
-    />
+        page={
+          <Outlet/>
+        }
+
+        odoo={
+          <div
+            id="odoo-content"
+            style={{
+              width: "30%",
+              overflow: "auto",
+              padding: "20px",
+              minHeight: 0
+            }}
+          />
+        }
+
+      />
+
+      {isBlocked && (
+        <div style={{
+          position:"absolute",
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          background:"rgba(0,0,0,0.6)",
+          zIndex:2000,
+          display:"flex",
+          alignItems:"center",
+          justifyContent:"center",
+          color:"#fff",
+          fontSize:"20px",
+          fontWeight:"bold"
+        }}>
+          Доступ ограничен. Оплатите подписку.
+        </div>
+      )}
+
+    </div>
 
   )
 
