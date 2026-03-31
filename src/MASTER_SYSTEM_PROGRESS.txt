@@ -1,0 +1,30 @@
+TOTEM MASTER CABINET — SYSTEM PROGRESS FREEZE
+
+Сделано в этом safe pass:
+1. MasterServicesPage переведён на общий контракт getCurrentMasterScope().
+2. MasterContext переведён на общий контракт getCurrentMasterScope().
+3. MasterDashboard переведён на общий контракт getCurrentMasterScope().
+4. MasterBookingsPage переведён на общий контракт getCurrentMasterScope().
+5. useMasterFinanceOverview переведён на общий контракт getCurrentMasterScope().
+6. В useMasterFinanceOverview выровнен settlements response: settlements / periods.
+7. В useMasterFinanceOverview выровнен API_BASE на https://api.totemv.com.
+8. Убрана локальная debug-заплатка MASTER_SERVICES_SLUG из ServicesPage.
+
+Что уже было закрыто раньше и сохраняется:
+- Master finance root работает.
+- Transactions работают.
+- Settlements работают.
+- Payouts работают.
+- Services снова работают.
+
+Что осталось:
+1. Прогнать MasterBookingsPage в UI.
+2. Прогнать MasterDashboard в UI.
+3. Проверить MasterMoneyPage / MasterHomePage / MasterLayout на остаточный drift.
+4. После UI-проверки — удалить больше неиспользуемые обходные slug-пути там, где они не нужны.
+
+Как применён фикс:
+- Вместо window.MASTER_SLUG / hash самописного / pathname-first,
+  страницы приведены к одному контракту:
+  getCurrentMasterScope() из master/payments/lib/masterFinanceRouteContract.js
+- Это делает slug-first через общий route contract и убирает расхождение страниц.

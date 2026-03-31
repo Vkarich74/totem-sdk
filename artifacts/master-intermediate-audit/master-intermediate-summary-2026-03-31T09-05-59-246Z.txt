@@ -1,0 +1,13 @@
+TOTEM MASTER INTERMEDIATE AUDIT
+Generated: 2026-03-31T09:05:59.249Z
+Base: http://localhost:5173
+Master slug: totem-demo-master
+Total cases: 2
+Failed cases: 1
+
+=== ROUTE SUMMARY ===
+bookings | failed=1/1 | slow=0/1 | avg=3153ms | max=3153ms | console=3 | page=0 | req_fail=1 | bad_http=0 | visible_empty=0
+dashboard | failed=0/1 | slow=0/1 | avg=2960ms | max=2960ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0
+
+=== FAILED RUNS ===
+master bookings run 1 | 3153ms | nav=- | console=3 | page=0 | req_fail=1 | bad_http=0 | body=181 | divs=19 | headings=0
