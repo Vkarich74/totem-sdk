@@ -1,6 +1,6 @@
-import { Outlet } from "react-router-dom"
-import { useEffect, useState } from "react"
-import { MasterProvider } from "./MasterContext"
+import { Outlet, useLocation } from "react-router-dom"
+import { useEffect, useMemo, useState } from "react"
+import { MasterProvider, useMaster } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
 import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
@@ -13,66 +13,28 @@ import {
 
 const ODOO_BASE = "https://www.totemv.com/odoo"
 
-function getMasterSlug() {
+function getCurrentSection(pathname){
+  if(!pathname) return "dashboard"
 
-  if (window.MASTER_SLUG) {
-    return window.MASTER_SLUG
-  }
+  const parts = pathname.split("/").filter(Boolean)
 
-  const hash = window.location.hash
+  if(parts.length < 3) return "dashboard"
 
-  if (hash) {
-    const clean = hash.replace("#/", "")
-    const parts = clean.split("/")
-
-    if (parts.length >= 2 && parts[0] === "master") {
-      return parts[1]
-    }
-  }
-
-  const storedSlug =
-    window.localStorage.getItem("totem_master_slug") ||
-    window.sessionStorage.getItem("totem_master_slug")
-
-  if (storedSlug) {
-    return storedSlug
-  }
-
-  return null
+  return parts[2] || "dashboard"
 }
 
-function getCurrentSection() {
-
-  const hash = window.location.hash
-
-  if (!hash) return "dashboard"
-
-  const clean = hash.replace("#/", "")
-  const parts = clean.split("/")
-
-  if (parts.length < 3) return "dashboard"
-
-  return parts[2]
-}
-
-async function loadOdooPanel() {
-
-  const slug = getMasterSlug()
-
-  if (!slug) {
+async function loadOdooPanel(slug, section){
+  if(!slug){
     console.error("ODOO BRIDGE: master slug missing")
     return
   }
 
-  const section = getCurrentSection()
-
   const url = `${ODOO_BASE}/master/${slug}/${section}`
 
-  try {
-
+  try{
     const res = await fetch(url)
 
-    if (!res.ok) {
+    if(!res.ok){
       throw new Error("ODOO_FETCH_FAILED")
     }
 
@@ -80,68 +42,78 @@ async function loadOdooPanel() {
 
     const container = document.getElementById("odoo-content")
 
-    if (!container) {
+    if(!container){
       console.error("ODOO BRIDGE: container missing")
       return
     }
 
     container.innerHTML = html
-
-  } catch (e) {
-
+  }catch(e){
     console.error("ODOO BRIDGE ERROR", e)
-
   }
-
 }
 
-export default function MasterLayout() {
+function MasterLayoutInner(){
 
-  const slug = getMasterSlug()
+  const location = useLocation()
+  const { slug } = useMaster()
+
   const [billing, setBilling] = useState(null)
   const [billingLoading, setBillingLoading] = useState(true)
 
-  useEffect(() => {
-    if (slug) {
-      window.localStorage.setItem("totem_master_slug", slug)
-      window.sessionStorage.setItem("totem_master_slug", slug)
-    }
+  const section = useMemo(()=>{
+    return getCurrentSection(location.pathname)
+  },[location.pathname])
 
-    async function loadBilling() {
-      if (!slug) {
-        setBilling(null)
-        setBillingLoading(false)
+  useEffect(()=>{
+    let cancelled = false
+
+    async function loadBilling(){
+      if(!slug){
+        if(!cancelled){
+          setBilling(null)
+          setBillingLoading(false)
+        }
         return
       }
 
-      try {
+      try{
+        setBillingLoading(true)
+
         const r = await getMaster(slug)
 
-        if (r.ok) {
+        if(cancelled) return
+
+        if(r?.ok){
           setBilling(r.billing_access || null)
-        } else {
+        }else{
           setBilling(null)
         }
-      } catch (e) {
+      }catch(e){
         console.error("MASTER BILLING LOAD ERROR", e)
-        setBilling(null)
-      } finally {
-        setBillingLoading(false)
+
+        if(!cancelled){
+          setBilling(null)
+        }
+      }finally{
+        if(!cancelled){
+          setBillingLoading(false)
+        }
       }
     }
 
     loadBilling()
-    loadOdooPanel()
 
-    window.addEventListener("hashchange", loadOdooPanel)
-
-    return () => {
-      window.removeEventListener("hashchange", loadOdooPanel)
+    return ()=>{
+      cancelled = true
     }
+  },[slug])
 
-  }, [slug])
+  useEffect(()=>{
+    loadOdooPanel(slug, section)
+  },[slug, section])
 
-  function logout() {
+  function logout(){
     window.location.href = "/"
   }
 
@@ -153,98 +125,103 @@ export default function MasterLayout() {
   const canWithdraw = canWithdrawByBilling(billing)
   const billingBlockReason = getBillingBlockReason(billing)
 
-  window.__TOTEM_MASTER_BILLING__ = {
-    billing,
-    billingLoading,
-    canWrite,
-    canWithdraw,
-    billingBlockReason
-  }
+  useEffect(()=>{
+    window.__TOTEM_MASTER_BILLING__ = {
+      billing,
+      billingLoading,
+      canWrite,
+      canWithdraw,
+      billingBlockReason
+    }
+  },[billing, billingLoading, canWrite, canWithdraw, billingBlockReason])
 
-  return (
+  return(
 
-    <MasterProvider>
+    <div style={{ position: "relative", height: "100%" }}>
 
-      <div style={{ position: "relative", height: "100%" }}>
+      {isGrace && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          background: "#ffcc00",
+          color: "#000",
+          padding: "10px",
+          textAlign: "center",
+          zIndex: 1000,
+          fontWeight: "bold"
+        }}>
+          Внимание: истекает подписка. Пополните баланс.
+        </div>
+      )}
 
-        {isGrace && (
-          <div style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            background: "#ffcc00",
-            color: "#000",
-            padding: "10px",
-            textAlign: "center",
-            zIndex: 1000,
-            fontWeight: "bold"
-          }}>
-            Внимание: истекает подписка. Пополните баланс.
+      <CabinetLayout
+
+        header={
+          <CabinetHeader slug={slug} onLogout={logout} />
+        }
+
+        sidebar={
+          <MasterSidebar slug={slug} />
+        }
+
+        page={
+          <Outlet />
+        }
+
+        odoo={
+          <div
+            id="odoo-content"
+            style={{
+              width: "30%",
+              overflow: "auto",
+              padding: "20px",
+              minHeight: 0
+            }}
+          />
+        }
+
+      />
+
+      {isBlocked && (
+        <div style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          zIndex: 2000,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#fff",
+          fontSize: "20px",
+          fontWeight: "bold",
+          textAlign: "center",
+          padding: "24px"
+        }}>
+          <div>
+            <div>Доступ ограничен. Оплатите подписку.</div>
+            {billingBlockReason && (
+              <div style={{ marginTop: "10px", fontSize: "14px", fontWeight: "normal" }}>
+                {billingBlockReason}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        <CabinetLayout
-
-          header={
-            <CabinetHeader slug={slug} onLogout={logout} />
-          }
-
-          sidebar={
-            <MasterSidebar slug={slug} />
-          }
-
-          page={
-            <Outlet />
-          }
-
-          odoo={
-            <div
-              id="odoo-content"
-              style={{
-                width: "30%",
-                overflow: "auto",
-                padding: "20px",
-                minHeight: 0
-              }}
-            />
-          }
-
-        />
-
-        {isBlocked && (
-          <div style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.6)",
-            zIndex: 2000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            fontSize: "20px",
-            fontWeight: "bold",
-            textAlign: "center",
-            padding: "24px"
-          }}>
-            <div>
-              <div>Доступ ограничен. Оплатите подписку.</div>
-              {billingBlockReason && (
-                <div style={{ marginTop: "10px", fontSize: "14px", fontWeight: "normal" }}>
-                  {billingBlockReason}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-      </div>
-
-    </MasterProvider>
+    </div>
 
   )
+}
 
+export default function MasterLayout(){
+  return (
+    <MasterProvider>
+      <MasterLayoutInner />
+    </MasterProvider>
+  )
 }
