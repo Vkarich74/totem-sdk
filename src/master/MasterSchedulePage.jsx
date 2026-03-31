@@ -1,8 +1,8 @@
- import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "./MasterContext"
- import PageSection from "../cabinet/PageSection"
+import PageSection from "../cabinet/PageSection"
 
- const API_BASE = import.meta.env.VITE_API_BASE
+const API_BASE = import.meta.env.VITE_API_BASE
 
 function pad(v){
 return v<10?"0"+v:String(v)
@@ -123,18 +123,6 @@ return{
 ...nearest,
 eta
 }
-}
-
-function currentMasterSlug(){
-const path=window.location.pathname||""
-const parts=path.split("/").filter(Boolean)
-const idx=parts.indexOf("master")
-
-if(idx>=0 && parts[idx+1]){
-return parts[idx+1]
-}
-
-return""
 }
 
 function normalizeStatus(v){
@@ -298,12 +286,18 @@ return slot<currentSlot()
 
 export default function MasterSchedulePage(){
 
-const {bookings=[],loading}=useMaster()
+const {
+bookings=[],
+loading,
+error,
+master,
+slug,
+salonSlug
+}=useMaster()
 
 const [dateKey,setDateKey]=useState(todayKey())
 const [statusOverrides,setStatusOverrides]=useState({})
 const [actionLoading,setActionLoading]=useState({})
-const [masterSalonSlug,setMasterSalonSlug]=useState("")
 const [clockTick,setClockTick]=useState(0)
 
 useEffect(()=>{
@@ -317,49 +311,20 @@ return()=>clearInterval(timer)
 const slots=useMemo(()=>buildSlots(),[])
 const nowSlot=currentSlot()
 
+function getMasterRouteSlug(){
+return master?.slug || slug || ""
+}
+
 function openBooking(id){
-window.location.hash="/master/bookings/"+id
+const routeSlug=getMasterRouteSlug()
+if(!routeSlug)return
+window.location.hash=`/master/${routeSlug}/bookings/${id}`
 }
 
 function createBooking(time){
-window.location.hash="/master/bookings/new?time="+time+"&date="+dateKey
-}
-
-async function resolveSalonSlug(){
-if(masterSalonSlug){
-return masterSalonSlug
-}
-
-const masterSlug=currentMasterSlug()
-
-if(!masterSlug){
-throw new Error("MASTER_SLUG_NOT_FOUND")
-}
-
-const response=await fetch(
-`${API_BASE}/internal/masters/`+encodeURIComponent(masterSlug)
-)
-
-if(!response.ok){
-throw new Error("MASTER_FETCH_FAILED")
-}
-
-const data=await response.json()
-const slug=
-data?.master?.salon_slug ??
-data?.master?.salonSlug ??
-data?.master?.salon?.slug ??
-data?.salon_slug ??
-data?.salonSlug ??
-data?.salon?.slug ??
-""
-
-if(!slug){
-throw new Error("SALON_SLUG_NOT_FOUND")
-}
-
-setMasterSalonSlug(slug)
-return slug
+const routeSlug=getMasterRouteSlug()
+if(!routeSlug)return
+window.location.hash=`/master/${routeSlug}/bookings/new?time=${encodeURIComponent(time)}&date=${encodeURIComponent(dateKey)}`
 }
 
 async function quickAction(e,booking,action){
@@ -371,13 +336,15 @@ action==="done" ? "completed" :
 action==="cancel" ? "cancelled" :
 "reserved"
 
-setActionLoading((prev)=>({
+setActionLoading((prev)=>( {
 ...prev,
 [booking.id]:action
 }))
 
 try{
-const salonSlug=await resolveSalonSlug()
+if(!salonSlug){
+throw new Error("SALON_SLUG_NOT_FOUND")
+}
 
 const response=await fetch(
 `${API_BASE}/public/salons/`+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
@@ -394,15 +361,13 @@ if(!response.ok){
 throw new Error("STATUS_UPDATE_FAILED")
 }
 
-setStatusOverrides((prev)=>({
+setStatusOverrides((prev)=>( {
 ...prev,
 [booking.id]:nextStatus
 }))
 
 }catch(error){
-if(error && error.message==="MASTER_SLUG_NOT_FOUND"){
-alert("Не найден master slug в URL")
-}else if(error && error.message==="SALON_SLUG_NOT_FOUND"){
+if(error && error.message==="SALON_SLUG_NOT_FOUND"){
 alert("У мастера не найден salon slug")
 }else{
 alert("Статус не обновился")
@@ -500,6 +465,22 @@ return{calendar,skip}
 },[bookings,dateKey,statusOverrides,clockTick])
 
 if(loading)return<PageSection title="Календарь мастера"><div>Загрузка...</div></PageSection>
+
+if(error){
+return(
+<PageSection title="Календарь мастера">
+<div style={{
+border:"1px solid #fecaca",
+background:"#fef2f2",
+color:"#991b1b",
+borderRadius:"10px",
+padding:"12px"
+}}>
+Ошибка загрузки календаря
+</div>
+</PageSection>
+)
+}
 
 return(
 

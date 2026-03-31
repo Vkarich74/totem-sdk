@@ -1,33 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
+import { useMaster } from "../MasterContext"
 
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
 import EmptyState from "../../cabinet/EmptyState"
 
 const API_BASE = import.meta.env.VITE_API_BASE
-
-function getMasterSlug() {
-  if (window.MASTER_SLUG) {
-    return window.MASTER_SLUG
-  }
-
-  const hash = window.location.hash || ""
-  const hashPath = hash.startsWith("#") ? hash.slice(1) : hash
-  const cleanHashPath = hashPath.startsWith("/") ? hashPath : `/${hashPath}`
-  const hashParts = cleanHashPath.split("/").filter(Boolean)
-
-  if (hashParts.length >= 2 && hashParts[0] === "master") {
-    return hashParts[1]
-  }
-
-  const pathParts = window.location.pathname.split("/").filter(Boolean)
-
-  if (pathParts.length >= 2 && pathParts[0] === "master") {
-    return pathParts[1]
-  }
-
-  return null
-}
 
 function money(value) {
   const n = Number(value) || 0
@@ -55,7 +33,16 @@ function formatDate(iso) {
   )
 }
 
+function getStatusLabel(status) {
+  if (status === "open") return "Открыт"
+  if (status === "closed") return "Закрыт"
+  return status || "—"
+}
+
 export default function MasterSettlementsPage() {
+  const { master, slug: contextSlug } = useMaster() || {}
+  const masterSlug = master?.slug || contextSlug || null
+
   const [periods, setPeriods] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -68,9 +55,7 @@ export default function MasterSettlementsPage() {
         setLoading(true)
         setError(null)
 
-        const slug = getMasterSlug()
-
-        if (!slug) {
+        if (!masterSlug) {
           console.error("MASTER_SLUG_NOT_FOUND")
 
           if (!cancelled) {
@@ -82,7 +67,7 @@ export default function MasterSettlementsPage() {
         }
 
         const res = await fetch(
-          `${API_BASE}/internal/masters/${slug}/settlements`
+          `${API_BASE}/internal/masters/${masterSlug}/settlements`
         )
 
         if (!res.ok) {
@@ -95,8 +80,6 @@ export default function MasterSettlementsPage() {
           return
         }
 
-        // 🔴 КЛЮЧЕВОЙ ФИКС:
-        // backend возвращает settlements, а не periods
         setPeriods(Array.isArray(data?.settlements) ? data.settlements : [])
       } catch (e) {
         console.error("Settlements load error", e)
@@ -117,7 +100,7 @@ export default function MasterSettlementsPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [masterSlug])
 
   const totalAmount = useMemo(() => {
     return periods.reduce((acc, item) => {
@@ -126,131 +109,139 @@ export default function MasterSettlementsPage() {
   }, [periods])
 
   return (
-    <PageSection title="Сеты">
-      {loading && <div>Загрузка...</div>}
+    <div style={{ padding: "20px" }}>
+      <PageSection title="Сеты">
+        {loading && <div>Загрузка...</div>}
 
-      {!loading && error && (
-        <EmptyState text={error} />
-      )}
+        {!loading && error && (
+          <EmptyState
+            title="Ошибка загрузки"
+            message={error}
+          />
+        )}
 
-      {!loading && !error && periods.length === 0 && (
-        <EmptyState text="Расчетных периодов пока нет" />
-      )}
+        {!loading && !error && periods.length === 0 && (
+          <EmptyState
+            title="Сеты отсутствуют"
+            message="Расчетные периоды появятся после транзакций"
+          />
+        )}
 
-      {!loading && !error && periods.length > 0 && (
-        <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "12px",
-              marginBottom: "16px"
-            }}
-          >
+        {!loading && !error && periods.length > 0 && (
+          <>
             <div
               style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                background: "#ffffff",
-                padding: "14px"
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "12px",
+                marginBottom: "16px"
               }}
             >
-              <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
-                Кол-во периодов
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  padding: "14px"
+                }}
+              >
+                <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
+                  Кол-во сетов
+                </div>
+                <div style={{ fontSize: "24px", fontWeight: 700 }}>
+                  {periods.length}
+                </div>
               </div>
-              <div style={{ fontSize: "24px", fontWeight: 700 }}>
-                {periods.length}
+
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  padding: "14px"
+                }}
+              >
+                <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
+                  Общая сумма
+                </div>
+                <div style={{ fontSize: "24px", fontWeight: 700 }}>
+                  {money(totalAmount)}
+                </div>
               </div>
             </div>
 
-            <div
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                background: "#ffffff",
-                padding: "14px"
-              }}
-            >
-              <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
-                Общая сумма
-              </div>
-              <div style={{ fontSize: "24px", fontWeight: 700 }}>
-                {money(totalAmount)}
-              </div>
-            </div>
-          </div>
+            <TableSection>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th align="left">ID</th>
+                    <th align="left">Начало</th>
+                    <th align="left">Конец</th>
+                    <th align="left">Сумма</th>
+                    <th align="left">Статус</th>
+                  </tr>
+                </thead>
 
-          <TableSection>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th align="left">Период</th>
-                  <th align="left">Начало</th>
-                  <th align="left">Конец</th>
-                  <th align="left">Сумма</th>
-                  <th align="left">Статус</th>
-                </tr>
-              </thead>
+                <tbody>
+                  {periods.map((p, index) => {
+                    const isLast = index === periods.length - 1
 
-              <tbody>
-                {periods.map((p, index) => {
-                  const isLast = index === periods.length - 1
+                    return (
+                      <tr key={p.id || index}>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                          }}
+                        >
+                          {p.id || "—"}
+                        </td>
 
-                  return (
-                    <tr key={p.id || index}>
-                      <td
-                        style={{
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7",
-                          padding: "10px"
-                        }}
-                      >
-                        {p.id || "—"}
-                      </td>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                          }}
+                        >
+                          {formatDate(p.period_start)}
+                        </td>
 
-                      <td
-                        style={{
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7",
-                          padding: "10px"
-                        }}
-                      >
-                        {formatDate(p.period_start)}
-                      </td>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                          }}
+                        >
+                          {formatDate(p.period_end)}
+                        </td>
 
-                      <td
-                        style={{
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7",
-                          padding: "10px"
-                        }}
-                      >
-                        {formatDate(p.period_end)}
-                      </td>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7",
+                            fontWeight: 600
+                          }}
+                        >
+                          {money(p.amount)}
+                        </td>
 
-                      <td
-                        style={{
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7",
-                          padding: "10px",
-                          fontWeight: 600
-                        }}
-                      >
-                        {money(p.amount)}
-                      </td>
-
-                      <td
-                        style={{
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7",
-                          padding: "10px"
-                        }}
-                      >
-                        {p.status || "—"}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </TableSection>
-        </>
-      )}
-    </PageSection>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                          }}
+                        >
+                          {getStatusLabel(p.status)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </TableSection>
+          </>
+        )}
+      </PageSection>
+    </div>
   )
 }

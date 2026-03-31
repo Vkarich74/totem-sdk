@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useMaster } from "./MasterContext"
 import {
   createMasterService,
   deleteMasterService,
@@ -82,7 +83,11 @@ function getServiceKey(service, index) {
 }
 
 export default function MasterServicesPage() {
-  const slug = useMemo(() => getSlugFromHash(), [])
+  const { master, slug: contextSlug } = useMaster() || {}
+
+  const slug = useMemo(() => {
+    return master?.slug || contextSlug || getSlugFromHash()
+  }, [master, contextSlug])
 
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
@@ -109,7 +114,6 @@ export default function MasterServicesPage() {
     return Array.from(map.values())
   }, [services])
 
-
   async function loadServices() {
     setLoading(true)
     setError("")
@@ -127,6 +131,13 @@ export default function MasterServicesPage() {
   }
 
   useEffect(() => {
+    if (!slug) {
+      setServices([])
+      setLoading(false)
+      setError("Не найден master slug")
+      return
+    }
+
     loadServices()
   }, [slug])
 

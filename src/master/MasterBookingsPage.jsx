@@ -1,289 +1,234 @@
-import {useMaster} from "./MasterContext"
-import {useParams} from "react-router-dom"
-import {useState} from "react"
+import { useMaster } from "./MasterContext"
+import { useParams, useNavigate } from "react-router-dom"
+import { useState } from "react"
 
 import PageSection from "../cabinet/PageSection"
 import TableSection from "../cabinet/TableSection"
 import EmptyState from "../cabinet/EmptyState"
 
-const API_BASE = import.meta.env.VITE_API_BASE
-
-function statusColor(s){
-if(s==="completed")return "#27ae60"
-if(s==="confirmed")return "#2980b9"
-if(s==="reserved")return "#f39c12"
-return "#e74c3c"
+function statusColor(s) {
+  if (s === "completed") return "#27ae60"
+  if (s === "confirmed") return "#2980b9"
+  if (s === "reserved") return "#f39c12"
+  return "#e74c3c"
 }
 
-function rowHoverStyle(e,enter){
-if(enter){
-e.currentTarget.style.background="#f9fafb"
-}else{
-e.currentTarget.style.background=""
-}
-}
-
-export default function MasterBookingsPage(){
-
-const {bookingId}=useParams()
-
-const {bookings,loading,master}=useMaster()
-
-const [client,setClient]=useState("")
-const [phone,setPhone]=useState("")
-const [serviceId,setServiceId]=useState("1")
-
-if(loading)return <div style={{padding:"20px"}}>Загрузка...</div>
-
-const hash=window.location.hash
-
-let masterSlug=""
-if(master && master.slug){
-masterSlug=master.slug
-}else{
-const p=window.location.pathname.split("/")
-masterSlug=p[2]||""
+function rowHoverStyle(e, enter) {
+  if (enter) {
+    e.currentTarget.style.background = "#f9fafb"
+  } else {
+    e.currentTarget.style.background = ""
+  }
 }
 
-if(hash.includes("/master/bookings/new")){
+export default function MasterBookingsPage() {
+
+  const { bookingId } = useParams()
+  const navigate = useNavigate()
+
+  const {
+    bookings,
+    loading,
+    error,
+    empty,
+    master,
+    slug
+  } = useMaster()
+
+  const [client, setClient] = useState("")
+  const [phone, setPhone] = useState("")
+  const [serviceId, setServiceId] = useState("1")
+
+  // 🔒 единый slug
+  const masterSlug = master?.slug || slug
+
+  if (loading) {
+    return <div style={{ padding: "20px" }}>Загрузка...</div>
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: "20px" }}>
+        <PageSection title="Ошибка">
+          <EmptyState title="Ошибка загрузки данных" message={error} />
+        </PageSection>
+      </div>
+    )
+  }
+
+  // ❗ CREATE (оставили, но безопаснее)
+  async function createBooking(date, time) {
+    if (!masterSlug) return
+
+    const start = date + "T" + time + ":00+06:00"
+
+    try {
+      await fetch(
+        `https://api.totemv.com/internal/masters/${masterSlug}/bookings`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            client_name: client,
+            phone: phone,
+            start_at: start,
+            service_id: Number(serviceId)
+          })
+        }
+      )
+    } catch (e) {
+      console.error("createBooking error", e)
+    }
+
+    navigate(`/master/${masterSlug}/schedule`)
+  }
+
+  // ❗ DETAIL
+  if (bookingId) {
+
+    const booking = bookings?.find(
+      (b) => String(b.id) === String(bookingId)
+    )
+
+    if (!booking) {
+      return (
+        <div style={{ padding: "20px" }}>
+          <PageSection title="Запись">
+            <EmptyState title="Запись не найдена" />
+          </PageSection>
+        </div>
+      )
+    }
+
+    return (
+      <div style={{ padding: "20px" }}>
+
+        <button
+          onClick={() => navigate(`/master/${masterSlug}/schedule`)}
+          style={{ marginBottom: "10px" }}
+        >
+          ← К календарю
+        </button>
+
+        <PageSection title={"BR-" + booking.id}>
+
+          <div style={{ color: statusColor(booking.status), marginBottom: "10px" }}>
+            {booking.status}
+          </div>
+
+          {booking.service_name && (
+            <div style={{ marginBottom: "6px" }}>
+              Услуга: {booking.service_name}
+            </div>
+          )}
 
-const params=new URLSearchParams(hash.split("?")[1]||"")
+          {booking.price && (
+            <div style={{ marginBottom: "6px" }}>
+              Цена: {booking.price} сом
+            </div>
+          )}
 
-const time=params.get("time")||""
-const date=params.get("date")||""
+          <div style={{ marginBottom: "6px" }}>
+            Время: {new Date(booking.start_at).toLocaleString("ru-RU")}
+          </div>
 
-async function createBooking(){
+          <div style={{ marginBottom: "6px" }}>
+            Клиент: {booking.client_name || "—"}
+          </div>
 
-const start=date+"T"+time+":00+06:00"
+          <div>
+            Телефон: {booking.phone || "—"}
+          </div>
 
-await fetch(
-`${API_BASE}/internal/masters/${masterSlug}/bookings`,
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-client_name:client,
-phone:phone,
-start_at:start,
-service_id:Number(serviceId)
-})
-}
-)
+        </PageSection>
 
-window.location.href=window.location.pathname+"#/master/schedule"
-}
+      </div>
+    )
+  }
 
-return(
+  // ❗ LIST
+  return (
+    <div style={{ padding: "20px" }}>
 
-<div style={{padding:"20px"}}>
+      <PageSection title="Записи">
 
-<button
-onClick={()=>window.location.hash="/master/schedule"}
-style={{marginBottom:"10px"}}
->
-← К календарю
-</button>
+        {empty ? (
 
-<PageSection title="Новая запись">
+          <EmptyState
+            title="Записей пока нет"
+            message="Записи появятся после бронирований"
+          />
 
-<div style={{maxWidth:"420px"}}>
+        ) : (
 
-<div style={{marginBottom:"10px"}}>
-Дата: <b>{date}</b>
-</div>
+          <TableSection>
 
-<div style={{marginBottom:"10px"}}>
-Время: <b>{time}</b>
-</div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
-<input
-placeholder="Клиент"
-value={client}
-onChange={e=>setClient(e.target.value)}
-style={{width:"100%",marginBottom:"8px"}}
-/>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Статус</th>
+                  <th>Дата</th>
+                  <th>Клиент</th>
+                  <th>Телефон</th>
+                </tr>
+              </thead>
 
-<input
-placeholder="Телефон"
-value={phone}
-onChange={e=>setPhone(e.target.value)}
-style={{width:"100%",marginBottom:"8px"}}
-/>
+              <tbody>
 
-<select
-value={serviceId}
-onChange={e=>setServiceId(e.target.value)}
-style={{width:"100%",marginBottom:"10px"}}
->
-<option value="1">Услуга 1</option>
-<option value="2">Услуга 2</option>
-<option value="3">Услуга 3</option>
-</select>
+                {bookings?.map((b) => (
 
-<button onClick={createBooking}>
-Создать запись
-</button>
+                  <tr
+                    key={b.id}
+                    style={{ cursor: "pointer", borderTop: "1px solid #eee" }}
+                    onMouseEnter={(e) => rowHoverStyle(e, true)}
+                    onMouseLeave={(e) => rowHoverStyle(e, false)}
+                    onClick={(e) => {
+                      if (e.target.tagName !== "A") {
+                        navigate(`/master/${masterSlug}/bookings/${b.id}`)
+                      }
+                    }}
+                  >
 
-</div>
+                    <td>
+                      <a href={`#/master/${masterSlug}/bookings/${b.id}`}>
+                        BR-{b.id}
+                      </a>
+                    </td>
 
-</PageSection>
+                    <td style={{ color: statusColor(b.status) }}>
+                      {b.status}
+                    </td>
 
-</div>
+                    <td>
+                      {new Date(b.start_at).toLocaleString("ru-RU")}
+                    </td>
 
-)
+                    <td>
+                      {b.client_name || "—"}
+                    </td>
 
-}
+                    <td>
+                      {b.phone || "—"}
+                    </td>
 
-if(bookingId){
+                  </tr>
 
-const booking=bookings.find(b=>String(b.id)===String(bookingId))
+                ))}
 
-if(!booking){
+              </tbody>
 
-return(
-<div style={{padding:"20px"}}>
-<PageSection title="Запись">
-<EmptyState title="Запись не найдена"/>
-</PageSection>
-</div>
-)
+            </table>
 
-}
+          </TableSection>
 
-return(
+        )}
 
-<div style={{padding:"20px"}}>
+      </PageSection>
 
-<button
-onClick={()=>window.location.hash="/master/schedule"}
-style={{marginBottom:"10px"}}
->
-← К календарю
-</button>
-
-<PageSection title={"BR-"+booking.id}>
-
-<div style={{color:statusColor(booking.status),marginBottom:"10px"}}>
-{booking.status}
-</div>
-
-{booking.service_name && (
-<div style={{marginBottom:"6px"}}>
-Услуга: {booking.service_name}
-</div>
-)}
-
-{booking.price && (
-<div style={{marginBottom:"6px"}}>
-Цена: {booking.price} сом
-</div>
-)}
-
-<div style={{marginBottom:"6px"}}>
-Время: {new Date(booking.start_at).toLocaleString("ru-RU")}
-</div>
-
-<div style={{marginBottom:"6px"}}>
-Клиент: {booking.client_name||"—"}
-</div>
-
-<div>
-Телефон: {booking.phone||"—"}
-</div>
-
-</PageSection>
-
-</div>
-
-)
-
-}
-
-return(
-
-<div style={{padding:"20px"}}>
-
-<PageSection title="Записи">
-
-{(!bookings || bookings.length===0) ? (
-
-<EmptyState
-title="Записей пока нет"
-message="Записи появятся после бронирований"
-/>
-
-) : (
-
-<TableSection>
-
-<table>
-
-<thead>
-<tr>
-<th>ID</th>
-<th>Статус</th>
-<th>Дата</th>
-<th>Клиент</th>
-<th>Телефон</th>
-</tr>
-</thead>
-
-<tbody>
-
-{bookings.map(b=>(
-
-<tr
-key={b.id}
-style={{cursor:"pointer"}}
-onMouseEnter={(e)=>rowHoverStyle(e,true)}
-onMouseLeave={(e)=>rowHoverStyle(e,false)}
-onClick={(e)=>{
-if(e.target.tagName!=="A"){
-window.location.hash="/master/bookings/"+b.id
-}
-}}
->
-
-<td>
-<a href={"#/master/bookings/"+b.id}>
-BR-{b.id}
-</a>
-</td>
-
-<td style={{color:statusColor(b.status)}}>
-{b.status}
-</td>
-
-<td>
-{new Date(b.start_at).toLocaleString("ru-RU")}
-</td>
-
-<td>
-{b.client_name||"—"}
-</td>
-
-<td>
-{b.phone||"—"}
-</td>
-
-</tr>
-
-))}
-
-</tbody>
-
-</table>
-
-</TableSection>
-
-)}
-
-</PageSection>
-
-</div>
-
-)
-
+    </div>
+  )
 }

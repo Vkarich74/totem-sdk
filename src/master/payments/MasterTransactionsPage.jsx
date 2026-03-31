@@ -1,33 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
+import { useMaster } from "../MasterContext"
 
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
 import EmptyState from "../../cabinet/EmptyState"
 
 const API_BASE = import.meta.env.VITE_API_BASE
-
-function getMasterSlug() {
-  if (window.MASTER_SLUG) {
-    return window.MASTER_SLUG
-  }
-
-  const hash = window.location.hash || ""
-  const hashPath = hash.startsWith("#") ? hash.slice(1) : hash
-  const cleanHashPath = hashPath.startsWith("/") ? hashPath : `/${hashPath}`
-  const hashParts = cleanHashPath.split("/").filter(Boolean)
-
-  if (hashParts.length >= 2 && hashParts[0] === "master") {
-    return hashParts[1]
-  }
-
-  const pathParts = window.location.pathname.split("/").filter(Boolean)
-
-  if (pathParts.length >= 2 && pathParts[0] === "master") {
-    return pathParts[1]
-  }
-
-  return null
-}
 
 function money(value) {
   const n = Number(value) || 0
@@ -88,6 +66,9 @@ function getTypeLabel(value) {
 }
 
 export default function MasterTransactionsPage() {
+  const { master, slug: contextSlug } = useMaster() || {}
+  const masterSlug = master?.slug || contextSlug || null
+
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -100,9 +81,7 @@ export default function MasterTransactionsPage() {
         setLoading(true)
         setError(null)
 
-        const slug = getMasterSlug()
-
-        if (!slug) {
+        if (!masterSlug) {
           console.error("MASTER_SLUG_NOT_FOUND")
 
           if (!cancelled) {
@@ -113,7 +92,7 @@ export default function MasterTransactionsPage() {
           return
         }
 
-        const res = await fetch(`${API_BASE}/internal/masters/${slug}/ledger`)
+        const res = await fetch(`${API_BASE}/internal/masters/${masterSlug}/ledger`)
 
         if (!res.ok) {
           throw new Error("LEDGER_FETCH_FAILED")
@@ -145,7 +124,7 @@ export default function MasterTransactionsPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [masterSlug])
 
   const summary = useMemo(() => {
     return transactions.reduce(
@@ -177,220 +156,228 @@ export default function MasterTransactionsPage() {
   }, [transactions])
 
   return (
-    <PageSection title="Транзакции">
-      {loading && <div>Загрузка...</div>}
+    <div style={{ padding: "20px" }}>
+      <PageSection title="Транзакции">
+        {loading && <div>Загрузка...</div>}
 
-      {!loading && error && (
-        <EmptyState text={error} />
-      )}
+        {!loading && error && (
+          <EmptyState
+            title="Ошибка загрузки"
+            message={error}
+          />
+        )}
 
-      {!loading && !error && transactions.length === 0 && (
-        <EmptyState text="Транзакций пока нет" />
-      )}
+        {!loading && !error && transactions.length === 0 && (
+          <EmptyState
+            title="Транзакций пока нет"
+            message="Финансовые операции появятся здесь"
+          />
+        )}
 
-      {!loading && !error && transactions.length > 0 && (
-        <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "12px",
-              marginBottom: "16px"
-            }}
-          >
+        {!loading && !error && transactions.length > 0 && (
+          <>
             <div
               style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                background: "#ffffff",
-                padding: "14px"
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "12px",
+                marginBottom: "16px"
               }}
             >
-              <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
-                Всего записей
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  padding: "14px"
+                }}
+              >
+                <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
+                  Всего операций
+                </div>
+                <div style={{ fontSize: "24px", fontWeight: 700 }}>
+                  {transactions.length}
+                </div>
               </div>
-              <div style={{ fontSize: "24px", fontWeight: 700 }}>
-                {transactions.length}
+
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  padding: "14px"
+                }}
+              >
+                <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
+                  Пополнения
+                </div>
+                <div style={{ fontSize: "24px", fontWeight: 700 }}>
+                  {money(summary.creditAmount)}
+                </div>
+                <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                  {summary.creditCount} шт.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  padding: "14px"
+                }}
+              >
+                <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
+                  Списания
+                </div>
+                <div style={{ fontSize: "24px", fontWeight: 700 }}>
+                  {money(summary.debitAmount)}
+                </div>
+                <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                  {summary.debitCount} шт.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  background: "#ffffff",
+                  padding: "14px"
+                }}
+              >
+                <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
+                  Общий оборот
+                </div>
+                <div style={{ fontSize: "24px", fontWeight: 700 }}>
+                  {money(summary.total)}
+                </div>
               </div>
             </div>
 
-            <div
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                background: "#ffffff",
-                padding: "14px"
-              }}
-            >
-              <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
-                Пополнения
-              </div>
-              <div style={{ fontSize: "24px", fontWeight: 700 }}>
-                {money(summary.creditAmount)}
-              </div>
-              <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-                {summary.creditCount} шт.
-              </div>
-            </div>
+            <TableSection>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th
+                      align="left"
+                      style={{
+                        padding: "12px 10px",
+                        borderBottom: "1px solid #e5e7eb",
+                        fontSize: "12px",
+                        color: "#6b7280"
+                      }}
+                    >
+                      Дата
+                    </th>
+                    <th
+                      align="left"
+                      style={{
+                        padding: "12px 10px",
+                        borderBottom: "1px solid #e5e7eb",
+                        fontSize: "12px",
+                        color: "#6b7280"
+                      }}
+                    >
+                      Тип
+                    </th>
+                    <th
+                      align="left"
+                      style={{
+                        padding: "12px 10px",
+                        borderBottom: "1px solid #e5e7eb",
+                        fontSize: "12px",
+                        color: "#6b7280"
+                      }}
+                    >
+                      Reference ID
+                    </th>
+                    <th
+                      align="left"
+                      style={{
+                        padding: "12px 10px",
+                        borderBottom: "1px solid #e5e7eb",
+                        fontSize: "12px",
+                        color: "#6b7280"
+                      }}
+                    >
+                      Направление
+                    </th>
+                    <th
+                      align="left"
+                      style={{
+                        padding: "12px 10px",
+                        borderBottom: "1px solid #e5e7eb",
+                        fontSize: "12px",
+                        color: "#6b7280"
+                      }}
+                    >
+                      Сумма
+                    </th>
+                  </tr>
+                </thead>
 
-            <div
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                background: "#ffffff",
-                padding: "14px"
-              }}
-            >
-              <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
-                Списания
-              </div>
-              <div style={{ fontSize: "24px", fontWeight: 700 }}>
-                {money(summary.debitAmount)}
-              </div>
-              <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-                {summary.debitCount} шт.
-              </div>
-            </div>
+                <tbody>
+                  {transactions.map((t, index) => {
+                    const isLast = index === transactions.length - 1
 
-            <div
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                background: "#ffffff",
-                padding: "14px"
-              }}
-            >
-              <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
-                Общий оборот
-              </div>
-              <div style={{ fontSize: "24px", fontWeight: 700 }}>
-                {money(summary.total)}
-              </div>
-            </div>
-          </div>
+                    return (
+                      <tr key={t.id || `${t.reference_id || "tx"}-${index}`}>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                          }}
+                        >
+                          {formatDate(t.created_at)}
+                        </td>
 
-          <TableSection>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th
-                    align="left"
-                    style={{
-                      padding: "12px 10px",
-                      borderBottom: "1px solid #e5e7eb",
-                      fontSize: "12px",
-                      color: "#6b7280"
-                    }}
-                  >
-                    Дата
-                  </th>
-                  <th
-                    align="left"
-                    style={{
-                      padding: "12px 10px",
-                      borderBottom: "1px solid #e5e7eb",
-                      fontSize: "12px",
-                      color: "#6b7280"
-                    }}
-                  >
-                    Тип
-                  </th>
-                  <th
-                    align="left"
-                    style={{
-                      padding: "12px 10px",
-                      borderBottom: "1px solid #e5e7eb",
-                      fontSize: "12px",
-                      color: "#6b7280"
-                    }}
-                  >
-                    Reference ID
-                  </th>
-                  <th
-                    align="left"
-                    style={{
-                      padding: "12px 10px",
-                      borderBottom: "1px solid #e5e7eb",
-                      fontSize: "12px",
-                      color: "#6b7280"
-                    }}
-                  >
-                    Направление
-                  </th>
-                  <th
-                    align="left"
-                    style={{
-                      padding: "12px 10px",
-                      borderBottom: "1px solid #e5e7eb",
-                      fontSize: "12px",
-                      color: "#6b7280"
-                    }}
-                  >
-                    Сумма
-                  </th>
-                </tr>
-              </thead>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                          }}
+                        >
+                          {getTypeLabel(t.reference_type)}
+                        </td>
 
-              <tbody>
-                {transactions.map((t, index) => {
-                  const isLast = index === transactions.length - 1
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7",
+                            wordBreak: "break-word"
+                          }}
+                        >
+                          {t.reference_id || "—"}
+                        </td>
 
-                  return (
-                    <tr key={t.id || `${t.reference_id || "tx"}-${index}`}>
-                      <td
-                        style={{
-                          padding: "12px 10px",
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7"
-                        }}
-                      >
-                        {formatDate(t.created_at)}
-                      </td>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7"
+                          }}
+                        >
+                          {getDirectionLabel(t.direction)}
+                        </td>
 
-                      <td
-                        style={{
-                          padding: "12px 10px",
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7"
-                        }}
-                      >
-                        {getTypeLabel(t.reference_type)}
-                      </td>
-
-                      <td
-                        style={{
-                          padding: "12px 10px",
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7",
-                          wordBreak: "break-word"
-                        }}
-                      >
-                        {t.reference_id || "—"}
-                      </td>
-
-                      <td
-                        style={{
-                          padding: "12px 10px",
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7"
-                        }}
-                      >
-                        {getDirectionLabel(t.direction)}
-                      </td>
-
-                      <td
-                        style={{
-                          padding: "12px 10px",
-                          borderBottom: isLast ? "none" : "1px solid #eef2f7",
-                          fontWeight: 600
-                        }}
-                      >
-                        {money(t.amount)}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </TableSection>
-        </>
-      )}
-    </PageSection>
+                        <td
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: isLast ? "none" : "1px solid #eef2f7",
+                            fontWeight: 600
+                          }}
+                        >
+                          {money(t.amount)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </TableSection>
+          </>
+        )}
+      </PageSection>
+    </div>
   )
 }

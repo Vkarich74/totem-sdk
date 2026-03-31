@@ -1,212 +1,291 @@
 import { useMemo, useEffect, useState } from "react"
 import { useMaster } from "./MasterContext"
 
-const API = "https://api.totemv.com"
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  window.API_BASE ||
+  "https://api.totemv.com"
 
 function normalizeStatus(s){
+  if(!s) return "reserved"
 
-if(!s) return "reserved"
+  s=String(s).toLowerCase()
 
-s=s.toLowerCase()
+  if(s==="canceled") return "cancelled"
 
-if(s==="canceled") return "cancelled"
-
-return s
-
+  return s
 }
 
 function statusColor(s){
+  s=normalizeStatus(s)
 
-s=normalizeStatus(s)
+  if(s==="reserved") return "#ffe082"
+  if(s==="confirmed") return "#90caf9"
+  if(s==="completed") return "#a5d6a7"
+  if(s==="cancelled") return "#ef9a9a"
 
-if(s==="reserved") return "#ffe082"
-if(s==="confirmed") return "#90caf9"
-if(s==="completed") return "#a5d6a7"
-if(s==="cancelled") return "#ef9a9a"
-
-return "#eee"
-
+  return "#eee"
 }
 
 function money(n){
-
-return new Intl.NumberFormat("ru-RU").format(n||0)+" сом"
-
+  return new Intl.NumberFormat("ru-RU").format(Number(n)||0)+" сом"
 }
 
 function time(iso){
+  if(!iso) return "—"
 
-const d=new Date(iso)
+  const d=new Date(iso)
 
-return d.toLocaleDateString("ru-RU")+" "+
-d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
+  if(Number.isNaN(d.getTime())) return "—"
 
+  return d.toLocaleDateString("ru-RU")+" "+
+  d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
 }
 
 function Card({title,value}){
+  return(
+    <div style={{
+      border:"1px solid #eee",
+      borderRadius:"10px",
+      padding:"12px",
+      background:"#fff"
+    }}>
+      <div style={{color:"#666"}}>{title}</div>
 
-return(
-
-<div style={{
-border:"1px solid #eee",
-borderRadius:"10px",
-padding:"12px",
-background:"#fff"
-}}>
-
-<div style={{color:"#666"}}>{title}</div>
-
-<div style={{
-fontSize:"20px",
-fontWeight:"bold",
-marginTop:"6px"
-}}>
-
-{value}
-
-</div>
-
-</div>
-
-)
-
+      <div style={{
+        fontSize:"20px",
+        fontWeight:"bold",
+        marginTop:"6px"
+      }}>
+        {value}
+      </div>
+    </div>
+  )
 }
 
 export default function MasterMoneyPage(){
 
-const {metrics,bookings,master}=useMaster()
+  const {
+    metrics,
+    bookings=[],
+    master,
+    slug: contextSlug,
+    loading,
+    error,
+    empty
+  } = useMaster()
 
-const [wallet,setWallet]=useState(null)
+  const [wallet,setWallet]=useState(null)
+  const [walletLoading,setWalletLoading]=useState(true)
+  const [walletError,setWalletError]=useState("")
 
-const masterName=master?.name
-const slug=master?.slug
+  const masterName=master?.name || ""
+  const slug=master?.slug || contextSlug || null
 
-useEffect(()=>{
+  useEffect(()=>{
 
-if(!slug) return
+    let cancelled=false
 
-async function loadWallet(){
+    async function loadWallet(){
 
-try{
+      if(!slug){
+        if(!cancelled){
+          setWallet(null)
+          setWalletLoading(false)
+          setWalletError("Не найден master slug")
+        }
+        return
+      }
 
-const r=await fetch(API+"/internal/masters/"+slug+"/wallet-balance")
-const j=await r.json()
+      try{
+        setWalletLoading(true)
+        setWalletError("")
 
-if(j?.ok){
-setWallet(j.balance||0)
-}
+        const r=await fetch(API_BASE+"/internal/masters/"+encodeURIComponent(slug)+"/wallet-balance")
 
-}catch(e){
-console.error("WALLET_LOAD_FAILED",e)
-}
+        if(!r.ok){
+          throw new Error("WALLET_FETCH_FAILED")
+        }
 
-}
+        const j=await r.json()
 
-loadWallet()
+        if(cancelled){
+          return
+        }
 
-},[slug])
+        if(j?.ok || typeof j?.balance !== "undefined"){
+          setWallet(Number(j.balance)||0)
+        }else{
+          setWallet(null)
+          setWalletError("Баланс недоступен")
+        }
 
-const recent=useMemo(()=>{
+      }catch(e){
+        console.error("WALLET_LOAD_FAILED",e)
 
-if(!bookings)return[]
+        if(!cancelled){
+          setWallet(null)
+          setWalletError("Не удалось загрузить баланс")
+        }
+      }finally{
+        if(!cancelled){
+          setWalletLoading(false)
+        }
+      }
 
-return bookings
-.filter(b=>b.master_name===masterName)
-.sort((a,b)=>new Date(b.start_at)-new Date(a.start_at))
-.slice(0,10)
+    }
 
-},[bookings,masterName])
+    loadWallet()
 
-if(!metrics)return <div>Загрузка...</div>
+    return()=>{
+      cancelled=true
+    }
 
-return(
+  },[slug])
 
-<div>
+  const recent=useMemo(()=>{
 
-<h3>Доход</h3>
+    if(!Array.isArray(bookings)) return []
 
-<div style={{
-display:"grid",
-gridTemplateColumns:"1fr 1fr",
-gap:"10px",
-marginBottom:"16px"
-}}>
+    return [...bookings]
+      .sort((a,b)=>new Date(b.start_at)-new Date(a.start_at))
+      .slice(0,10)
 
-<Card
-title="Баланс"
-value={wallet===null ? "..." : money(wallet)}
-/>
+  },[bookings])
 
-<Card
-title="Записи сегодня"
-value={metrics.bookings_today||0}
-/>
+  if(loading){
+    return <div>Загрузка...</div>
+  }
 
-<Card
-title="Записи неделя"
-value={metrics.bookings_week||0}
-/>
+  if(error){
+    return (
+      <div style={{
+        border:"1px solid #f5c2c7",
+        background:"#fff5f5",
+        color:"#b42318",
+        borderRadius:"10px",
+        padding:"12px"
+      }}>
+        Ошибка загрузки данных
+      </div>
+    )
+  }
 
-<Card
-title="Клиенты"
-value={metrics.clients_total||0}
-/>
+  if(!metrics && empty){
+    return (
+      <div style={{
+        border:"1px solid #eee",
+        borderRadius:"10px",
+        padding:"12px",
+        background:"#fff"
+      }}>
+        Нет данных
+      </div>
+    )
+  }
 
-</div>
+  return(
 
-<div style={{
-border:"1px solid #eee",
-borderRadius:"10px",
-padding:"12px"
-}}>
+    <div>
 
-<b>Последние записи</b>
+      <h3>Доход</h3>
 
-<div style={{marginTop:"10px"}}>
+      <div style={{
+        display:"grid",
+        gridTemplateColumns:"1fr 1fr",
+        gap:"10px",
+        marginBottom:"16px"
+      }}>
 
-{recent.map(b=>(
+        <Card
+          title="Баланс"
+          value={
+            walletLoading
+              ? "..."
+              : walletError
+                ? "—"
+                : money(wallet)
+          }
+        />
 
-<div
-key={b.id}
-style={{
-border:"1px solid #eee",
-borderRadius:"8px",
-padding:"8px",
-marginBottom:"6px",
-background:statusColor(b.status)
-}}
->
+        <Card
+          title="Записи сегодня"
+          value={metrics?.bookings_today||0}
+        />
 
-<div>
+        <Card
+          title="Записи неделя"
+          value={metrics?.bookings_week||0}
+        />
 
-<b>#{b.id}</b>
-{" "}
-{time(b.start_at)}
+        <Card
+          title="Клиенты"
+          value={metrics?.clients_total||0}
+        />
 
-</div>
+      </div>
 
-<div>
+      {walletError && (
+        <div style={{
+          color:"#b42318",
+          fontSize:"13px",
+          marginBottom:"12px"
+        }}>
+          {walletError}
+        </div>
+      )}
 
-{b.client_name||"клиент"}
-{" "}
-{b.phone||""}
+      <div style={{
+        border:"1px solid #eee",
+        borderRadius:"10px",
+        padding:"12px"
+      }}>
 
-</div>
+        <b>Последние записи{masterName ? ` — ${masterName}` : ""}</b>
 
-<div style={{fontSize:"12px"}}>
-{normalizeStatus(b.status)}
-</div>
+        <div style={{marginTop:"10px"}}>
 
-</div>
+          {recent.length===0 ? (
+            <div style={{color:"#666"}}>Записей пока нет</div>
+          ) : recent.map(b=>(
 
-))}
+            <div
+              key={b.id}
+              style={{
+                border:"1px solid #eee",
+                borderRadius:"8px",
+                padding:"8px",
+                marginBottom:"6px",
+                background:statusColor(b.status)
+              }}
+            >
 
-</div>
+              <div>
+                <b>#{b.id}</b>
+                {" "}
+                {time(b.start_at)}
+              </div>
 
-</div>
+              <div>
+                {b.client_name||"клиент"}
+                {" "}
+                {b.phone||""}
+              </div>
 
-</div>
+              <div style={{fontSize:"12px"}}>
+                {normalizeStatus(b.status)}
+              </div>
 
-)
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+    </div>
+
+  )
 
 }
