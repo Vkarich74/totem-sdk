@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getMasterSlug } from "./utils/slug";
+import { useMaster } from "./MasterContext";
 import api from "./api/internal";
 
 function generateSlots() {
@@ -38,7 +38,8 @@ function getTimeKey(dateString) {
 
 export default function SchedulePage() {
 
-  const slug = getMasterSlug();
+  const { master, slug: contextSlug } = useMaster() || {};
+  const slug = master?.slug || contextSlug || null;
 
   const [bookings, setBookings] = useState([]);
   const [slots] = useState(generateSlots());
@@ -48,13 +49,19 @@ export default function SchedulePage() {
 
   useEffect(() => {
     loadBookings();
-  }, []);
+  }, [slug]);
 
   async function loadBookings() {
 
     try {
 
       setLoading(true);
+
+      if (!slug) {
+        console.error("MASTER_SLUG_NOT_FOUND");
+        setBookings([]);
+        return;
+      }
 
       const res = await api.get(`/internal/masters/${slug}/bookings`);
 

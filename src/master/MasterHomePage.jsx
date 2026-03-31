@@ -1,5 +1,8 @@
+import { useMaster } from "./MasterContext"
+
 export default function MasterHomePage() {
-  const slug = window.MASTER_SLUG;
+
+  const { slug } = useMaster()
 
   return (
     <div style={{padding:40,fontFamily:"Arial"}}>
@@ -7,7 +10,7 @@ export default function MasterHomePage() {
       <p>Публичная страница мастера работает.</p>
       <p>MASTER SLUG: <b>{slug}</b></p>
 
-      <a href={`#/master/dashboard`}>
+      <a href={`#/master/${slug}/dashboard`}>
         Перейти в кабинет мастера
       </a>
     </div>

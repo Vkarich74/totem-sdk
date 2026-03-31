@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useMaster } from "../MasterContext";
 
 import {
   fetchActiveContract,
@@ -13,39 +14,6 @@ const API_BASE =
   import.meta.env.VITE_API_BASE ||
   window.API_BASE ||
   "https://totem-p0-api-production.up.railway.app";
-
-function getHashPath() {
-  const hash = window.location.hash || "";
-  if (!hash) {
-    return "";
-  }
-
-  const normalized = hash.startsWith("#") ? hash.slice(1) : hash;
-  return normalized.startsWith("/") ? normalized : `/${normalized}`;
-}
-
-function getMasterSlug() {
-  if (window.MASTER_SLUG) {
-    return window.MASTER_SLUG;
-  }
-
-  const hash = window.location.hash || "";
-  const hashPath = hash.startsWith("#") ? hash.slice(1) : hash;
-  const cleanHashPath = hashPath.startsWith("/") ? hashPath : `/${hashPath}`;
-  const parts = cleanHashPath.split("/").filter(Boolean);
-
-  if (parts.length >= 2 && parts[0] === "master") {
-    return parts[1];
-  }
-
-  const pathParts = window.location.pathname.split("/").filter(Boolean);
-
-  if (pathParts.length >= 2 && pathParts[0] === "master") {
-    return pathParts[1];
-  }
-
-  return null;
-}
 
 function money(value) {
   const n = Number(value) || 0;
@@ -239,6 +207,9 @@ async function fetchJson(url, errorCode) {
 }
 
 export default function MasterFinancePage() {
+  const { master, slug: contextSlug } = useMaster() || {};
+  const masterId = master?.slug || contextSlug || null;
+
   const [activeContract, setActiveContract] = useState(null);
   const [history, setHistory] = useState([]);
   const [wallet, setWallet] = useState(null);
@@ -246,8 +217,6 @@ export default function MasterFinancePage() {
   const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const masterId = getMasterSlug();
 
   useEffect(() => {
     let cancelled = false;

@@ -16,28 +16,6 @@ const QUICK_TEMPLATES = [
   { name: "Мелирование", duration_min: 150, price: 0 }
 ]
 
-function getSlugFromHash() {
-  const hash = window.location.hash || ""
-  const clean = hash.replace(/^#\/?/, "")
-  const parts = clean.split("/").filter(Boolean)
-
-  if (parts[0] === "master") {
-    if (parts[1] && parts[1] !== "services") {
-      return parts[1]
-    }
-
-    const storedSlug =
-      window.localStorage.getItem("totem_master_slug") ||
-      window.sessionStorage.getItem("totem_master_slug")
-
-    if (storedSlug) {
-      return storedSlug
-    }
-  }
-
-  return "totem-demo-master"
-}
-
 function normalizeServicesResponse(payload) {
   if (Array.isArray(payload)) {
     return payload
@@ -86,7 +64,7 @@ export default function MasterServicesPage() {
   const { master, slug: contextSlug } = useMaster() || {}
 
   const slug = useMemo(() => {
-    return master?.slug || contextSlug || getSlugFromHash()
+    return master?.slug || contextSlug || null
   }, [master, contextSlug])
 
   const [services, setServices] = useState([])
@@ -108,13 +86,19 @@ export default function MasterServicesPage() {
     services.forEach((s) => {
       const key = s?.service_pk || s?.catalog_service_id || s?.name
       if (!key) return
-      // оставляем последнюю (новую)
       map.set(key, s)
     })
     return Array.from(map.values())
   }, [services])
 
   async function loadServices() {
+    if (!slug) {
+      setServices([])
+      setLoading(false)
+      setError("Не найден master slug")
+      return
+    }
+
     setLoading(true)
     setError("")
 
@@ -201,6 +185,12 @@ export default function MasterServicesPage() {
       return
     }
 
+    if (!slug) {
+      setError("Не найден master slug")
+      setSuccess("")
+      return
+    }
+
     setSaving(true)
     setError("")
     setSuccess("")
@@ -250,6 +240,12 @@ export default function MasterServicesPage() {
       return
     }
 
+    if (!slug) {
+      setError("Не найден master slug")
+      setSuccess("")
+      return
+    }
+
     setTogglingId(serviceId)
     setError("")
     setSuccess("")
@@ -273,6 +269,12 @@ export default function MasterServicesPage() {
 
     if (!serviceId) {
       setError("Не найден id услуги")
+      setSuccess("")
+      return
+    }
+
+    if (!slug) {
+      setError("Не найден master slug")
       setSuccess("")
       return
     }
