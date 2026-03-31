@@ -2,6 +2,8 @@ import { NavLink } from "react-router-dom"
 
 export default function MasterSidebar({ slug }) {
 
+  const base = `/master/${slug}`
+
   const menuStyle = ({ isActive }) => ({
     display: "block",
     padding: "6px 0",
@@ -44,11 +46,11 @@ export default function MasterSidebar({ slug }) {
 
       <nav>
 
-        <NavLink style={menuStyle} to="/master/dashboard">Главная</NavLink>
-        <NavLink style={menuStyle} to="/master/bookings">Записи</NavLink>
-        <NavLink style={menuStyle} to="/master/clients">Клиенты</NavLink>
-        <NavLink style={menuStyle} to="/master/schedule">Расписание</NavLink>
-        <NavLink style={menuStyle} to="/master/services">Услуги</NavLink>
+        <NavLink style={menuStyle} to={`${base}/dashboard`}>Главная</NavLink>
+        <NavLink style={menuStyle} to={`${base}/bookings`}>Записи</NavLink>
+        <NavLink style={menuStyle} to={`${base}/clients`}>Клиенты</NavLink>
+        <NavLink style={menuStyle} to={`${base}/schedule`}>Расписание</NavLink>
+        <NavLink style={menuStyle} to={`${base}/services`}>Услуги</NavLink>
 
       </nav>
 
@@ -58,11 +60,11 @@ export default function MasterSidebar({ slug }) {
 
       <nav>
 
-        <NavLink style={menuStyle} to="/master/finance">Финансы</NavLink>
-        <NavLink style={menuStyle} to="/master/money">Доход</NavLink>
-        <NavLink style={menuStyle} to="/master/transactions">Транзакции</NavLink>
-        <NavLink style={menuStyle} to="/master/settlements">Сеты</NavLink>
-        <NavLink style={menuStyle} to="/master/payouts">Выплаты</NavLink>
+        <NavLink style={menuStyle} to={`${base}/finance`}>Финансы</NavLink>
+        <NavLink style={menuStyle} to={`${base}/money`}>Доход</NavLink>
+        <NavLink style={menuStyle} to={`${base}/transactions`}>Транзакции</NavLink>
+        <NavLink style={menuStyle} to={`${base}/settlements`}>Сеты</NavLink>
+        <NavLink style={menuStyle} to={`${base}/payouts`}>Выплаты</NavLink>
 
       </nav>
 
@@ -72,7 +74,7 @@ export default function MasterSidebar({ slug }) {
 
       <nav>
 
-        <NavLink style={menuStyle} to="/master/settings">Настройки</NavLink>
+        <NavLink style={menuStyle} to={`${base}/settings`}>Настройки</NavLink>
 
       </nav>
 
