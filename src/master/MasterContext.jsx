@@ -1,79 +1,78 @@
 import { createContext, useContext, useEffect, useState } from "react"
+import { useParams } from "react-router-dom"
 import { getMasterMetrics, getMasterBookings, getMasterClients } from "../api/master"
 
-const C = createContext()
+const C = createContext(null)
 
 export function MasterProvider({ children }) {
 
-const slug = window.MASTER_SLUG
+  const { slug } = useParams()
 
-const [metrics, setMetrics] = useState(null)
-const [bookings, setBookings] = useState([])
-const [clients, setClients] = useState([])
-const [loading, setLoading] = useState(true)
+  const [metrics, setMetrics] = useState(null)
+  const [bookings, setBookings] = useState([])
+  const [clients, setClients] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-async function load() {
+  async function load(currentSlug) {
 
-setLoading(true)
+    if (!currentSlug) {
+      console.error("MASTER CONTEXT ERROR: SLUG_MISSING")
+      setError("SLUG_MISSING")
+      setLoading(false)
+      return
+    }
 
-try {
+    setLoading(true)
+    setError(null)
 
-const m = await getMasterMetrics(slug)
+    try {
 
-setMetrics(
-m?.metrics
-|| m
-|| {}
-)
+      const [m, b, c] = await Promise.all([
+        getMasterMetrics(currentSlug),
+        getMasterBookings(currentSlug),
+        getMasterClients(currentSlug)
+      ])
 
-const b = await getMasterBookings(slug)
+      setMetrics(m?.metrics || m || {})
+      setBookings(Array.isArray(b) ? b : b?.bookings || [])
+      setClients(Array.isArray(c) ? c : c?.clients || [])
 
-setBookings(
-Array.isArray(b)
-? b
-: b?.bookings || []
-)
+    } catch (e) {
 
-const c = await getMasterClients(slug)
+      console.error("MASTER CONTEXT ERROR", e)
 
-setClients(
-Array.isArray(c)
-? c
-: c?.clients || []
-)
+      setMetrics(null)
+      setBookings([])
+      setClients([])
+      setError(e?.message || "MASTER_CONTEXT_LOAD_FAILED")
 
-} catch (e) {
+    } finally {
+      setLoading(false)
+    }
+  }
 
-console.error("MASTER CONTEXT ERROR", e)
+  useEffect(() => {
+    load(slug)
+  }, [slug])
 
-}
-
-setLoading(false)
-
-}
-
-useEffect(() => {
-load()
-}, [])
-
-return (
-
-<C.Provider value={{
-metrics,
-bookings,
-clients,
-loading,
-reload: load
-}}>
-
-{children}
-
-</C.Provider>
-
-)
-
+  return (
+    <C.Provider
+      value={{
+        slug,
+        metrics,
+        bookings,
+        clients,
+        loading,
+        error,
+        reload: () => load(slug)
+      }}
+    >
+      {children}
+    </C.Provider>
+  )
 }
 
 export function useMaster() {
-return useContext(C)
+  return useContext(C)
 }

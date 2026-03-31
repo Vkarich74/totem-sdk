@@ -14,32 +14,34 @@ const API_BASE =
   window.API_BASE ||
   "https://totem-p0-api-production.up.railway.app";
 
+function getHashPath() {
+  const hash = window.location.hash || "";
+  if (!hash) {
+    return "";
+  }
+
+  const normalized = hash.startsWith("#") ? hash.slice(1) : hash;
+  return normalized.startsWith("/") ? normalized : `/${normalized}`;
+}
+
 function getMasterSlug() {
   if (window.MASTER_SLUG) {
     return window.MASTER_SLUG;
   }
 
-  if (window.location.hash) {
-    const hash = window.location.hash.replace(/^#/, "");
-    const parts = hash.split("/").filter(Boolean);
-
-    if (parts.length >= 2 && parts[0] === "master") {
-      return parts[1];
-    }
-
-    if (parts.length >= 2 && parts[0] === "salon") {
-      return parts[1];
-    }
-  }
-
-  const parts = window.location.pathname.split("/").filter(Boolean);
+  const hash = window.location.hash || "";
+  const hashPath = hash.startsWith("#") ? hash.slice(1) : hash;
+  const cleanHashPath = hashPath.startsWith("/") ? hashPath : `/${hashPath}`;
+  const parts = cleanHashPath.split("/").filter(Boolean);
 
   if (parts.length >= 2 && parts[0] === "master") {
     return parts[1];
   }
 
-  if (parts.length >= 2 && parts[0] === "salon") {
-    return parts[1];
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+
+  if (pathParts.length >= 2 && pathParts[0] === "master") {
+    return pathParts[1];
   }
 
   return null;
@@ -106,6 +108,136 @@ function formatAccessFlag(value) {
   return value ? "Разрешено" : "Ограничено";
 }
 
+function normalizeContractResponse(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  if (payload.contract) {
+    return payload.contract;
+  }
+
+  if (payload.active_contract) {
+    return payload.active_contract;
+  }
+
+  if (payload.ok && payload.data) {
+    return payload.data;
+  }
+
+  return payload;
+}
+
+function normalizeHistoryResponse(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.history)) {
+    return payload.history;
+  }
+
+  if (Array.isArray(payload?.contracts)) {
+    return payload.contracts;
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+
+  return [];
+}
+
+function normalizeWalletResponse(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  if (payload.wallet) {
+    return payload.wallet;
+  }
+
+  if (payload.data?.wallet) {
+    return payload.data.wallet;
+  }
+
+  if (typeof payload.balance !== "undefined") {
+    return payload;
+  }
+
+  if (payload.data && typeof payload.data.balance !== "undefined") {
+    return payload.data;
+  }
+
+  return payload;
+}
+
+function normalizeSettlementsResponse(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.settlements)) {
+    return payload.settlements;
+  }
+
+  if (Array.isArray(payload?.periods)) {
+    return payload.periods;
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+
+  if (Array.isArray(payload?.data?.settlements)) {
+    return payload.data.settlements;
+  }
+
+  if (Array.isArray(payload?.data?.periods)) {
+    return payload.data.periods;
+  }
+
+  return [];
+}
+
+function normalizeLedgerResponse(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.ledger)) {
+    return payload.ledger;
+  }
+
+  if (Array.isArray(payload?.entries)) {
+    return payload.entries;
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+
+  if (Array.isArray(payload?.data?.ledger)) {
+    return payload.data.ledger;
+  }
+
+  if (Array.isArray(payload?.data?.entries)) {
+    return payload.data.entries;
+  }
+
+  return [];
+}
+
+async function fetchJson(url, errorCode) {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(errorCode);
+  }
+
+  return response.json();
+}
+
 export default function MasterFinancePage() {
   const [activeContract, setActiveContract] = useState(null);
   const [history, setHistory] = useState([]);
@@ -149,24 +281,9 @@ export default function MasterFinancePage() {
         ] = await Promise.allSettled([
           fetchActiveContract(masterId),
           fetchContractHistory(masterId),
-          fetch(`${API_BASE}/internal/masters/${masterId}/wallet-balance`).then(async (r) => {
-            if (!r.ok) {
-              throw new Error("WALLET_FETCH_FAILED");
-            }
-            return r.json();
-          }),
-          fetch(`${API_BASE}/internal/masters/${masterId}/settlements`).then(async (r) => {
-            if (!r.ok) {
-              throw new Error("SETTLEMENTS_FETCH_FAILED");
-            }
-            return r.json();
-          }),
-          fetch(`${API_BASE}/internal/masters/${masterId}/ledger`).then(async (r) => {
-            if (!r.ok) {
-              throw new Error("LEDGER_FETCH_FAILED");
-            }
-            return r.json();
-          })
+          fetchJson(`${API_BASE}/internal/masters/${masterId}/wallet-balance`, "WALLET_FETCH_FAILED"),
+          fetchJson(`${API_BASE}/internal/masters/${masterId}/settlements`, "SETTLEMENTS_FETCH_FAILED"),
+          fetchJson(`${API_BASE}/internal/masters/${masterId}/ledger`, "LEDGER_FETCH_FAILED")
         ]);
 
         if (cancelled) {
@@ -174,43 +291,35 @@ export default function MasterFinancePage() {
         }
 
         if (activeResult.status === "fulfilled") {
-          setActiveContract(activeResult.value || null);
+          setActiveContract(normalizeContractResponse(activeResult.value));
         } else {
           console.error("Active contract load error:", activeResult.reason);
           setActiveContract(null);
         }
 
         if (historyResult.status === "fulfilled") {
-          setHistory(Array.isArray(historyResult.value) ? historyResult.value : []);
+          setHistory(normalizeHistoryResponse(historyResult.value));
         } else {
           console.error("Contract history load error:", historyResult.reason);
           setHistory([]);
         }
 
         if (walletResult.status === "fulfilled") {
-          setWallet(walletResult.value || null);
+          setWallet(normalizeWalletResponse(walletResult.value));
         } else {
           console.error("Wallet load error:", walletResult.reason);
           setWallet(null);
         }
 
         if (settlementsResult.status === "fulfilled") {
-          setSettlements(
-            Array.isArray(settlementsResult.value?.periods)
-              ? settlementsResult.value.periods
-              : []
-          );
+          setSettlements(normalizeSettlementsResponse(settlementsResult.value));
         } else {
           console.error("Settlements load error:", settlementsResult.reason);
           setSettlements([]);
         }
 
         if (ledgerResult.status === "fulfilled") {
-          setLedger(
-            Array.isArray(ledgerResult.value?.ledger)
-              ? ledgerResult.value.ledger
-              : []
-          );
+          setLedger(normalizeLedgerResponse(ledgerResult.value));
         } else {
           console.error("Ledger load error:", ledgerResult.reason);
           setLedger([]);
@@ -302,7 +411,7 @@ export default function MasterFinancePage() {
     return [
       {
         label: "Баланс кошелька",
-        value: wallet?.ok ? money(wallet.balance) : "—"
+        value: wallet?.ok || typeof wallet?.balance !== "undefined" ? money(wallet.balance) : "—"
       },
       {
         label: "Реальный доход",
@@ -330,7 +439,7 @@ export default function MasterFinancePage() {
       },
       {
         label: "Contract ID",
-        value: activeContract?.contract_id || "—"
+        value: activeContract?.contract_id || activeContract?.id || "—"
       },
       {
         label: "Billing state",
@@ -426,10 +535,10 @@ export default function MasterFinancePage() {
           >
             <div style={styles.infoGrid}>
               <InfoRow label="Активный контракт" value={contractIsActive ? "Да" : "Нет"} />
-              <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
-              <InfoRow label="Model Type" value={activeContract?.model_type || "—"} />
-              <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
-              <InfoRow label="Wallet Balance" value={wallet?.ok ? money(wallet.balance) : "—"} />
+              <InfoRow label="Contract ID" value={activeContract?.contract_id || activeContract?.id || "—"} />
+              <InfoRow label="Model Type" value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
+              <InfoRow label="Start Date" value={activeContract?.start_date || activeContract?.current_period_start || "—"} />
+              <InfoRow label="Wallet Balance" value={wallet?.ok || typeof wallet?.balance !== "undefined" ? money(wallet.balance) : "—"} />
               <InfoRow label="Real Income" value={money(realIncomeTotal)} />
               <InfoRow label="Current Settlements" value={money(settlementTotal)} />
               <InfoRow label="Payout Total" value={money(payoutTotal)} />
@@ -444,8 +553,8 @@ export default function MasterFinancePage() {
             subtitle="Баланс и кошелёк мастера"
           >
             <div style={styles.infoGrid}>
-              <InfoRow label="Wallet ID" value={wallet?.wallet_id || "—"} />
-              <InfoRow label="Баланс" value={wallet?.ok ? money(wallet.balance) : "—"} />
+              <InfoRow label="Wallet ID" value={wallet?.wallet_id || wallet?.id || "—"} />
+              <InfoRow label="Баланс" value={wallet?.ok || typeof wallet?.balance !== "undefined" ? money(wallet.balance) : "—"} />
               <InfoRow label="Валюта" value={wallet?.currency || "—"} />
             </div>
           </SectionCard>
@@ -470,9 +579,9 @@ export default function MasterFinancePage() {
 
               {contractIsActive ? (
                 <div style={styles.infoGrid}>
-                  <InfoRow label="Contract ID" value={activeContract?.contract_id || "—"} />
-                  <InfoRow label="Model" value={activeContract?.model_type || "—"} />
-                  <InfoRow label="Start Date" value={activeContract?.start_date || "—"} />
+                  <InfoRow label="Contract ID" value={activeContract?.contract_id || activeContract?.id || "—"} />
+                  <InfoRow label="Model" value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
+                  <InfoRow label="Start Date" value={activeContract?.start_date || activeContract?.current_period_start || "—"} />
                 </div>
               ) : (
                 <p style={styles.emptyText}>Активный контракт отсутствует</p>
@@ -499,14 +608,14 @@ export default function MasterFinancePage() {
                         const isLast = index === history.length - 1;
 
                         return (
-                          <tr key={item.contract_id || index}>
+                          <tr key={item.contract_id || item.id || index}>
                             <td
                               style={{
                                 ...styles.td,
                                 ...(isLast ? styles.lastRowCell : null)
                               }}
                             >
-                              {item.contract_id || "—"}
+                              {item.contract_id || item.id || "—"}
                             </td>
                             <td
                               style={{
@@ -522,7 +631,7 @@ export default function MasterFinancePage() {
                                 ...(isLast ? styles.lastRowCell : null)
                               }}
                             >
-                              {item.start_date || "—"}
+                              {item.start_date || item.current_period_start || "—"}
                             </td>
                           </tr>
                         );
@@ -572,7 +681,7 @@ export default function MasterFinancePage() {
                               ...(isLast ? styles.lastRowCell : null)
                             }}
                           >
-                            {formatDate(item.start_date)}
+                            {formatDate(item.start_date || item.period_start)}
                           </td>
                           <td
                             style={{
@@ -580,7 +689,7 @@ export default function MasterFinancePage() {
                               ...(isLast ? styles.lastRowCell : null)
                             }}
                           >
-                            {formatDate(item.end_date)}
+                            {formatDate(item.end_date || item.period_end)}
                           </td>
                           <td
                             style={{

@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import ErrorBoundary from "./core/ErrorBoundary";
 
 import PublicSalonPage from "./public/PublicSalonPage";
@@ -47,15 +47,73 @@ import MasterPayoutsPage from "./master/payments/MasterPayoutsPage";
 /* NEW MASTER FINANCE CONTROL PAGE */
 import MasterFinancePage from "./master/payments/MasterFinancePage";
 
-function getSlugFromPath() {
+const SALON_STATIC_SEGMENTS = new Set([
+  "dashboard",
+  "calendar",
+  "masters",
+  "clients",
+  "bookings",
+  "services",
+  "money",
+  "finance",
+  "contracts",
+  "salon-money",
+  "transactions",
+  "settlements",
+  "payouts",
+  "settings"
+]);
+
+const MASTER_STATIC_SEGMENTS = new Set([
+  "dashboard",
+  "bookings",
+  "clients",
+  "schedule",
+  "services",
+  "finance",
+  "money",
+  "transactions",
+  "settlements",
+  "payouts",
+  "settings"
+]);
+
+function getHashParts() {
   const hash = window.location.hash || "";
   const clean = hash.replace(/^#\/?/, "");
-  const parts = clean.split("/");
+  return clean.split("/").filter(Boolean);
+}
 
-  const globalSalonSlug = window.SALON_SLUG || null;
-  const globalMasterSlug = window.MASTER_SLUG || null;
+function getStoredSalonSlug() {
+  return (
+    window.SALON_SLUG ||
+    window.localStorage.getItem("totem_salon_slug") ||
+    window.sessionStorage.getItem("totem_salon_slug") ||
+    null
+  );
+}
 
-  return parts[1] || globalSalonSlug || globalMasterSlug;
+function getStoredMasterSlug() {
+  return (
+    window.MASTER_SLUG ||
+    window.localStorage.getItem("totem_master_slug") ||
+    window.sessionStorage.getItem("totem_master_slug") ||
+    null
+  );
+}
+
+function getSlugFromPath() {
+  const parts = getHashParts();
+
+  if (parts[0] === "salon" && parts[1] && !SALON_STATIC_SEGMENTS.has(parts[1])) {
+    return parts[1];
+  }
+
+  if (parts[0] === "master" && parts[1] && !MASTER_STATIC_SEGMENTS.has(parts[1])) {
+    return parts[1];
+  }
+
+  return getStoredSalonSlug() || getStoredMasterSlug() || null;
 }
 
 function getPublicPage() {
@@ -72,6 +130,17 @@ function getPublicPage() {
   return "salon";
 }
 
+function RedirectToMasterSlug({ tail = "" }) {
+  const slug = getStoredMasterSlug() || getSlugFromPath();
+
+  if (!slug) {
+    return <Navigate to="/" replace />;
+  }
+
+  const normalizedTail = tail ? `/${tail}` : "";
+  return <Navigate to={`/master/${slug}${normalizedTail}`} replace />;
+}
+
 export default function App() {
   const slug = getSlugFromPath();
   const publicType = getPublicPage();
@@ -80,7 +149,6 @@ export default function App() {
     <ErrorBoundary>
       <HashRouter>
         <Routes>
-
           {/* PUBLIC ROOT */}
           <Route
             index
@@ -144,8 +212,29 @@ export default function App() {
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
-          {/* MASTER CABINET */}
-          <Route path="master" element={<MasterLayout />}>
+          {/* MASTER CABINET REDIRECT LAYER */}
+          <Route path="master" element={<RedirectToMasterSlug />}>
+            <Route index element={<RedirectToMasterSlug />} />
+          </Route>
+          <Route path="master/dashboard" element={<RedirectToMasterSlug tail="dashboard" />} />
+          <Route path="master/bookings" element={<RedirectToMasterSlug tail="bookings" />} />
+          <Route path="master/bookings/:bookingId" element={<RedirectToMasterSlug tail="bookings" />} />
+          <Route path="master/clients" element={<RedirectToMasterSlug tail="clients" />} />
+          <Route path="master/schedule" element={<RedirectToMasterSlug tail="schedule" />} />
+          <Route path="master/services" element={<RedirectToMasterSlug tail="services" />} />
+          <Route path="master/finance" element={<RedirectToMasterSlug tail="finance" />} />
+          <Route path="master/finance/money" element={<RedirectToMasterSlug tail="finance/money" />} />
+          <Route path="master/finance/transactions" element={<RedirectToMasterSlug tail="finance/transactions" />} />
+          <Route path="master/finance/settlements" element={<RedirectToMasterSlug tail="finance/settlements" />} />
+          <Route path="master/finance/payouts" element={<RedirectToMasterSlug tail="finance/payouts" />} />
+          <Route path="master/money" element={<RedirectToMasterSlug tail="money" />} />
+          <Route path="master/transactions" element={<RedirectToMasterSlug tail="transactions" />} />
+          <Route path="master/settlements" element={<RedirectToMasterSlug tail="settlements" />} />
+          <Route path="master/payouts" element={<RedirectToMasterSlug tail="payouts" />} />
+          <Route path="master/settings" element={<RedirectToMasterSlug tail="settings" />} />
+
+          {/* MASTER CABINET WITH SLUG */}
+          <Route path="master/:slug" element={<MasterLayout />}>
             <Route index element={<MasterDashboard />} />
             <Route path="dashboard" element={<MasterDashboard />} />
 
@@ -158,6 +247,10 @@ export default function App() {
             <Route path="services" element={<MasterServicesPage />} />
 
             <Route path="finance" element={<MasterFinancePage />} />
+            <Route path="finance/money" element={<MasterMoneyPage />} />
+            <Route path="finance/transactions" element={<MasterTransactionsPage />} />
+            <Route path="finance/settlements" element={<MasterSettlementsPage />} />
+            <Route path="finance/payouts" element={<MasterPayoutsPage />} />
 
             <Route path="money" element={<MasterMoneyPage />} />
             <Route path="transactions" element={<MasterTransactionsPage />} />
@@ -166,7 +259,6 @@ export default function App() {
 
             <Route path="settings" element={<MasterSettingsPage />} />
           </Route>
-
         </Routes>
       </HashRouter>
     </ErrorBoundary>
