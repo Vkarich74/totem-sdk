@@ -3,16 +3,14 @@ import { useParams } from "react-router-dom";
 import { resolveSalonSlug } from "../SalonContext";
 import PageSection from "../../cabinet/PageSection";
 
-const API_BASE = import.meta.env.VITE_API_BASE
-
-
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function ClientsPage(){
 
 const [clients,setClients] = useState([]);
 const [loading,setLoading] = useState(true);
+const [error,setError] = useState(null);
 const [search,setSearch] = useState("");
-const [selected,setSelected] = useState(null);
 
 const { slug: routeSlug } = useParams();
 const salonSlug = resolveSalonSlug(routeSlug);
@@ -23,6 +21,9 @@ async function load(){
 
 try{
 
+setLoading(true);
+setError(null);
+
 const res = await fetch(
 `${API_BASE}/internal/salons/${salonSlug}/clients`
 );
@@ -31,10 +32,13 @@ const data = await res.json();
 
 if(data.ok){
 setClients(data.clients || []);
+}else{
+setError("Ошибка загрузки клиентов");
 }
 
 }catch(e){
 console.error(e);
+setError("Ошибка сети");
 }
 
 setLoading(false);
@@ -44,14 +48,6 @@ setLoading(false);
 load();
 
 },[salonSlug]);
-
-if(loading){
-return (
-<PageSection title="Клиенты салона">
-<div>Загрузка клиентов...</div>
-</PageSection>
-);
-}
 
 const filtered = clients.filter(c => {
 
@@ -68,14 +64,7 @@ return (
 
 <PageSection title="Клиенты салона">
 
-<div style={{
-display:"flex",
-gap:"30px"
-}}>
-
-{/* LIST */}
-
-<div style={{flex:1}}>
+{/* SEARCH */}
 
 <input
 placeholder="Поиск клиента..."
@@ -83,114 +72,134 @@ value={search}
 onChange={(e)=>setSearch(e.target.value)}
 style={{
 width:"100%",
-padding:"10px",
+padding:"12px",
 marginBottom:"15px",
 border:"1px solid #ddd",
-borderRadius:"6px"
+borderRadius:"8px",
+fontSize:"14px"
 }}
 />
 
-{filtered.length === 0 && (
+{/* LOADING */}
+
+{loading && (
+
+<div style={{
+display:"flex",
+flexDirection:"column",
+gap:"10px"
+}}>
+{[1,2,3].map(i=>(
+<div key={i} style={{
+padding:"15px",
+border:"1px solid #eee",
+borderRadius:"10px",
+background:"#fafafa"
+}}>
+Загрузка...
+</div>
+))}
+</div>
+
+)}
+
+{/* ERROR */}
+
+{error && (
+
+<div style={{
+padding:"15px",
+border:"1px solid #ffdddd",
+background:"#fff5f5",
+borderRadius:"8px",
+color:"#c00"
+}}>
+{error}
+</div>
+
+)}
+
+{/* EMPTY */}
+
+{!loading && !error && filtered.length === 0 && (
 
 <div style={{
 padding:"20px",
 border:"1px dashed #ccc",
-borderRadius:"8px",
-color:"#888"
+borderRadius:"10px",
+color:"#888",
+textAlign:"center"
 }}>
 Клиенты пока отсутствуют
 </div>
 
 )}
 
-{filtered.length > 0 && (
+{/* LIST */}
 
-<table style={{
-width:"100%",
-borderCollapse:"collapse"
+{!loading && !error && filtered.length > 0 && (
+
+<div style={{
+display:"flex",
+flexDirection:"column",
+gap:"10px"
 }}>
-
-<thead>
-
-<tr style={{borderBottom:"1px solid #ddd"}}>
-<th align="left">Имя</th>
-<th align="left">Телефон</th>
-<th align="left">Визиты</th>
-</tr>
-
-</thead>
-
-<tbody>
 
 {filtered.map(c=>(
 
-<tr
+<div
 key={c.id}
-onClick={()=>setSelected(c)}
 style={{
-borderBottom:"1px solid #eee",
-cursor:"pointer",
-background:selected?.id === c.id ? "#f5f7ff" : "white"
+border:"1px solid #eee",
+borderRadius:"12px",
+padding:"15px",
+background:"#fff",
+boxShadow:"0 2px 6px rgba(0,0,0,0.04)"
 }}
 >
 
-<td>{c.name}</td>
-<td>{c.phone}</td>
-<td>{c.visits}</td>
-
-</tr>
-
-))}
-
-</tbody>
-
-</table>
-
-)}
-
+<div style={{
+fontWeight:"600",
+fontSize:"15px",
+marginBottom:"5px"
+}}>
+{c.name || "Без имени"}
 </div>
-
-{/* CARD */}
 
 <div style={{
-width:"320px"
+fontSize:"13px",
+color:"#666",
+marginBottom:"8px"
 }}>
-
-{selected && (
+📞 {c.phone || "-"}
+</div>
 
 <div style={{
-border:"1px solid #eee",
-borderRadius:"10px",
-padding:"20px",
-background:"#fafafa"
+display:"flex",
+justifyContent:"space-between",
+fontSize:"13px",
+color:"#444"
 }}>
 
-<h3 style={{marginTop:0}}>
-{selected.name}
-</h3>
-
-<div style={{marginBottom:"10px"}}>
-Телефон: {selected.phone}
+<div>
+Визиты: <b>{c.visits || 0}</b>
 </div>
 
-<div style={{marginBottom:"10px"}}>
-Визиты: {selected.visits}
-</div>
-
-<div style={{marginBottom:"10px"}}>
-Регистрация:
-{selected.created_at
-? new Date(selected.created_at).toLocaleDateString("ru-RU")
+<div>
+{c.created_at
+? new Date(c.created_at).toLocaleDateString("ru-RU")
 : ""}
 </div>
 
 </div>
 
+</div>
+
+))}
+
+</div>
+
 )}
-
-</div>
-
-</div>
 
 </PageSection>
 
