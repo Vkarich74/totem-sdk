@@ -85,7 +85,8 @@ export function buildSalonPath(slug, section = "dashboard"){
     return `/salon/${slug}/${targetSection}`
   }
 
-  return `/salon/${targetSection}`
+  console.error("SALON PATH ERROR: SLUG_MISSING", { section: targetSection })
+  return "/salon"
 }
 
 export function SalonProvider({ children }){

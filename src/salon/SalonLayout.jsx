@@ -23,7 +23,8 @@ async function loadOdooPanel(slug, section){
     return
   }
 
-  const url = `${ODOO_BASE}/salon/${slug}/${section}`
+  const targetSection = section || "dashboard"
+  const url = `${ODOO_BASE}/salon/${slug}/${targetSection}`
 
   try{
     const res = await fetch(url)
