@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMaster } from "../MasterContext";
 
 import {
@@ -13,37 +14,79 @@ import {
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
   window.API_BASE ||
-  "https://totem-p0-api-production.up.railway.app";
+  "https://api.totemv.com";
 
 function money(value) {
   const n = Number(value) || 0;
-  return new Intl.NumberFormat("ru-RU").format(n) + " сом";
+  return `${new Intl.NumberFormat("ru-RU").format(n)} сом`;
 }
 
-function formatDate(iso) {
-  if (!iso) {
-    return "—";
-  }
+function formatDateTime(iso) {
+  if (!iso) return "—";
 
   const d = new Date(iso);
-
-  if (Number.isNaN(d.getTime())) {
-    return "—";
-  }
+  if (Number.isNaN(d.getTime())) return "—";
 
   return (
     d.toLocaleDateString("ru-RU") +
     " " +
-    d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+    d.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit"
+    })
   );
 }
 
-function sumAmounts(items) {
-  if (!Array.isArray(items)) {
-    return 0;
-  }
+function fetchJson(url, errorCode) {
+  return fetch(url).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(errorCode);
+    }
 
-  return items.reduce((acc, item) => acc + (Number(item?.amount) || 0), 0);
+    return response.json();
+  });
+}
+
+function normalizeContractResponse(payload) {
+  if (!payload) return null;
+  if (payload.contract) return payload.contract;
+  if (payload.active_contract) return payload.active_contract;
+  if (payload.ok && payload.data) return payload.data;
+  return payload;
+}
+
+function normalizeHistoryResponse(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.history)) return payload.history;
+  if (Array.isArray(payload?.contracts)) return payload.contracts;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+}
+
+function normalizeWalletResponse(payload) {
+  if (!payload) return null;
+  if (payload.wallet) return payload.wallet;
+  if (payload.data?.wallet) return payload.data.wallet;
+  if (typeof payload.balance !== "undefined") return payload;
+  if (typeof payload.data?.balance !== "undefined") return payload.data;
+  return payload;
+}
+
+function normalizeSettlementsResponse(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.settlements)) return payload.settlements;
+  if (Array.isArray(payload?.periods)) return payload.periods;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data?.settlements)) return payload.data.settlements;
+  return [];
+}
+
+function normalizePayoutsResponse(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.payouts)) return payload.payouts;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data?.payouts)) return payload.data.payouts;
+  return [];
 }
 
 function getBillingSnapshot() {
@@ -59,791 +102,49 @@ function getBillingSnapshot() {
 }
 
 function formatBillingState(billing, billingLoading) {
-  if (billingLoading) {
-    return "Проверка";
-  }
+  if (billingLoading) return "Проверка";
 
-  const state = billing?.access_state || billing?.subscription_status || "active";
+  const state = String(
+    billing?.access_state ||
+      billing?.subscription_status ||
+      "active"
+  ).toLowerCase();
 
   if (state === "active") return "Активен";
   if (state === "grace") return "Grace";
   if (state === "blocked") return "Blocked";
-
-  return String(state);
+  return state || "—";
 }
 
 function formatAccessFlag(value) {
   return value ? "Разрешено" : "Ограничено";
 }
 
-function normalizeContractResponse(payload) {
-  if (!payload) {
-    return null;
-  }
-
-  if (payload.contract) {
-    return payload.contract;
-  }
-
-  if (payload.active_contract) {
-    return payload.active_contract;
-  }
-
-  if (payload.ok && payload.data) {
-    return payload.data;
-  }
-
-  return payload;
+function sumAmounts(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((acc, item) => acc + (Number(item?.amount) || 0), 0);
 }
 
-function normalizeHistoryResponse(payload) {
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  if (Array.isArray(payload?.history)) {
-    return payload.history;
-  }
-
-  if (Array.isArray(payload?.contracts)) {
-    return payload.contracts;
-  }
-
-  if (Array.isArray(payload?.items)) {
-    return payload.items;
-  }
-
-  return [];
-}
-
-function normalizeWalletResponse(payload) {
-  if (!payload) {
-    return null;
-  }
-
-  if (payload.wallet) {
-    return payload.wallet;
-  }
-
-  if (payload.data?.wallet) {
-    return payload.data.wallet;
-  }
-
-  if (typeof payload.balance !== "undefined") {
-    return payload;
-  }
-
-  if (payload.data && typeof payload.data.balance !== "undefined") {
-    return payload.data;
-  }
-
-  return payload;
-}
-
-function normalizeSettlementsResponse(payload) {
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  if (Array.isArray(payload?.settlements)) {
-    return payload.settlements;
-  }
-
-  if (Array.isArray(payload?.periods)) {
-    return payload.periods;
-  }
-
-  if (Array.isArray(payload?.items)) {
-    return payload.items;
-  }
-
-  if (Array.isArray(payload?.data?.settlements)) {
-    return payload.data.settlements;
-  }
-
-  if (Array.isArray(payload?.data?.periods)) {
-    return payload.data.periods;
-  }
-
-  return [];
-}
-
-function normalizeLedgerResponse(payload) {
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  if (Array.isArray(payload?.ledger)) {
-    return payload.ledger;
-  }
-
-  if (Array.isArray(payload?.entries)) {
-    return payload.entries;
-  }
-
-  if (Array.isArray(payload?.items)) {
-    return payload.items;
-  }
-
-  if (Array.isArray(payload?.data?.ledger)) {
-    return payload.data.ledger;
-  }
-
-  if (Array.isArray(payload?.data?.entries)) {
-    return payload.data.entries;
-  }
-
-  return [];
-}
-
-async function fetchJson(url, errorCode) {
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(errorCode);
-  }
-
-  return response.json();
-}
-
-export default function MasterFinancePage() {
-  const { master, slug: contextSlug } = useMaster() || {};
-  const masterId = master?.slug || contextSlug || null;
-
-  const [activeContract, setActiveContract] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [wallet, setWallet] = useState(null);
-  const [settlements, setSettlements] = useState([]);
-  const [ledger, setLedger] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadFinance() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (!masterId) {
-          console.error("MASTER_SLUG_NOT_FOUND");
-
-          if (!cancelled) {
-            setActiveContract(null);
-            setHistory([]);
-            setWallet(null);
-            setSettlements([]);
-            setLedger([]);
-            setError("Не найден master slug");
-          }
-
-          return;
-        }
-
-        const [
-          activeResult,
-          historyResult,
-          walletResult,
-          settlementsResult,
-          ledgerResult
-        ] = await Promise.allSettled([
-          fetchActiveContract(masterId),
-          fetchContractHistory(masterId),
-          fetchJson(`${API_BASE}/internal/masters/${masterId}/wallet-balance`, "WALLET_FETCH_FAILED"),
-          fetchJson(`${API_BASE}/internal/masters/${masterId}/settlements`, "SETTLEMENTS_FETCH_FAILED"),
-          fetchJson(`${API_BASE}/internal/masters/${masterId}/ledger`, "LEDGER_FETCH_FAILED")
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        if (activeResult.status === "fulfilled") {
-          setActiveContract(normalizeContractResponse(activeResult.value));
-        } else {
-          console.error("Active contract load error:", activeResult.reason);
-          setActiveContract(null);
-        }
-
-        if (historyResult.status === "fulfilled") {
-          setHistory(normalizeHistoryResponse(historyResult.value));
-        } else {
-          console.error("Contract history load error:", historyResult.reason);
-          setHistory([]);
-        }
-
-        if (walletResult.status === "fulfilled") {
-          setWallet(normalizeWalletResponse(walletResult.value));
-        } else {
-          console.error("Wallet load error:", walletResult.reason);
-          setWallet(null);
-        }
-
-        if (settlementsResult.status === "fulfilled") {
-          setSettlements(normalizeSettlementsResponse(settlementsResult.value));
-        } else {
-          console.error("Settlements load error:", settlementsResult.reason);
-          setSettlements([]);
-        }
-
-        if (ledgerResult.status === "fulfilled") {
-          setLedger(normalizeLedgerResponse(ledgerResult.value));
-        } else {
-          console.error("Ledger load error:", ledgerResult.reason);
-          setLedger([]);
-        }
-
-        if (
-          activeResult.status === "rejected" &&
-          historyResult.status === "rejected" &&
-          walletResult.status === "rejected" &&
-          settlementsResult.status === "rejected" &&
-          ledgerResult.status === "rejected"
-        ) {
-          setError("Ошибка загрузки финансовых данных");
-        }
-      } catch (err) {
-        console.error("Finance load error:", err);
-
-        if (!cancelled) {
-          setActiveContract(null);
-          setHistory([]);
-          setWallet(null);
-          setSettlements([]);
-          setLedger([]);
-          setError("Ошибка загрузки финансовых данных");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadFinance();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [masterId]);
-
-  const contractIsActive = useMemo(() => {
-    return activeContract ? isContractActive(activeContract) : false;
-  }, [activeContract]);
-
-  const payoutEntries = useMemo(() => {
-    return ledger.filter((item) => item?.reference_type === "payout");
-  }, [ledger]);
-
-  const refundReverseEntries = useMemo(() => {
-    return ledger.filter((item) => item?.reference_type === "refund_reverse");
-  }, [ledger]);
-
-  const settlementTotal = useMemo(() => {
-    return sumAmounts(settlements);
-  }, [settlements]);
-
-  const payoutTotal = useMemo(() => {
-    return sumAmounts(payoutEntries);
-  }, [payoutEntries]);
-
-  const refundReverseTotal = useMemo(() => {
-    return sumAmounts(refundReverseEntries);
-  }, [refundReverseEntries]);
-
-  const realIncomeTotal = useMemo(() => {
-    return sumAmounts(
-      ledger.filter(
-        (item) =>
-          item?.reference_type === "payout" &&
-          item?.direction === "credit"
-      )
-    );
-  }, [ledger]);
-
-  const billingSnapshot = getBillingSnapshot();
-  const billing = billingSnapshot.billing;
-  const billingLoading = billingSnapshot.billingLoading;
-  const canWrite = billingSnapshot.canWrite;
-  const canWithdraw = billingSnapshot.canWithdraw;
-  const billingBlockReason = billingSnapshot.billingBlockReason;
-
-  const billingStateLabel = useMemo(() => {
-    return formatBillingState(billing, billingLoading);
-  }, [billing, billingLoading]);
-
-  const isBillingBlocked = billing?.access_state === "blocked";
-  const isBillingGrace = billing?.access_state === "grace";
-
-  const overviewItems = useMemo(() => {
-    return [
-      {
-        label: "Баланс кошелька",
-        value: wallet?.ok || typeof wallet?.balance !== "undefined" ? money(wallet.balance) : "—"
-      },
-      {
-        label: "Реальный доход",
-        value: money(realIncomeTotal)
-      },
-      {
-        label: "Текущие начисления",
-        value: money(settlementTotal)
-      },
-      {
-        label: "Расчетных периодов",
-        value: String(settlements.length)
-      },
-      {
-        label: "Выплат / payout",
-        value: String(payoutEntries.length)
-      },
-      {
-        label: "Refund reverse",
-        value: money(refundReverseTotal)
-      },
-      {
-        label: "Статус контракта",
-        value: contractIsActive ? "Активен" : "Нет активного контракта"
-      },
-      {
-        label: "Contract ID",
-        value: activeContract?.contract_id || activeContract?.id || "—"
-      },
-      {
-        label: "Billing state",
-        value: billingStateLabel
-      },
-      {
-        label: "Write доступ",
-        value: formatAccessFlag(canWrite)
-      },
-      {
-        label: "Withdraw доступ",
-        value: formatAccessFlag(canWithdraw)
-      }
-    ];
-  }, [
-    wallet,
-    realIncomeTotal,
-    settlementTotal,
-    settlements.length,
-    payoutEntries.length,
-    refundReverseTotal,
-    contractIsActive,
-    activeContract,
-    billingStateLabel,
-    canWrite,
-    canWithdraw
-  ]);
-
-  if (loading) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <div style={styles.loadingCard}>Загрузка финансов...</div>
-        </div>
-      </div>
-    );
-  }
-
+function StatCard({ label, value, hint }) {
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <header style={styles.header}>
-          <div>
-            <div style={styles.eyebrow}>MASTER CABINET</div>
-            <h1 style={styles.title}>Finance</h1>
-            <p style={styles.subtitle}>
-              Единая финансовая панель мастера. Контур собран на текущих backend endpoint без изменения бизнес-логики.
-            </p>
-          </div>
-        </header>
-
-        {error ? (
-          <section style={styles.warningBanner}>
-            <div style={styles.warningTitle}>Часть финансовых данных недоступна</div>
-            <div style={styles.warningText}>
-              Страница открыта в безопасном режиме. Проверь console и network по master finance endpoint.
-            </div>
-          </section>
-        ) : null}
-
-        {isBillingGrace ? (
-          <section style={styles.warningBanner}>
-            <div style={styles.warningTitle}>Billing: grace period</div>
-            <div style={styles.warningText}>
-              Доступ частично ограничен. Проверь оплату подписки, чтобы не перейти в blocked.
-            </div>
-          </section>
-        ) : null}
-
-        {isBillingBlocked ? (
-          <section style={styles.blockedBanner}>
-            <div style={styles.blockedTitle}>Billing: доступ ограничен</div>
-            <div style={styles.blockedText}>
-              Финансовые действия мастера заблокированы.
-              {billingBlockReason ? ` Причина: ${billingBlockReason}` : ""}
-            </div>
-          </section>
-        ) : null}
-
-        <section style={styles.overviewGrid}>
-          {overviewItems.map((item) => (
-            <div key={item.label} style={styles.statCard}>
-              <div style={styles.statLabel}>{item.label}</div>
-              <div style={styles.statValue}>{item.value}</div>
-            </div>
-          ))}
-        </section>
-
-        <section style={styles.stack}>
-          <SectionCard
-            title="Overview"
-            subtitle="Общий статус финансового контура мастера"
-          >
-            <div style={styles.infoGrid}>
-              <InfoRow label="Активный контракт" value={contractIsActive ? "Да" : "Нет"} />
-              <InfoRow label="Contract ID" value={activeContract?.contract_id || activeContract?.id || "—"} />
-              <InfoRow label="Model Type" value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
-              <InfoRow label="Start Date" value={activeContract?.start_date || activeContract?.current_period_start || "—"} />
-              <InfoRow label="Wallet Balance" value={wallet?.ok || typeof wallet?.balance !== "undefined" ? money(wallet.balance) : "—"} />
-              <InfoRow label="Real Income" value={money(realIncomeTotal)} />
-              <InfoRow label="Current Settlements" value={money(settlementTotal)} />
-              <InfoRow label="Payout Total" value={money(payoutTotal)} />
-              <InfoRow label="Billing State" value={billingStateLabel} />
-              <InfoRow label="Write Access" value={formatAccessFlag(canWrite)} />
-              <InfoRow label="Withdraw Access" value={formatAccessFlag(canWithdraw)} />
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Wallet"
-            subtitle="Баланс и кошелёк мастера"
-          >
-            <div style={styles.infoGrid}>
-              <InfoRow label="Wallet ID" value={wallet?.wallet_id || wallet?.id || "—"} />
-              <InfoRow label="Баланс" value={wallet?.ok || typeof wallet?.balance !== "undefined" ? money(wallet.balance) : "—"} />
-              <InfoRow label="Валюта" value={wallet?.currency || "—"} />
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Contracts"
-            subtitle="Активный контракт и история изменений"
-          >
-            <div style={styles.contractCard}>
-              <div style={styles.contractHeader}>
-                <div style={styles.contractStatusWrap}>
-                  <span
-                    style={{
-                      ...styles.badge,
-                      ...(contractIsActive ? styles.badgeSuccess : styles.badgeMuted)
-                    }}
-                  >
-                    {contractIsActive ? "ACTIVE" : "NO ACTIVE CONTRACT"}
-                  </span>
-                </div>
-              </div>
-
-              {contractIsActive ? (
-                <div style={styles.infoGrid}>
-                  <InfoRow label="Contract ID" value={activeContract?.contract_id || activeContract?.id || "—"} />
-                  <InfoRow label="Model" value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
-                  <InfoRow label="Start Date" value={activeContract?.start_date || activeContract?.current_period_start || "—"} />
-                </div>
-              ) : (
-                <p style={styles.emptyText}>Активный контракт отсутствует</p>
-              )}
-            </div>
-
-            <div style={styles.historyWrap}>
-              <div style={styles.subsectionTitle}>Contract History</div>
-
-              {history.length === 0 ? (
-                <div style={styles.emptyPanel}>История контрактов отсутствует</div>
-              ) : (
-                <div style={styles.tableWrap}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Contract ID</th>
-                        <th style={styles.th}>Status</th>
-                        <th style={styles.th}>Start Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.map((item, index) => {
-                        const isLast = index === history.length - 1;
-
-                        return (
-                          <tr key={item.contract_id || item.id || index}>
-                            <td
-                              style={{
-                                ...styles.td,
-                                ...(isLast ? styles.lastRowCell : null)
-                              }}
-                            >
-                              {item.contract_id || item.id || "—"}
-                            </td>
-                            <td
-                              style={{
-                                ...styles.td,
-                                ...(isLast ? styles.lastRowCell : null)
-                              }}
-                            >
-                              {item.status || "—"}
-                            </td>
-                            <td
-                              style={{
-                                ...styles.td,
-                                ...(isLast ? styles.lastRowCell : null)
-                              }}
-                            >
-                              {item.start_date || item.current_period_start || "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Settlements"
-            subtitle="Текущие начисления мастера по расчетным периодам"
-          >
-            {settlements.length === 0 ? (
-              <div style={styles.emptyPanel}>Расчетных периодов пока нет</div>
-            ) : (
-              <div style={styles.tableWrap}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Период</th>
-                      <th style={styles.th}>Начало</th>
-                      <th style={styles.th}>Конец</th>
-                      <th style={styles.th}>Сумма</th>
-                      <th style={styles.th}>Статус</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {settlements.map((item, index) => {
-                      const isLast = index === settlements.length - 1;
-
-                      return (
-                        <tr key={item.id || index}>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {item.id || "—"}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {formatDate(item.start_date || item.period_start)}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {formatDate(item.end_date || item.period_end)}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {money(item.amount)}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {item.status || "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard
-            title="Payouts"
-            subtitle="Фактические выплаты мастеру из ledger"
-          >
-            {payoutEntries.length === 0 ? (
-              <div style={styles.emptyPanel}>Выплат пока нет</div>
-            ) : (
-              <div style={styles.tableWrap}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Дата</th>
-                      <th style={styles.th}>Reference Type</th>
-                      <th style={styles.th}>Reference ID</th>
-                      <th style={styles.th}>Направление</th>
-                      <th style={styles.th}>Сумма</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payoutEntries.map((item, index) => {
-                      const isLast = index === payoutEntries.length - 1;
-
-                      return (
-                        <tr key={item.id || index}>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {formatDate(item.created_at)}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {item.reference_type || "—"}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {item.reference_id || "—"}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {item.direction || "—"}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {money(item.amount)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard
-            title="Ledger"
-            subtitle="Движения кошелька мастера"
-          >
-            {ledger.length === 0 ? (
-              <div style={styles.emptyPanel}>Проводок пока нет</div>
-            ) : (
-              <div style={styles.tableWrap}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Дата</th>
-                      <th style={styles.th}>Reference Type</th>
-                      <th style={styles.th}>Reference ID</th>
-                      <th style={styles.th}>Направление</th>
-                      <th style={styles.th}>Сумма</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ledger.map((item, index) => {
-                      const isLast = index === ledger.length - 1;
-
-                      return (
-                        <tr key={item.id || index}>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {formatDate(item.created_at)}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {item.reference_type || "—"}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {item.reference_id || "—"}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {item.direction || "—"}
-                          </td>
-                          <td
-                            style={{
-                              ...styles.td,
-                              ...(isLast ? styles.lastRowCell : null)
-                            }}
-                          >
-                            {money(item.amount)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </SectionCard>
-        </section>
-      </div>
+    <div style={styles.card}>
+      <div style={styles.cardLabel}>{label}</div>
+      <div style={styles.cardValue}>{value}</div>
+      {hint ? <div style={styles.cardHint}>{hint}</div> : null}
     </div>
   );
 }
 
-function SectionCard({ title, subtitle, children }) {
+function Panel({ title, subtitle, children }) {
   return (
-    <section style={styles.card}>
-      <div style={styles.cardHeader}>
-        <h2 style={styles.cardTitle}>{title}</h2>
-        <div style={styles.cardSubtitle}>{subtitle}</div>
+    <section style={styles.panel}>
+      <div style={styles.panelHeader}>
+        <div>
+          <div style={styles.panelTitle}>{title}</div>
+          {subtitle ? <div style={styles.panelSubtitle}>{subtitle}</div> : null}
+        </div>
       </div>
-      <div style={styles.cardBody}>{children}</div>
+      {children}
     </section>
   );
 }
@@ -857,258 +158,493 @@ function InfoRow({ label, value }) {
   );
 }
 
+function FinanceNav({ masterSlug, active }) {
+  const items = [
+    { key: "finance", label: "Финансы", note: "overview", to: `/master/${masterSlug}/finance` },
+    { key: "money", label: "Доход", note: "деньги сейчас", to: `/master/${masterSlug}/money` },
+    { key: "settlements", label: "Сеты", note: "расчётные периоды", to: `/master/${masterSlug}/settlements` },
+    { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: `/master/${masterSlug}/payouts` },
+    { key: "transactions", label: "Транзакции", note: "ledger", to: `/master/${masterSlug}/transactions` }
+  ];
+
+  return (
+    <div style={styles.navGrid}>
+      {items.map((item) => {
+        const isActive = item.key === active;
+        return (
+          <Link
+            key={item.key}
+            to={item.to}
+            style={{
+              ...styles.navCard,
+              borderColor: isActive ? "#dbeafe" : "#e5e7eb",
+              background: isActive ? "#eff6ff" : "#ffffff"
+            }}
+          >
+            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}>{item.label}</div>
+            <div style={styles.navNote}>{item.note}</div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function MasterFinancePage() {
+  const { master, slug: contextSlug } = useMaster() || {};
+  const masterSlug = master?.slug || contextSlug || null;
+
+  const [activeContract, setActiveContract] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [wallet, setWallet] = useState(null);
+  const [settlements, setSettlements] = useState([]);
+  const [payouts, setPayouts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFinance() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (!masterSlug) {
+          if (!cancelled) {
+            setActiveContract(null);
+            setHistory([]);
+            setWallet(null);
+            setSettlements([]);
+            setPayouts([]);
+            setError("Не найден master slug");
+          }
+          return;
+        }
+
+        const [
+          activeResult,
+          historyResult,
+          walletResult,
+          settlementsResult,
+          payoutsResult
+        ] = await Promise.allSettled([
+          fetchActiveContract(masterSlug),
+          fetchContractHistory(masterSlug),
+          fetchJson(`${API_BASE}/internal/masters/${masterSlug}/wallet-balance`, "WALLET_FETCH_FAILED"),
+          fetchJson(`${API_BASE}/internal/masters/${masterSlug}/settlements`, "SETTLEMENTS_FETCH_FAILED"),
+          fetchJson(`${API_BASE}/internal/masters/${masterSlug}/payouts`, "PAYOUTS_FETCH_FAILED")
+        ]);
+
+        if (cancelled) return;
+
+        setActiveContract(
+          activeResult.status === "fulfilled"
+            ? normalizeContractResponse(activeResult.value)
+            : null
+        );
+
+        setHistory(
+          historyResult.status === "fulfilled"
+            ? normalizeHistoryResponse(historyResult.value)
+            : []
+        );
+
+        setWallet(
+          walletResult.status === "fulfilled"
+            ? normalizeWalletResponse(walletResult.value)
+            : null
+        );
+
+        setSettlements(
+          settlementsResult.status === "fulfilled"
+            ? normalizeSettlementsResponse(settlementsResult.value)
+            : []
+        );
+
+        setPayouts(
+          payoutsResult.status === "fulfilled"
+            ? normalizePayoutsResponse(payoutsResult.value)
+            : []
+        );
+
+        if (
+          activeResult.status === "rejected" &&
+          historyResult.status === "rejected" &&
+          walletResult.status === "rejected" &&
+          settlementsResult.status === "rejected" &&
+          payoutsResult.status === "rejected"
+        ) {
+          setError("Не удалось загрузить finance overview");
+        }
+      } catch (e) {
+        console.error("MASTER_FINANCE_OVERVIEW_LOAD_FAILED", e);
+
+        if (!cancelled) {
+          setActiveContract(null);
+          setHistory([]);
+          setWallet(null);
+          setSettlements([]);
+          setPayouts([]);
+          setError("Не удалось загрузить finance overview");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadFinance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [masterSlug]);
+
+  const billingSnapshot = getBillingSnapshot();
+  const billingStateLabel = formatBillingState(
+    billingSnapshot.billing,
+    billingSnapshot.billingLoading
+  );
+
+  const contractIsActive = useMemo(() => {
+    return activeContract ? isContractActive(activeContract) : false;
+  }, [activeContract]);
+
+  const walletBalance = useMemo(() => {
+    if (typeof wallet?.balance === "undefined") return 0;
+    return Number(wallet.balance) || 0;
+  }, [wallet]);
+
+  const settlementTotal = useMemo(() => sumAmounts(settlements), [settlements]);
+  const payoutTotal = useMemo(() => sumAmounts(payouts), [payouts]);
+
+  const lastSettlement = useMemo(() => {
+    if (!settlements.length) return null;
+
+    return [...settlements].sort((a, b) => {
+      return new Date(b?.period_end || b?.created_at || 0) - new Date(a?.period_end || a?.created_at || 0);
+    })[0];
+  }, [settlements]);
+
+  const historyPreview = useMemo(() => history.slice(0, 5), [history]);
+
+  return (
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <div>
+            <div style={styles.eyebrow}>MASTER CABINET</div>
+            <h1 style={styles.title}>Финансы</h1>
+            <p style={styles.subtitle}>
+              Обзор финансового состояния мастера. Детальные движения вынесены в отдельные страницы.
+            </p>
+          </div>
+        </header>
+
+        {masterSlug ? <FinanceNav masterSlug={masterSlug} active="finance" /> : null}
+
+        {loading ? <div style={styles.loadingCard}>Загрузка финансов...</div> : null}
+
+        {!loading && error ? (
+          <div style={styles.errorBanner}>
+            <div style={styles.errorTitle}>Ошибка загрузки</div>
+            <div style={styles.errorText}>{error}</div>
+          </div>
+        ) : null}
+
+        {!loading && !error ? (
+          <>
+            <section style={styles.grid}>
+              <StatCard label="Баланс" value={money(walletBalance)} hint="Текущий wallet state" />
+              <StatCard label="Статус billing" value={billingStateLabel} hint={`Запись: ${formatAccessFlag(billingSnapshot.canWrite)} · Выплаты: ${formatAccessFlag(billingSnapshot.canWithdraw)}`} />
+              <StatCard label="Сеты" value={String(settlements.length)} hint={money(settlementTotal)} />
+              <StatCard label="Выплаты" value={String(payouts.length)} hint={money(payoutTotal)} />
+            </section>
+
+            <section style={styles.actionsGrid}>
+              <Link to={`/master/${masterSlug}/money`} style={styles.actionCard}>
+                <div style={styles.actionTitle}>Доход</div>
+                <div style={styles.actionText}>Баланс, доступы, последний расчетный период</div>
+              </Link>
+
+              <Link to={`/master/${masterSlug}/settlements`} style={styles.actionCard}>
+                <div style={styles.actionTitle}>Сеты</div>
+                <div style={styles.actionText}>Все расчетные периоды по мастеру</div>
+              </Link>
+
+              <Link to={`/master/${masterSlug}/payouts`} style={styles.actionCard}>
+                <div style={styles.actionTitle}>Выплаты</div>
+                <div style={styles.actionText}>Фактические выплаты и их статусы</div>
+              </Link>
+
+              <Link to={`/master/${masterSlug}/transactions`} style={styles.actionCard}>
+                <div style={styles.actionTitle}>Транзакции</div>
+                <div style={styles.actionText}>Техническая финансовая лента и движения</div>
+              </Link>
+            </section>
+
+            <div style={styles.stack}>
+              <Panel title="Текущее состояние" subtitle="Только summary без тяжелых таблиц">
+                <div style={styles.infoGrid}>
+                  <InfoRow label="Активный контракт" value={contractIsActive ? "Да" : "Нет"} />
+                  <InfoRow label="Contract ID" value={activeContract?.contract_id || activeContract?.id || "—"} />
+                  <InfoRow label="Модель" value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
+                  <InfoRow label="Баланс" value={money(walletBalance)} />
+                  <InfoRow label="Billing state" value={billingStateLabel} />
+                  <InfoRow label="Write доступ" value={formatAccessFlag(billingSnapshot.canWrite)} />
+                  <InfoRow label="Withdraw доступ" value={formatAccessFlag(billingSnapshot.canWithdraw)} />
+                  <InfoRow label="Block reason" value={billingSnapshot.billingBlockReason || "—"} />
+                </div>
+              </Panel>
+
+              <Panel title="Последний расчетный период" subtitle="Компактная поверхность вместо полной таблицы">
+                {lastSettlement ? (
+                  <div style={styles.infoGrid}>
+                    <InfoRow label="Settlement ID" value={lastSettlement.id || "—"} />
+                    <InfoRow label="Начало" value={formatDateTime(lastSettlement.period_start || lastSettlement.start_date)} />
+                    <InfoRow label="Конец" value={formatDateTime(lastSettlement.period_end || lastSettlement.end_date)} />
+                    <InfoRow label="Сумма" value={money(lastSettlement.amount)} />
+                    <InfoRow label="Статус" value={lastSettlement.status || "—"} />
+                    <InfoRow label="Создан" value={formatDateTime(lastSettlement.created_at)} />
+                  </div>
+                ) : (
+                  <div style={styles.emptyText}>Расчетных периодов пока нет.</div>
+                )}
+              </Panel>
+
+              <Panel title="История контрактов" subtitle="Компактный блок. Полная история не перегружает hub.">
+                {historyPreview.length === 0 ? (
+                  <div style={styles.emptyText}>История контрактов пока не найдена.</div>
+                ) : (
+                  <div style={styles.historyList}>
+                    {historyPreview.map((item, index) => (
+                      <details key={item?.id || item?.contract_id || index} style={styles.historyItem}>
+                        <summary style={styles.historySummary}>
+                          <span>{item?.contract_id || item?.id || `Контракт ${index + 1}`}</span>
+                          <span>{item?.status || item?.state || "—"}</span>
+                        </summary>
+                        <div style={styles.historyBody}>
+                          <InfoRow label="Модель" value={item?.model_type || item?.terms_json?.model || "—"} />
+                          <InfoRow label="Версия" value={item?.version || "—"} />
+                          <InfoRow label="Начало" value={formatDateTime(item?.start_date || item?.created_at)} />
+                          <InfoRow label="Окончание" value={formatDateTime(item?.end_date || item?.closed_at)} />
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 const styles = {
+  navGrid: {
+    display: "flex",
+    gap: "10px",
+    overflowX: "auto",
+    paddingBottom: "4px",
+    marginBottom: "16px",
+    scrollbarWidth: "thin"
+  },
+  navCard: {
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "12px 14px",
+    textDecoration: "none",
+    display: "block",
+    minWidth: "150px",
+    flex: "0 0 auto"
+  },
+  navTitle: {
+    fontSize: "14px",
+    fontWeight: 700,
+    marginBottom: "4px"
+  },
+  navNote: {
+    fontSize: "12px",
+    color: "#6b7280"
+  },
   page: {
-    minHeight: "100%",
-    background: "#f6f7fb",
-    padding: "24px"
+    padding: "20px"
   },
   container: {
-    maxWidth: "1400px",
-    margin: "0 auto"
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px"
   },
   header: {
-    marginBottom: "20px"
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start"
   },
   eyebrow: {
-    fontSize: "12px",
-    fontWeight: 700,
-    letterSpacing: "0.12em",
+    fontSize: "11px",
+    letterSpacing: "0.08em",
     textTransform: "uppercase",
     color: "#6b7280",
-    marginBottom: "8px"
+    fontWeight: 700,
+    marginBottom: "6px"
   },
   title: {
     margin: 0,
     fontSize: "28px",
-    lineHeight: 1.2,
-    fontWeight: 700,
+    lineHeight: 1.1,
     color: "#111827"
   },
   subtitle: {
-    margin: "6px 0 0 0",
-    fontSize: "14px",
-    lineHeight: 1.5,
+    margin: "8px 0 0",
     color: "#6b7280",
-    maxWidth: "860px"
-  },
-  warningBanner: {
-    marginBottom: "20px",
-    padding: "16px 18px",
-    borderRadius: "16px",
-    border: "1px solid #fde68a",
-    background: "#fffbeb"
-  },
-  warningTitle: {
     fontSize: "14px",
-    fontWeight: 700,
-    color: "#92400e",
-    marginBottom: "6px"
+    maxWidth: "720px"
   },
-  warningText: {
-    fontSize: "13px",
-    lineHeight: 1.6,
-    color: "#a16207"
-  },
-  blockedBanner: {
-    marginBottom: "20px",
-    padding: "16px 18px",
-    borderRadius: "16px",
-    border: "1px solid #fecaca",
-    background: "#fef2f2"
-  },
-  blockedTitle: {
-    fontSize: "14px",
-    fontWeight: 700,
-    color: "#991b1b",
-    marginBottom: "6px"
-  },
-  blockedText: {
-    fontSize: "13px",
-    lineHeight: 1.6,
-    color: "#b91c1c"
-  },
-  overviewGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "14px",
-    marginBottom: "20px"
-  },
-  statCard: {
-    background: "#ffffff",
+  loadingCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
-    padding: "18px",
-    minHeight: "118px",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
+    background: "#ffffff",
+    padding: "18px"
   },
-  statLabel: {
-    margin: 0,
-    fontSize: "13px",
-    color: "#6b7280",
-    fontWeight: 500
+  errorBanner: {
+    border: "1px solid #fecaca",
+    background: "#fff5f5",
+    color: "#991b1b",
+    borderRadius: "14px",
+    padding: "16px"
   },
-  statValue: {
-    margin: "10px 0 0 0",
-    fontSize: "28px",
+  errorTitle: {
     fontWeight: 700,
-    lineHeight: 1.1,
-    color: "#111827",
-    wordBreak: "break-word"
+    marginBottom: "6px"
   },
-  stack: {
+  errorText: {
+    fontSize: "14px"
+  },
+  grid: {
     display: "grid",
-    gap: "20px"
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "12px"
+  },
+  actionsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "12px"
   },
   card: {
-    background: "#ffffff",
     border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "18px",
-    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
+    borderRadius: "14px",
+    background: "#ffffff",
+    padding: "16px"
   },
-  cardHeader: {
-    marginBottom: "12px"
+  cardLabel: {
+    fontSize: "12px",
+    color: "#6b7280",
+    marginBottom: "8px"
   },
-  cardTitle: {
-    margin: 0,
-    fontSize: "18px",
+  cardValue: {
+    fontSize: "24px",
     fontWeight: 700,
     color: "#111827"
   },
-  cardSubtitle: {
+  cardHint: {
     marginTop: "6px",
-    fontSize: "13px",
-    lineHeight: 1.45,
+    fontSize: "12px",
     color: "#6b7280"
   },
-  cardBody: {
-    marginTop: "12px"
+  actionCard: {
+    display: "block",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    background: "#ffffff",
+    padding: "16px",
+    textDecoration: "none",
+    color: "#111827"
+  },
+  actionTitle: {
+    fontSize: "16px",
+    fontWeight: 700,
+    marginBottom: "6px"
+  },
+  actionText: {
+    fontSize: "13px",
+    color: "#6b7280"
+  },
+  stack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px"
+  },
+  panel: {
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    background: "#ffffff",
+    padding: "16px"
+  },
+  panelHeader: {
+    marginBottom: "12px"
+  },
+  panelTitle: {
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#111827"
+  },
+  panelSubtitle: {
+    marginTop: "4px",
+    fontSize: "13px",
+    color: "#6b7280"
   },
   infoGrid: {
     display: "grid",
-    gap: "12px"
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "10px"
   },
   infoRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "16px",
-    padding: "10px 0",
-    borderBottom: "1px solid #f3f4f6"
+    border: "1px solid #eef2f7",
+    borderRadius: "12px",
+    padding: "12px",
+    background: "#f8fafc"
   },
   infoLabel: {
-    fontSize: "13px",
+    fontSize: "12px",
     color: "#6b7280",
-    fontWeight: 500
+    marginBottom: "6px"
   },
   infoValue: {
     fontSize: "14px",
     color: "#111827",
     fontWeight: 600,
-    textAlign: "right",
     wordBreak: "break-word"
   },
-  contractCard: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "16px",
-    background: "#fbfcfe"
-  },
-  contractHeader: {
+  historyList: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "14px"
-  },
-  contractStatusWrap: {
-    display: "flex",
-    alignItems: "center",
+    flexDirection: "column",
     gap: "10px"
   },
-  badge: {
-    display: "inline-flex",
+  historyItem: {
+    border: "1px solid #eef2f7",
+    borderRadius: "12px",
+    background: "#f8fafc"
+  },
+  historySummary: {
+    cursor: "pointer",
+    listStyle: "none",
+    display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    minHeight: "28px",
-    padding: "0 10px",
-    borderRadius: "999px",
-    fontSize: "12px",
-    fontWeight: 700,
-    letterSpacing: "0.04em"
+    justifyContent: "space-between",
+    gap: "12px",
+    padding: "12px 14px",
+    fontWeight: 600,
+    color: "#111827"
   },
-  badgeSuccess: {
-    background: "#dcfce7",
-    color: "#166534",
-    border: "1px solid #bbf7d0"
-  },
-  badgeMuted: {
-    background: "#f3f4f6",
-    color: "#6b7280",
-    border: "1px solid #e5e7eb"
-  },
-  subsectionTitle: {
-    fontSize: "14px",
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: "12px"
-  },
-  historyWrap: {
-    marginTop: "18px"
+  historyBody: {
+    padding: "0 14px 14px"
   },
   emptyText: {
-    margin: 0,
-    color: "#6b7280",
     fontSize: "14px",
-    lineHeight: 1.6
-  },
-  emptyPanel: {
-    border: "1px dashed #d1d5db",
-    borderRadius: "14px",
-    padding: "18px",
-    fontSize: "14px",
-    color: "#6b7280",
-    background: "#f9fafb"
-  },
-  tableWrap: {
-    overflowX: "auto",
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    background: "#ffffff"
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    minWidth: "640px"
-  },
-  th: {
-    textAlign: "left",
-    padding: "12px 14px",
-    fontSize: "12px",
-    fontWeight: 700,
-    color: "#6b7280",
-    background: "#f8fafc",
-    borderBottom: "1px solid #e5e7eb",
-    whiteSpace: "nowrap"
-  },
-  td: {
-    padding: "12px 14px",
-    fontSize: "14px",
-    color: "#111827",
-    borderBottom: "1px solid #eef2f7",
-    verticalAlign: "top"
-  },
-  lastRowCell: {
-    borderBottom: "none"
-  },
-  loadingCard: {
-    padding: "20px",
-    borderRadius: "16px",
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    fontSize: "14px",
-    color: "#374151"
+    color: "#6b7280"
   }
 };

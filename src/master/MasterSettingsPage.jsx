@@ -1,9 +1,9 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 import { useMaster } from "./MasterContext"
-
 import PageSection from "../cabinet/PageSection"
 
-function Block({ title, children }) {
+function Block({ title, hint, children }) {
   return (
     <div
       style={{
@@ -14,37 +14,23 @@ function Block({ title, children }) {
         background: "#ffffff"
       }}
     >
-      <div
-        style={{
-          fontSize: "14px",
-          fontWeight: 600,
-          marginBottom: "10px"
-        }}
-      >
-        {title}
-      </div>
-
+      <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "6px" }}>{title}</div>
+      {hint ? (
+        <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "12px", lineHeight: 1.45 }}>{hint}</div>
+      ) : null}
       {children}
     </div>
   )
 }
 
-function Field({ label, value, onChange, type = "text" }) {
+function Field({ label, value, onChange, type = "text", placeholder = "" }) {
   return (
     <div style={{ marginBottom: "12px" }}>
-      <div
-        style={{
-          fontSize: "12px",
-          color: "#6b7280",
-          marginBottom: "4px"
-        }}
-      >
-        {label}
-      </div>
-
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>{label}</div>
       <input
         type={type}
         value={value || ""}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: "100%",
@@ -58,173 +44,210 @@ function Field({ label, value, onChange, type = "text" }) {
   )
 }
 
-function ServiceRow({ service, setService }) {
+function ReadonlyRow({ label, value }){
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: "10px",
-        marginBottom: "10px"
-      }}
-    >
-      <input
-        value={service.name}
-        onChange={(e) =>
-          setService({ ...service, name: e.target.value })
-        }
-        placeholder="Название услуги"
-        style={{
-          flex: 2,
-          padding: "10px",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px"
-        }}
-      />
-
-      <input
-        type="number"
-        value={service.price}
-        onChange={(e) =>
-          setService({ ...service, price: e.target.value })
-        }
-        placeholder="Цена"
-        style={{
-          flex: 1,
-          padding: "10px",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px"
-        }}
-      />
-
-      <input
-        type="number"
-        value={service.duration}
-        onChange={(e) =>
-          setService({ ...service, duration: e.target.value })
-        }
-        placeholder="Мин"
-        style={{
-          flex: 1,
-          padding: "10px",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px"
-        }}
-      />
+    <div style={{
+      display: "flex",
+      justifyContent: "space-between",
+      gap: "12px",
+      padding: "10px 0",
+      borderBottom: "1px solid #f3f4f6"
+    }}>
+      <div style={{ fontSize: "13px", color: "#6b7280" }}>{label}</div>
+      <div style={{ fontSize: "13px", fontWeight: 600, color: "#111827", textAlign: "right" }}>{value || "—"}</div>
     </div>
   )
 }
 
-export default function MasterSettingsPage() {
-  const { master } = useMaster()
+function getBillingUi(billingAccess, billingBlockReason){
+  const state = String(
+    billingAccess?.access_state ||
+    billingAccess?.accessState ||
+    "active"
+  ).toLowerCase()
 
-  const [name, setName] = useState(master?.name || "")
+  if(state === "blocked"){
+    return {
+      title: "Оплата требует внимания",
+      tone: "#b42318",
+      bg: "#fff5f5",
+      border: "#f5c2c7",
+      note: billingBlockReason || "Доступ ограничен до оплаты"
+    }
+  }
+
+  if(state === "grace"){
+    return {
+      title: "Льготный период",
+      tone: "#9a6700",
+      bg: "#fff8db",
+      border: "#facc15",
+      note: billingBlockReason || "Скоро потребуется пополнение"
+    }
+  }
+
+  return {
+    title: "Подписка активна",
+    tone: "#027a48",
+    bg: "#ecfdf3",
+    border: "#abefc6",
+    note: "Платёжный доступ работает без ограничений"
+  }
+}
+
+export default function MasterSettingsPage() {
+  const {
+    master,
+    slug,
+    billingAccess,
+    canWrite,
+    canWithdraw,
+    billingBlockReason
+  } = useMaster()
+
+  const [name, setName] = useState("")
   const [photo, setPhoto] = useState("")
   const [bio, setBio] = useState("")
-
   const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
   const [whatsapp, setWhatsapp] = useState("")
+  const [slot, setSlot] = useState("15")
+  const [minBefore, setMinBefore] = useState("60")
+  const [advance, setAdvance] = useState("30")
 
-  const [services, setServices] = useState([
-    { name: "Стрижка", price: 800, duration: 30 },
-    { name: "Маникюр", price: 1200, duration: 60 }
-  ])
+  useEffect(() => {
+    setName(master?.name || "")
+    setPhoto(master?.photo || master?.avatar || master?.image || "")
+    setBio(master?.bio || master?.about || "")
+    setPhone(master?.phone || "")
+    setEmail(master?.email || "")
+    setWhatsapp(master?.whatsapp || master?.phone || "")
+  }, [master])
 
-  const [hours, setHours] = useState({
-    mon: "09:00-19:00",
-    tue: "09:00-19:00",
-    wed: "",
-    thu: "09:00-19:00",
-    fri: "09:00-19:00",
-    sat: "10:00-18:00",
-    sun: ""
-  })
+  const billingUi = useMemo(
+    () => getBillingUi(billingAccess, billingBlockReason),
+    [billingAccess, billingBlockReason]
+  )
 
-  const [slot, setSlot] = useState(15)
-  const [minBefore, setMinBefore] = useState(60)
-  const [advance, setAdvance] = useState(30)
+  const billingModel =
+    billingAccess?.billing_model ||
+    billingAccess?.billingModel ||
+    "—"
 
-  const updateService = (i, val) => {
-    const copy = [...services]
-    copy[i] = val
-    setServices(copy)
-  }
+  const subscriptionStatus =
+    billingAccess?.subscription_status ||
+    billingAccess?.subscriptionStatus ||
+    "—"
 
-  const addService = () => {
-    setServices([...services, { name: "", price: "", duration: "" }])
-  }
+  const currentPeriodEnd =
+    billingAccess?.current_period_end ||
+    billingAccess?.currentPeriodEnd ||
+    null
 
-  const save = () => {
+  function save() {
     console.log("MASTER SETTINGS", {
+      slug,
       name,
       photo,
       bio,
       phone,
       email,
       whatsapp,
-      services,
-      hours,
       slot,
       minBefore,
       advance
     })
 
-    alert("Настройки сохранены (локально)")
+    alert("Настройки сохранены локально")
   }
 
   return (
     <div style={{ padding: "20px" }}>
       <PageSection title="Настройки мастера">
-        <Block title="Контакты">
+        <div style={{
+          border: `1px solid ${billingUi.border}`,
+          background: billingUi.bg,
+          color: billingUi.tone,
+          borderRadius: "14px",
+          padding: "16px",
+          marginBottom: "16px"
+        }}>
+          <div style={{ fontSize: "15px", fontWeight: 800, marginBottom: "6px" }}>{billingUi.title}</div>
+          <div style={{ fontSize: "13px", lineHeight: 1.45 }}>{billingUi.note}</div>
+          <div style={{ marginTop: "10px", fontSize: "13px", color: "#344054" }}>
+            Запись: <strong>{canWrite ? "доступна" : "ограничена"}</strong> · Выплаты: <strong>{canWithdraw ? "доступны" : "ограничены"}</strong>
+          </div>
+        </div>
+
+        <Block title="Профиль" hint="Базовые данные мастера. Эта страница не тянет тяжёлые списки клиентов, записей и финансов.">
+          <Field label="Имя" value={name} onChange={setName} />
+          <Field label="Фото (URL)" value={photo} onChange={setPhoto} placeholder="https://..." />
+          <Field label="Описание" value={bio} onChange={setBio} />
+        </Block>
+
+        <Block title="Контакты" hint="Операционные контакты для связи с клиентами.">
           <Field label="Телефон" value={phone} onChange={setPhone} />
           <Field label="Email" value={email} onChange={setEmail} />
           <Field label="WhatsApp" value={whatsapp} onChange={setWhatsapp} />
         </Block>
 
-        <Block title="Профиль">
-          <Field label="Имя" value={name} onChange={setName} />
-          <Field label="Фото (URL)" value={photo} onChange={setPhoto} />
-          <Field label="Описание" value={bio} onChange={setBio} />
-        </Block>
-
-        <Block title="Услуги">
-          {services.map((s, i) => (
-            <ServiceRow
-              key={i}
-              service={s}
-              setService={(v) => updateService(i, v)}
-            />
-          ))}
-
-          <button
-            onClick={addService}
-            style={{
-              marginTop: "8px",
-              padding: "8px 12px",
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb",
-              background: "#fff",
-              cursor: "pointer"
-            }}
-          >
-            Добавить услугу
-          </button>
-        </Block>
-
-        <Block title="Рабочие часы">
-          <Field label="Понедельник" value={hours.mon} onChange={(v) => setHours({ ...hours, mon: v })} />
-          <Field label="Вторник" value={hours.tue} onChange={(v) => setHours({ ...hours, tue: v })} />
-          <Field label="Среда" value={hours.wed} onChange={(v) => setHours({ ...hours, wed: v })} />
-          <Field label="Четверг" value={hours.thu} onChange={(v) => setHours({ ...hours, thu: v })} />
-          <Field label="Пятница" value={hours.fri} onChange={(v) => setHours({ ...hours, fri: v })} />
-          <Field label="Суббота" value={hours.sat} onChange={(v) => setHours({ ...hours, sat: v })} />
-          <Field label="Воскресенье" value={hours.sun} onChange={(v) => setHours({ ...hours, sun: v })} />
-        </Block>
-
-        <Block title="Бронирование">
+        <Block title="Параметры бронирования" hint="Локальные параметры формы и расписания. Управление услугами вынесено в отдельную страницу «Услуги».">
           <Field label="Шаг слота (мин)" value={slot} onChange={setSlot} type="number" />
           <Field label="Минимум до записи (мин)" value={minBefore} onChange={setMinBefore} type="number" />
-          <Field label="Максимум вперед (дней)" value={advance} onChange={setAdvance} type="number" />
+          <Field label="Максимум вперёд (дней)" value={advance} onChange={setAdvance} type="number" />
+        </Block>
+
+        <Block title="Billing / доступ" hint="Read-only блок. Здесь только статус и маршруты в профильные страницы, без тяжёлых таблиц.">
+          <ReadonlyRow label="Master slug" value={slug} />
+          <ReadonlyRow label="Billing model" value={billingModel} />
+          <ReadonlyRow label="Статус подписки" value={subscriptionStatus} />
+          <ReadonlyRow
+            label="Период до"
+            value={currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleString("ru-RU") : "—"}
+          />
+          <ReadonlyRow label="Запись" value={canWrite ? "доступна" : "ограничена"} />
+          <ReadonlyRow label="Выплаты" value={canWithdraw ? "доступны" : "ограничены"} />
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "12px",
+            marginTop: "14px"
+          }}>
+            <Link
+              to={`/master/${slug}/services`}
+              style={{
+                display: "block",
+                textDecoration: "none",
+                textAlign: "center",
+                padding: "12px 14px",
+                borderRadius: "10px",
+                border: "1px solid #e5e7eb",
+                background: "#fff",
+                color: "#111827",
+                fontWeight: 700
+              }}
+            >
+              Открыть услуги
+            </Link>
+
+            <Link
+              to={`/master/${slug}/finance`}
+              style={{
+                display: "block",
+                textDecoration: "none",
+                textAlign: "center",
+                padding: "12px 14px",
+                borderRadius: "10px",
+                border: "1px solid #e5e7eb",
+                background: "#fff",
+                color: "#111827",
+                fontWeight: 700
+              }}
+            >
+              Открыть финансы
+            </Link>
+          </div>
         </Block>
 
         <button

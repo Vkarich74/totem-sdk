@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "./MasterContext"
 import PageSection from "../cabinet/PageSection"
 
-const API_BASE = import.meta.env.VITE_API_BASE
+const API_BASE = import.meta.env.VITE_API_BASE || window.API_BASE || "https://api.totemv.com"
+
+function normalizeBookingsResponse(payload){
+if(Array.isArray(payload)) return payload
+if(Array.isArray(payload?.bookings)) return payload.bookings
+if(Array.isArray(payload?.data?.bookings)) return payload.data.bookings
+return []
+}
 
 function pad(v){
 return v<10?"0"+v:String(v)
@@ -287,18 +294,80 @@ return slot<currentSlot()
 export default function MasterSchedulePage(){
 
 const {
-bookings=[],
-loading,
-error,
+loading: masterLoading,
+error: masterError,
 master,
 slug,
 salonSlug
 }=useMaster()
 
+const [bookings,setBookings]=useState([])
+const [bookingsLoading,setBookingsLoading]=useState(true)
+const [bookingsError,setBookingsError]=useState("")
+
 const [dateKey,setDateKey]=useState(todayKey())
 const [statusOverrides,setStatusOverrides]=useState({})
 const [actionLoading,setActionLoading]=useState({})
 const [clockTick,setClockTick]=useState(0)
+
+useEffect(()=>{
+let cancelled=false
+const routeSlug=master?.slug || slug
+
+async function loadBookings(){
+if(!routeSlug){
+if(!cancelled){
+setBookings([])
+setBookingsLoading(false)
+setBookingsError("SLUG_MISSING")
+}
+return
+}
+
+try{
+setBookingsLoading(true)
+setBookingsError("")
+
+const response=await fetch(
+`${API_BASE}/internal/masters/`+encodeURIComponent(routeSlug)+"/bookings"
+)
+
+const text=await response.text()
+let raw=null
+
+try{
+raw=JSON.parse(text)
+}catch{
+raw=null
+}
+
+if(!response.ok){
+throw new Error("MASTER_BOOKINGS_HTTP_"+response.status)
+}
+
+if(!cancelled){
+setBookings(normalizeBookingsResponse(raw))
+}
+}catch(error){
+console.error("MASTER_SCHEDULE_BOOKINGS_LOAD_FAILED",error)
+
+if(!cancelled){
+setBookings([])
+setBookingsError(error?.message || "MASTER_BOOKINGS_LOAD_FAILED")
+}
+}finally{
+if(!cancelled){
+setBookingsLoading(false)
+}
+}
+}
+
+loadBookings()
+
+return()=>{
+cancelled=true
+}
+},[master?.slug,slug])
 
 useEffect(()=>{
 const timer=setInterval(()=>{
@@ -463,6 +532,9 @@ skip.add(k)
 return{calendar,skip}
 
 },[bookings,dateKey,statusOverrides,clockTick])
+
+const loading=masterLoading || bookingsLoading
+const error=masterError || bookingsError
 
 if(loading)return<PageSection title="Календарь мастера"><div>Загрузка...</div></PageSection>
 

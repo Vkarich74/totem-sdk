@@ -1,11 +1,11 @@
 import { apiGet, apiPost } from "../api";
 
 export async function fetchActiveContract(masterId) {
-  return apiGet(`/contracts/master/${masterId}/active`);
+  return apiGet(`/internal/contracts/master/${masterId}/active`);
 }
 
 export async function fetchContractHistory(masterId) {
-  return apiGet(`/contracts/master/${masterId}/history`);
+  return apiGet(`/internal/contracts/master/${masterId}/history`);
 }
 
 export async function createContract(payload) {

@@ -1,10 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
-import {
-  getMasterMetrics,
-  getMasterBookings,
-  getMasterClients
-} from "../api/master"
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  window.API_BASE ||
+  "https://api.totemv.com"
 
 const C = createContext(null)
 
@@ -16,35 +16,17 @@ function resolveSlug(routeSlug){
   return null
 }
 
-function normalizeMetricsResponse(payload){
-  if(payload?.metrics) return payload.metrics
-  if(payload?.data?.metrics) return payload.data.metrics
-  if(payload && typeof payload === "object") return payload
-  return {}
+function normalizeMasterRoot(payload){
+  if(!payload) return null
+  if(payload.master || payload.billing_access) return payload
+  if(payload.data?.master || payload.data?.billing_access) return payload.data
+  return payload
 }
 
-function normalizeBookingsResponse(payload){
-  if(Array.isArray(payload)) return payload
-  if(Array.isArray(payload?.bookings)) return payload.bookings
-  if(Array.isArray(payload?.data?.bookings)) return payload.data.bookings
-  return []
-}
-
-function normalizeClientsResponse(payload){
-  if(Array.isArray(payload)) return payload
-  if(Array.isArray(payload?.clients)) return payload.clients
-  if(Array.isArray(payload?.data?.clients)) return payload.data.clients
-  return []
-}
-
-function extractMasterFromPayloads(metricsPayload, bookingsPayload, clientsPayload, slug){
+function extractMaster(payload, slug){
   const direct =
-    metricsPayload?.master ||
-    metricsPayload?.data?.master ||
-    bookingsPayload?.master ||
-    bookingsPayload?.data?.master ||
-    clientsPayload?.master ||
-    clientsPayload?.data?.master ||
+    payload?.master ||
+    payload?.data?.master ||
     null
 
   if(direct && typeof direct === "object"){
@@ -60,15 +42,55 @@ function extractMasterFromPayloads(metricsPayload, bookingsPayload, clientsPaylo
   }
 }
 
-export function MasterProvider({ children }){
+function extractBillingAccess(payload){
+  if(payload?.billing_access) return payload.billing_access
+  if(payload?.data?.billing_access) return payload.data.billing_access
+  return null
+}
 
+function deriveCanWrite(billingAccess){
+  if(typeof billingAccess?.can_write === "boolean") return billingAccess.can_write
+  if(typeof billingAccess?.canWrite === "boolean") return billingAccess.canWrite
+
+  const state = String(
+    billingAccess?.access_state ||
+    billingAccess?.accessState ||
+    ""
+  ).toLowerCase()
+
+  if(state === "blocked") return false
+  return true
+}
+
+function deriveCanWithdraw(billingAccess){
+  if(typeof billingAccess?.can_withdraw === "boolean") return billingAccess.can_withdraw
+  if(typeof billingAccess?.canWithdraw === "boolean") return billingAccess.canWithdraw
+
+  const state = String(
+    billingAccess?.access_state ||
+    billingAccess?.accessState ||
+    ""
+  ).toLowerCase()
+
+  if(state === "blocked") return false
+  return true
+}
+
+function deriveBillingBlockReason(billingAccess){
+  return (
+    billingAccess?.block_reason ||
+    billingAccess?.billing_block_reason ||
+    billingAccess?.reason ||
+    null
+  )
+}
+
+export function MasterProvider({ children }){
   const { slug: routeSlug } = useParams()
   const slug = useMemo(()=>resolveSlug(routeSlug),[routeSlug])
 
   const [master,setMaster] = useState(null)
-  const [metrics,setMetrics] = useState(null)
-  const [bookings,setBookings] = useState([])
-  const [clients,setClients] = useState([])
+  const [billingAccess,setBillingAccess] = useState(null)
 
   const [loading,setLoading] = useState(true)
   const [error,setError] = useState(null)
@@ -78,9 +100,7 @@ export function MasterProvider({ children }){
     if(!currentSlug){
       console.error("MASTER CONTEXT ERROR: SLUG_MISSING")
       setMaster(null)
-      setMetrics(null)
-      setBookings([])
-      setClients([])
+      setBillingAccess(null)
       setEmpty(false)
       setError("SLUG_MISSING")
       setLoading(false)
@@ -88,53 +108,49 @@ export function MasterProvider({ children }){
     }
 
     setMaster(null)
-    setMetrics(null)
-    setBookings([])
-    setClients([])
+    setBillingAccess(null)
     setEmpty(false)
 
     setLoading(true)
     setError(null)
 
     try{
-      const [metricsResponse, bookingsResponse, clientsResponse] = await Promise.all([
-        getMasterMetrics(currentSlug),
-        getMasterBookings(currentSlug),
-        getMasterClients(currentSlug)
-      ])
-
-      const metricsData = normalizeMetricsResponse(metricsResponse)
-      const bookingsData = normalizeBookingsResponse(bookingsResponse)
-      const clientsData = normalizeClientsResponse(clientsResponse)
-
-      const hasData =
-        bookingsData.length > 0 ||
-        clientsData.length > 0 ||
-        Object.keys(metricsData || {}).length > 0
-
-      const masterData = extractMasterFromPayloads(
-        metricsResponse,
-        bookingsResponse,
-        clientsResponse,
-        currentSlug
+      const response = await fetch(
+        API_BASE + "/internal/masters/" + encodeURIComponent(currentSlug)
       )
 
-      setMetrics(metricsData)
-      setBookings(bookingsData)
-      setClients(clientsData)
+      const text = await response.text()
+      let raw = null
+
+      try{
+        raw = JSON.parse(text)
+      }catch{
+        raw = null
+      }
+
+      if(!response.ok){
+        throw new Error("MASTER_CONTEXT_HTTP_" + response.status)
+      }
+
+      const normalized = normalizeMasterRoot(raw)
+      const masterData = extractMaster(normalized, currentSlug)
+      const billing = extractBillingAccess(normalized)
+
       setMaster({
         ...masterData,
         slug: masterData?.slug || currentSlug,
-        hasData
+        hasData: true
       })
-      setEmpty(!hasData)
+      setBillingAccess(billing || null)
+      setEmpty(false)
     }catch(e){
       console.error("MASTER CONTEXT ERROR", e)
 
-      setMaster(null)
-      setMetrics(null)
-      setBookings([])
-      setClients([])
+      setMaster({
+        slug: currentSlug,
+        hasData: false
+      })
+      setBillingAccess(null)
       setEmpty(false)
       setError(e?.message || "MASTER_CONTEXT_LOAD_FAILED")
     }finally{
@@ -146,14 +162,26 @@ export function MasterProvider({ children }){
     load(slug)
   },[slug])
 
+  const canWrite = deriveCanWrite(billingAccess)
+  const canWithdraw = deriveCanWithdraw(billingAccess)
+  const billingBlockReason = deriveBillingBlockReason(billingAccess)
+  const salonSlug =
+    master?.salon_slug ||
+    master?.salonSlug ||
+    billingAccess?.salon_slug ||
+    billingAccess?.salonSlug ||
+    null
+
   return (
     <C.Provider
       value={{
         slug,
+        salonSlug,
         master,
-        metrics,
-        bookings,
-        clients,
+        billingAccess,
+        canWrite,
+        canWithdraw,
+        billingBlockReason,
         loading,
         error,
         empty,
