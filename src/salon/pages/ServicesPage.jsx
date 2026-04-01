@@ -3,21 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import PageSection from "../../cabinet/PageSection";
 import StatGrid from "../../cabinet/StatGrid";
 import EmptyState from "../../cabinet/EmptyState";
+import { useSalonSlug } from "../SalonContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
-const MASTER_SLUG = window.MASTER_SLUG || "demo-master";
-
-function resolveSlugFromHash() {
-  const hash = window.location.hash || "";
-  const clean = hash.replace(/^#\/?/, "");
-  const parts = clean.split("/");
-
-  if (parts[0] === "salon" && parts[1] && parts[1] !== "services") {
-    return parts[1];
-  }
-
-  return window.SALON_SLUG || "totem-demo-salon";
-}
 
 function buttonStyle(kind = "default", disabled = false) {
   const base = {
@@ -132,8 +120,8 @@ function formatDuration(value) {
   return `${numberValue} мин`;
 }
 
-export default function ServicesPage(props) {
-  const slug = props?.slug || resolveSlugFromHash();
+export default function ServicesPage() {
+  const slug = useSalonSlug();
 
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -189,11 +177,7 @@ export default function ServicesPage(props) {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/internal/masters/${MASTER_SLUG}`);
-      if (!res.ok) throw new Error(`MASTER_LOAD_FAILED_${res.status}`);
-
-      const data = await res.json();
-      setMaster(data?.master || null);
+      setMaster(null);
     } catch (e) {
       console.error("LOAD_MASTER_ERROR", e);
       setMaster(null);
@@ -237,17 +221,7 @@ export default function ServicesPage(props) {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/internal/masters/${MASTER_SLUG}/services`);
-      if (!res.ok) throw new Error(`MASTER_SERVICES_LOAD_FAILED_${res.status}`);
-
-      const data = await res.json();
-      const fallbackServices = (data?.services || []).map((item) => ({
-        ...item,
-        master_id: master?.id || null,
-        master_slug: MASTER_SLUG,
-        master_name: master?.name || "Мастер"
-      }));
-      setMasterServices(fallbackServices);
+      setMasterServices([]);
     } catch (e) {
       console.error("LOAD_MASTER_SERVICES_ERROR", e);
       setMasterServices([]);
@@ -425,7 +399,7 @@ export default function ServicesPage(props) {
       if (!masterId) return false;
       return !existingKeys.has(`${masterId}:${item.service_pk}`);
     });
-  }, [master, masterServices, services]);
+  }, [masterServices, services]);
 
   const stats = useMemo(() => {
     const total = services.length;

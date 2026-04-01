@@ -1,16 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import * as api from "../../api/internal";
-import { getSalonSlug } from "../../utils/salon";
 import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
-
-function resolveSlug(){
-  const util = getSalonSlug();
-  if(util) return util;
-
-  const parts = window.location.pathname.split("/");
-  return parts[2] || "totem-demo-salon";
-}
+import { useSalonSlug } from "../SalonContext";
 
 function statusColor(status){
   if(status==="reserved") return "#f59e0b";
@@ -67,7 +59,7 @@ export default function BookingsPage(){
   const [loadingAction,setLoadingAction] = useState(null);
   const [selectedBookingId,setSelectedBookingId] = useState(null);
 
-  const salonSlug = resolveSlug();
+  const salonSlug = useSalonSlug();
 
   async function load(){
 

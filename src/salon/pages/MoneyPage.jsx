@@ -1,21 +1,11 @@
 import { useEffect, useState } from "react";
 import PageSection from "../../cabinet/PageSection";
 import * as api from "../../api/internal";
-import { getSalonSlug } from "../../utils/salon";
-
-function resolveSlug(){
-
-const util = getSalonSlug();
-if(util) return util;
-
-const parts = window.location.pathname.split("/");
-return parts[2] || "totem-demo-salon";
-
-}
+import { useSalonSlug } from "../SalonContext";
 
 export default function MoneyPage(){
 
-const salonSlug = resolveSlug();
+const salonSlug = useSalonSlug();
 
 const [metrics,setMetrics] = useState(null);
 

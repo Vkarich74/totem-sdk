@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import PageSection from "../../cabinet/PageSection";
+import { useSalonSlug } from "../SalonContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -7,7 +8,7 @@ export default function DashboardPage(){
 
 const [metrics,setMetrics] = useState(null);
 
-const salonSlug = window.SALON_SLUG || "totem-demo-salon";
+const salonSlug = useSalonSlug();
 
 async function load(){
 
@@ -32,8 +33,9 @@ console.error("METRICS LOAD ERROR",e);
 }
 
 useEffect(()=>{
+if(!salonSlug) return;
 load();
-},[]);
+},[salonSlug]);
 
 if(!metrics){
 return (

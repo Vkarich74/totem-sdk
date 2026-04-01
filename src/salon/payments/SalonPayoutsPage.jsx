@@ -1,31 +1,20 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
 
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
+import { useSalonSlug } from "../SalonContext"
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
 export default function SalonPayoutsPage() {
-
-  const params = useParams()
-
-  let slug = params.slug
-
-  if (!slug) {
-    const m = window.location.pathname.match(/salon\/([^/]+)/)
-    if (m) slug = m[1]
-  }
-
+  const slug = useSalonSlug()
   const [payouts, setPayouts] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-
     let cancelled = false
 
     async function loadPayouts() {
-
       if (!slug) {
         if (!cancelled) {
           setPayouts([])
@@ -34,11 +23,12 @@ export default function SalonPayoutsPage() {
         return
       }
 
-      try {
+      if (!cancelled) {
+        setLoading(true)
+      }
 
-        const res = await fetch(
-          `${API_BASE}/internal/salons/${slug}/payouts`
-        )
+      try {
+        const res = await fetch(`${API_BASE}/internal/salons/${slug}/payouts`)
 
         if (!res.ok) {
           if (!cancelled) {
@@ -51,7 +41,6 @@ export default function SalonPayoutsPage() {
         const data = await res.json()
 
         if (!cancelled) {
-
           if (data && data.ok && Array.isArray(data.payouts)) {
             setPayouts(data.payouts)
           } else {
@@ -60,18 +49,14 @@ export default function SalonPayoutsPage() {
 
           setLoading(false)
         }
-
       } catch (err) {
-
         console.log("PAYOUTS API NOT AVAILABLE")
 
         if (!cancelled) {
           setPayouts([])
           setLoading(false)
         }
-
       }
-
     }
 
     loadPayouts()
@@ -79,7 +64,6 @@ export default function SalonPayoutsPage() {
     return () => {
       cancelled = true
     }
-
   }, [slug])
 
   if (loading) {
@@ -90,20 +74,24 @@ export default function SalonPayoutsPage() {
     )
   }
 
+  if (!slug) {
+    return (
+      <PageSection title="Выплаты салона">
+        <EmptyState title="Slug не найден" text="Проверь маршрут salon cabinet" />
+      </PageSection>
+    )
+  }
+
   if (payouts.length === 0) {
     return (
       <PageSection title="Выплаты салона">
-        <EmptyState
-          title="Выплаты отсутствуют"
-          text="Выплаты салона пока отсутствуют"
-        />
+        <EmptyState title="Выплаты отсутствуют" text="Выплаты салона пока отсутствуют" />
       </PageSection>
     )
   }
 
   return (
     <PageSection title="Выплаты салона">
-
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -115,22 +103,16 @@ export default function SalonPayoutsPage() {
         </thead>
 
         <tbody>
-
           {payouts.map((p) => (
-
             <tr key={p.id}>
               <td>{p.id}</td>
               <td>{p.created_at || "-"}</td>
               <td>{p.amount || 0}</td>
               <td>{p.status || "-"}</td>
             </tr>
-
           ))}
-
         </tbody>
-
       </table>
-
     </PageSection>
   )
 }

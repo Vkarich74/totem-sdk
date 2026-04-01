@@ -1,16 +1,8 @@
 import { useEffect, useState } from "react";
 import PageSection from "../../cabinet/PageSection";
+import { useSalonSlug } from "../SalonContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE
-
-function resolveSlug() {
-
-  if (window.SALON_SLUG) return window.SALON_SLUG;
-
-  const parts = window.location.pathname.split("/");
-  return parts[2] || "totem-demo-salon";
-
-}
 
 export default function ClientsPage(){
 
@@ -19,7 +11,7 @@ const [loading,setLoading] = useState(true);
 const [search,setSearch] = useState("");
 const [selected,setSelected] = useState(null);
 
-const salonSlug = resolveSlug();
+const salonSlug = useSalonSlug();
 
 useEffect(()=>{
 

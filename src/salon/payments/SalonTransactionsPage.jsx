@@ -2,25 +2,19 @@ import { useEffect, useState } from "react"
 
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
+import { useSalonSlug } from "../SalonContext"
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
 export default function SalonTransactionsPage() {
-
+  const slug = useSalonSlug()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-
     let cancelled = false
 
     async function loadTransactions() {
-
-      const path = window.location.pathname
-
-      const parts = path.split("/")
-      const slug = parts[2]
-
       if (!slug) {
         if (!cancelled) {
           setTransactions([])
@@ -29,11 +23,12 @@ export default function SalonTransactionsPage() {
         return
       }
 
-      try {
+      if (!cancelled) {
+        setLoading(true)
+      }
 
-        const res = await fetch(
-          `${API_BASE}/internal/salons/${slug}/payments`
-        )
+      try {
+        const res = await fetch(`${API_BASE}/internal/salons/${slug}/payments`)
 
         if (!res.ok) {
           if (!cancelled) {
@@ -46,7 +41,6 @@ export default function SalonTransactionsPage() {
         const data = await res.json()
 
         if (!cancelled) {
-
           if (data && data.ok && Array.isArray(data.payments)) {
             setTransactions(data.payments)
           } else {
@@ -55,18 +49,14 @@ export default function SalonTransactionsPage() {
 
           setLoading(false)
         }
-
       } catch (err) {
-
         console.log("PAYMENTS API ERROR", err)
 
         if (!cancelled) {
           setTransactions([])
           setLoading(false)
         }
-
       }
-
     }
 
     loadTransactions()
@@ -74,8 +64,7 @@ export default function SalonTransactionsPage() {
     return () => {
       cancelled = true
     }
-
-  }, [])
+  }, [slug])
 
   if (loading) {
     return (
@@ -85,21 +74,24 @@ export default function SalonTransactionsPage() {
     )
   }
 
+  if (!slug) {
+    return (
+      <PageSection title="Транзакции салона">
+        <EmptyState title="Slug не найден" text="Проверь маршрут salon cabinet" />
+      </PageSection>
+    )
+  }
+
   if (transactions.length === 0) {
     return (
       <PageSection title="Транзакции салона">
-        <EmptyState
-          title="Транзакции отсутствуют"
-          text="Транзакции салона пока отсутствуют"
-        />
+        <EmptyState title="Транзакции отсутствуют" text="Транзакции салона пока отсутствуют" />
       </PageSection>
     )
   }
 
   return (
-
     <PageSection title="Транзакции салона">
-
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -112,9 +104,7 @@ export default function SalonTransactionsPage() {
         </thead>
 
         <tbody>
-
           {transactions.map((tx) => (
-
             <tr key={tx.id}>
               <td>{tx.id}</td>
               <td>{tx.created_at || "-"}</td>
@@ -122,13 +112,9 @@ export default function SalonTransactionsPage() {
               <td>{tx.provider || "-"}</td>
               <td>{tx.status || "-"}</td>
             </tr>
-
           ))}
-
         </tbody>
       </table>
-
     </PageSection>
-
   )
 }

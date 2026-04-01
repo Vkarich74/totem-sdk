@@ -1,11 +1,28 @@
-// src/salon/SalonShell.jsx
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useParams } from "react-router-dom"
+import { buildSalonPath, resolveSalonSlugValue } from "./SalonContext"
+
+const MOBILE_NAV_ITEMS = [
+  { label: "Главная", section: "dashboard" },
+  { label: "Записи", section: "bookings" },
+  { label: "Мастера", section: "masters" },
+  { label: "Финансы", section: "finance" },
+  { label: "Настройки", section: "settings" },
+]
 
 export default function SalonShell() {
+  const params = useParams()
+  const location = useLocation()
+
+  const slug = resolveSalonSlugValue({
+    paramsSlug: params?.slug,
+    pathname: location.pathname,
+    hash: location.hash,
+  })
+
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h3 style={{ margin: 0 }}>Комната салона</h3>
+        <h3 style={{ margin: 0 }}>Кабинет салона</h3>
       </header>
 
       <main style={styles.main}>
@@ -13,14 +30,12 @@ export default function SalonShell() {
       </main>
 
       <nav style={styles.bottomNav}>
-        <NavItem to="/salon/masters" label="Мастера" />
-        <NavItem to="/salon/bookings" label="Записи" />
-        <NavItem to="/salon/reports" label="Отчёты" />
-        <NavItem to="/salon/money" label="Деньги" />
-        <NavItem to="/salon/settings" label="Настройки" />
+        {MOBILE_NAV_ITEMS.map((item) => (
+          <NavItem key={item.section} to={buildSalonPath(slug, item.section)} label={item.label} />
+        ))}
       </nav>
     </div>
-  );
+  )
 }
 
 function NavItem({ to, label }) {
@@ -34,7 +49,7 @@ function NavItem({ to, label }) {
     >
       {label}
     </NavLink>
-  );
+  )
 }
 
 const styles = {
@@ -58,8 +73,9 @@ const styles = {
     borderTop: "1px solid #eee",
     padding: "10px 0",
     fontSize: "13px",
+    gap: "8px",
   },
   navItem: {
     textDecoration: "none",
   },
-};
+}

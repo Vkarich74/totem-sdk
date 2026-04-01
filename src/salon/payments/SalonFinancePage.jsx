@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react"
+import { useSalonSlug } from "../SalonContext"
 import {
   canWriteByBilling,
   canWithdrawByBilling,
@@ -231,7 +232,7 @@ export default function SalonFinancePage() {
   const [ledgerLoading, setLedgerLoading] = useState(true)
   const [walletLoading, setWalletLoading] = useState(true)
 
-  const salonSlug = "totem-demo-salon"
+  const salonSlug = useSalonSlug()
 
   const pageStyle = {
     minHeight: "100%",
@@ -415,12 +416,32 @@ export default function SalonFinancePage() {
   }
 
   useEffect(() => {
+    if (!salonSlug) {
+      setPayments([])
+      setLedger([])
+      setWalletBalance(null)
+      setContracts([])
+      setBillingAccess(null)
+      setLoading(false)
+      setLedgerLoading(false)
+      setWalletLoading(false)
+      setContractsLoading(false)
+      setBillingLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setLedgerLoading(true)
+    setWalletLoading(true)
+    setContractsLoading(true)
+    setBillingLoading(true)
+
     loadPayments()
     loadLedger()
     loadWallet()
     loadContracts()
     loadBillingAccess()
-  }, [])
+  }, [salonSlug])
 
   async function loadPayments() {
     try {
