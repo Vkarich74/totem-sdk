@@ -121,209 +121,232 @@ function formatDuration(value) {
   return `${numberValue} мин`;
 }
 
-export default function ServicesPage(props) {
+function normalizeServicesResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.services)) return data.services;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+function getAttachOptionLabel(service) {
+  const parts = [];
+  if (service?.master_name) parts.push(service.master_name);
+  if (service?.name) parts.push(service.name);
+
+  const tail = [];
+  if (Number.isFinite(Number(service?.price))) {
+    tail.push(`${Number(service.price).toLocaleString("ru-RU")} сом`);
+  }
+  if (Number.isFinite(Number(service?.duration_min))) {
+    tail.push(`${service.duration_min} мин`);
+  }
+
+  return [parts.join(" — "), tail.join(" — ")].filter(Boolean).join(" — ");
+}
+
+export default function ServicesPage() {
   const { slug: routeSlug } = useParams();
   const slug = resolveSalonSlug(routeSlug);
 
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [master, setMaster] = useState(null);
   const [masterServices, setMasterServices] = useState([]);
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [attachLoading, setAttachLoading] = useState(false);
   const [salonMasters, setSalonMasters] = useState([]);
 
-  async function loadServices() {
+  async function fetchSalonMasters() {
+    const response = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
+    if (!response.ok) {
+      throw new Error(`SALON_MASTERS_LOAD_FAILED_${response.status}`);
+    }
+
+    const payload = await response.json();
+    const list = Array.isArray(payload?.masters) ? payload.masters : [];
+    return list.filter((item) => item?.status === "active");
+  }
+
+  async function loadServices(showLoader = true) {
+    if (!slug) {
+      setServices([]);
+      setLoading(false);
+      setError("Не найден slug салона");
+      return;
+    }
+
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
+      setError("");
 
-      const res = await fetch(`${API_BASE}/internal/salons/${slug}/services`);
-      if (!res.ok) throw new Error(`LOAD_FAILED_${res.status}`);
+      const [servicesResponse, activeMasters] = await Promise.all([
+        fetch(`${API_BASE}/internal/salons/${slug}/services`),
+        fetchSalonMasters()
+      ]);
 
-      const data = await res.json();
-
-      if (data?.services) {
-        setServices(data.services);
-      } else {
-        setServices([]);
+      if (!servicesResponse.ok) {
+        throw new Error(`LOAD_FAILED_${servicesResponse.status}`);
       }
+
+      const payload = await servicesResponse.json();
+      const normalizedServices = normalizeServicesResponse(payload);
+
+      setServices(normalizedServices);
+      setSalonMasters(activeMasters);
+      setSuccess("");
     } catch (e) {
       console.error("LOAD_SERVICES_ERROR", e);
-      alert("Ошибка загрузки услуг");
       setServices([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadMaster() {
-    try {
-      const salonMastersRes = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
-      if (!salonMastersRes.ok) throw new Error(`SALON_MASTERS_LOAD_FAILED_${salonMastersRes.status}`);
-
-      const salonMastersData = await salonMastersRes.json();
-      const activeSalonMasters = (salonMastersData?.masters || []).filter(
-        (item) => item.status === "active"
-      );
-
-      setSalonMasters(activeSalonMasters);
-
-      if (activeSalonMasters.length > 0) {
-        setMaster({
-          id: activeSalonMasters[0].id,
-          slug: activeSalonMasters[0].slug,
-          name: activeSalonMasters[0].name
-        });
-        return;
-      }
-
-      setMaster(null);
-    } catch (e) {
-      console.error("LOAD_MASTER_ERROR", e);
-      setMaster(null);
       setSalonMasters([]);
+      setError("Не удалось загрузить услуги салона");
+    } finally {
+      if (showLoader) setLoading(false);
     }
   }
 
-  async function loadMasterServices() {
+  async function loadMasterServices(showLoader = false) {
+    if (!slug) {
+      setMasterServices([]);
+      return;
+    }
+
     try {
-      const salonMastersRes = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
-      if (!salonMastersRes.ok) throw new Error(`SALON_MASTERS_LOAD_FAILED_${salonMastersRes.status}`);
+      if (showLoader) setLoading(true);
+      setError("");
 
-      const salonMastersData = await salonMastersRes.json();
-      const activeSalonMasters = (salonMastersData?.masters || []).filter(
-        (item) => item.status === "active"
-      );
+      const activeMasters = await fetchSalonMasters();
+      setSalonMasters(activeMasters);
 
-      setSalonMasters(activeSalonMasters);
-
-      if (activeSalonMasters.length > 0) {
-        const responses = await Promise.all(
-          activeSalonMasters.map(async (currentMaster) => {
-            const res = await fetch(`${API_BASE}/internal/masters/${currentMaster.slug}/services`);
-            if (!res.ok) {
-              throw new Error(`MASTER_SERVICES_LOAD_FAILED_${currentMaster.slug}_${res.status}`);
-            }
-
-            const data = await res.json();
-            const list = data?.services || [];
-
-            return list.map((item) => ({
-              ...item,
-              master_id: currentMaster.id,
-              master_slug: currentMaster.slug,
-              master_name: currentMaster.name
-            }));
-          })
-        );
-
-        setMasterServices(responses.flat());
+      if (activeMasters.length === 0) {
+        setMasterServices([]);
         return;
       }
 
-      setMasterServices([]);
+      const responses = await Promise.all(
+        activeMasters.map(async (currentMaster) => {
+          const response = await fetch(`${API_BASE}/internal/masters/${currentMaster.slug}/services`);
+          if (!response.ok) {
+            throw new Error(`MASTER_SERVICES_LOAD_FAILED_${currentMaster.slug}_${response.status}`);
+          }
+
+          const payload = await response.json();
+          const list = normalizeServicesResponse(payload);
+
+          return list.map((item) => ({
+            ...item,
+            master_id: currentMaster.id,
+            master_slug: currentMaster.slug,
+            master_name: currentMaster.name
+          }));
+        })
+      );
+
+      setMasterServices(responses.flat());
     } catch (e) {
       console.error("LOAD_MASTER_SERVICES_ERROR", e);
       setMasterServices([]);
+      setError("Не удалось загрузить услуги мастеров");
+    } finally {
+      if (showLoader) setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadServices();
-    loadMaster();
-    loadMasterServices();
+    loadServices(true);
+    loadMasterServices(false);
   }, [slug]);
 
   async function toggleActive(service) {
     try {
       setProcessingId(service.id);
+      setError("");
+      setSuccess("");
 
-      const res = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
+      const response = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          active: !service.active
-        })
+        body: JSON.stringify({ active: !service.active })
       });
 
-      if (!res.ok) throw new Error("TOGGLE_FAILED");
+      if (!response.ok) throw new Error("TOGGLE_FAILED");
 
-      await loadServices();
+      await loadServices(false);
+      setSuccess(service.active ? "Услуга выключена" : "Услуга включена");
     } catch (e) {
       console.error("TOGGLE_ERROR", e);
-      alert("Ошибка изменения статуса");
+      setError("Ошибка изменения статуса услуги");
     } finally {
       setProcessingId(null);
     }
   }
 
   async function updatePrice(service) {
-    const input = window.prompt("Новая цена", String(service.price));
+    const input = window.prompt("Новая цена", String(service.price ?? ""));
     if (input === null) return;
 
     const price = Number(input);
 
-    if (Number.isNaN(price) || price < 0) {
-      alert("Некорректная цена");
+    if (!Number.isFinite(price) || price < 0) {
+      setError("Некорректная цена");
       return;
     }
 
     try {
       setProcessingId(service.id);
+      setError("");
+      setSuccess("");
 
-      const res = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
+      const response = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          price
-        })
+        body: JSON.stringify({ price })
       });
 
-      if (!res.ok) throw new Error("UPDATE_PRICE_FAILED");
+      if (!response.ok) throw new Error("UPDATE_PRICE_FAILED");
 
-      await loadServices();
+      await loadServices(false);
+      setSuccess("Цена услуги обновлена");
     } catch (e) {
       console.error("UPDATE_PRICE_ERROR", e);
-      alert("Ошибка обновления цены");
+      setError("Ошибка обновления цены");
     } finally {
       setProcessingId(null);
     }
   }
 
   async function updateDuration(service) {
-    const input = window.prompt("Новая длительность в минутах", String(service.duration_min));
+    const input = window.prompt("Новая длительность в минутах", String(service.duration_min ?? ""));
     if (input === null) return;
 
     const durationMin = Number(input);
 
-    if (
-      Number.isNaN(durationMin) ||
-      durationMin <= 0 ||
-      !Number.isInteger(durationMin)
-    ) {
-      alert("Некорректная длительность");
+    if (!Number.isFinite(durationMin) || durationMin <= 0 || !Number.isInteger(durationMin)) {
+      setError("Некорректная длительность");
       return;
     }
 
     try {
       setProcessingId(service.id);
+      setError("");
+      setSuccess("");
 
-      const res = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
+      const response = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          duration_min: durationMin
-        })
+        body: JSON.stringify({ duration_min: durationMin })
       });
 
-      if (!res.ok) throw new Error("UPDATE_DURATION_FAILED");
+      if (!response.ok) throw new Error("UPDATE_DURATION_FAILED");
 
-      await loadServices();
+      await loadServices(false);
+      setSuccess("Длительность услуги обновлена");
     } catch (e) {
       console.error("UPDATE_DURATION_ERROR", e);
-      alert("Ошибка обновления длительности");
+      setError("Ошибка обновления длительности");
     } finally {
       setProcessingId(null);
     }
@@ -331,32 +354,31 @@ export default function ServicesPage(props) {
 
   async function attachService() {
     if (!selectedServiceId) {
-      alert("Выбери услугу");
+      setError("Выбери услугу мастера");
       return;
     }
 
     const selected = masterServices.find((item) => String(item.id) === String(selectedServiceId));
 
     if (!selected) {
-      alert("Услуга мастера не найдена");
+      setError("Услуга мастера не найдена");
       return;
     }
 
-    const targetMasterId = selected.master_id || master?.id;
-
+    const targetMasterId = selected.master_id;
     if (!targetMasterId) {
-      alert("Не удалось определить мастера");
+      setError("Не удалось определить мастера для услуги");
       return;
     }
 
     try {
       setAttachLoading(true);
+      setError("");
+      setSuccess("");
 
-      const res = await fetch(`${API_BASE}/internal/salons/${slug}/services`, {
+      const response = await fetch(`${API_BASE}/internal/salons/${slug}/services`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           master_id: Number(targetMasterId),
           service_pk: Number(selected.service_pk),
@@ -366,48 +388,47 @@ export default function ServicesPage(props) {
         })
       });
 
-      if (!res.ok) {
-        let message = "ATTACH_FAILED";
-
+      if (!response.ok) {
+        let message = "Ошибка подключения услуги";
         try {
-          const errorData = await res.json();
-          message = errorData?.error || message;
+          const payload = await response.json();
+          message = payload?.error || message;
         } catch (parseError) {
           console.error("ATTACH_ERROR_PARSE_FAILED", parseError);
         }
-
         throw new Error(message);
       }
 
-      await loadServices();
-      await loadMasterServices();
+      await loadServices(false);
+      await loadMasterServices(false);
       setSelectedServiceId("");
-      alert("Услуга подключена");
+      setSuccess("Услуга подключена в салон");
     } catch (e) {
       console.error("ATTACH_ERROR", e);
-      alert(`Ошибка подключения услуги: ${e.message}`);
+      setError(e?.message || "Ошибка подключения услуги");
     } finally {
       setAttachLoading(false);
     }
   }
 
   const availableMasterServices = useMemo(() => {
-    const existingKeys = new Set(
-      services.map((item) => `${item.master_id}:${item.service_pk}`)
-    );
+    const existingKeys = new Set(services.map((item) => `${item.master_id}:${item.service_pk}`));
 
     return masterServices.filter((item) => {
-      const masterId = item.master_id || master?.id;
+      const masterId = item?.master_id;
       if (!masterId) return false;
       return !existingKeys.has(`${masterId}:${item.service_pk}`);
     });
-  }, [master, masterServices, services]);
+  }, [masterServices, services]);
 
   const stats = useMemo(() => {
     const total = services.length;
-    const active = services.filter((s) => s.active).length;
-    return { total, active };
+    const active = services.filter((item) => item?.active).length;
+    const masters = new Set(services.map((item) => item?.master_id).filter(Boolean)).size;
+    return { total, active, masters };
   }, [services]);
+
+  const isBusy = loading || attachLoading || processingId !== null;
 
   return (
     <PageSection title="Услуги салона">
@@ -429,7 +450,8 @@ export default function ServicesPage(props) {
         <StatGrid
           items={[
             { label: "Всего услуг", value: stats.total },
-            { label: "Активные", value: stats.active }
+            { label: "Активные", value: stats.active },
+            { label: "Мастеров в витрине", value: stats.masters }
           ]}
         />
 
@@ -448,28 +470,20 @@ export default function ServicesPage(props) {
               <div style={labelStyle()}>Доступные услуги</div>
               <select
                 value={selectedServiceId}
-                onChange={(e) => setSelectedServiceId(e.target.value)}
+                onChange={(event) => setSelectedServiceId(event.target.value)}
                 style={inputStyle()}
                 disabled={attachLoading || availableMasterServices.length === 0}
               >
                 <option value="">Выбери услугу</option>
-
-                {availableMasterServices.map((s) => (
-                  <option key={`${s.master_id || "master"}-${s.id}`} value={s.id}>
-                    {s.master_name ? `${s.master_name} — ` : ""}
-                    {s.name} — {s.price} сом — {s.duration_min} мин
+                {availableMasterServices.map((service) => (
+                  <option key={`${service.master_id || "master"}-${service.id}`} value={service.id}>
+                    {getAttachOptionLabel(service)}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                flexWrap: "wrap"
-              }}
-            >
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button
                 onClick={attachService}
                 disabled={attachLoading || availableMasterServices.length === 0}
@@ -479,53 +493,61 @@ export default function ServicesPage(props) {
               </button>
 
               <button
-                onClick={loadServices}
-                disabled={loading || attachLoading || processingId !== null}
-                style={buttonStyle("default", loading || attachLoading || processingId !== null)}
+                onClick={() => {
+                  loadServices(true);
+                  loadMasterServices(false);
+                }}
+                disabled={isBusy}
+                style={buttonStyle("default", isBusy)}
               >
                 {loading ? "Обновляем..." : "Обновить"}
               </button>
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              flexWrap: "wrap"
-            }}
-          >
-            <div style={badgeStyle(salonMasters.length > 0)}>
-              Активных мастеров: {salonMasters.length}
-            </div>
-
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <div style={badgeStyle(salonMasters.length > 0)}>Активных мастеров: {salonMasters.length}</div>
             <div style={badgeStyle(availableMasterServices.length > 0)}>
               Доступно для подключения: {availableMasterServices.length}
             </div>
           </div>
 
           {salonMasters.length === 0 && (
-            <div
-              style={{
-                fontSize: "13px",
-                color: "#667085"
-              }}
-            >
-              В салоне нет активных мастеров.
-            </div>
+            <div style={{ fontSize: "13px", color: "#667085" }}>В салоне нет активных мастеров.</div>
           )}
 
           {salonMasters.length > 0 && availableMasterServices.length === 0 && (
-            <div
-              style={{
-                fontSize: "13px",
-                color: "#667085"
-              }}
-            >
-              Нет доступных услуг мастеров для подключения.
+            <div style={{ fontSize: "13px", color: "#667085" }}>
+              Все доступные услуги мастеров уже подключены в салон.
             </div>
           )}
         </div>
+
+        {success && (
+          <div
+            style={{
+              ...cardStyle(),
+              border: "1px solid #abefc6",
+              background: "#ecfdf3",
+              color: "#067647"
+            }}
+          >
+            {success}
+          </div>
+        )}
+
+        {error && (
+          <div
+            style={{
+              ...cardStyle(),
+              border: "1px solid #fecdca",
+              background: "#fff6f5",
+              color: "#b42318"
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         {loading && (
           <div style={cardStyle()}>
@@ -533,7 +555,7 @@ export default function ServicesPage(props) {
           </div>
         )}
 
-        {!loading && services.length === 0 && (
+        {!loading && services.length === 0 && !error && (
           <EmptyState
             title="Услуг пока нет"
             text="Подключите услуги мастеров и начните управлять витриной салона"
@@ -541,104 +563,108 @@ export default function ServicesPage(props) {
         )}
 
         {!loading && services.length > 0 && (
-          <div style={cardStyle()}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "12px",
-                flexWrap: "wrap"
-              }}
-            >
-              <h3 style={sectionTitleStyle()}>Подключённые услуги</h3>
-
+          <>
+            <div style={{ ...cardStyle(), padding: "16px" }}>
               <div
                 style={{
-                  fontSize: "13px",
-                  color: "#667085"
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexWrap: "wrap"
                 }}
               >
-                Все изменения применяются сразу после действия.
+                <h3 style={sectionTitleStyle()}>Подключённые услуги</h3>
+                <div style={{ fontSize: "13px", color: "#667085" }}>
+                  Все изменения применяются сразу после действия.
+                </div>
               </div>
             </div>
 
             <div
               style={{
-                overflowX: "auto",
-                border: "1px solid #eaecf0",
-                borderRadius: "12px",
-                background: "#ffffff"
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "16px"
               }}
             >
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "840px" }}>
-                <thead>
-                  <tr style={{ background: "#f9fafb" }}>
-                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>ID</th>
-                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Мастер</th>
-                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Услуга</th>
-                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Цена</th>
-                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Длительность</th>
-                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Статус</th>
-                    <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "12px", color: "#667085" }}>Действия</th>
-                  </tr>
-                </thead>
+              {services.map((service) => {
+                const isProcessing = processingId === service.id;
 
-                <tbody>
-                  {services.map((s, index) => {
-                    const isProcessing = processingId === s.id;
+                return (
+                  <div key={service.id} style={cardStyle()}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "12px"
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div style={{ fontSize: "17px", fontWeight: 700, color: "#111827" }}>
+                          {service.name || "Без названия"}
+                        </div>
+                        <div style={{ fontSize: "13px", color: "#667085" }}>
+                          {service.master_name || "Мастер не указан"}
+                        </div>
+                      </div>
+                      <span style={badgeStyle(!!service.active)}>
+                        {service.active ? "Активна" : "Отключена"}
+                      </span>
+                    </div>
 
-                    return (
-                      <tr
-                        key={s.id}
-                        style={{
-                          borderTop: index === 0 ? "none" : "1px solid #eaecf0"
-                        }}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                        gap: "12px"
+                      }}
+                    >
+                      <div>
+                        <div style={labelStyle()}>Цена</div>
+                        <div style={{ fontSize: "15px", fontWeight: 600, color: "#111827" }}>
+                          {formatMoney(service.price)}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={labelStyle()}>Длительность</div>
+                        <div style={{ fontSize: "15px", fontWeight: 600, color: "#111827" }}>
+                          {formatDuration(service.duration_min)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => toggleActive(service)}
+                        disabled={isProcessing || attachLoading}
+                        style={buttonStyle("default", isProcessing || attachLoading)}
                       >
-                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px", fontWeight: 600 }}>{s.id}</td>
-                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px" }}>{s.master_name || "—"}</td>
-                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px", fontWeight: 500 }}>{s.name}</td>
-                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px" }}>{formatMoney(s.price)}</td>
-                        <td style={{ padding: "16px 12px", color: "#111827", fontSize: "14px" }}>{formatDuration(s.duration_min)}</td>
-                        <td style={{ padding: "16px 12px" }}>
-                          <span style={badgeStyle(!!s.active)}>
-                            {s.active ? "Активна" : "Отключена"}
-                          </span>
-                        </td>
-                        <td style={{ padding: "16px 12px" }}>
-                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                            <button
-                              onClick={() => toggleActive(s)}
-                              disabled={isProcessing || attachLoading}
-                              style={buttonStyle("default", isProcessing || attachLoading)}
-                            >
-                              {s.active ? "Выключить" : "Включить"}
-                            </button>
+                        {service.active ? "Выключить" : "Включить"}
+                      </button>
 
-                            <button
-                              onClick={() => updatePrice(s)}
-                              disabled={isProcessing || attachLoading}
-                              style={buttonStyle("default", isProcessing || attachLoading)}
-                            >
-                              Цена
-                            </button>
+                      <button
+                        onClick={() => updatePrice(service)}
+                        disabled={isProcessing || attachLoading}
+                        style={buttonStyle("default", isProcessing || attachLoading)}
+                      >
+                        Цена
+                      </button>
 
-                            <button
-                              onClick={() => updateDuration(s)}
-                              disabled={isProcessing || attachLoading}
-                              style={buttonStyle("default", isProcessing || attachLoading)}
-                            >
-                              Длительность
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      <button
+                        onClick={() => updateDuration(service)}
+                        disabled={isProcessing || attachLoading}
+                        style={buttonStyle("default", isProcessing || attachLoading)}
+                      >
+                        Длительность
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          </>
         )}
       </div>
     </PageSection>

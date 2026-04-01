@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug } from "../SalonContext"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
@@ -158,6 +158,30 @@ async function safeReadJson(response) {
   }
 }
 
+
+function FinanceTab({ href, label, active = false }) {
+  return (
+    <a
+      href={href}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "10px 14px",
+        borderRadius: 12,
+        textDecoration: "none",
+        fontSize: 13,
+        fontWeight: 700,
+        border: active ? "1px solid #111827" : "1px solid #d1d5db",
+        background: active ? "#111827" : "#ffffff",
+        color: active ? "#ffffff" : "#111827",
+        whiteSpace: "nowrap"
+      }}
+    >
+      {label}
+    </a>
+  )
+}
+
 export default function SalonContractsPage() {
   const [contracts, setContracts] = useState([])
   const [contractsLoading, setContractsLoading] = useState(true)
@@ -195,8 +219,18 @@ export default function SalonContractsPage() {
   const [contractActionSuccess, setContractActionSuccess] = useState("")
 
   const { slug: routeSlug } = useParams()
+  const location = useLocation()
 
   const salonSlug = resolveSalonSlug(routeSlug)
+
+  const financeTabs = [
+    { key: "finance", label: "Финансы", href: `#/salon/${salonSlug}/finance` },
+    { key: "money", label: "Доход", href: `#/salon/${salonSlug}/money` },
+    { key: "settlements", label: "Сеты", href: `#/salon/${salonSlug}/settlements` },
+    { key: "payouts", label: "Выплаты", href: `#/salon/${salonSlug}/payouts` },
+    { key: "transactions", label: "Транзакции", href: `#/salon/${salonSlug}/transactions` },
+    { key: "contracts", label: "Контракты", href: `#/salon/${salonSlug}/contracts` }
+  ]
 
   const pageStyle = {
     minHeight: "100%",
@@ -238,6 +272,20 @@ export default function SalonContractsPage() {
   const compactGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 12
+  }
+
+  const financeNavStyle = {
+    display: "flex",
+    gap: 10,
+    overflowX: "auto",
+    paddingBottom: 4,
+    marginTop: 16
+  }
+
+  const contractsGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
     gap: 12
   }
 
@@ -894,6 +942,16 @@ export default function SalonContractsPage() {
     [contracts]
   )
 
+  const latestActiveContract = useMemo(
+    () => [...activeContracts].sort((a, b) => new Date(b.effective_from || 0) - new Date(a.effective_from || 0))[0] || null,
+    [activeContracts]
+  )
+
+  const latestArchivedContract = useMemo(
+    () => [...archivedContracts].sort((a, b) => new Date(b.archived_at || b.updated_at || 0) - new Date(a.archived_at || a.updated_at || 0))[0] || null,
+    [archivedContracts]
+  )
+
   const contractSum = Number(masterPercent || 0) + Number(salonPercent || 0) + Number(platformPercent || 0)
   const isPercentModel = contractModel === "percentage"
   const isRentModel = contractModel === "fixed_rent"
@@ -901,14 +959,89 @@ export default function SalonContractsPage() {
   const isHybridModel = contractModel === "hybrid"
   const hasMasters = masters.length > 0
 
+  function renderContractCard(contract, mode = "active") {
+    const isBusy = contractActionLoadingId === contract.id
+    const actionsLocked = Boolean(contractActionLoadingId)
+
+    return (
+      <Card key={`${mode}-${contract.id}`} style={{ padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Мастер</p>
+            <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 700, color: "#111827" }}>{getMasterName(contract)}</p>
+            <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+              {getContractModelLabel(contract)} · {getContractSummary(contract)}
+            </p>
+          </div>
+          <span style={getStatusStyle(contract.status)}>{formatStatus(contract.status)}</span>
+        </div>
+
+        <div style={{ ...compactGridStyle, marginTop: 14 }}>
+          <InfoBox label="ID" value={contract.id || "-"} />
+          <InfoBox label="Дата начала" value={formatDateTime(contract.effective_from)} />
+          {mode === "archived" ? (
+            <InfoBox label="Архивирован" value={formatDateTime(contract.archived_at)} />
+          ) : (
+            <InfoBox label="Модель" value={getContractModelLabel(contract)} />
+          )}
+        </div>
+
+        {mode !== "archived" && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+            {mode === "pending" && (
+              <button
+                type="button"
+                onClick={() => acceptContract(contract.id)}
+                disabled={actionsLocked}
+                style={{
+                  ...primaryButtonStyle,
+                  padding: "8px 12px",
+                  width: "auto",
+                  opacity: actionsLocked ? 0.7 : 1,
+                  cursor: actionsLocked ? "wait" : "pointer"
+                }}
+              >
+                {isBusy ? "Обработка..." : "Принять"}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => archiveContract(contract.id)}
+              disabled={actionsLocked}
+              style={{
+                ...(mode === "active" ? dangerButtonStyle : secondaryButtonStyle),
+                opacity: actionsLocked ? 0.7 : 1,
+                cursor: actionsLocked ? "wait" : "pointer"
+              }}
+            >
+              {isBusy ? "Обработка..." : "Архивировать"}
+            </button>
+          </div>
+        )}
+      </Card>
+    )
+  }
+
   return (
     <div style={pageStyle}>
       <div style={shellStyle}>
         <div style={pageHeaderStyle}>
           <h1 style={pageTitleStyle}>Контракты салона</h1>
           <p style={pageSubtitleStyle}>
-            Единый блок контрактов: сводка, активные, ожидающие и архивные контракты, модели договорённостей и создание нового контракта.
+            Контракты вынесены в отдельную ось: здесь видно текущее состояние договорённостей, историю и создание нового контракта без смешения с общими финансами.
           </p>
+        </div>
+
+        <div style={financeNavStyle}>
+          {financeTabs.map((tab) => (
+            <FinanceTab
+              key={tab.key}
+              href={tab.href}
+              label={tab.label}
+              active={location.pathname.endsWith("/contracts")}
+            />
+          ))}
         </div>
 
         <SectionBlock
@@ -961,6 +1094,21 @@ export default function SalonContractsPage() {
                   label="Всего"
                   value={contractsLoading ? "..." : contracts.length}
                   note="Полная история контрактов салона"
+                />
+              </div>
+
+
+              <div style={{ ...compactGridStyle, marginTop: 12 }}>
+                <InfoBox
+                  label="Последний активный"
+                  value={contractsLoading ? "..." : (latestActiveContract ? getMasterName(latestActiveContract) : "—")}
+                  note={contractsLoading ? "Загрузка..." : (latestActiveContract ? getContractSummary(latestActiveContract) : "Нет активных контрактов")}
+                />
+
+                <InfoBox
+                  label="Последний архивный"
+                  value={contractsLoading ? "..." : (latestArchivedContract ? getMasterName(latestArchivedContract) : "—")}
+                  note={contractsLoading ? "Загрузка..." : (latestArchivedContract ? formatDateTime(latestArchivedContract.archived_at) : "Архив пока пуст")}
                 />
               </div>
 
