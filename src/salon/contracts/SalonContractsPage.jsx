@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
-import { resolveSalonSlug } from "../SalonContext"
+import { resolveSalonSlug, buildSalonPath } from "../SalonContext"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
@@ -224,12 +224,12 @@ export default function SalonContractsPage() {
   const salonSlug = resolveSalonSlug(routeSlug)
 
   const financeTabs = [
-    { key: "finance", label: "Финансы", href: `#/salon/${salonSlug}/finance` },
-    { key: "money", label: "Доход", href: `#/salon/${salonSlug}/money` },
-    { key: "settlements", label: "Сеты", href: `#/salon/${salonSlug}/settlements` },
-    { key: "payouts", label: "Выплаты", href: `#/salon/${salonSlug}/payouts` },
-    { key: "transactions", label: "Транзакции", href: `#/salon/${salonSlug}/transactions` },
-    { key: "contracts", label: "Контракты", href: `#/salon/${salonSlug}/contracts` }
+    { key: "finance", label: "Финансы", href: buildSalonPath(salonSlug, "finance") },
+    { key: "money", label: "Доход", href: buildSalonPath(salonSlug, "money") },
+    { key: "settlements", label: "Сеты", href: buildSalonPath(salonSlug, "settlements") },
+    { key: "payouts", label: "Выплаты", href: buildSalonPath(salonSlug, "payouts") },
+    { key: "transactions", label: "Транзакции", href: buildSalonPath(salonSlug, "transactions") },
+    { key: "contracts", label: "Контракты", href: buildSalonPath(salonSlug, "contracts") }
   ]
 
   const pageStyle = {
