@@ -1,247 +1,196 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
-import { useLocation, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import { getSalon } from "../api/internal"
 
 const SalonContext = createContext(null)
 
-function readHashPath(hashValue) {
-  const hash = hashValue ?? window.location.hash ?? ""
-  return hash.replace(/^#\/?/, "")
+function normalizeSalonRoot(payload){
+  if(!payload) return null
+  if(payload.salon || payload.billing_access) return payload
+  if(payload.data?.salon || payload.data?.billing_access) return payload.data
+  return payload
 }
 
-function readSlugFromHash(hashValue) {
-  const clean = readHashPath(hashValue)
-  if (!clean) return null
+function extractSalon(payload, slug){
+  const direct =
+    payload?.salon ||
+    payload?.data?.salon ||
+    null
 
-  const parts = clean.split("/").filter(Boolean)
-  const salonIndex = parts.indexOf("salon")
-
-  if (salonIndex !== -1 && parts[salonIndex + 1]) {
-    return parts[salonIndex + 1]
-  }
-
-  return null
-}
-
-function readSlugFromPathname(pathnameValue) {
-  const pathname = pathnameValue ?? window.location.pathname ?? ""
-  const parts = pathname.split("/").filter(Boolean)
-  const salonIndex = parts.indexOf("salon")
-
-  if (salonIndex !== -1 && parts[salonIndex + 1]) {
-    return parts[salonIndex + 1]
-  }
-
-  return null
-}
-
-export function readSalonSection(hashValue) {
-  const clean = readHashPath(hashValue)
-  if (!clean) return "dashboard"
-
-  const parts = clean.split("/").filter(Boolean)
-  const salonIndex = parts.indexOf("salon")
-
-  if (salonIndex !== -1 && parts[salonIndex + 2]) {
-    return parts[salonIndex + 2]
-  }
-
-  return "dashboard"
-}
-
-export function resolveSalonSlugValue({
-  paramsSlug = null,
-  pathname = null,
-  hash = null,
-  windowSlug = null,
-} = {}) {
-  if (paramsSlug) {
-    return paramsSlug
-  }
-
-  const hashSlug = readSlugFromHash(hash)
-  if (hashSlug) {
-    return hashSlug
-  }
-
-  const pathnameSlug = readSlugFromPathname(pathname)
-  if (pathnameSlug) {
-    return pathnameSlug
-  }
-
-  const bridgeSlug = windowSlug ?? window.SALON_SLUG ?? null
-  if (bridgeSlug) {
-    return bridgeSlug
-  }
-
-  return null
-}
-
-export function buildSalonPath(slug, section = "dashboard") {
-  if (!slug) {
-    return "/salon"
-  }
-
-  if (!section) {
-    return `/salon/${slug}`
-  }
-
-  return `/salon/${slug}/${section}`
-}
-
-function normalizeIdentity(payload, slug) {
-  if (!payload || typeof payload !== "object") {
-    return slug
-      ? {
-          slug,
-          name: slug,
-        }
-      : null
+  if(direct && typeof direct === "object"){
+    return {
+      ...direct,
+      slug: direct.slug || slug
+    }
   }
 
   return {
-    id: payload.id ?? null,
-    slug: payload.slug ?? slug ?? null,
-    name: payload.name ?? payload.title ?? payload.slug ?? slug ?? "Салон",
-    status: payload.status ?? null,
+    slug,
+    hasData: false
   }
 }
 
-function normalizeBillingAccess(payload) {
-  if (!payload || typeof payload !== "object") {
-    return null
-  }
-
-  return {
-    exists: Boolean(payload.exists),
-    subscription_status: payload.subscription_status ?? null,
-    access_state: payload.access_state ?? null,
-    can_write: Boolean(payload.can_write),
-    can_withdraw: Boolean(payload.can_withdraw),
-    billing: payload.billing ?? null,
-  }
+function extractBillingAccess(payload){
+  if(payload?.billing_access) return payload.billing_access
+  if(payload?.data?.billing_access) return payload.data.billing_access
+  return null
 }
 
-export function SalonProvider({ children }) {
-  const params = useParams()
-  const location = useLocation()
+function deriveCanWrite(billingAccess){
+  if(typeof billingAccess?.can_write === "boolean") return billingAccess.can_write
+  if(typeof billingAccess?.canWrite === "boolean") return billingAccess.canWrite
 
-  const slug = useMemo(() => {
-    return resolveSalonSlugValue({
-      paramsSlug: params?.slug,
-      pathname: location.pathname,
-      hash: location.hash,
-    })
-  }, [params?.slug, location.pathname, location.hash])
+  const state = String(
+    billingAccess?.access_state ||
+    billingAccess?.accessState ||
+    ""
+  ).toLowerCase()
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  if(state === "blocked") return false
+  return true
+}
+
+function deriveCanWithdraw(billingAccess){
+  if(typeof billingAccess?.can_withdraw === "boolean") return billingAccess.can_withdraw
+  if(typeof billingAccess?.canWithdraw === "boolean") return billingAccess.canWithdraw
+
+  const state = String(
+    billingAccess?.access_state ||
+    billingAccess?.accessState ||
+    ""
+  ).toLowerCase()
+
+  if(state === "blocked") return false
+  return true
+}
+
+function deriveBillingBlockReason(billingAccess){
+  return (
+    billingAccess?.block_reason ||
+    billingAccess?.billing_block_reason ||
+    billingAccess?.reason ||
+    null
+  )
+}
+
+export function resolveSalonSlug(routeSlug){
+  if(routeSlug) return routeSlug
+
+  if(window.SALON_SLUG) return window.SALON_SLUG
+
+  return null
+}
+
+export function buildSalonPath(slug, section = "dashboard"){
+  const targetSection = section || "dashboard"
+
+  if(slug){
+    return `/salon/${slug}/${targetSection}`
+  }
+
+  return `/salon/${targetSection}`
+}
+
+export function SalonProvider({ children }){
+  const { slug: routeSlug } = useParams()
+  const slug = useMemo(() => resolveSalonSlug(routeSlug), [routeSlug])
+
   const [identity, setIdentity] = useState(null)
   const [billingAccess, setBillingAccess] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [empty, setEmpty] = useState(false)
+
+  async function load(currentSlug){
+    if(!currentSlug){
+      console.error("SALON CONTEXT ERROR: SLUG_MISSING")
+      setIdentity(null)
+      setBillingAccess(null)
+      setEmpty(false)
+      setError("SLUG_MISSING")
+      setLoading(false)
+      return
+    }
+
+    window.SALON_SLUG = currentSlug
+
+    setIdentity(null)
+    setBillingAccess(null)
+    setEmpty(false)
+    setLoading(true)
+    setError(null)
+
+    try{
+      const raw = await getSalon(currentSlug)
+      const normalized = normalizeSalonRoot(raw)
+      const salonData = extractSalon(normalized, currentSlug)
+      const billing = extractBillingAccess(normalized)
+
+      setIdentity({
+        ...salonData,
+        slug: salonData?.slug || currentSlug,
+        hasData: true
+      })
+      setBillingAccess(billing || null)
+      setEmpty(false)
+    }catch(e){
+      console.error("SALON CONTEXT ERROR", e)
+
+      setIdentity({
+        slug: currentSlug,
+        hasData: false
+      })
+      setBillingAccess(null)
+      setEmpty(false)
+      setError(e?.message || "SALON_CONTEXT_LOAD_FAILED")
+    }finally{
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false
-
-    async function loadSalonContext() {
-      if (!slug) {
-        if (!cancelled) {
-          setIdentity(null)
-          setBillingAccess(null)
-          setError("SALON_SLUG_MISSING")
-          setLoading(false)
-        }
-        return
-      }
-
-      if (window.SALON_SLUG !== slug) {
-        window.SALON_SLUG = slug
-      }
-
-      try {
-        if (!cancelled) {
-          setLoading(true)
-          setError("")
-        }
-
-        const response = await getSalon(slug)
-
-        if (cancelled) {
-          return
-        }
-
-        if (response && response.ok) {
-          setIdentity(normalizeIdentity(response.salon || response.data || response, slug))
-          setBillingAccess(normalizeBillingAccess(response.billing_access))
-          setError("")
-        } else {
-          setIdentity(normalizeIdentity(null, slug))
-          setBillingAccess(null)
-          setError("SALON_CONTEXT_LOAD_FAILED")
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setIdentity(normalizeIdentity(null, slug))
-          setBillingAccess(null)
-          setError("SALON_CONTEXT_LOAD_FAILED")
-          console.error("SALON CONTEXT LOAD ERROR", e)
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      }
-    }
-
-    loadSalonContext()
-
-    return () => {
-      cancelled = true
-    }
+    load(slug)
   }, [slug])
 
-  const value = useMemo(() => {
-    const accessState = billingAccess?.access_state ?? null
-    const canWrite = Boolean(billingAccess?.can_write)
-    const canWithdraw = Boolean(billingAccess?.can_withdraw)
+  const canWrite = deriveCanWrite(billingAccess)
+  const canWithdraw = deriveCanWithdraw(billingAccess)
+  const billingBlockReason = deriveBillingBlockReason(billingAccess)
 
-    let billingBlockReason = null
-
-    if (accessState === "blocked") {
-      billingBlockReason = "blocked"
-    } else if (accessState === "grace") {
-      billingBlockReason = "grace"
-    }
-
-    return {
-      slug,
-      identity,
-      billing_access: billingAccess,
-      canWrite,
-      canWithdraw,
-      billingBlockReason,
-      loading,
-      error,
-      section: readSalonSection(location.hash),
-    }
-  }, [slug, identity, billingAccess, loading, error, location.hash])
-
-  return <SalonContext.Provider value={value}>{children}</SalonContext.Provider>
+  return (
+    <SalonContext.Provider
+      value={{
+        slug,
+        identity,
+        billing_access: billingAccess,
+        billingAccess,
+        canWrite,
+        canWithdraw,
+        billingBlockReason,
+        loading,
+        error,
+        empty,
+        reload: () => load(slug)
+      }}
+    >
+      {children}
+    </SalonContext.Provider>
+  )
 }
 
-export function useSalonContext() {
+export function useSalonContext(){
   const context = useContext(SalonContext)
 
-  if (!context) {
+  if(!context){
     throw new Error("useSalonContext must be used inside SalonProvider")
   }
 
   return context
 }
 
-export function useSalonSlug() {
+export function useSalonSlug(){
   return useSalonContext().slug
 }
 
-export function useSalonBillingAccess() {
+export function useSalonBillingAccess(){
   return useSalonContext().billing_access
 }

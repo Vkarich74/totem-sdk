@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { resolveSalonSlug } from "../SalonContext";
 
 import PageSection from "../../cabinet/PageSection";
 import StatGrid from "../../cabinet/StatGrid";
 import EmptyState from "../../cabinet/EmptyState";
-import { useSalonSlug } from "../SalonContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -120,8 +121,9 @@ function formatDuration(value) {
   return `${numberValue} мин`;
 }
 
-export default function ServicesPage() {
-  const slug = useSalonSlug();
+export default function ServicesPage(props) {
+  const { slug: routeSlug } = useParams();
+  const slug = resolveSalonSlug(routeSlug);
 
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -399,7 +401,7 @@ export default function ServicesPage() {
       if (!masterId) return false;
       return !existingKeys.has(`${masterId}:${item.service_pk}`);
     });
-  }, [masterServices, services]);
+  }, [master, masterServices, services]);
 
   const stats = useMemo(() => {
     const total = services.length;

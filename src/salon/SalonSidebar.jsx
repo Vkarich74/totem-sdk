@@ -1,88 +1,83 @@
 import { NavLink } from "react-router-dom"
 import { buildSalonPath } from "./SalonContext"
 
-const NAV_GROUPS = [
-  {
-    title: "Основное",
-    items: [
-      { label: "Главная", section: "dashboard" },
-      { label: "Мастера", section: "masters" },
-      { label: "Записи", section: "bookings" },
-      { label: "Расписание", section: "calendar" },
-      { label: "Клиенты", section: "clients" },
-      { label: "Услуги", section: "services" },
-    ],
-  },
-  {
-    title: "Финансы",
-    items: [
-      { label: "Финансы", section: "finance" },
-      { label: "Доход", section: "salon-money" },
-      { label: "Деньги", section: "money" },
-      { label: "Транзакции", section: "transactions" },
-      { label: "Сеты", section: "settlements" },
-      { label: "Выплаты", section: "payouts" },
-      { label: "Контракты", section: "contracts" },
-    ],
-  },
-  {
-    title: "Аккаунт",
-    items: [{ label: "Настройки", section: "settings" }],
-  },
+const mainItems = [
+  { section: "dashboard", label: "Главная" },
+  { section: "masters", label: "Мастера" },
+  { section: "bookings", label: "Записи" },
+  { section: "calendar", label: "Расписание" },
+  { section: "clients", label: "Клиенты" },
+  { section: "services", label: "Услуги" }
 ]
 
-export default function SalonSidebar({ slug }) {
-  const sidebarStyle = {
-    width: "220px",
-    flexShrink: 0,
-    borderRight: "1px solid #eee",
-    padding: "20px",
-    background: "#fafafa",
-    position: "sticky",
-    top: 0,
-    height: "100%",
-    alignSelf: "flex-start",
-  }
+const financeItems = [
+  { section: "finance", label: "Финансы" },
+  { section: "money", label: "Доход" },
+  { section: "salon-money", label: "Деньги" },
+  { section: "transactions", label: "Транзакции" },
+  { section: "settlements", label: "Сеты" },
+  { section: "payouts", label: "Выплаты" },
+  { section: "contracts", label: "Контракты" }
+]
 
-  const menuStyle = ({ isActive }) => ({
+const accountItems = [{ section: "settings", label: "Настройки" }]
+
+function menuStyle({ isActive }) {
+  return {
     display: "block",
     padding: "8px 0",
     textDecoration: "none",
     color: isActive ? "#111827" : "#4b5563",
-    fontWeight: isActive ? 700 : 400,
-  })
+    fontWeight: isActive ? 700 : 500
+  }
+}
 
+function MenuGroup({ title, items, slug }) {
   return (
-    <div style={sidebarStyle}>
-      <div style={{ marginBottom: "25px" }}>
+    <>
+      <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+        {title}
+      </div>
+      <nav>
+        {items.map((item) => (
+          <NavLink key={item.section} style={menuStyle} to={buildSalonPath(slug, item.section)}>
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+    </>
+  )
+}
+
+export default function SalonSidebar({ slug }) {
+  return (
+    <div
+      style={{
+        width: 220,
+        flexShrink: 0,
+        borderRight: "1px solid #eee",
+        padding: 20,
+        background: "#fafafa",
+        position: "sticky",
+        top: 0,
+        height: "100%",
+        alignSelf: "flex-start"
+      }}
+    >
+      <div style={{ marginBottom: 25 }}>
         <strong>Салон</strong>
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#777",
-            marginTop: "4px",
-            wordBreak: "break-word",
-          }}
-        >
-          {slug || "slug не найден"}
-        </div>
+        <div style={{ fontSize: 12, color: "#777", marginTop: 4 }}>{slug || "—"}</div>
       </div>
 
-      {NAV_GROUPS.map((group) => (
-        <div key={group.title} style={{ marginBottom: "24px" }}>
-          <div style={{ fontSize: "12px", color: "#888", marginBottom: "10px" }}>
-            {group.title}
-          </div>
+      <MenuGroup title="Основное" items={mainItems} slug={slug} />
 
-          <nav>
-            {group.items.map((item) => (
-              <NavLink key={item.section} style={menuStyle} to={buildSalonPath(slug, item.section)}>
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-      ))}
+      <div style={{ marginTop: 25 }}>
+        <MenuGroup title="Финансы" items={financeItems} slug={slug} />
+      </div>
+
+      <div style={{ marginTop: 25 }}>
+        <MenuGroup title="Аккаунт" items={accountItems} slug={slug} />
+      </div>
     </div>
   )
 }

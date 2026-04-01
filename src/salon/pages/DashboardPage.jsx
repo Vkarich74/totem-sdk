@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { resolveSalonSlug } from "../SalonContext";
 import PageSection from "../../cabinet/PageSection";
-import { useSalonSlug } from "../SalonContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -8,7 +9,8 @@ export default function DashboardPage(){
 
 const [metrics,setMetrics] = useState(null);
 
-const salonSlug = useSalonSlug();
+const { slug: routeSlug } = useParams();
+const salonSlug = resolveSalonSlug(routeSlug);
 
 async function load(){
 
@@ -33,9 +35,8 @@ console.error("METRICS LOAD ERROR",e);
 }
 
 useEffect(()=>{
-if(!salonSlug) return;
 load();
-},[salonSlug]);
+},[]);
 
 if(!metrics){
 return (

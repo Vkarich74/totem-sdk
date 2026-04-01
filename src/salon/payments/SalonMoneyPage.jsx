@@ -1,98 +1,132 @@
 import { useEffect, useState } from "react"
-
+import { useParams } from "react-router-dom"
+import { resolveSalonSlug } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
-import { useSalonSlug } from "../SalonContext"
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
+
 export default function SalonMoneyPage() {
-  const slug = useSalonSlug()
+
+  const params = useParams()
+
+  const slug = resolveSalonSlug(params.slug)
+
 
   const [metrics, setMetrics] = useState(null)
   const [wallet, setWallet] = useState(null)
   const [loading, setLoading] = useState(true)
 
+
   useEffect(() => {
+
     let cancelled = false
 
+
     async function loadMoney() {
+
       if (!slug) {
-        if (!cancelled) {
-          setMetrics(null)
-          setWallet(null)
-          setLoading(false)
-        }
+
+        if (!cancelled) setLoading(false)
+
         return
+
       }
 
-      if (!cancelled) {
-        setLoading(true)
-      }
 
       try {
+
         const [metricsRes, walletRes] = await Promise.all([
           fetch(`${API_BASE}/internal/salons/${slug}/metrics`),
           fetch(`${API_BASE}/internal/salons/${slug}/wallet-balance`)
         ])
 
+
         if (!metricsRes.ok || !walletRes.ok) {
-          if (!cancelled) {
-            setMetrics(null)
-            setWallet(null)
-            setLoading(false)
-          }
+
+          if (!cancelled) setLoading(false)
+
           return
+
         }
+
 
         const metricsData = await metricsRes.json()
         const walletData = await walletRes.json()
 
-        if (!cancelled) {
-          setMetrics(metricsData?.ok ? metricsData.metrics || null : null)
-          setWallet(walletData?.ok ? walletData.balance ?? null : null)
-          setLoading(false)
-        }
-      } catch (err) {
-        console.log("SALON MONEY API ERROR")
 
         if (!cancelled) {
-          setMetrics(null)
-          setWallet(null)
+
+          if (metricsData?.ok) {
+
+            setMetrics(metricsData.metrics)
+
+          }
+
+
+          if (walletData?.ok) {
+
+            setWallet(walletData.balance)
+
+          }
+
           setLoading(false)
+
         }
+
       }
+      catch (err) {
+
+        console.log("SALON MONEY API ERROR")
+
+        if (!cancelled) setLoading(false)
+
+      }
+
     }
+
 
     loadMoney()
 
     return () => {
+
       cancelled = true
+
     }
+
   }, [slug])
 
+
   if (loading) {
+
     return (
+
       <PageSection title="Финансы салона">
-        <div style={{ padding: "20px" }}>Загрузка финансов...</div>
+
+        <div style={{ padding: "20px" }}>
+          Загрузка финансов...
+        </div>
+
       </PageSection>
+
     )
+
   }
 
-  if (!slug) {
-    return (
-      <PageSection title="Финансы салона">
-        <div style={{ padding: "20px" }}>Salon slug не найден.</div>
-      </PageSection>
-    )
-  }
 
   const walletBalance = wallet || 0
+
   const revenueToday = metrics?.revenue_today || 0
+
   const revenueMonth = metrics?.revenue_month || 0
+
   const paymentsTotal = metrics?.payments_total || 0
 
+
   return (
+
     <PageSection title="Финансы салона">
+
       <div
         style={{
           display: "grid",
@@ -101,17 +135,44 @@ export default function SalonMoneyPage() {
           marginTop: "20px"
         }}
       >
-        <Card title="Баланс кошелька" value={walletBalance} color="#10b981" />
-        <Card title="Выручка сегодня" value={revenueToday} color="#3b82f6" />
-        <Card title="Выручка за месяц" value={revenueMonth} color="#3b82f6" />
-        <Card title="Всего платежей" value={paymentsTotal} color="#8b5cf6" />
+
+        <Card
+          title="Баланс кошелька"
+          value={walletBalance}
+          color="#10b981"
+        />
+
+        <Card
+          title="Выручка сегодня"
+          value={revenueToday}
+          color="#3b82f6"
+        />
+
+        <Card
+          title="Выручка за месяц"
+          value={revenueMonth}
+          color="#3b82f6"
+        />
+
+        <Card
+          title="Всего платежей"
+          value={paymentsTotal}
+          color="#8b5cf6"
+        />
+
       </div>
+
     </PageSection>
+
   )
+
 }
 
+
 function Card({ title, value, color }) {
+
   return (
+
     <div
       style={{
         border: "1px solid #e5e7eb",
@@ -121,6 +182,7 @@ function Card({ title, value, color }) {
         background: "#fff"
       }}
     >
+
       <div
         style={{
           fontSize: "13px",
@@ -139,6 +201,9 @@ function Card({ title, value, color }) {
       >
         {value}
       </div>
+
     </div>
+
   )
+
 }

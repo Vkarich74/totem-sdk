@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { resolveSalonSlug } from "../SalonContext";
 import PageSection from "../../cabinet/PageSection";
-import { useSalonSlug } from "../SalonContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE
+
+
 
 export default function ClientsPage(){
 
@@ -11,7 +14,8 @@ const [loading,setLoading] = useState(true);
 const [search,setSearch] = useState("");
 const [selected,setSelected] = useState(null);
 
-const salonSlug = useSalonSlug();
+const { slug: routeSlug } = useParams();
+const salonSlug = resolveSalonSlug(routeSlug);
 
 useEffect(()=>{
 

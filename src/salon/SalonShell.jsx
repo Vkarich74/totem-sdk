@@ -1,23 +1,16 @@
-import { NavLink, Outlet, useLocation, useParams } from "react-router-dom"
-import { buildSalonPath, resolveSalonSlugValue } from "./SalonContext"
+import { NavLink, Outlet } from "react-router-dom"
+import { buildSalonPath, useSalonSlug } from "./SalonContext"
 
-const MOBILE_NAV_ITEMS = [
-  { label: "Главная", section: "dashboard" },
-  { label: "Записи", section: "bookings" },
-  { label: "Мастера", section: "masters" },
-  { label: "Финансы", section: "finance" },
-  { label: "Настройки", section: "settings" },
+const bottomItems = [
+  { section: "dashboard", label: "Главная" },
+  { section: "bookings", label: "Записи" },
+  { section: "masters", label: "Мастера" },
+  { section: "salon-money", label: "Деньги" },
+  { section: "settings", label: "Ещё" }
 ]
 
 export default function SalonShell() {
-  const params = useParams()
-  const location = useLocation()
-
-  const slug = resolveSalonSlugValue({
-    paramsSlug: params?.slug,
-    pathname: location.pathname,
-    hash: location.hash,
-  })
+  const slug = useSalonSlug()
 
   return (
     <div style={styles.container}>
@@ -30,7 +23,7 @@ export default function SalonShell() {
       </main>
 
       <nav style={styles.bottomNav}>
-        {MOBILE_NAV_ITEMS.map((item) => (
+        {bottomItems.map((item) => (
           <NavItem key={item.section} to={buildSalonPath(slug, item.section)} label={item.label} />
         ))}
       </nav>
@@ -44,7 +37,7 @@ function NavItem({ to, label }) {
       to={to}
       style={({ isActive }) => ({
         ...styles.navItem,
-        color: isActive ? "#2563eb" : "#666",
+        color: isActive ? "#2563eb" : "#666"
       })}
     >
       {label}
@@ -56,16 +49,16 @@ const styles = {
   container: {
     display: "flex",
     flexDirection: "column",
-    height: "100vh",
+    height: "100vh"
   },
   header: {
     padding: "12px 16px",
-    borderBottom: "1px solid #eee",
+    borderBottom: "1px solid #eee"
   },
   main: {
     flex: 1,
     overflowY: "auto",
-    padding: "16px",
+    padding: "16px"
   },
   bottomNav: {
     display: "flex",
@@ -73,9 +66,10 @@ const styles = {
     borderTop: "1px solid #eee",
     padding: "10px 0",
     fontSize: "13px",
-    gap: "8px",
+    background: "#fff"
   },
   navItem: {
     textDecoration: "none",
-  },
+    fontWeight: 600
+  }
 }

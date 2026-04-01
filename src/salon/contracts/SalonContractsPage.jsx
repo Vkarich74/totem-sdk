@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react"
-import { useSalonSlug } from "../SalonContext"
+import { useParams } from "react-router-dom"
+import { resolveSalonSlug } from "../SalonContext"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
@@ -193,7 +194,9 @@ export default function SalonContractsPage() {
   const [contractActionError, setContractActionError] = useState("")
   const [contractActionSuccess, setContractActionSuccess] = useState("")
 
-  const salonSlug = useSalonSlug()
+  const { slug: routeSlug } = useParams()
+
+  const salonSlug = resolveSalonSlug(routeSlug)
 
   const pageStyle = {
     minHeight: "100%",
@@ -345,16 +348,8 @@ export default function SalonContractsPage() {
   }
 
   useEffect(() => {
-    if (!salonSlug) {
-      setContracts([])
-      setMasters([])
-      setContractsLoading(false)
-      setMastersLoading(false)
-      return
-    }
-
     initializePage()
-  }, [salonSlug])
+  }, [])
 
   async function initializePage() {
     setContractsLoading(true)

@@ -1,20 +1,23 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import * as api from "../../api/internal";
+import { resolveSalonSlug } from "../SalonContext";
 import { generateTimeSlots } from "../../calendar/calendarEngine";
 import PageSection from "../../cabinet/PageSection";
-import { useSalonSlug } from "../SalonContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "https://api.totemv.com";
+
+
 
 export default function CalendarPage(){
 
   const navigate = useNavigate();
+  const { slug: routeSlug } = useParams();
 
   const [bookings,setBookings] = useState([]);
   const [masters,setMasters] = useState([]);
 
-  const salonSlug = useSalonSlug();
+  const salonSlug = resolveSalonSlug(routeSlug);
 
   async function load(){
 
@@ -39,9 +42,8 @@ export default function CalendarPage(){
   }
 
   useEffect(()=>{
-    if(!salonSlug) return;
     load();
-  },[salonSlug]);
+  },[]);
 
   function formatTime(d){
     if(!d) return "";

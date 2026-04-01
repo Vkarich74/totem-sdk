@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import * as api from "../../api/internal";
+import { resolveSalonSlug } from "../SalonContext";
 import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
-import { useSalonSlug } from "../SalonContext";
+
+
 
 function statusColor(status){
   if(status==="reserved") return "#f59e0b";
@@ -50,6 +53,8 @@ function rowHoverStyle(e, enter, active){
 
 export default function BookingsPage(){
 
+  const { slug: routeSlug } = useParams();
+
   const [bookings,setBookings] = useState([]);
   const [masters,setMasters] = useState([]);
 
@@ -59,7 +64,7 @@ export default function BookingsPage(){
   const [loadingAction,setLoadingAction] = useState(null);
   const [selectedBookingId,setSelectedBookingId] = useState(null);
 
-  const salonSlug = useSalonSlug();
+  const salonSlug = resolveSalonSlug(routeSlug);
 
   async function load(){
 

@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { resolveSalonSlug } from "../SalonContext";
 
 import PageSection from "../../cabinet/PageSection";
 import StatGrid from "../../cabinet/StatGrid";
 import EmptyState from "../../cabinet/EmptyState";
-import { useSalonSlug } from "../SalonContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
+
+
 
 function statusLabel(status) {
   if (status === "active") return "Активен";
@@ -38,8 +41,9 @@ function buttonStyle(kind = "default") {
   return base;
 }
 
-export default function MastersPage() {
-  const slug = useSalonSlug();
+export default function MastersPage(props) {
+  const { slug: routeSlug } = useParams();
+  const slug = resolveSalonSlug(routeSlug);
 
   const [masters, setMasters] = useState([]);
   const [loading, setLoading] = useState(false);

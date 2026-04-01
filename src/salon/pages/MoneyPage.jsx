@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { resolveSalonSlug } from "../SalonContext";
 import PageSection from "../../cabinet/PageSection";
 import * as api from "../../api/internal";
-import { useSalonSlug } from "../SalonContext";
+
+
 
 export default function MoneyPage(){
 
-const salonSlug = useSalonSlug();
+const { slug: routeSlug } = useParams();
+const salonSlug = resolveSalonSlug(routeSlug);
 
 const [metrics,setMetrics] = useState(null);
 
