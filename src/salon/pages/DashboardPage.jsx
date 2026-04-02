@@ -180,8 +180,9 @@ export default function DashboardPage(){
         setMetricsError("")
         setEmpty(false)
 
-        const metricsUrl = `${API_BASE}/internal/salons/${encodeURIComponent(slug)}/metrics`
-        const response = await fetch(metricsUrl)
+        const response = await fetch(
+          API_BASE + "/internal/salons/" + encodeURIComponent(slug) + "/metrics"
+        )
 
         const text = await response.text()
         let raw = null

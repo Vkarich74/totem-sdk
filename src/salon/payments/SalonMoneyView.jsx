@@ -133,7 +133,7 @@ function FinanceNav({ slug, active }){
   )
 }
 
-export default function SalonMoneyPage(){
+export default function SalonMoneyView(){
   const { slug: routeSlug } = useParams()
   const slug = resolveSalonSlug(routeSlug)
 

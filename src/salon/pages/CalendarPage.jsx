@@ -1,30 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
+import * as api from "../../api/internal"
 import { resolveSalonSlug } from "../SalonContext"
 import { generateTimeSlots } from "../../calendar/calendarEngine"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
 
 const API_BASE = import.meta.env.VITE_API_BASE || "https://api.totemv.com"
-
-
-async function fetchJson(url, options){
-  const response = await fetch(url, options)
-
-  let data = null
-  try{
-    data = await response.json()
-  }catch{
-    data = null
-  }
-
-  if(!response.ok){
-    throw new Error(data?.error || `HTTP_${response.status}`)
-  }
-
-  return data
-}
-
 
 function useIsMobile(){
   const getValue = () => {
@@ -178,8 +160,8 @@ export default function CalendarPage(){
       setError("")
 
       const [resBookings, resMasters] = await Promise.all([
-        fetchJson(`${API_BASE}/internal/salons/${salonSlug}/bookings`),
-        fetchJson(`${API_BASE}/internal/salons/${salonSlug}/masters`)
+        api.getBookings(salonSlug),
+        api.getMasters(salonSlug)
       ])
 
       if(!resBookings?.ok){
@@ -252,7 +234,7 @@ export default function CalendarPage(){
 
     try{
       setActionLoading(`${master?.id || master?.name}-${time}`)
-      await fetchJson(`${API_BASE}/internal/bookings/create`, {
+      await fetch(`${API_BASE}/internal/bookings/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -280,7 +262,7 @@ export default function CalendarPage(){
 
     try{
       setActionLoading(String(booking.id))
-      await fetchJson(`${API_BASE}/internal/bookings/${booking.id}/move`, {
+      await fetch(`${API_BASE}/internal/bookings/${booking.id}/move`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json"
@@ -335,8 +317,6 @@ export default function CalendarPage(){
 
   return (
     <PageSection title="Расписание салона">
-      <div style={styles.pageHint}>Календарь записей и управление слотами мастеров</div>
-
       <div style={styles.summaryGrid}>
         <SummaryCard label="Мастеров" value={summary.masters} hint="В активном расписании" />
         <SummaryCard label="Записей на день" value={summary.bookings} hint={selectedDay ? formatDateLabel(selectedDay) : "—"} />
@@ -450,11 +430,6 @@ export default function CalendarPage(){
 }
 
 const styles = {
-  pageHint: {
-    marginBottom: 16,
-    color: "#6b7280",
-    fontSize: 14
-  },
   summaryGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",

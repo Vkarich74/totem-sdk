@@ -1,64 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
+import * as api from "../../api/internal"
 import { resolveSalonSlug } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
-
-const API_BASE = import.meta.env.VITE_API_BASE || "https://api.totemv.com"
-
-async function fetchJson(url, options){
-  const response = await fetch(url, options)
-
-  let data = null
-  try{
-    data = await response.json()
-  }catch{
-    data = null
-  }
-
-  if(!response.ok){
-    throw new Error(data?.error || `HTTP_${response.status}`)
-  }
-
-  return data
-}
-
-async function runBookingAction(bookingId, actionType){
-  const candidates = [
-    {
-      url: `${API_BASE}/internal/bookings/${bookingId}/${actionType}`,
-      options: { method: "POST" }
-    },
-    {
-      url: `${API_BASE}/internal/bookings/${bookingId}/action`,
-      options: {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: actionType })
-      }
-    },
-    {
-      url: `${API_BASE}/internal/bookings/${bookingId}`,
-      options: {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: actionType, status: actionType })
-      }
-    }
-  ]
-
-  let lastError = null
-
-  for(const candidate of candidates){
-    try{
-      return await fetchJson(candidate.url, candidate.options)
-    }catch(error){
-      lastError = error
-    }
-  }
-
-  throw lastError || new Error("BOOKING_ACTION_FAILED")
-}
 
 function statusColor(status){
   const value = String(status || "reserved").toLowerCase()
@@ -215,8 +160,8 @@ export default function BookingsPage(){
       setError("")
 
       const [bookingsResponse, mastersResponse] = await Promise.all([
-        fetchJson(`${API_BASE}/internal/salons/${encodeURIComponent(salonSlug)}/bookings`),
-        fetchJson(`${API_BASE}/internal/salons/${encodeURIComponent(salonSlug)}/masters`)
+        api.getBookings(salonSlug),
+        api.getMasters(salonSlug)
       ])
 
       if(!bookingsResponse?.ok){
@@ -228,7 +173,12 @@ export default function BookingsPage(){
       )
 
       setBookings(normalizedBookings)
-      setMasters(mastersResponse?.ok ? (mastersResponse.masters || []) : [])
+
+      if(mastersResponse?.ok){
+        setMasters(mastersResponse.masters || [])
+      }else{
+        setMasters([])
+      }
     }catch(loadError){
       console.error("SALON BOOKINGS LOAD ERROR", loadError)
       setBookings([])
@@ -240,17 +190,27 @@ export default function BookingsPage(){
   }
 
   useEffect(() => {
-    let cancelled = false
+    let disposed = false
+    let intervalId = null
 
     async function run(){
-      if(cancelled || loadingAction) return
+      if(disposed || loadingAction) return
       await load()
     }
 
     run()
 
+    intervalId = window.setInterval(() => {
+      if(!disposed && !loadingAction){
+        load()
+      }
+    }, 10000)
+
     return () => {
-      cancelled = true
+      disposed = true
+      if(intervalId){
+        window.clearInterval(intervalId)
+      }
     }
   }, [salonSlug, loadingAction])
 
@@ -259,7 +219,7 @@ export default function BookingsPage(){
 
     try{
       setLoadingAction(id)
-      const response = await runBookingAction(id, type)
+      const response = await api.bookingAction(id, type)
 
       if(!response?.ok){
         alert("Ошибка изменения статуса")
