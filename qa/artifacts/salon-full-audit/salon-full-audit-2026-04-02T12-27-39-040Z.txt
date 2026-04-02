@@ -1,0 +1,404 @@
+TOTEM SALON FULL AUDIT
+Generated: 2026-04-02T12:27:39.040Z
+Base: http://localhost:5173
+Slug: totem-demo-salon
+
+=== 1. STRUCTURE AUDIT ===
+Total directories: 4
+Total files: 21
+Page files: 14
+Support files: 5
+Orphan files: 1
+Duplicate responsibility groups: 1
+
+Page files:
+- src/salon/contracts/SalonContractsPage.jsx
+- src/salon/pages/BookingsPage.jsx
+- src/salon/pages/CalendarPage.jsx
+- src/salon/pages/ClientsPage.jsx
+- src/salon/pages/DashboardPage.jsx
+- src/salon/pages/MastersPage.jsx
+- src/salon/pages/MoneyPage.jsx
+- src/salon/pages/ServicesPage.jsx
+- src/salon/pages/SettingsPage.jsx
+- src/salon/payments/SalonFinancePage.jsx
+- src/salon/payments/SalonMoneyPage.jsx
+- src/salon/payments/SalonPayoutsPage.jsx
+- src/salon/payments/SalonSettlementsPage.jsx
+- src/salon/payments/SalonTransactionsPage.jsx
+
+Orphan files:
+- src/salon/pages/MoneyPage.jsx | reason=page_without_discovered_endpoint
+
+Duplicate responsibility:
+- route=money | count=2 | files=src/salon/pages/MoneyPage.jsx, src/salon/payments/SalonMoneyPage.jsx
+
+=== 2. ROUTE AUDIT ===
+Routes declared in App.jsx: 0
+Discovered page routes: 14
+App route bindings:
+none
+
+Runtime route summary:
+- bookings | avg=4224ms | min=4156ms | max=4267ms | failures=3 | warnings=0
+- calendar | avg=1614ms | min=1611ms | max=1616ms | failures=0 | warnings=0
+- clients | avg=1598ms | min=1593ms | max=1600ms | failures=0 | warnings=0
+- contracts | avg=1595ms | min=1593ms | max=1599ms | failures=0 | warnings=0
+- dashboard | avg=1591ms | min=1586ms | max=1596ms | failures=0 | warnings=0
+- finance | avg=1599ms | min=1592ms | max=1605ms | failures=0 | warnings=0
+- masters | avg=1606ms | min=1585ms | max=1636ms | failures=0 | warnings=0
+- money | avg=1581ms | min=1547ms | max=1636ms | failures=3 | warnings=0
+- payouts | avg=1588ms | min=1586ms | max=1590ms | failures=0 | warnings=0
+- services | avg=1617ms | min=1614ms | max=1619ms | failures=0 | warnings=3
+- settings | avg=1577ms | min=1569ms | max=1586ms | failures=0 | warnings=0
+- settlements | avg=1598ms | min=1595ms | max=1603ms | failures=0 | warnings=0
+- transactions | avg=1593ms | min=1579ms | max=1603ms | failures=0 | warnings=0
+
+=== 3. COVERAGE MATRIX ===
+- file=src/salon/pages/BookingsPage.jsx | route=bookings | endpoints=/api/internal | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/pages/CalendarPage.jsx | route=calendar | endpoints=/internal/bookings/:var/move, /internal/bookings/create, /internal/salons/:slug/bookings, /internal/salons/:slug/masters | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/pages/ClientsPage.jsx | route=clients | endpoints=/internal/salons/:slug/clients | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/contracts/SalonContractsPage.jsx | route=contracts | endpoints=/internal/contracts/:var/accept, /internal/contracts/:var/archive, /internal/salons/:slug/contracts, /internal/salons/:slug/masters | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/pages/DashboardPage.jsx | route=dashboard | endpoints=/internal/salons/:slug/metrics | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/payments/SalonFinancePage.jsx | route=finance | endpoints=/internal/salons/:slug/contracts, /internal/salons/:slug/metrics, /internal/salons/:slug/payouts, /internal/salons/:slug/settlements, /internal/salons/:slug/wallet-balance | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/pages/MastersPage.jsx | route=masters | endpoints=/internal/masters/activate, /internal/masters/create, /internal/salons/:slug/masters, /internal/salons/:slug/masters/:var/terminate | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/pages/MoneyPage.jsx | route=money | endpoints=none | slug_source=unknown | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/payments/SalonMoneyPage.jsx | route=money | endpoints=/internal/salons/:slug/settlements, /internal/salons/:slug/wallet-balance, /internal/salons/:var | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/payments/SalonPayoutsPage.jsx | route=payouts | endpoints=/internal/salons/:slug/payouts | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/pages/ServicesPage.jsx | route=services | endpoints=/internal/masters/:var/services, /internal/salon-services/:var, /internal/salons/:slug/masters, /internal/salons/:slug/services | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/pages/SettingsPage.jsx | route=settings | endpoints=none | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/payments/SalonSettlementsPage.jsx | route=settlements | endpoints=/internal/salons/:slug/settlements | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+- file=src/salon/payments/SalonTransactionsPage.jsx | route=transactions | endpoints=/internal/salons/:slug/ledger | slug_source=route_param | odoo_bridge=false | status=DISCOVERED
+
+=== 4. API DISCOVERY AUDIT ===
+Total discovered endpoints: 21
+Total active endpoint calls: 144
+Broken bindings: 2
+Unreachable endpoints: 0
+Empty or suspect endpoints: 2
+
+Discovered endpoints:
+- /api/internal
+- /internal/bookings/:var/move
+- /internal/bookings/create
+- /internal/contracts/:var/accept
+- /internal/contracts/:var/archive
+- /internal/masters/:var/services
+- /internal/masters/activate
+- /internal/masters/create
+- /internal/salon-services/:var
+- /internal/salons/:slug/bookings
+- /internal/salons/:slug/clients
+- /internal/salons/:slug/contracts
+- /internal/salons/:slug/ledger
+- /internal/salons/:slug/masters
+- /internal/salons/:slug/masters/:var/terminate
+- /internal/salons/:slug/metrics
+- /internal/salons/:slug/payouts
+- /internal/salons/:slug/services
+- /internal/salons/:slug/settlements
+- /internal/salons/:slug/wallet-balance
+- /internal/salons/:var
+
+Broken bindings:
+- route=bookings | file=src/salon/pages/BookingsPage.jsx | reason=no_runtime_call_detected
+- route=money | file=src/salon/payments/SalonMoneyPage.jsx | reason=no_runtime_call_detected
+
+Unreachable endpoints:
+none
+
+Empty or suspect endpoints:
+- route=services | endpoint=/internal/masters/test-master-1772587209470/services | empty=true | suspect=true | reason=all_arrays_empty
+- route=services | endpoint=/internal/masters/test-master-2-1772588328996/services | empty=true | suspect=true | reason=all_arrays_empty
+
+=== 5. PAGE RUNTIME AUDIT ===
+Total runtime checks: 42
+- run=1 | route=bookings | ui_ok=true | expected_blocks_ok=true | render=4156ms | console=1 | req_fail=0 | api_called=false | api_ok=false | api_readable=false | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=calendar | ui_ok=true | expected_blocks_ok=true | render=1614ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=clients | ui_ok=true | expected_blocks_ok=true | render=1600ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=contracts | ui_ok=true | expected_blocks_ok=true | render=1599ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=dashboard | ui_ok=true | expected_blocks_ok=true | render=1596ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=finance | ui_ok=true | expected_blocks_ok=true | render=1601ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=masters | ui_ok=true | expected_blocks_ok=true | render=1598ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=money | ui_ok=true | expected_blocks_ok=true | render=1589ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=money | ui_ok=true | expected_blocks_ok=true | render=1563ms | console=0 | req_fail=0 | api_called=false | api_ok=false | api_readable=false | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=payouts | ui_ok=true | expected_blocks_ok=true | render=1590ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=services | ui_ok=true | expected_blocks_ok=true | render=1614ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=4 | suspect=4 | slug_mismatch=false
+- run=1 | route=settings | ui_ok=true | expected_blocks_ok=true | render=1586ms | console=0 | req_fail=0 | api_called=false | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=settlements | ui_ok=true | expected_blocks_ok=true | render=1603ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=1 | route=transactions | ui_ok=true | expected_blocks_ok=true | render=1579ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=bookings | ui_ok=true | expected_blocks_ok=true | render=4267ms | console=1 | req_fail=0 | api_called=false | api_ok=false | api_readable=false | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=calendar | ui_ok=true | expected_blocks_ok=true | render=1611ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=clients | ui_ok=true | expected_blocks_ok=true | render=1593ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=contracts | ui_ok=true | expected_blocks_ok=true | render=1594ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=dashboard | ui_ok=true | expected_blocks_ok=true | render=1592ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=finance | ui_ok=true | expected_blocks_ok=true | render=1605ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=masters | ui_ok=true | expected_blocks_ok=true | render=1636ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=money | ui_ok=true | expected_blocks_ok=true | render=1588ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=money | ui_ok=true | expected_blocks_ok=true | render=1547ms | console=0 | req_fail=0 | api_called=false | api_ok=false | api_readable=false | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=payouts | ui_ok=true | expected_blocks_ok=true | render=1586ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=services | ui_ok=true | expected_blocks_ok=true | render=1619ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=4 | suspect=4 | slug_mismatch=false
+- run=2 | route=settings | ui_ok=true | expected_blocks_ok=true | render=1576ms | console=0 | req_fail=0 | api_called=false | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=settlements | ui_ok=true | expected_blocks_ok=true | render=1595ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=2 | route=transactions | ui_ok=true | expected_blocks_ok=true | render=1603ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=bookings | ui_ok=true | expected_blocks_ok=true | render=4249ms | console=1 | req_fail=0 | api_called=false | api_ok=false | api_readable=false | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=calendar | ui_ok=true | expected_blocks_ok=true | render=1616ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=clients | ui_ok=true | expected_blocks_ok=true | render=1600ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=contracts | ui_ok=true | expected_blocks_ok=true | render=1593ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=dashboard | ui_ok=true | expected_blocks_ok=true | render=1586ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=finance | ui_ok=true | expected_blocks_ok=true | render=1592ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=masters | ui_ok=true | expected_blocks_ok=true | render=1585ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=money | ui_ok=true | expected_blocks_ok=true | render=1636ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=money | ui_ok=true | expected_blocks_ok=true | render=1562ms | console=0 | req_fail=0 | api_called=false | api_ok=false | api_readable=false | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=payouts | ui_ok=true | expected_blocks_ok=true | render=1589ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=services | ui_ok=true | expected_blocks_ok=true | render=1617ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=4 | suspect=4 | slug_mismatch=false
+- run=3 | route=settings | ui_ok=true | expected_blocks_ok=true | render=1569ms | console=0 | req_fail=0 | api_called=false | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=settlements | ui_ok=true | expected_blocks_ok=true | render=1595ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+- run=3 | route=transactions | ui_ok=true | expected_blocks_ok=true | render=1597ms | console=0 | req_fail=0 | api_called=true | api_ok=true | api_readable=true | contract_ok=true | empty=0 | suspect=0 | slug_mismatch=false
+
+=== 6. DATA CONTRACT AUDIT ===
+Contract issues: 0
+- run=1 | route=bookings | contract_ok=true | required=ok | missing=none
+- run=1 | route=calendar | contract_ok=true | required=none | missing=none
+- run=1 | route=clients | contract_ok=true | required=ok | missing=none
+- run=1 | route=contracts | contract_ok=true | required=ok | missing=none
+- run=1 | route=dashboard | contract_ok=true | required=ok | missing=none
+- run=1 | route=finance | contract_ok=true | required=ok | missing=none
+- run=1 | route=masters | contract_ok=true | required=ok | missing=none
+- run=1 | route=money | contract_ok=true | required=ok | missing=none
+- run=1 | route=money | contract_ok=true | required=ok | missing=none
+- run=1 | route=payouts | contract_ok=true | required=ok | missing=none
+- run=1 | route=services | contract_ok=true | required=ok | missing=none
+- run=1 | route=settings | contract_ok=true | required=none | missing=none
+- run=1 | route=settlements | contract_ok=true | required=ok | missing=none
+- run=1 | route=transactions | contract_ok=true | required=ok | missing=none
+- run=2 | route=bookings | contract_ok=true | required=ok | missing=none
+- run=2 | route=calendar | contract_ok=true | required=none | missing=none
+- run=2 | route=clients | contract_ok=true | required=ok | missing=none
+- run=2 | route=contracts | contract_ok=true | required=ok | missing=none
+- run=2 | route=dashboard | contract_ok=true | required=ok | missing=none
+- run=2 | route=finance | contract_ok=true | required=ok | missing=none
+- run=2 | route=masters | contract_ok=true | required=ok | missing=none
+- run=2 | route=money | contract_ok=true | required=ok | missing=none
+- run=2 | route=money | contract_ok=true | required=ok | missing=none
+- run=2 | route=payouts | contract_ok=true | required=ok | missing=none
+- run=2 | route=services | contract_ok=true | required=ok | missing=none
+- run=2 | route=settings | contract_ok=true | required=none | missing=none
+- run=2 | route=settlements | contract_ok=true | required=ok | missing=none
+- run=2 | route=transactions | contract_ok=true | required=ok | missing=none
+- run=3 | route=bookings | contract_ok=true | required=ok | missing=none
+- run=3 | route=calendar | contract_ok=true | required=none | missing=none
+- run=3 | route=clients | contract_ok=true | required=ok | missing=none
+- run=3 | route=contracts | contract_ok=true | required=ok | missing=none
+- run=3 | route=dashboard | contract_ok=true | required=ok | missing=none
+- run=3 | route=finance | contract_ok=true | required=ok | missing=none
+- run=3 | route=masters | contract_ok=true | required=ok | missing=none
+- run=3 | route=money | contract_ok=true | required=ok | missing=none
+- run=3 | route=money | contract_ok=true | required=ok | missing=none
+- run=3 | route=payouts | contract_ok=true | required=ok | missing=none
+- run=3 | route=services | contract_ok=true | required=ok | missing=none
+- run=3 | route=settings | contract_ok=true | required=none | missing=none
+- run=3 | route=settlements | contract_ok=true | required=ok | missing=none
+- run=3 | route=transactions | contract_ok=true | required=ok | missing=none
+
+=== 7. EMPTY / ERROR STATE AUDIT ===
+Error-state issues: 12
+- route=bookings | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=calendar | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=clients | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=contracts | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=dashboard | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=finance | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=masters | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=money | simulated=false | error_ui_ok=true | reason=no_discovered_endpoint
+- route=money | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=payouts | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=services | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=settings | simulated=false | error_ui_ok=true | reason=no_discovered_endpoint
+- route=settlements | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+- route=transactions | simulated=true | error_ui_ok=false | reason=ui_crashed_on_abort
+
+=== 8. SLUG AUDIT ===
+Hardcoded slug hits: 2
+window.SALON_SLUG hits: 8
+Route slug hits: 1
+Slug mismatches: 0
+
+Hardcoded slug hits:
+- src/utils/salon.js:22 | pattern=totem-demo-salon | return "totem-demo-salon";
+- src/utils/salon.js:22 | pattern=demo-salon | return "totem-demo-salon";
+
+Slug mismatches:
+none
+
+=== 9. ODOO BRIDGE AUDIT ===
+Inject detected in code: true
+Dev fallback detected: true
+Runtime inject issues: 0
+
+Inject hits:
+- src/core/dev-bootstrap.js:19 | console.log("SALON_SLUG:", window.SALON_SLUG)
+- src/core/runtime.js:19 | if(window.SALON_SLUG){
+- src/core/runtime.js:20 | return window.SALON_SLUG
+- src/main.jsx:25 | if (window.SALON_SLUG && typeof window.SALON_SLUG === "string") {
+- src/main.jsx:28 | slug: window.SALON_SLUG
+- src/utils/salon.js:3 | const w = (window.SALON_SLUG || "").trim();
+- src/utils/slug.js:26 | if(window.SALON_SLUG){
+- src/utils/slug.js:27 | return window.SALON_SLUG
+
+Runtime checks:
+- run=1 | route=bookings | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/bookings
+- run=1 | route=calendar | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/calendar
+- run=1 | route=clients | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/clients
+- run=1 | route=contracts | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/contracts
+- run=1 | route=dashboard | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/dashboard
+- run=1 | route=finance | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/finance
+- run=1 | route=masters | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/masters
+- run=1 | route=money | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/money
+- run=1 | route=money | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/money
+- run=1 | route=payouts | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/payouts
+- run=1 | route=services | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/services
+- run=1 | route=settings | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/settings
+- run=1 | route=settlements | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/settlements
+- run=1 | route=transactions | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/transactions
+- run=2 | route=bookings | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/bookings
+- run=2 | route=calendar | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/calendar
+- run=2 | route=clients | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/clients
+- run=2 | route=contracts | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/contracts
+- run=2 | route=dashboard | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/dashboard
+- run=2 | route=finance | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/finance
+- run=2 | route=masters | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/masters
+- run=2 | route=money | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/money
+- run=2 | route=money | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/money
+- run=2 | route=payouts | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/payouts
+- run=2 | route=services | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/services
+- run=2 | route=settings | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/settings
+- run=2 | route=settlements | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/settlements
+- run=2 | route=transactions | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/transactions
+- run=3 | route=bookings | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/bookings
+- run=3 | route=calendar | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/calendar
+- run=3 | route=clients | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/clients
+- run=3 | route=contracts | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/contracts
+- run=3 | route=dashboard | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/dashboard
+- run=3 | route=finance | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/finance
+- run=3 | route=masters | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/masters
+- run=3 | route=money | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/money
+- run=3 | route=money | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/money
+- run=3 | route=payouts | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/payouts
+- run=3 | route=services | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/services
+- run=3 | route=settings | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/settings
+- run=3 | route=settlements | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/settlements
+- run=3 | route=transactions | window_slug=null | inject_ok=true | route_slug_ok=true | hash=#/salon/totem-demo-salon/transactions
+
+=== 10. FINANCE CHAIN AUDIT ===
+- run=1 | route=contracts | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=1 | route=finance | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=1 | route=money | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=1 | route=money | api_called=false | api_ok=false | contract_ok=true | empty=0 | suspect=0
+- run=1 | route=payouts | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=1 | route=settlements | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=1 | route=transactions | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=2 | route=contracts | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=2 | route=finance | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=2 | route=money | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=2 | route=money | api_called=false | api_ok=false | contract_ok=true | empty=0 | suspect=0
+- run=2 | route=payouts | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=2 | route=settlements | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=2 | route=transactions | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=3 | route=contracts | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=3 | route=finance | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=3 | route=money | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=3 | route=money | api_called=false | api_ok=false | contract_ok=true | empty=0 | suspect=0
+- run=3 | route=payouts | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=3 | route=settlements | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+- run=3 | route=transactions | api_called=true | api_ok=true | contract_ok=true | empty=0 | suspect=0
+
+=== 11. NAVIGATION AUDIT ===
+Foreign route leaks: 0
+- run=1 | route=bookings | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/bookings
+- run=1 | route=calendar | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/calendar
+- run=1 | route=clients | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/clients
+- run=1 | route=contracts | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/contracts
+- run=1 | route=dashboard | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/dashboard
+- run=1 | route=finance | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/finance
+- run=1 | route=masters | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/masters
+- run=1 | route=money | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/money
+- run=1 | route=money | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/money
+- run=1 | route=payouts | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/payouts
+- run=1 | route=services | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/services
+- run=1 | route=settings | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/settings
+- run=1 | route=settlements | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/settlements
+- run=1 | route=transactions | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/transactions
+- run=2 | route=bookings | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/bookings
+- run=2 | route=calendar | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/calendar
+- run=2 | route=clients | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/clients
+- run=2 | route=contracts | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/contracts
+- run=2 | route=dashboard | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/dashboard
+- run=2 | route=finance | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/finance
+- run=2 | route=masters | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/masters
+- run=2 | route=money | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/money
+- run=2 | route=money | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/money
+- run=2 | route=payouts | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/payouts
+- run=2 | route=services | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/services
+- run=2 | route=settings | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/settings
+- run=2 | route=settlements | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/settlements
+- run=2 | route=transactions | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/transactions
+- run=3 | route=bookings | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/bookings
+- run=3 | route=calendar | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/calendar
+- run=3 | route=clients | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/clients
+- run=3 | route=contracts | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/contracts
+- run=3 | route=dashboard | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/dashboard
+- run=3 | route=finance | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/finance
+- run=3 | route=masters | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/masters
+- run=3 | route=money | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/money
+- run=3 | route=money | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/money
+- run=3 | route=payouts | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/payouts
+- run=3 | route=services | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/services
+- run=3 | route=settings | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/settings
+- run=3 | route=settlements | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/settlements
+- run=3 | route=transactions | slug_persist_ok=true | foreign_route_leak=false | url=http://localhost:5173/#/salon/totem-demo-salon/transactions
+
+=== 12. HARDCODE / DEV-ONLY AUDIT ===
+Hardcoded findings: 2
+Dev fallback findings: 1
+- file=src/core/dev-bootstrap.js | reason=dev_bootstrap_or_local_fallback
+
+=== 13. PERFORMANCE AUDIT ===
+Avg page time: 1783ms
+Max page time: 4267ms
+Avg api time: 458ms
+Max api time: 1139ms
+Slow pages: 1
+Slow endpoints: 0
+Unstable pages: 0
+Unstable endpoints: 0
+
+Slow pages:
+- bookings(avg=4224ms,max=4267ms)
+
+Slow endpoints:
+none
+
+Unstable pages:
+none
+
+Unstable endpoints:
+none
+
+=== 14. FINAL PASS / FAIL MATRIX ===
+Total files scanned: 21
+Total pages discovered: 14
+Total routes discovered: 14
+Total endpoints discovered: 21
+Total endpoint calls checked: 144
+Passed markers: 179
+Failed markers: 17
+Warning markers: 5
+Broken chains: 2
+Empty responses: 2
+Suspected stubs: 2
+Slug mismatches: 0
+Odoo issues: 0
+Performance issues: 1
+FINAL STATUS: FAIL
+

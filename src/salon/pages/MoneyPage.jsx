@@ -1,4 +1,4 @@
-import SalonMoneyPage from "../payments/SalonMoneyView"
+import SalonMoneyPage from "../payments/SalonMoneyPage"
 
 export default function MoneyPage(){
   return <SalonMoneyPage />
