@@ -1,0 +1,12 @@
+TOTEM SALON LOCAL AUDIT SUMMARY
+Generated: 2026-04-01T19:12:13.724Z
+Base: http://localhost:5173
+Slug: totem-demo-salon
+Total cases: 0
+Failed cases: 0
+
+=== ROUTE SUMMARY ===
+
+=== TOP FAILS (max 30) ===
+
+=== TOP SLOW (max 30) ===

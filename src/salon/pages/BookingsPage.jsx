@@ -173,12 +173,7 @@ export default function BookingsPage(){
       )
 
       setBookings(normalizedBookings)
-
-      if(mastersResponse?.ok){
-        setMasters(mastersResponse.masters || [])
-      }else{
-        setMasters([])
-      }
+      setMasters(mastersResponse?.ok ? (mastersResponse.masters || []) : [])
     }catch(loadError){
       console.error("SALON BOOKINGS LOAD ERROR", loadError)
       setBookings([])
@@ -190,27 +185,17 @@ export default function BookingsPage(){
   }
 
   useEffect(() => {
-    let disposed = false
-    let intervalId = null
+    let cancelled = false
 
     async function run(){
-      if(disposed || loadingAction) return
+      if(cancelled || loadingAction) return
       await load()
     }
 
     run()
 
-    intervalId = window.setInterval(() => {
-      if(!disposed && !loadingAction){
-        load()
-      }
-    }, 10000)
-
     return () => {
-      disposed = true
-      if(intervalId){
-        window.clearInterval(intervalId)
-      }
+      cancelled = true
     }
   }, [salonSlug, loadingAction])
 

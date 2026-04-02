@@ -1,0 +1,1204 @@
+[
+  {
+    "name": "salon dashboard run 1",
+    "side": "salon",
+    "route": "dashboard",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/dashboard",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/dashboard",
+    "title": "TOTEM SDK",
+    "duration": 3847,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1671,
+    "divCount": 89,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon masters run 1",
+    "side": "salon",
+    "route": "masters",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/masters",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/masters",
+    "title": "TOTEM SDK",
+    "duration": 3048,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1614,
+    "divCount": 212,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon bookings run 1",
+    "side": "salon",
+    "route": "bookings",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/bookings",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/bookings",
+    "title": "TOTEM SDK",
+    "duration": 2371,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 591,
+    "divCount": 50,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon calendar run 1",
+    "side": "salon",
+    "route": "calendar",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/calendar",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/calendar",
+    "title": "TOTEM SDK",
+    "duration": 2494,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1200,
+    "divCount": 317,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon finance run 1",
+    "side": "salon",
+    "route": "finance",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/finance",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/finance",
+    "title": "TOTEM SDK",
+    "duration": 2504,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1663,
+    "divCount": 118,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/finance' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/finance"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon services run 1",
+    "side": "salon",
+    "route": "services",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/services",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/services",
+    "title": "TOTEM SDK",
+    "duration": 2427,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 964,
+    "divCount": 70,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon clients run 1",
+    "side": "salon",
+    "route": "clients",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/clients",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/clients",
+    "title": "TOTEM SDK",
+    "duration": 2506,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 534,
+    "divCount": 52,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/clients' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/clients"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon settings run 1",
+    "side": "salon",
+    "route": "settings",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/settings",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/settings",
+    "title": "TOTEM SDK",
+    "duration": 2417,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1464,
+    "divCount": 91,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon money run 1",
+    "side": "salon",
+    "route": "money",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/money",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/money",
+    "title": "TOTEM SDK",
+    "duration": 2466,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1383,
+    "divCount": 112,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon settlements run 1",
+    "side": "salon",
+    "route": "settlements",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/settlements",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/settlements",
+    "title": "TOTEM SDK",
+    "duration": 2489,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 973,
+    "divCount": 85,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon payouts run 1",
+    "side": "salon",
+    "route": "payouts",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/payouts",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/payouts",
+    "title": "TOTEM SDK",
+    "duration": 2437,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1214,
+    "divCount": 123,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon transactions run 1",
+    "side": "salon",
+    "route": "transactions",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/transactions",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/transactions",
+    "title": "TOTEM SDK",
+    "duration": 2436,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 4164,
+    "divCount": 414,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/transactions' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/transactions"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon contracts run 1",
+    "side": "salon",
+    "route": "contracts",
+    "run": 1,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/contracts",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/contracts",
+    "title": "TOTEM SDK",
+    "duration": 2410,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 2180,
+    "divCount": 61,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon dashboard run 2",
+    "side": "salon",
+    "route": "dashboard",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/dashboard",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/dashboard",
+    "title": "TOTEM SDK",
+    "duration": 2471,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1671,
+    "divCount": 89,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/dashboard' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/dashboard"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon masters run 2",
+    "side": "salon",
+    "route": "masters",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/masters",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/masters",
+    "title": "TOTEM SDK",
+    "duration": 2406,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1614,
+    "divCount": 212,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon bookings run 2",
+    "side": "salon",
+    "route": "bookings",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/bookings",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/bookings",
+    "title": "TOTEM SDK",
+    "duration": 2408,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 591,
+    "divCount": 50,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon calendar run 2",
+    "side": "salon",
+    "route": "calendar",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/calendar",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/calendar",
+    "title": "TOTEM SDK",
+    "duration": 2506,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1200,
+    "divCount": 317,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/calendar' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/calendar"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon finance run 2",
+    "side": "salon",
+    "route": "finance",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/finance",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/finance",
+    "title": "TOTEM SDK",
+    "duration": 2374,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1663,
+    "divCount": 118,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon services run 2",
+    "side": "salon",
+    "route": "services",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/services",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/services",
+    "title": "TOTEM SDK",
+    "duration": 2392,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 964,
+    "divCount": 70,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon clients run 2",
+    "side": "salon",
+    "route": "clients",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/clients",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/clients",
+    "title": "TOTEM SDK",
+    "duration": 2529,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 534,
+    "divCount": 52,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/clients' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/clients"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon settings run 2",
+    "side": "salon",
+    "route": "settings",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/settings",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/settings",
+    "title": "TOTEM SDK",
+    "duration": 2414,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1464,
+    "divCount": 91,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/settings' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/settings"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon money run 2",
+    "side": "salon",
+    "route": "money",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/money",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/money",
+    "title": "TOTEM SDK",
+    "duration": 2452,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1383,
+    "divCount": 112,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon settlements run 2",
+    "side": "salon",
+    "route": "settlements",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/settlements",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/settlements",
+    "title": "TOTEM SDK",
+    "duration": 2401,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 973,
+    "divCount": 85,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/settlements' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/settlements"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon payouts run 2",
+    "side": "salon",
+    "route": "payouts",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/payouts",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/payouts",
+    "title": "TOTEM SDK",
+    "duration": 2432,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1214,
+    "divCount": 123,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon transactions run 2",
+    "side": "salon",
+    "route": "transactions",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/transactions",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/transactions",
+    "title": "TOTEM SDK",
+    "duration": 2432,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 4164,
+    "divCount": 414,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/transactions' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/transactions"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon contracts run 2",
+    "side": "salon",
+    "route": "contracts",
+    "run": 2,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/contracts",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/contracts",
+    "title": "TOTEM SDK",
+    "duration": 2390,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 2180,
+    "divCount": 61,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon dashboard run 3",
+    "side": "salon",
+    "route": "dashboard",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/dashboard",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/dashboard",
+    "title": "TOTEM SDK",
+    "duration": 2418,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1671,
+    "divCount": 89,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/dashboard' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/dashboard"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon masters run 3",
+    "side": "salon",
+    "route": "masters",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/masters",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/masters",
+    "title": "TOTEM SDK",
+    "duration": 2416,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1614,
+    "divCount": 212,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon bookings run 3",
+    "side": "salon",
+    "route": "bookings",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/bookings",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/bookings",
+    "title": "TOTEM SDK",
+    "duration": 2365,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 591,
+    "divCount": 50,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/bookings' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/bookings"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon calendar run 3",
+    "side": "salon",
+    "route": "calendar",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/calendar",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/calendar",
+    "title": "TOTEM SDK",
+    "duration": 2516,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1200,
+    "divCount": 317,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon finance run 3",
+    "side": "salon",
+    "route": "finance",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/finance",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/finance",
+    "title": "TOTEM SDK",
+    "duration": 2319,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1663,
+    "divCount": 118,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon services run 3",
+    "side": "salon",
+    "route": "services",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/services",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/services",
+    "title": "TOTEM SDK",
+    "duration": 2368,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 964,
+    "divCount": 70,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon clients run 3",
+    "side": "salon",
+    "route": "clients",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/clients",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/clients",
+    "title": "TOTEM SDK",
+    "duration": 2366,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 534,
+    "divCount": 52,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/clients' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/clients"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon settings run 3",
+    "side": "salon",
+    "route": "settings",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/settings",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/settings",
+    "title": "TOTEM SDK",
+    "duration": 2471,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1464,
+    "divCount": 91,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/settings' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/settings"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon money run 3",
+    "side": "salon",
+    "route": "money",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/money",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/money",
+    "title": "TOTEM SDK",
+    "duration": 2384,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1383,
+    "divCount": 112,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon settlements run 3",
+    "side": "salon",
+    "route": "settlements",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/settlements",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/settlements",
+    "title": "TOTEM SDK",
+    "duration": 2454,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 973,
+    "divCount": 85,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon payouts run 3",
+    "side": "salon",
+    "route": "payouts",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/payouts",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/payouts",
+    "title": "TOTEM SDK",
+    "duration": 2360,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 1214,
+    "divCount": 123,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context.",
+      "Access to fetch at 'https://www.totemv.com/odoo/salon/totem-demo-salon/payouts' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "Failed to load resource: net::ERR_FAILED",
+      "ODOO BRIDGE ERROR TypeError: Failed to fetch\n    at loadOdooPanel (http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:24:23)\n    at http://localhost:5173/src/salon/SalonLayout.jsx?t=1775068394431:134:5\n    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18117:15)\n    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19488:11)\n    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19445:22)\n    at http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5bcbd46b:19326:17"
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [
+      "GET https://www.totemv.com/odoo/salon/totem-demo-salon/payouts"
+    ],
+    "badResponses": []
+  },
+  {
+    "name": "salon transactions run 3",
+    "side": "salon",
+    "route": "transactions",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/transactions",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/transactions",
+    "title": "TOTEM SDK",
+    "duration": 2385,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 4164,
+    "divCount": 414,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  },
+  {
+    "name": "salon contracts run 3",
+    "side": "salon",
+    "route": "contracts",
+    "run": 3,
+    "url": "http://localhost:5173/#/salon/totem-demo-salon/contracts",
+    "finalUrl": "http://localhost:5173/#/salon/totem-demo-salon/contracts",
+    "title": "TOTEM SDK",
+    "duration": 2872,
+    "isSlow": false,
+    "status": "FAIL",
+    "gotoError": null,
+    "bodyReadError": null,
+    "bodyLength": 2180,
+    "divCount": 61,
+    "hasUrl": true,
+    "hasBody": true,
+    "hasDivs": true,
+    "consoleErrors": [
+      "TOTEM SDK: Unable to resolve platform context."
+    ],
+    "consoleWarnings": [
+      "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "badResponses": []
+  }
+]

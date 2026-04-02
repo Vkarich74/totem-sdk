@@ -17,20 +17,49 @@ function getCurrentSection(pathname){
   return parts[2] || "dashboard"
 }
 
+function isLocalRuntime(){
+  if(typeof window === "undefined") return false
+
+  const host = String(window.location.hostname || "").toLowerCase()
+  return host === "localhost" || host === "127.0.0.1"
+}
+
+function setOdooContent(message){
+  const container = document.getElementById("odoo-content")
+
+  if(!container){
+    console.error("ODOO BRIDGE: container missing")
+    return
+  }
+
+  container.innerHTML = `
+    <div style="padding:16px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;color:#111827;font:14px/1.5 Arial, sans-serif;">
+      ${message}
+    </div>
+  `
+}
+
 async function loadOdooPanel(slug, section){
   if(!slug){
     console.error("ODOO BRIDGE: salon slug missing")
+    setOdooContent("Odoo блок не загружен: отсутствует slug салона.")
     return
   }
 
   const targetSection = section || "dashboard"
+
+  if(isLocalRuntime()){
+    setOdooContent("Локальный режим: Odoo блок отключён, чтобы не создавать сетевые ошибки при локальном аудите и разработке.")
+    return
+  }
+
   const url = `${ODOO_BASE}/salon/${slug}/${targetSection}`
 
   try{
     const res = await fetch(url)
 
     if(!res.ok){
-      throw new Error("ODOO_FETCH_FAILED")
+      throw new Error(`ODOO_FETCH_FAILED_${res.status}`)
     }
 
     const html = await res.text()
@@ -44,6 +73,7 @@ async function loadOdooPanel(slug, section){
     container.innerHTML = html
   }catch(e){
     console.error("ODOO BRIDGE ERROR", e)
+    setOdooContent("Не удалось загрузить Odoo блок. Продолжайте работу в кабинете, основной интерфейс доступен.")
   }
 }
 

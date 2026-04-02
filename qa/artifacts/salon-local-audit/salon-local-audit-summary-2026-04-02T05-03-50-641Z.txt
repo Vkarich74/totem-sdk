@@ -1,0 +1,67 @@
+TOTEM SALON LOCAL AUDIT SUMMARY
+Generated: 2026-04-02T05:03:50.644Z
+Base: http://localhost:5173
+Slug: totem-demo-salon
+Total cases: 39
+Pass: 39
+Fail: 0
+
+=== ROUTE SUMMARY ===
+dashboard | pass=3/3 | fail=0/3 | slow=0/3 | avg=2867ms | max=3934ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=4 | ignored_req=0
+masters | pass=3/3 | fail=0/3 | slow=0/3 | avg=2577ms | max=3032ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=3 | ignored_req=0
+payouts | pass=3/3 | fail=0/3 | slow=0/3 | avg=2487ms | max=2624ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=6 | ignored_req=1
+bookings | pass=3/3 | fail=0/3 | slow=0/3 | avg=2455ms | max=2687ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=6 | ignored_req=1
+contracts | pass=3/3 | fail=0/3 | slow=0/3 | avg=2450ms | max=2527ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=3 | ignored_req=0
+services | pass=3/3 | fail=0/3 | slow=0/3 | avg=2448ms | max=2584ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=9 | ignored_req=2
+transactions | pass=3/3 | fail=0/3 | slow=0/3 | avg=2433ms | max=2572ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=6 | ignored_req=1
+calendar | pass=3/3 | fail=0/3 | slow=0/3 | avg=2426ms | max=2509ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=6 | ignored_req=1
+money | pass=3/3 | fail=0/3 | slow=0/3 | avg=2426ms | max=2501ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=3 | ignored_req=0
+settlements | pass=3/3 | fail=0/3 | slow=0/3 | avg=2420ms | max=2511ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=6 | ignored_req=1
+finance | pass=3/3 | fail=0/3 | slow=0/3 | avg=2387ms | max=2427ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=3 | ignored_req=0
+settings | pass=3/3 | fail=0/3 | slow=0/3 | avg=2366ms | max=2413ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=6 | ignored_req=1
+clients | pass=3/3 | fail=0/3 | slow=0/3 | avg=2350ms | max=2380ms | console=0 | page=0 | req_fail=0 | bad_http=0 | ignored_console=3 | ignored_req=0
+
+=== FAILED RUNS ===
+
+=== IGNORED LOCAL NOISE ===
+salon dashboard run 1 | ignored_console=2 | ignored_req=0 | ignored_http=0
+salon masters run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon bookings run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon calendar run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon finance run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon services run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon clients run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon settings run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon money run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon settlements run 1 | ignored_console=4 | ignored_req=1 | ignored_http=0
+salon payouts run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon transactions run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon contracts run 1 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon dashboard run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon masters run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon bookings run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon calendar run 2 | ignored_console=4 | ignored_req=1 | ignored_http=0
+salon finance run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon services run 2 | ignored_console=4 | ignored_req=1 | ignored_http=0
+salon clients run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon settings run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon money run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon settlements run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon payouts run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon transactions run 2 | ignored_console=4 | ignored_req=1 | ignored_http=0
+salon contracts run 2 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon dashboard run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon masters run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon bookings run 3 | ignored_console=4 | ignored_req=1 | ignored_http=0
+salon calendar run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon finance run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon services run 3 | ignored_console=4 | ignored_req=1 | ignored_http=0
+salon clients run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon settings run 3 | ignored_console=4 | ignored_req=1 | ignored_http=0
+salon money run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon settlements run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon payouts run 3 | ignored_console=4 | ignored_req=1 | ignored_http=0
+salon transactions run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+salon contracts run 3 | ignored_console=1 | ignored_req=0 | ignored_http=0
+
+=== TOP SLOW ===

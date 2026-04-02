@@ -1,0 +1,17 @@
+TOTEM SALON LOCAL AUDIT SUMMARY
+Generated: 2026-04-01T19:25:30.280Z
+Base: http://localhost:5173
+Slug: totem-demo-salon
+Total cases: 1
+Failed cases: 1
+
+=== ROUTE SUMMARY ===
+salon bookings | failed=1/1 | slow=0/1 | avg=2884ms | max=2884ms | console=2 | page=0 | req_fail=0 | bad_http=0
+
+=== TOP FAILS (max 30) ===
+salon bookings run 1 | 2884ms | nav=page.waitForSelector: Test ended.
+Call log:
+[2m  - waiting for locator('body') to be visible[22m
+ | console=2 | page=0 | req_fail=0 | bad_http=0 | body=0 | divs=0
+
+=== TOP SLOW (max 30) ===

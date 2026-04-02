@@ -1,0 +1,13 @@
+TOTEM SALON FULL CHAIN SUMMARY
+Generated: 2026-04-02T05:44:58.786Z
+
+dashboard | api_called=true | api_ok=true | ui_ok=true | time=4431ms
+bookings | api_called=true | api_ok=true | ui_ok=true | time=3252ms
+clients | api_called=true | api_ok=true | ui_ok=true | time=2859ms
+masters | api_called=true | api_ok=true | ui_ok=true | time=3197ms
+services | api_called=true | api_ok=true | ui_ok=true | time=3819ms
+money | api_called=true | api_ok=true | ui_ok=true | time=3131ms
+transactions | api_called=true | api_ok=true | ui_ok=true | time=3056ms
+settlements | api_called=true | api_ok=true | ui_ok=true | time=3139ms
+payouts | api_called=true | api_ok=true | ui_ok=true | time=3371ms
+contracts | api_called=true | api_ok=true | ui_ok=true | time=3006ms

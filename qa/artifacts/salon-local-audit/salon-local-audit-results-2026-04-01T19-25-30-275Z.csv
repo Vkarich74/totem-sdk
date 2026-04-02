@@ -1,0 +1,5 @@
+name,side,route,run,url,finalUrl,duration,slow,navError,bodyLength,divs,consoleErrors,pageErrors,failedRequests,badResponses
+"salon bookings run 1","salon","bookings",1,"http://localhost:5173/#/salon/totem-demo-salon/bookings","",2884,false,"page.waitForSelector: Test ended.
+Call log:
+[2m  - waiting for locator('body') to be visible[22m
+",0,0,2,0,0,0

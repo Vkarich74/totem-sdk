@@ -1,0 +1,2 @@
+name,side,route,run,url,finalUrl,duration,slow,navError,bodyLength,divs,consoleErrors,pageErrors,failedRequests,badResponses
+"salon masters run 1","salon","masters",1,"http://localhost:5173/#/salon/totem-demo-salon/masters","http://localhost:5173/#/salon/totem-demo-salon/masters",4161,false,"",1614,212,2,0,0,0
