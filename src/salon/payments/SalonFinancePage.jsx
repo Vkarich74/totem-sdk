@@ -8,7 +8,7 @@ const API_BASE =
   "https://api.totemv.com"
 
 function money(value){
-  return new Intl.NumberFormat("ru-RU").format(Number(value) || 0) + " сом"
+  return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
 }
 
 function formatDateTime(value){
@@ -100,8 +100,9 @@ function getContractStatusLabel(value){
 
 function getPayoutStatusLabel(value){
   const status = String(value || "").toLowerCase()
-  if(status === "paid") return "Выплачен"
+  if(status === "paid" || status === "completed") return "Выплачено"
   if(status === "pending") return "Ожидает"
+  if(status === "processing") return "Обрабатывается"
   if(status === "failed") return "Ошибка"
   return value || "—"
 }
@@ -112,49 +113,6 @@ function getSettlementStatusLabel(value){
   if(status === "closed") return "Закрыт"
   if(status === "pending") return "Ожидает"
   return value || "—"
-}
-
-function SectionTitle({ title, note }){
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>{title}</div>
-      {note ? (
-        <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4, lineHeight: 1.45 }}>{note}</div>
-      ) : null}
-    </div>
-  )
-}
-
-function Panel({ children }){
-  return (
-    <div style={{
-      border: "1px solid #e5e7eb",
-      borderRadius: 16,
-      background: "#ffffff",
-      padding: 16,
-      boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
-    }}>
-      {children}
-    </div>
-  )
-}
-
-function StatCard({ title, value, note }){
-  return (
-    <div style={{
-      border: "1px solid #e5e7eb",
-      borderRadius: 14,
-      background: "#ffffff",
-      padding: 16,
-      minHeight: 118
-    }}>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>{title}</div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: "#111827" }}>{value}</div>
-      {note ? (
-        <div style={{ fontSize: 13, color: "#6b7280", marginTop: 8, lineHeight: 1.45 }}>{note}</div>
-      ) : null}
-    </div>
-  )
 }
 
 function FinanceNavCard({ to, title, note, active = false }){
@@ -168,7 +126,9 @@ function FinanceNavCard({ to, title, note, active = false }){
         border: `1px solid ${active ? "#dbeafe" : "#e5e7eb"}`,
         borderRadius: 14,
         background: active ? "#eff6ff" : "#ffffff",
-        padding: 14
+        padding: 14,
+        minWidth: 0,
+        boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
       }}
     >
       <div style={{ fontSize: 14, fontWeight: 800, color: active ? "#1d4ed8" : "#111827", marginBottom: 6 }}>{title}</div>
@@ -177,49 +137,50 @@ function FinanceNavCard({ to, title, note, active = false }){
   )
 }
 
-function EmptyState({ text }){
+function Panel({ title, note, children }){
   return (
-    <div style={{
-      border: "1px dashed #d1d5db",
-      borderRadius: 14,
-      background: "#f9fafb",
-      padding: 16,
-      color: "#6b7280",
-      fontSize: 14
-    }}>
-      {text}
+    <section style={styles.panel}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.panelTitle}>{title}</h2>
+        {note ? <p style={styles.panelNote}>{note}</p> : null}
+      </div>
+      <div style={{ marginTop: 14 }}>{children}</div>
+    </section>
+  )
+}
+
+function StatCard({ title, value, note }){
+  return (
+    <article style={styles.statCard}>
+      <div style={styles.statLabel}>{title}</div>
+      <div style={styles.statValue}>{value}</div>
+      {note ? <div style={styles.statNote}>{note}</div> : null}
+    </article>
+  )
+}
+
+function EmptyState({ title, text }){
+  return (
+    <div style={styles.emptyBox}>
+      <h3 style={styles.emptyTitle}>{title}</h3>
+      <p style={styles.emptyText}>{text}</p>
     </div>
   )
 }
 
 function PreviewRow({ title, meta, value, status }){
   return (
-    <div style={{
-      borderTop: "1px solid #eef2f7",
-      paddingTop: 12,
-      marginTop: 12,
-      display: "flex",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      gap: 12,
-      flexWrap: "wrap"
-    }}>
+    <article style={styles.previewRow}>
       <div style={{ minWidth: 0, flex: "1 1 240px" }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{title}</div>
-        {meta ? (
-          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4, lineHeight: 1.4 }}>{meta}</div>
-        ) : null}
+        <h3 style={styles.previewTitle}>{title}</h3>
+        {meta ? <p style={styles.previewMeta}>{meta}</p> : null}
       </div>
 
-      <div style={{ textAlign: "right" }}>
-        {typeof value !== "undefined" ? (
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{value}</div>
-        ) : null}
-        {status ? (
-          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{status}</div>
-        ) : null}
+      <div style={styles.previewAside}>
+        {typeof value !== "undefined" ? <div style={styles.previewValue}>{value}</div> : null}
+        {status ? <div style={styles.previewStatus}>{status}</div> : null}
       </div>
-    </div>
+    </article>
   )
 }
 
@@ -368,169 +329,413 @@ export default function SalonFinancePage(){
   }
 
   const pageLoading = contextLoading || loading
-  const pageError = contextError || error
+  const pageError = !pageLoading && (contextError || error)
   const showEmpty = !pageLoading && !pageError && !contracts.length && !settlements.length && !payouts.length && !walletBalance && !metricsView.revenueMonth
 
-  if(pageError){
-    return (
-      <div style={{ padding: 20 }}>
-        <div style={{ fontSize: 28, fontWeight: 800, color: "#111827" }}>Финансы салона</div>
-        <div style={{
-          marginTop: 12,
-          border: "1px solid #f5c2c7",
-          background: "#fff5f5",
-          color: "#b42318",
-          borderRadius: 12,
-          padding: 14
-        }}>
-          Ошибка загрузки финансового модуля
-        </div>
-      </div>
-    )
-  }
-
-  if(pageLoading){
-    return (
-      <div style={{ padding: 20 }}>
-        <div style={{ fontSize: 28, fontWeight: 800, color: "#111827" }}>Финансы салона</div>
-        <div style={{ marginTop: 12, color: "#6b7280" }}>Загрузка финансового обзора...</div>
-      </div>
-    )
-  }
-
   return (
-    <div style={{ padding: 20, background: "#f6f7fb", minHeight: "100%" }}>
-      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 28, fontWeight: 800, color: "#111827" }}>Финансы салона</div>
-          <div style={{ fontSize: 14, color: "#6b7280", marginTop: 6, lineHeight: 1.5 }}>
-            Центральный обзор денег, доступа и переходов в расчёты, выплаты, транзакции и договоры.
-          </div>
-        </div>
-
-        <div style={{
-          border: `1px solid ${billingUi.border}`,
-          background: billingUi.bg,
-          color: billingUi.tone,
-          borderRadius: 14,
-          padding: 14,
-          marginBottom: 16
-        }}>
-          <div style={{ fontSize: 15, fontWeight: 800 }}>{billingUi.title}</div>
-          <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{billingUi.note}</div>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 10, fontSize: 13 }}>
-            <span>Запись: {canWrite ? "разрешена" : "ограничена"}</span>
-            <span>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</span>
-          </div>
-        </div>
-
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: 12,
-          marginBottom: 18
-        }}>
-          <StatCard title="Баланс кошелька" value={money(walletBalance)} note="Текущий wallet balance салона" />
-          <StatCard title="Доход сегодня" value={money(metricsView.revenueToday)} note="Операционная выручка за день" />
-          <StatCard title="Доход за месяц" value={money(metricsView.revenueMonth)} note="Главный срез по текущей выручке" />
-          <StatCard title="Активные контракты" value={String(activeContracts.length)} note="Связка с мастерами и правила расчётов" />
-        </div>
-
-        <Panel>
-          <SectionTitle title="Финансовая навигация" note="Финансы — это overview, а глубокие действия находятся на отдельных страницах." />
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 12
-          }}>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        {slug ? (
+          <nav aria-label="Финансовые разделы" style={styles.navGrid}>
             <FinanceNavCard to={buildSalonPath(slug, "finance")} title="Финансы" note="Общий обзор" active />
             <FinanceNavCard to={buildSalonPath(slug, "money")} title="Доход" note="Деньги сейчас" />
             <FinanceNavCard to={buildSalonPath(slug, "settlements")} title="Сеты" note="Расчётные периоды" />
             <FinanceNavCard to={buildSalonPath(slug, "payouts")} title="Выплаты" note="Фактические выплаты" />
             <FinanceNavCard to={buildSalonPath(slug, "transactions")} title="Транзакции" note="Техническая лента" />
             <FinanceNavCard to={buildSalonPath(slug, "contracts")} title="Контракты" note="Договорный модуль" />
-          </div>
-        </Panel>
+          </nav>
+        ) : null}
 
-        {showEmpty ? (
-          <div style={{ marginTop: 18 }}>
-            <EmptyState text="Финансовые данные пока не наполнены. Как только появятся движения денег, контракты или расчётные периоды, обзор заполнится автоматически." />
-          </div>
-        ) : (
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 16,
-            marginTop: 18
-          }}>
-            <Panel>
-              <SectionTitle title="Контрактный статус" note="Здесь только краткий обзор. Полная работа с договорами остаётся на странице контрактов." />
-              {activeContracts.length === 0 ? (
-                <EmptyState text="Активных контрактов пока нет." />
-              ) : (
-                activeContracts.slice(0, 3).map((contract, index) => (
-                  <PreviewRow
-                    key={contract?.id || index}
-                    title={contract?.master_name || contract?.master_slug || contract?.master_id || "Мастер"}
-                    meta={contract?.billing_model || contract?.contract_type || "Условия заданы в контракте"}
-                    value={money(contract?.amount || 0)}
-                    status={getContractStatusLabel(contract?.status)}
-                  />
-                ))
-              )}
-              <div style={{ marginTop: 14 }}>
-                <Link to={buildSalonPath(slug, "contracts")} style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8", textDecoration: "none" }}>
-                  Открыть все контракты →
-                </Link>
-              </div>
-            </Panel>
+        <header style={styles.pageHeader}>
+          <p style={styles.eyebrow}>Salon finance / mobile</p>
+          <h1 style={styles.pageTitle}>Финансы салона</h1>
+          <p style={styles.pageSubtitle}>
+            Центральный обзор денег, доступа и переходов в расчёты, выплаты, транзакции и договоры. Верхний слой страницы стабилен для mobile-first использования.
+          </p>
+        </header>
 
-            <Panel>
-              <SectionTitle title="Последние расчётные периоды" note="Компактный preview без перегрузки overview-страницы." />
-              {recentSettlements.length === 0 ? (
-                <EmptyState text="Расчётные периоды пока не сформированы." />
-              ) : (
-                recentSettlements.map((settlement, index) => (
-                  <PreviewRow
-                    key={settlement?.id || index}
-                    title={`Период ${formatDateTime(settlement?.period_start)} — ${formatDateTime(settlement?.period_end)}`}
-                    meta={settlement?.closed_at ? `Закрыт: ${formatDateTime(settlement.closed_at)}` : "Период ещё открыт"}
-                    value={money(settlement?.amount || settlement?.total_amount || 0)}
-                    status={getSettlementStatusLabel(settlement?.status)}
-                  />
-                ))
-              )}
-              <div style={{ marginTop: 14 }}>
-                <Link to={buildSalonPath(slug, "settlements")} style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8", textDecoration: "none" }}>
-                  Открыть все сеты →
-                </Link>
-              </div>
-            </Panel>
-
-            <Panel>
-              <SectionTitle title="Последние выплаты" note="Здесь только краткая лента. Полная история и статусы — на странице выплат." />
-              {recentPayouts.length === 0 ? (
-                <EmptyState text="Выплат пока нет." />
-              ) : (
-                recentPayouts.map((payout, index) => (
-                  <PreviewRow
-                    key={payout?.id || index}
-                    title={payout?.destination || payout?.reference || payout?.reference_id || "Выплата"}
-                    meta={formatDateTime(payout?.paid_at || payout?.created_at)}
-                    value={money(payout?.amount || 0)}
-                    status={getPayoutStatusLabel(payout?.status)}
-                  />
-                ))
-              )}
-              <div style={{ marginTop: 14 }}>
-                <Link to={buildSalonPath(slug, "payouts")} style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8", textDecoration: "none" }}>
-                  Открыть все выплаты →
-                </Link>
-              </div>
-            </Panel>
+        <section
+          style={{
+            ...styles.alert,
+            borderColor: billingUi.border,
+            background: billingUi.bg,
+            color: billingUi.tone
+          }}
+        >
+          <div style={styles.alertMain}>
+            <h2 style={{ ...styles.alertTitle, color: billingUi.tone }}>{billingUi.title}</h2>
+            <p style={styles.alertText}>{billingUi.note}</p>
           </div>
-        )}
+          <div style={styles.alertMeta}>
+            <div>Запись: {canWrite ? "разрешена" : "ограничена"}</div>
+            <div>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</div>
+          </div>
+        </section>
+
+        <section style={styles.statsGrid}>
+          <StatCard title="Баланс кошелька" value={money(walletBalance)} note="Текущий wallet balance салона" />
+          <StatCard title="Доход сегодня" value={money(metricsView.revenueToday)} note="Операционная выручка за день" />
+          <StatCard title="Доход за месяц" value={money(metricsView.revenueMonth)} note="Главный срез по текущей выручке" />
+          <StatCard title="Активные контракты" value={String(activeContracts.length)} note="Связка с мастерами и правила расчётов" />
+        </section>
+
+        <div style={styles.mainStack}>
+          <Panel
+            title="Короткий статус модуля"
+            note="Overview держит единый каркас: header, billing, summary и компактные превью дочерних финансовых разделов."
+          >
+            {pageLoading ? <div style={styles.infoText}>Загрузка финансового обзора...</div> : null}
+
+            {pageError ? (
+              <EmptyState
+                title={contextError ? "Ошибка shell-слоя" : "Ошибка загрузки"}
+                text={contextError ? "Не удалось определить состояние кабинета салона" : "Не удалось загрузить финансовый модуль"}
+              />
+            ) : null}
+
+            {showEmpty ? (
+              <EmptyState
+                title="Финансовые данные пока не наполнены"
+                text="Как только появятся движения денег, контракты или расчётные периоды, обзор заполнится автоматически. Каркас страницы уже готов под production mobile UI."
+              />
+            ) : null}
+
+            {!pageLoading && !pageError && !showEmpty ? (
+              <div style={styles.infoGrid}>
+                <div style={styles.infoItem}>
+                  <div style={styles.infoLabel}>Платежей всего</div>
+                  <div style={styles.infoValue}>{metricsView.paymentsTotal}</div>
+                </div>
+                <div style={styles.infoItem}>
+                  <div style={styles.infoLabel}>Записей сегодня</div>
+                  <div style={styles.infoValue}>{metricsView.bookingsToday}</div>
+                </div>
+                <div style={styles.infoItem}>
+                  <div style={styles.infoLabel}>Сетов</div>
+                  <div style={styles.infoValue}>{settlements.length}</div>
+                </div>
+                <div style={styles.infoItem}>
+                  <div style={styles.infoLabel}>Выплат</div>
+                  <div style={styles.infoValue}>{payouts.length}</div>
+                </div>
+              </div>
+            ) : null}
+          </Panel>
+
+          <Panel
+            title="Финансовая навигация"
+            note="Обзор остаётся главным экраном, а глубокие действия вынесены на отдельные finance-страницы с тем же мобильным контрактом."
+          >
+            {slug ? (
+              <div style={styles.navOverviewGrid}>
+                <FinanceNavCard to={buildSalonPath(slug, "finance")} title="Финансы" note="Общий обзор" active />
+                <FinanceNavCard to={buildSalonPath(slug, "money")} title="Доход" note="Деньги сейчас" />
+                <FinanceNavCard to={buildSalonPath(slug, "settlements")} title="Сеты" note="Расчётные периоды" />
+                <FinanceNavCard to={buildSalonPath(slug, "payouts")} title="Выплаты" note="Фактические выплаты" />
+                <FinanceNavCard to={buildSalonPath(slug, "transactions")} title="Транзакции" note="Техническая лента" />
+                <FinanceNavCard to={buildSalonPath(slug, "contracts")} title="Контракты" note="Договорный модуль" />
+              </div>
+            ) : (
+              <EmptyState title="Навигация недоступна" text="Не найден salon slug для переходов между финансовыми разделами." />
+            )}
+          </Panel>
+
+          {!pageLoading && !pageError && !showEmpty ? (
+            <div style={styles.previewGrid}>
+              <Panel title="Контрактный статус" note="Здесь только краткий обзор. Полная работа с договорами остаётся на странице контрактов.">
+                {activeContracts.length === 0 ? (
+                  <EmptyState title="Активных контрактов пока нет" text="Когда появятся рабочие договоры с мастерами, блок заполнится автоматически." />
+                ) : (
+                  activeContracts.slice(0, 3).map((contract, index) => (
+                    <PreviewRow
+                      key={contract?.id || index}
+                      title={contract?.master_name || contract?.master_slug || contract?.master_id || "Мастер"}
+                      meta={contract?.billing_model || contract?.contract_type || "Условия заданы в контракте"}
+                      value={money(contract?.amount || 0)}
+                      status={getContractStatusLabel(contract?.status)}
+                    />
+                  ))
+                )}
+                <div style={styles.linkRow}>
+                  <Link to={buildSalonPath(slug, "contracts")} style={styles.inlineLink}>
+                    Открыть все контракты →
+                  </Link>
+                </div>
+              </Panel>
+
+              <Panel title="Последние расчётные периоды" note="Компактный preview без перегрузки overview-страницы.">
+                {recentSettlements.length === 0 ? (
+                  <EmptyState title="Расчётные периоды пока не сформированы" text="Сеты появятся после накопления транзакций и закрытия операций." />
+                ) : (
+                  recentSettlements.map((settlement, index) => (
+                    <PreviewRow
+                      key={settlement?.id || index}
+                      title={`Период ${formatDateTime(settlement?.period_start)} — ${formatDateTime(settlement?.period_end)}`}
+                      meta={settlement?.closed_at ? `Закрыт: ${formatDateTime(settlement.closed_at)}` : "Период ещё открыт"}
+                      value={money(settlement?.amount || settlement?.total_amount || 0)}
+                      status={getSettlementStatusLabel(settlement?.status)}
+                    />
+                  ))
+                )}
+                <div style={styles.linkRow}>
+                  <Link to={buildSalonPath(slug, "settlements")} style={styles.inlineLink}>
+                    Открыть все сеты →
+                  </Link>
+                </div>
+              </Panel>
+
+              <Panel title="Последние выплаты" note="Здесь только краткая лента. Полная история и статусы — на странице выплат.">
+                {recentPayouts.length === 0 ? (
+                  <EmptyState title="Выплат пока нет" text="Блок автоматически наполнится после появления payout-записей." />
+                ) : (
+                  recentPayouts.map((payout, index) => (
+                    <PreviewRow
+                      key={payout?.id || index}
+                      title={payout?.destination || payout?.reference || payout?.reference_id || "Выплата"}
+                      meta={formatDateTime(payout?.paid_at || payout?.created_at)}
+                      value={money(payout?.amount || 0)}
+                      status={getPayoutStatusLabel(payout?.status)}
+                    />
+                  ))
+                )}
+                <div style={styles.linkRow}>
+                  <Link to={buildSalonPath(slug, "payouts")} style={styles.inlineLink}>
+                    Открыть все выплаты →
+                  </Link>
+                </div>
+              </Panel>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )
+}
+
+const styles = {
+  page: {
+    padding: 14,
+    background: "#f8fafc",
+    minHeight: "100%"
+  },
+  container: {
+    maxWidth: 980,
+    margin: "0 auto"
+  },
+  navGrid: {
+    display: "flex",
+    gap: 10,
+    overflowX: "auto",
+    paddingBottom: 4,
+    marginBottom: 16,
+    scrollbarWidth: "thin"
+  },
+  pageHeader: {
+    marginBottom: 16
+  },
+  eyebrow: {
+    margin: 0,
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#475467",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em"
+  },
+  pageTitle: {
+    margin: "6px 0 0",
+    fontSize: 30,
+    lineHeight: 1.1,
+    fontWeight: 800,
+    color: "#111827"
+  },
+  pageSubtitle: {
+    margin: "8px 0 0",
+    fontSize: 14,
+    color: "#6b7280",
+    lineHeight: 1.55
+  },
+  alert: {
+    display: "flex",
+    gap: 12,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    border: "1px solid #e5e7eb",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16
+  },
+  alertMain: {
+    minWidth: 0,
+    flex: "1 1 240px"
+  },
+  alertTitle: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 800
+  },
+  alertText: {
+    margin: "4px 0 0",
+    fontSize: 13,
+    lineHeight: 1.45,
+    color: "#475467"
+  },
+  alertMeta: {
+    fontSize: 12,
+    lineHeight: 1.6,
+    textAlign: "right",
+    color: "#475467"
+  },
+  statsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+    gap: 12,
+    marginBottom: 16
+  },
+  statCard: {
+    border: "1px solid #e5e7eb",
+    borderRadius: 14,
+    background: "#ffffff",
+    padding: 14,
+    minHeight: 116
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 8
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 800,
+    color: "#111827"
+  },
+  statNote: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#6b7280",
+    lineHeight: 1.45
+  },
+  mainStack: {
+    display: "grid",
+    gap: 14
+  },
+  panel: {
+    border: "1px solid #e5e7eb",
+    borderRadius: 16,
+    background: "#ffffff",
+    padding: 16,
+    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
+  },
+  sectionHeader: {
+    display: "grid",
+    gap: 6
+  },
+  panelTitle: {
+    margin: 0,
+    fontSize: 20,
+    fontWeight: 800,
+    color: "#111827"
+  },
+  panelNote: {
+    margin: 0,
+    fontSize: 13,
+    color: "#6b7280",
+    lineHeight: 1.5
+  },
+  infoText: {
+    fontSize: 14,
+    color: "#6b7280"
+  },
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: 12
+  },
+  infoItem: {
+    borderTop: "1px solid #eef2f7",
+    paddingTop: 12
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 6
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#111827",
+    lineHeight: 1.45
+  },
+  emptyBox: {
+    border: "1px dashed #d1d5db",
+    borderRadius: 14,
+    background: "#f9fafb",
+    padding: 16
+  },
+  emptyTitle: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#111827"
+  },
+  emptyText: {
+    margin: "6px 0 0",
+    fontSize: 14,
+    color: "#6b7280",
+    lineHeight: 1.5
+  },
+  navOverviewGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+    gap: 12
+  },
+  previewGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: 14
+  },
+  previewRow: {
+    borderTop: "1px solid #eef2f7",
+    paddingTop: 12,
+    marginTop: 12,
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  previewTitle: {
+    margin: 0,
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#111827"
+  },
+  previewMeta: {
+    margin: "4px 0 0",
+    fontSize: 12,
+    color: "#6b7280",
+    lineHeight: 1.4
+  },
+  previewAside: {
+    textAlign: "right"
+  },
+  previewValue: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#111827"
+  },
+  previewStatus: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 4
+  },
+  linkRow: {
+    marginTop: 14
+  },
+  inlineLink: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: "#1d4ed8",
+    textDecoration: "none"
+  }
 }

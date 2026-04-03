@@ -99,7 +99,7 @@ function FinanceNav({ slug, active }){
   ]
 
   return (
-    <div style={styles.navGrid}>
+    <nav aria-label="Финансовые разделы" style={styles.navGrid}>
       {items.map((item) => {
         const isActive = item.key === active
 
@@ -118,26 +118,28 @@ function FinanceNav({ slug, active }){
           </Link>
         )
       })}
-    </div>
+    </nav>
   )
 }
 
 function StatCard({ title, value, note }){
   return (
-    <div style={styles.statCard}>
+    <article style={styles.statCard}>
       <div style={styles.statLabel}>{title}</div>
       <div style={styles.statValue}>{value}</div>
       {note ? <div style={styles.statNote}>{note}</div> : null}
-    </div>
+    </article>
   )
 }
 
 function Panel({ title, note, children }){
   return (
     <section style={styles.panel}>
-      <div style={styles.panelTitle}>{title}</div>
-      {note ? <div style={styles.panelNote}>{note}</div> : null}
-      <div style={{ marginTop: 12 }}>{children}</div>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.panelTitle}>{title}</h2>
+        {note ? <p style={styles.panelNote}>{note}</p> : null}
+      </div>
+      <div style={{ marginTop: 14 }}>{children}</div>
     </section>
   )
 }
@@ -145,8 +147,8 @@ function Panel({ title, note, children }){
 function EmptyBox({ title, text }){
   return (
     <div style={styles.emptyBox}>
-      <div style={styles.emptyTitle}>{title}</div>
-      <div style={styles.emptyText}>{text}</div>
+      <h3 style={styles.emptyTitle}>{title}</h3>
+      <p style={styles.emptyText}>{text}</p>
     </div>
   )
 }
@@ -218,115 +220,198 @@ export default function SalonSettlementsPage(){
   }, [slug])
 
   const totalAmount = useMemo(() => {
-    return settlements.reduce((acc, item) => acc + (Number(item?.amount) || 0), 0)
+    return settlements.reduce((acc, item) => {
+      return acc + (Number(item?.amount ?? item?.total_amount) || 0)
+    }, 0)
   }, [settlements])
 
   const openCount = useMemo(() => {
     return settlements.filter((item) => String(item?.status || "").toLowerCase() === "open").length
   }, [settlements])
 
+  const closedCount = useMemo(() => {
+    return settlements.filter((item) => String(item?.status || "").toLowerCase() === "closed").length
+  }, [settlements])
+
   const lastSettlement = settlements[0] || null
   const billingUi = getBillingUi(billingAccess, billingBlockReason)
+  const pageLoading = contextLoading || loading
+  const pageError = !pageLoading && (contextError || error)
+  const pageEmpty = !pageLoading && !pageError && settlements.length === 0
 
   return (
     <div style={styles.page}>
-      {slug ? <FinanceNav slug={slug} active="settlements" /> : null}
+      <div style={styles.container}>
+        {slug ? <FinanceNav slug={slug} active="settlements" /> : null}
 
-      <Panel title="Сеты" note="Расчётные периоды салона, суммы и текущий статус по каждому периоду.">
-        {contextLoading || loading ? <div style={styles.infoText}>Загрузка...</div> : null}
+        <header style={styles.pageHeader}>
+          <p style={styles.eyebrow}>Salon finance / mobile</p>
+          <h1 style={styles.pageTitle}>Сеты</h1>
+          <p style={styles.pageSubtitle}>
+            Расчётные периоды салона: суммы, даты начала и окончания, текущий статус и готовность к выводу.
+          </p>
+        </header>
 
-        {!contextLoading && contextError ? (
-          <EmptyBox
-            title="Ошибка shell-слоя"
-            text="Не удалось определить состояние кабинета салона"
-          />
-        ) : null}
+        <section
+          style={{
+            ...styles.alert,
+            background: billingUi.bg,
+            borderColor: billingUi.border
+          }}
+        >
+          <div style={styles.alertMain}>
+            <h2 style={{ ...styles.alertTitle, color: billingUi.tone }}>{billingUi.title}</h2>
+            <p style={styles.alertText}>{billingUi.note}</p>
+          </div>
+          <div style={styles.alertMeta}>
+            <div>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</div>
+            <div>Периодов: {settlements.length}</div>
+          </div>
+        </section>
 
-        {!contextLoading && !loading && error ? (
-          <EmptyBox
-            title="Ошибка загрузки"
-            text={error}
-          />
-        ) : null}
+        <section style={styles.statsGrid}>
+          <StatCard title="Всего сетов" value={settlements.length} note="Все найденные расчётные периоды" />
+          <StatCard title="Общая сумма" value={money(totalAmount)} note="Сумма по всем периодам" />
+          <StatCard title="Открытые" value={openCount} note="Периоды, ещё не закрытые системой" />
+          <StatCard title="Закрытые" value={closedCount} note={lastSettlement ? `Последний статус: ${getStatusLabel(lastSettlement?.status)}` : "Данных пока нет"} />
+        </section>
 
-        {!contextLoading && !loading && !error && settlements.length === 0 ? (
-          <EmptyBox
-            title="Сеты отсутствуют"
-            text="Расчётные периоды появятся после накопления транзакций и закрытия операций"
-          />
-        ) : null}
+        <div style={styles.mainStack}>
+          <Panel
+            title="Лента расчётных периодов"
+            note="Каждый сет выводится отдельной карточкой. На мобильном экране сначала идёт смысловой заголовок, затем даты и сумма."
+          >
+            {pageLoading ? <div style={styles.infoText}>Загрузка...</div> : null}
 
-        {!contextLoading && !loading && !error && settlements.length > 0 ? (
-          <>
-            <div style={styles.alert}>
-              <div>
-                <div style={styles.alertTitle}>{billingUi.title}</div>
-                <div style={styles.alertText}>{billingUi.note}</div>
-              </div>
-              <div style={styles.alertMeta}>
-                <div>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</div>
-                <div>Сетов: {settlements.length}</div>
-              </div>
-            </div>
-
-            <div style={styles.statsGrid}>
-              <StatCard title="Всего сетов" value={settlements.length} note="Все найденные расчётные периоды" />
-              <StatCard title="Общая сумма" value={money(totalAmount)} note="Сумма по всем периодам" />
-              <StatCard title="Открытые" value={openCount} note="Незакрытые периоды" />
-              <StatCard
-                title="Последний сет"
-                value={lastSettlement ? money(lastSettlement?.amount) : "—"}
-                note={lastSettlement ? getStatusLabel(lastSettlement?.status) : "Данных пока нет"}
+            {pageError ? (
+              <EmptyBox
+                title={contextError ? "Ошибка shell-слоя" : "Ошибка загрузки"}
+                text={contextError ? "Не удалось определить состояние кабинета салона" : error}
               />
-            </div>
+            ) : null}
 
-            <div style={styles.cardsList}>
-              {settlements.map((item, index) => (
-                <div key={item?.id || index} style={styles.itemCard}>
-                  <div style={styles.itemTop}>
-                    <div>
-                      <div style={styles.itemTitle}>{item?.id || `Сет ${index + 1}`}</div>
-                      <div style={styles.itemSubtitle}>
-                        {formatDateTime(item?.period_start || item?.start_date)} → {formatDateTime(item?.period_end || item?.end_date)}
-                      </div>
-                    </div>
-                    <div style={styles.badge}>{getStatusLabel(item?.status)}</div>
+            {pageEmpty ? (
+              <EmptyBox
+                title="Сеты отсутствуют"
+                text="Расчётные периоды появятся после накопления транзакций и закрытия операций. Каркас страницы уже готов под mobile-first сценарий."
+              />
+            ) : null}
+
+            {!pageLoading && !pageError && !pageEmpty ? (
+              <>
+                <div style={styles.listHeader}>
+                  <div>
+                    <h3 style={styles.listTitle}>Последние периоды</h3>
+                    <p style={styles.listNote}>Короткий обзор без перегруза: период, статус, сумма и ключевые даты.</p>
                   </div>
-
-                  <div style={styles.metaGrid}>
-                    <div style={styles.metaCell}>
-                      <div style={styles.metaLabel}>Сумма</div>
-                      <div style={styles.metaValue}>{money(item?.amount)}</div>
-                    </div>
-
-                    <div style={styles.metaCell}>
-                      <div style={styles.metaLabel}>Создан</div>
-                      <div style={styles.metaValue}>{formatDateTime(item?.created_at)}</div>
-                    </div>
-
-                    <div style={styles.metaCell}>
-                      <div style={styles.metaLabel}>Начало</div>
-                      <div style={styles.metaValue}>{formatDateTime(item?.period_start || item?.start_date)}</div>
-                    </div>
-
-                    <div style={styles.metaCell}>
-                      <div style={styles.metaLabel}>Конец</div>
-                      <div style={styles.metaValue}>{formatDateTime(item?.period_end || item?.end_date)}</div>
-                    </div>
+                  <div style={styles.listMeta}>
+                    Последний сет: {lastSettlement ? formatDateTime(lastSettlement?.period_end || lastSettlement?.created_at) : "—"}
                   </div>
                 </div>
-              ))}
+
+                <div style={styles.cardsList}>
+                  {settlements.map((item, index) => (
+                    <article key={item?.id || index} style={styles.itemCard}>
+                      <div style={styles.itemTop}>
+                        <div>
+                          <h3 style={styles.itemTitle}>{item?.id || `Сет ${index + 1}`}</h3>
+                          <p style={styles.itemSubtitle}>
+                            {formatDateTime(item?.period_start || item?.start_date)} → {formatDateTime(item?.period_end || item?.end_date)}
+                          </p>
+                        </div>
+                        <div style={styles.badge}>{getStatusLabel(item?.status)}</div>
+                      </div>
+
+                      <div style={styles.metaGrid}>
+                        <div style={styles.metaCell}>
+                          <div style={styles.metaLabel}>Сумма</div>
+                          <div style={styles.metaValue}>{money(item?.amount ?? item?.total_amount)}</div>
+                        </div>
+
+                        <div style={styles.metaCell}>
+                          <div style={styles.metaLabel}>Создан</div>
+                          <div style={styles.metaValue}>{formatDateTime(item?.created_at)}</div>
+                        </div>
+
+                        <div style={styles.metaCell}>
+                          <div style={styles.metaLabel}>Начало периода</div>
+                          <div style={styles.metaValue}>{formatDateTime(item?.period_start || item?.start_date)}</div>
+                        </div>
+
+                        <div style={styles.metaCell}>
+                          <div style={styles.metaLabel}>Конец периода</div>
+                          <div style={styles.metaValue}>{formatDateTime(item?.period_end || item?.end_date)}</div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </Panel>
+
+          <Panel
+            title="Короткий статус модуля"
+            note="Страница держит стабильный верхний DOM при любых данных и даёт однородное поведение вместе с выплатами и транзакциями."
+          >
+            <div style={styles.infoGrid}>
+              <div style={styles.infoItem}>
+                <div style={styles.infoLabel}>Режим вывода</div>
+                <div style={styles.infoValue}>{canWithdraw ? "Разрешён" : "Ограничен"}</div>
+              </div>
+              <div style={styles.infoItem}>
+                <div style={styles.infoLabel}>Последняя сумма</div>
+                <div style={styles.infoValue}>{lastSettlement ? money(lastSettlement?.amount ?? lastSettlement?.total_amount) : "—"}</div>
+              </div>
+              <div style={styles.infoItem}>
+                <div style={styles.infoLabel}>Последний статус</div>
+                <div style={styles.infoValue}>{lastSettlement ? getStatusLabel(lastSettlement?.status) : "—"}</div>
+              </div>
+              <div style={styles.infoItem}>
+                <div style={styles.infoLabel}>Открытых периодов</div>
+                <div style={styles.infoValue}>{openCount}</div>
+              </div>
             </div>
-          </>
-        ) : null}
-      </Panel>
+          </Panel>
+        </div>
+      </div>
     </div>
   )
 }
 
 const styles = {
   page: {
-    padding: "14px 14px 20px"
+    padding: "14px 14px 20px",
+    background: "#f8fafc",
+    minHeight: "100%"
+  },
+  container: {
+    maxWidth: "980px",
+    margin: "0 auto"
+  },
+  pageHeader: {
+    marginBottom: "16px"
+  },
+  eyebrow: {
+    margin: 0,
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#475467",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em"
+  },
+  pageTitle: {
+    margin: "6px 0 0",
+    fontSize: "30px",
+    lineHeight: 1.1,
+    fontWeight: 800,
+    color: "#111827"
+  },
+  pageSubtitle: {
+    margin: "8px 0 0",
+    fontSize: "14px",
+    color: "#667085",
+    lineHeight: 1.55
   },
   navGrid: {
     display: "flex",
@@ -343,7 +428,8 @@ const styles = {
     textDecoration: "none",
     display: "block",
     minWidth: "150px",
-    flex: "0 0 auto"
+    flex: "0 0 auto",
+    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
   },
   navTitle: {
     fontSize: "14px",
@@ -354,45 +440,6 @@ const styles = {
     fontSize: "12px",
     color: "#6b7280"
   },
-  panel: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    background: "#ffffff",
-    padding: "16px",
-    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
-  },
-  panelTitle: {
-    fontSize: "22px",
-    fontWeight: 800,
-    color: "#111827"
-  },
-  panelNote: {
-    marginTop: "6px",
-    fontSize: "13px",
-    color: "#6b7280",
-    lineHeight: 1.5
-  },
-  infoText: {
-    fontSize: "14px",
-    color: "#6b7280"
-  },
-  emptyBox: {
-    border: "1px dashed #d1d5db",
-    borderRadius: "14px",
-    background: "#f9fafb",
-    padding: "16px"
-  },
-  emptyTitle: {
-    fontSize: "15px",
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: "6px"
-  },
-  emptyText: {
-    fontSize: "14px",
-    color: "#6b7280",
-    lineHeight: 1.5
-  },
   alert: {
     display: "flex",
     justifyContent: "space-between",
@@ -400,20 +447,23 @@ const styles = {
     gap: "12px",
     flexWrap: "wrap",
     border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    background: "#f8fafc",
+    borderRadius: "16px",
     padding: "14px",
     marginBottom: "16px"
   },
+  alertMain: {
+    minWidth: 0,
+    flex: "1 1 240px"
+  },
   alertTitle: {
-    fontSize: "14px",
-    fontWeight: 800,
-    color: "#111827"
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 800
   },
   alertText: {
-    marginTop: "4px",
+    margin: "4px 0 0",
     fontSize: "13px",
-    color: "#6b7280",
+    color: "#475467",
     lineHeight: 1.45
   },
   alertMeta: {
@@ -451,6 +501,79 @@ const styles = {
     color: "#6b7280",
     lineHeight: 1.45
   },
+  mainStack: {
+    display: "grid",
+    gap: "14px"
+  },
+  panel: {
+    border: "1px solid #e5e7eb",
+    borderRadius: "16px",
+    background: "#ffffff",
+    padding: "16px",
+    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
+  },
+  sectionHeader: {
+    display: "grid",
+    gap: "6px"
+  },
+  panelTitle: {
+    margin: 0,
+    fontSize: "20px",
+    fontWeight: 800,
+    color: "#111827"
+  },
+  panelNote: {
+    margin: 0,
+    fontSize: "13px",
+    color: "#6b7280",
+    lineHeight: 1.5
+  },
+  infoText: {
+    fontSize: "14px",
+    color: "#6b7280"
+  },
+  emptyBox: {
+    border: "1px dashed #d1d5db",
+    borderRadius: "14px",
+    background: "#f9fafb",
+    padding: "16px"
+  },
+  emptyTitle: {
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#111827"
+  },
+  emptyText: {
+    margin: "6px 0 0",
+    fontSize: "14px",
+    color: "#6b7280",
+    lineHeight: 1.5
+  },
+  listHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "12px",
+    flexWrap: "wrap",
+    marginBottom: "14px"
+  },
+  listTitle: {
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 800,
+    color: "#111827"
+  },
+  listNote: {
+    margin: "4px 0 0",
+    fontSize: "13px",
+    color: "#6b7280",
+    lineHeight: 1.45
+  },
+  listMeta: {
+    fontSize: "12px",
+    color: "#667085"
+  },
   cardsList: {
     display: "grid",
     gap: "12px"
@@ -469,12 +592,13 @@ const styles = {
     flexWrap: "wrap"
   },
   itemTitle: {
+    margin: 0,
     fontSize: "15px",
     fontWeight: 800,
     color: "#111827"
   },
   itemSubtitle: {
-    marginTop: "4px",
+    margin: "4px 0 0",
     fontSize: "12px",
     color: "#6b7280",
     lineHeight: 1.45
@@ -503,6 +627,27 @@ const styles = {
     marginBottom: "6px"
   },
   metaValue: {
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#111827",
+    lineHeight: 1.45,
+    wordBreak: "break-word"
+  },
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "12px"
+  },
+  infoItem: {
+    borderTop: "1px solid #eef2f7",
+    paddingTop: "12px"
+  },
+  infoLabel: {
+    fontSize: "12px",
+    color: "#6b7280",
+    marginBottom: "6px"
+  },
+  infoValue: {
     fontSize: "14px",
     fontWeight: 700,
     color: "#111827",

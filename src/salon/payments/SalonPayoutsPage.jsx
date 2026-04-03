@@ -46,7 +46,7 @@ function getStatusLabel(value){
   const status = String(value || "").toLowerCase()
   if(status === "pending") return "Ожидает"
   if(status === "processing") return "Обрабатывается"
-  if(status === "completed") return "Завершено"
+  if(status === "completed" || status === "paid") return "Завершена"
   if(status === "failed") return "Ошибка"
   return value || "—"
 }
@@ -99,7 +99,7 @@ function FinanceNav({ slug, active }){
   ]
 
   return (
-    <div style={styles.navGrid}>
+    <nav aria-label="Финансовые разделы" style={styles.navGrid}>
       {items.map((item) => {
         const isActive = item.key === active
 
@@ -118,26 +118,28 @@ function FinanceNav({ slug, active }){
           </Link>
         )
       })}
-    </div>
+    </nav>
   )
 }
 
 function StatCard({ title, value, note }){
   return (
-    <div style={styles.statCard}>
+    <article style={styles.statCard}>
       <div style={styles.statLabel}>{title}</div>
       <div style={styles.statValue}>{value}</div>
       {note ? <div style={styles.statNote}>{note}</div> : null}
-    </div>
+    </article>
   )
 }
 
 function Panel({ title, note, children }){
   return (
     <section style={styles.panel}>
-      <div style={styles.panelTitle}>{title}</div>
-      {note ? <div style={styles.panelNote}>{note}</div> : null}
-      <div style={{ marginTop: 12 }}>{children}</div>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.panelTitle}>{title}</h2>
+        {note ? <p style={styles.panelNote}>{note}</p> : null}
+      </div>
+      <div style={{ marginTop: 14 }}>{children}</div>
     </section>
   )
 }
@@ -145,8 +147,8 @@ function Panel({ title, note, children }){
 function EmptyBox({ title, text }){
   return (
     <div style={styles.emptyBox}>
-      <div style={styles.emptyTitle}>{title}</div>
-      <div style={styles.emptyText}>{text}</div>
+      <h3 style={styles.emptyTitle}>{title}</h3>
+      <p style={styles.emptyText}>{text}</p>
     </div>
   )
 }
@@ -222,7 +224,10 @@ export default function SalonPayoutsPage(){
   }, [payouts])
 
   const completedCount = useMemo(() => {
-    return payouts.filter((item) => String(item?.status || "").toLowerCase() === "completed").length
+    return payouts.filter((item) => {
+      const status = String(item?.status || "").toLowerCase()
+      return status === "completed" || status === "paid"
+    }).length
   }, [payouts])
 
   const pendingCount = useMemo(() => {
@@ -232,112 +237,187 @@ export default function SalonPayoutsPage(){
     }).length
   }, [payouts])
 
+  const failedCount = useMemo(() => {
+    return payouts.filter((item) => String(item?.status || "").toLowerCase() === "failed").length
+  }, [payouts])
+
   const lastPayout = payouts[0] || null
   const billingUi = getBillingUi(billingAccess, billingBlockReason)
+  const pageLoading = contextLoading || loading
+  const pageError = !pageLoading && (contextError || error)
+  const pageEmpty = !pageLoading && !pageError && payouts.length === 0
 
   return (
     <div style={styles.page}>
-      {slug ? <FinanceNav slug={slug} active="payouts" /> : null}
+      <div style={styles.container}>
+        {slug ? <FinanceNav slug={slug} active="payouts" /> : null}
 
-      <Panel title="Выплаты" note="Фактические выплаты салона, суммы, статусы и последние проведённые операции.">
-        {contextLoading || loading ? <div style={styles.infoText}>Загрузка...</div> : null}
+        <header style={styles.pageHeader}>
+          <p style={styles.eyebrow}>Salon finance / mobile</p>
+          <h1 style={styles.pageTitle}>Выплаты</h1>
+          <p style={styles.pageSubtitle}>
+            Фактические выплаты салона: суммы, статусы, доступ к выводу и последние движения по payout-цепочке.
+          </p>
+        </header>
 
-        {!contextLoading && contextError ? (
-          <EmptyBox
-            title="Ошибка shell-слоя"
-            text="Не удалось определить состояние кабинета салона"
-          />
-        ) : null}
+        <section
+          style={{
+            ...styles.alert,
+            background: billingUi.bg,
+            borderColor: billingUi.border
+          }}
+        >
+          <div style={styles.alertMain}>
+            <h2 style={{ ...styles.alertTitle, color: billingUi.tone }}>{billingUi.title}</h2>
+            <p style={styles.alertText}>{billingUi.note}</p>
+          </div>
+          <div style={styles.alertMeta}>
+            <div>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</div>
+            <div>Записей: {payouts.length}</div>
+          </div>
+        </section>
 
-        {!contextLoading && !loading && error ? (
-          <EmptyBox
-            title="Ошибка загрузки"
-            text={error}
-          />
-        ) : null}
+        <section style={styles.statsGrid}>
+          <StatCard title="Всего выплат" value={payouts.length} note="Все найденные payout-операции" />
+          <StatCard title="Общая сумма" value={money(totalAmount)} note="Сумма по всем выплатам" />
+          <StatCard title="В обработке" value={pendingCount} note="Pending + processing" />
+          <StatCard title="Завершено" value={completedCount} note={failedCount ? `Ошибок: ${failedCount}` : "Без ошибочных выплат"} />
+        </section>
 
-        {!contextLoading && !loading && !error && payouts.length === 0 ? (
-          <EmptyBox
-            title="Выплат пока нет"
-            text="Выплаты появятся после обработки заявок и закрытия расчётных периодов"
-          />
-        ) : null}
+        <div style={styles.mainStack}>
+          <Panel
+            title="Лента выплат"
+            note="Основной список payout-записей. На мобильном экране структура остаётся одноколоночной и читаемой."
+          >
+            {pageLoading ? <div style={styles.infoText}>Загрузка...</div> : null}
 
-        {!contextLoading && !loading && !error && payouts.length > 0 ? (
-          <>
-            <div
-              style={{
-                ...styles.alert,
-                background: billingUi.bg,
-                borderColor: billingUi.border
-              }}
-            >
-              <div>
-                <div style={{ ...styles.alertTitle, color: billingUi.tone }}>{billingUi.title}</div>
-                <div style={styles.alertText}>{billingUi.note}</div>
-              </div>
-              <div style={styles.alertMeta}>
-                <div>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</div>
-                <div>Выплат: {payouts.length}</div>
-              </div>
-            </div>
-
-            <div style={styles.statsGrid}>
-              <StatCard title="Всего выплат" value={payouts.length} note="Все найденные выплаты" />
-              <StatCard title="Общая сумма" value={money(totalAmount)} note="Сумма по всем выплатам" />
-              <StatCard title="В обработке" value={pendingCount} note="Ожидают завершения" />
-              <StatCard
-                title="Последняя выплата"
-                value={lastPayout ? money(lastPayout?.amount) : "—"}
-                note={lastPayout ? getStatusLabel(lastPayout?.status) : "Данных пока нет"}
+            {pageError ? (
+              <EmptyBox
+                title={contextError ? "Ошибка shell-слоя" : "Ошибка загрузки"}
+                text={contextError ? "Не удалось определить состояние кабинета салона" : error}
               />
-            </div>
+            ) : null}
 
-            <div style={styles.cardsList}>
-              {payouts.map((item, index) => (
-                <div key={item?.id || index} style={styles.itemCard}>
-                  <div style={styles.itemTop}>
-                    <div>
-                      <div style={styles.itemTitle}>{item?.id || `Выплата ${index + 1}`}</div>
-                      <div style={styles.itemSubtitle}>{formatDateTime(item?.created_at || item?.date)}</div>
-                    </div>
-                    <div style={styles.badge}>{getStatusLabel(item?.status)}</div>
+            {pageEmpty ? (
+              <EmptyBox
+                title="Выплат пока нет"
+                text="Выплаты появятся после обработки заявок и закрытия расчётных периодов. Каркас страницы уже готов под мобильную работу."
+              />
+            ) : null}
+
+            {!pageLoading && !pageError && !pageEmpty ? (
+              <>
+                <div style={styles.listHeader}>
+                  <div>
+                    <h3 style={styles.listTitle}>Последние операции</h3>
+                    <p style={styles.listNote}>Каждая карточка показывает сумму, дату, reference и текущий статус.</p>
                   </div>
-
-                  <div style={styles.metaGrid}>
-                    <div style={styles.metaCell}>
-                      <div style={styles.metaLabel}>Сумма</div>
-                      <div style={styles.metaValue}>{money(item?.amount)}</div>
-                    </div>
-
-                    <div style={styles.metaCell}>
-                      <div style={styles.metaLabel}>Создана</div>
-                      <div style={styles.metaValue}>{formatDateTime(item?.created_at || item?.date)}</div>
-                    </div>
-
-                    <div style={styles.metaCell}>
-                      <div style={styles.metaLabel}>Reference</div>
-                      <div style={styles.metaValue}>{item?.reference || item?.reference_id || "—"}</div>
-                    </div>
-
-                    <div style={styles.metaCell}>
-                      <div style={styles.metaLabel}>Статус</div>
-                      <div style={styles.metaValue}>{getStatusLabel(item?.status)}</div>
-                    </div>
+                  <div style={styles.listMeta}>
+                    Последняя выплата: {lastPayout ? formatDateTime(lastPayout?.created_at || lastPayout?.date) : "—"}
                   </div>
                 </div>
-              ))}
+
+                <div style={styles.cardsList}>
+                  {payouts.map((item, index) => (
+                    <article key={item?.id || index} style={styles.itemCard}>
+                      <div style={styles.itemTop}>
+                        <div>
+                          <h3 style={styles.itemTitle}>{item?.id || `Выплата ${index + 1}`}</h3>
+                          <p style={styles.itemSubtitle}>{formatDateTime(item?.created_at || item?.date)}</p>
+                        </div>
+                        <div style={styles.badge}>{getStatusLabel(item?.status)}</div>
+                      </div>
+
+                      <div style={styles.metaGrid}>
+                        <div style={styles.metaCell}>
+                          <div style={styles.metaLabel}>Сумма</div>
+                          <div style={styles.metaValue}>{money(item?.amount)}</div>
+                        </div>
+
+                        <div style={styles.metaCell}>
+                          <div style={styles.metaLabel}>Создана</div>
+                          <div style={styles.metaValue}>{formatDateTime(item?.created_at || item?.date)}</div>
+                        </div>
+
+                        <div style={styles.metaCell}>
+                          <div style={styles.metaLabel}>Связка</div>
+                          <div style={styles.metaValue}>{item?.reference || item?.reference_id || "—"}</div>
+                        </div>
+
+                        <div style={styles.metaCell}>
+                          <div style={styles.metaLabel}>Статус</div>
+                          <div style={styles.metaValue}>{getStatusLabel(item?.status)}</div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </Panel>
+
+          <Panel
+            title="Короткий статус модуля"
+            note="Верхний каркас страницы не схлопывается даже без данных. Это нужно для стабильного mobile UX и audit DOM."
+          >
+            <div style={styles.infoGrid}>
+              <div style={styles.infoItem}>
+                <div style={styles.infoLabel}>Режим вывода</div>
+                <div style={styles.infoValue}>{canWithdraw ? "Разрешён" : "Ограничен"}</div>
+              </div>
+              <div style={styles.infoItem}>
+                <div style={styles.infoLabel}>Последняя сумма</div>
+                <div style={styles.infoValue}>{lastPayout ? money(lastPayout?.amount) : "—"}</div>
+              </div>
+              <div style={styles.infoItem}>
+                <div style={styles.infoLabel}>Последний статус</div>
+                <div style={styles.infoValue}>{lastPayout ? getStatusLabel(lastPayout?.status) : "—"}</div>
+              </div>
+              <div style={styles.infoItem}>
+                <div style={styles.infoLabel}>Ошибочные выплаты</div>
+                <div style={styles.infoValue}>{failedCount}</div>
+              </div>
             </div>
-          </>
-        ) : null}
-      </Panel>
+          </Panel>
+        </div>
+      </div>
     </div>
   )
 }
 
 const styles = {
   page: {
-    padding: "14px 14px 20px"
+    padding: "14px 14px 20px",
+    background: "#f8fafc",
+    minHeight: "100%"
+  },
+  container: {
+    maxWidth: "980px",
+    margin: "0 auto"
+  },
+  pageHeader: {
+    marginBottom: "16px"
+  },
+  eyebrow: {
+    margin: 0,
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#475467",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em"
+  },
+  pageTitle: {
+    margin: "6px 0 0",
+    fontSize: "30px",
+    lineHeight: 1.1,
+    fontWeight: 800,
+    color: "#111827"
+  },
+  pageSubtitle: {
+    margin: "8px 0 0",
+    fontSize: "14px",
+    color: "#667085",
+    lineHeight: 1.55
   },
   navGrid: {
     display: "flex",
@@ -354,7 +434,8 @@ const styles = {
     textDecoration: "none",
     display: "block",
     minWidth: "150px",
-    flex: "0 0 auto"
+    flex: "0 0 auto",
+    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
   },
   navTitle: {
     fontSize: "14px",
@@ -365,45 +446,6 @@ const styles = {
     fontSize: "12px",
     color: "#6b7280"
   },
-  panel: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    background: "#ffffff",
-    padding: "16px",
-    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
-  },
-  panelTitle: {
-    fontSize: "22px",
-    fontWeight: 800,
-    color: "#111827"
-  },
-  panelNote: {
-    marginTop: "6px",
-    fontSize: "13px",
-    color: "#6b7280",
-    lineHeight: 1.5
-  },
-  infoText: {
-    fontSize: "14px",
-    color: "#6b7280"
-  },
-  emptyBox: {
-    border: "1px dashed #d1d5db",
-    borderRadius: "14px",
-    background: "#f9fafb",
-    padding: "16px"
-  },
-  emptyTitle: {
-    fontSize: "15px",
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: "6px"
-  },
-  emptyText: {
-    fontSize: "14px",
-    color: "#6b7280",
-    lineHeight: 1.5
-  },
   alert: {
     display: "flex",
     justifyContent: "space-between",
@@ -411,18 +453,23 @@ const styles = {
     gap: "12px",
     flexWrap: "wrap",
     border: "1px solid #e5e7eb",
-    borderRadius: "14px",
+    borderRadius: "16px",
     padding: "14px",
     marginBottom: "16px"
   },
+  alertMain: {
+    minWidth: 0,
+    flex: "1 1 240px"
+  },
   alertTitle: {
-    fontSize: "14px",
+    margin: 0,
+    fontSize: "16px",
     fontWeight: 800
   },
   alertText: {
-    marginTop: "4px",
+    margin: "4px 0 0",
     fontSize: "13px",
-    color: "#6b7280",
+    color: "#475467",
     lineHeight: 1.45
   },
   alertMeta: {
@@ -460,6 +507,79 @@ const styles = {
     color: "#6b7280",
     lineHeight: 1.45
   },
+  mainStack: {
+    display: "grid",
+    gap: "14px"
+  },
+  panel: {
+    border: "1px solid #e5e7eb",
+    borderRadius: "16px",
+    background: "#ffffff",
+    padding: "16px",
+    boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
+  },
+  sectionHeader: {
+    display: "grid",
+    gap: "6px"
+  },
+  panelTitle: {
+    margin: 0,
+    fontSize: "20px",
+    fontWeight: 800,
+    color: "#111827"
+  },
+  panelNote: {
+    margin: 0,
+    fontSize: "13px",
+    color: "#6b7280",
+    lineHeight: 1.5
+  },
+  infoText: {
+    fontSize: "14px",
+    color: "#6b7280"
+  },
+  emptyBox: {
+    border: "1px dashed #d1d5db",
+    borderRadius: "14px",
+    background: "#f9fafb",
+    padding: "16px"
+  },
+  emptyTitle: {
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#111827"
+  },
+  emptyText: {
+    margin: "6px 0 0",
+    fontSize: "14px",
+    color: "#6b7280",
+    lineHeight: 1.5
+  },
+  listHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "12px",
+    flexWrap: "wrap",
+    marginBottom: "14px"
+  },
+  listTitle: {
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 800,
+    color: "#111827"
+  },
+  listNote: {
+    margin: "4px 0 0",
+    fontSize: "13px",
+    color: "#6b7280",
+    lineHeight: 1.45
+  },
+  listMeta: {
+    fontSize: "12px",
+    color: "#667085"
+  },
   cardsList: {
     display: "grid",
     gap: "12px"
@@ -478,12 +598,13 @@ const styles = {
     flexWrap: "wrap"
   },
   itemTitle: {
+    margin: 0,
     fontSize: "15px",
     fontWeight: 800,
     color: "#111827"
   },
   itemSubtitle: {
-    marginTop: "4px",
+    margin: "4px 0 0",
     fontSize: "12px",
     color: "#6b7280",
     lineHeight: 1.45
@@ -512,6 +633,27 @@ const styles = {
     marginBottom: "6px"
   },
   metaValue: {
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#111827",
+    lineHeight: 1.45,
+    wordBreak: "break-word"
+  },
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "12px"
+  },
+  infoItem: {
+    borderTop: "1px solid #eef2f7",
+    paddingTop: "12px"
+  },
+  infoLabel: {
+    fontSize: "12px",
+    color: "#6b7280",
+    marginBottom: "6px"
+  },
+  infoValue: {
     fontSize: "14px",
     fontWeight: 700,
     color: "#111827",

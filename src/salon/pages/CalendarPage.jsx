@@ -209,7 +209,7 @@ export default function CalendarPage(){
   }, [salonSlug])
 
   const dayOptions = useMemo(() => buildDayOptions(bookings), [bookings])
-  const slots = useMemo(() => generateTimeSlots(), [])
+  const slots = useMemo(() => generateTimeSlots().slice(0, 16), [])
 
   const bookingsByMasterAndTime = useMemo(() => {
     const index = new Map()
