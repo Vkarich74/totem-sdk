@@ -1,7 +1,36 @@
 import { safeJson } from "../utils/apiSafe";
 import { getSalonSlug, getMasterSlug } from "../utils/slug";
 
+
 const API_BASE = "https://api.totemv.com/internal";
+
+function getInternalToken(){
+  if (typeof window === "undefined") return null
+
+  const direct =
+    window.TOTEM_INTERNAL_TOKEN ||
+    window.__TOTEM_INTERNAL_TOKEN ||
+    null
+
+  if (direct) return String(direct)
+
+  try{
+    const stored = window.localStorage?.getItem("TOTEM_INTERNAL_TOKEN")
+    if (stored) return String(stored)
+  }catch(_err){}
+
+  return null
+}
+
+function buildInternalHeaders(headers = {}){
+  const token = getInternalToken()
+  if (!token) return headers
+
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`
+  }
+}
 
 /* ===============================
    BILLING GUARDS
@@ -259,4 +288,43 @@ export async function createMasterWithdraw(amount, billingAccess, masterSlug = g
     billing_access: j.billing_access || null,
     result: j
   };
+}
+
+/* ===============================
+   TEMPLATE API
+================================ */
+
+export function hasInternalTemplateToken(){
+  return Boolean(getInternalToken())
+}
+
+export async function getSalonTemplateDocument(salonSlug = getSalonSlug()){
+  const r = await safeJson(`${API_BASE}/templates/salon/${salonSlug}`, {
+    headers: buildInternalHeaders()
+  })
+
+  if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_DOCUMENT_FETCH_FAILED", detail:r }
+
+  const j = r.json
+  if(!j || !j.ok) return { ok:false, error:"SALON_TEMPLATE_DOCUMENT_API_NOT_OK", detail:j }
+
+  return { ok:true, document: j.document || null }
+}
+
+export async function saveSalonTemplateDraft(draft, salonSlug = getSalonSlug()){
+  const r = await safeJson(`${API_BASE}/templates/salon/${salonSlug}/draft`, {
+    method: "PUT",
+    headers: buildInternalHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      template_version: "v1",
+      draft
+    })
+  })
+
+  if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_DRAFT_SAVE_FAILED", detail:r }
+
+  const j = r.json
+  if(!j || !j.ok) return { ok:false, error:"SALON_TEMPLATE_DRAFT_API_NOT_OK", detail:j }
+
+  return { ok:true, document: j.document || null }
 }
