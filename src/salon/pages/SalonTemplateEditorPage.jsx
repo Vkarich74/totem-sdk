@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import PageHeader from "../../cabinet/PageHeader"
@@ -10,25 +9,26 @@ import {
   publishSalonTemplate,
   saveSalonTemplateDraft
 } from "../../api/internal"
+import { validateTemplatePayload } from "../../utils/validateTemplate"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 
 const sectionItems = [
-  { id: "identity", label: "Identity", note: "Имя салона, badge, оффер и subtitle." },
-  { id: "contacts", label: "Contacts", note: "Адрес, телефон, WhatsApp, график и карта." },
-  { id: "trust", label: "Trust", note: "Рейтинг, отзывы, completed bookings." },
-  { id: "hero", label: "Hero Image", note: "Главное изображение и брендовый визуал." },
-  { id: "benefits", label: "Benefits", note: "Преимущества салона в карточках." },
-  { id: "popular-services", label: "Popular Services", note: "Основные услуги для первого экрана услуг." },
-  { id: "catalog", label: "Full Catalog", note: "Полный каталог услуг и цен." },
-  { id: "promos", label: "Promos", note: "Акции и офферы." },
-  { id: "gallery", label: "Gallery", note: "Галерея интерьера, работ и атмосферы." },
-  { id: "reviews", label: "Reviews", note: "Отзывы клиентов." },
-  { id: "about", label: "About", note: "Параграфы о салоне и позиционировании." },
-  { id: "team", label: "Team", note: "Команда салона и карточки мастеров." },
-  { id: "map", label: "Map", note: "Карта и location block." },
+  { id: "identity", label: "Идентичность", note: "Имя салона, бейдж, оффер и подзаголовок." },
+  { id: "contacts", label: "Контакты", note: "Адрес, телефон, WhatsApp, график и карта." },
+  { id: "trust", label: "Доверие", note: "Рейтинг, отзывы и completed bookings." },
+  { id: "hero", label: "Hero-изображение", note: "Главное изображение и брендовый визуал." },
+  { id: "benefits", label: "Преимущества", note: "Преимущества салона в карточках." },
+  { id: "popular-services", label: "Популярные услуги", note: "Основные услуги для первого экрана услуг." },
+  { id: "catalog", label: "Полный каталог", note: "Полный каталог услуг и цен." },
+  { id: "promos", label: "Акции", note: "Акции и офферы." },
+  { id: "gallery", label: "Галерея", note: "Галерея интерьера, работ и атмосферы." },
+  { id: "reviews", label: "Отзывы", note: "Отзывы клиентов." },
+  { id: "about", label: "О салоне", note: "Параграфы о салоне и позиционировании." },
+  { id: "team", label: "Команда", note: "Команда салона и карточки мастеров." },
+  { id: "map", label: "Карта", note: "Карта и location block." },
   { id: "cta", label: "CTA", note: "Кнопки записи и привязка к services anchor." },
   { id: "seo", label: "SEO", note: "SEO title, description и canonical." },
-  { id: "preview-publish", label: "Preview / Publish", note: "Предпросмотр, publish и контроль статуса." }
+  { id: "preview-publish", label: "Предпросмотр / Публикация", note: "Предпросмотр, publish и контроль статуса." }
 ]
 
 const EMPTY_DRAFT = {
@@ -139,9 +139,10 @@ function buildMapUrl(contact = {}) {
   return `https://maps.google.com/?q=${encodeURIComponent(parts.join(", "))}`
 }
 
-function buildLocalDocument(previous, draft, slug, mode) {
+function buildLocalDocument(previous, draft, slug, mode, validationResult) {
   const nowIso = new Date().toISOString()
   const current = previous || {}
+  const validation = validationResult || validateTemplatePayload(draft)
 
   return {
     ...current,
@@ -153,18 +154,13 @@ function buildLocalDocument(previous, draft, slug, mode) {
       is_dirty: mode === "save",
       draft_exists: true,
       publish_state: mode === "publish" ? "published" : (current.status?.publish_state || "draft"),
-      is_publishable: true,
+      is_publishable: Boolean(validation.is_publishable),
       published_exists: mode === "publish" ? true : Boolean(current.status?.published_exists)
     },
     draft,
     published: mode === "publish" ? draft : (current.published || draft),
     validation: {
-      ...(current.validation || {}),
-      is_ready_for_preview: true,
-      is_publishable: true,
-      completeness_score: Math.max(75, Number(current.validation?.completeness_score || 0)),
-      hard_errors: [],
-      warnings: current.validation?.warnings || [],
+      ...validation,
       validated_at: nowIso
     },
     meta: {
@@ -302,7 +298,8 @@ export default function SalonTemplateEditorPage() {
 
       if (!hasToken) {
         const fallbackDraft = mergeDraft(draft)
-        const localDocument = buildLocalDocument(null, fallbackDraft, slug, "save")
+        const localValidation = validateTemplatePayload(fallbackDraft)
+        const localDocument = buildLocalDocument(null, fallbackDraft, slug, "save", localValidation)
         if (cancelled) return
         setDocumentState(localDocument)
         setDraft(fallbackDraft)
@@ -423,20 +420,24 @@ export default function SalonTemplateEditorPage() {
   async function handleSaveDraft() {
     if (!readyForWrite || !slug) return
 
-    if (!hasToken) {
-      const nextDocument = buildLocalDocument(documentState, {
-        ...draft,
-        contact: {
-          ...draft.contact,
-          map_embed_url: mapUrl
-        }
-      }, slug, "save")
+    const nextDraft = {
+      ...draft,
+      contact: {
+        ...draft.contact,
+        map_embed_url: mapUrl
+      }
+    }
+    const validationResult = validateTemplatePayload(nextDraft)
 
+    if (!hasToken) {
+      const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "save", validationResult)
       setDocumentState(nextDocument)
-      setDraft(mergeDraft(nextDocument.draft || draft))
+      setDraft(mergeDraft(nextDocument.draft || nextDraft))
       setSaveState({
         kind: "success",
-        message: "Черновик сохранён локально. Это mock-режим до подключения полной цепочки доступа."
+        message: validationResult.ok
+          ? "Черновик сохранён локально. Это mock-режим до подключения полной цепочки доступа."
+          : "Черновик сохранён локально с validation errors. Проверь обязательные поля перед публикацией."
       })
       setPublishState({ kind: "idle", message: "" })
       return
@@ -444,13 +445,7 @@ export default function SalonTemplateEditorPage() {
 
     setSaveState({ kind: "saving", message: "Сохраняем draft…" })
 
-    const result = await saveSalonTemplateDraft({
-      ...draft,
-      contact: {
-        ...draft.contact,
-        map_embed_url: mapUrl
-      }
-    }, slug)
+    const result = await saveSalonTemplateDraft(nextDraft, slug)
 
     if (!result.ok) {
       setSaveState({
@@ -461,8 +456,16 @@ export default function SalonTemplateEditorPage() {
     }
 
     const nextDocument = result.document || null
-    setDocumentState(nextDocument)
-    setDraft(mergeDraft(nextDocument?.draft || draft))
+    const mergedValidation = nextDocument?.validation || validationResult
+    setDocumentState({
+      ...nextDocument,
+      validation: mergedValidation,
+      status: {
+        ...(nextDocument?.status || {}),
+        is_publishable: Boolean(mergedValidation?.is_publishable)
+      }
+    })
+    setDraft(mergeDraft(nextDocument?.draft || nextDraft))
     setSaveState({ kind: "success", message: "Черновик сохранён." })
     setPublishState({ kind: "idle", message: "" })
   }
@@ -470,17 +473,31 @@ export default function SalonTemplateEditorPage() {
   async function handlePublish() {
     if (!readyForWrite || !slug) return
 
-    if (!hasToken) {
-      const nextDocument = buildLocalDocument(documentState, {
-        ...draft,
-        contact: {
-          ...draft.contact,
-          map_embed_url: mapUrl
-        }
-      }, slug, "publish")
+    const nextDraft = {
+      ...draft,
+      contact: {
+        ...draft.contact,
+        map_embed_url: mapUrl
+      }
+    }
+    const validationResult = validateTemplatePayload(nextDraft)
 
+    if (!validationResult.ok) {
+      const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "save", validationResult)
       setDocumentState(nextDocument)
-      setDraft(mergeDraft(nextDocument.draft || draft))
+      setDraft(mergeDraft(nextDraft))
+      setPublishState({
+        kind: "error",
+        message: "Публикация заблокирована: исправь обязательные поля template."
+      })
+      setSaveState({ kind: "idle", message: "" })
+      return
+    }
+
+    if (!hasToken) {
+      const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "publish", validationResult)
+      setDocumentState(nextDocument)
+      setDraft(mergeDraft(nextDocument.draft || nextDraft))
       setPublishState({
         kind: "success",
         message: "Публикация выполнена локально. Это mock-режим до подключения полной цепочки доступа."
@@ -490,6 +507,15 @@ export default function SalonTemplateEditorPage() {
     }
 
     setPublishState({ kind: "publishing", message: "Публикуем страницу…" })
+
+    const saveResult = await saveSalonTemplateDraft(nextDraft, slug)
+    if (!saveResult.ok) {
+      setPublishState({
+        kind: "error",
+        message: extractMessage(saveResult, "DRAFT_SAVE_BEFORE_PUBLISH_FAILED")
+      })
+      return
+    }
 
     const result = await publishSalonTemplate(slug, "system:1")
 
@@ -502,8 +528,16 @@ export default function SalonTemplateEditorPage() {
     }
 
     const nextDocument = result.document || null
-    setDocumentState(nextDocument)
-    setDraft(mergeDraft(nextDocument?.draft || draft))
+    const mergedValidation = nextDocument?.validation || validationResult
+    setDocumentState({
+      ...nextDocument,
+      validation: mergedValidation,
+      status: {
+        ...(nextDocument?.status || {}),
+        is_publishable: Boolean(mergedValidation?.is_publishable)
+      }
+    })
+    setDraft(mergeDraft(nextDocument?.draft || nextDraft))
     setPublishState({ kind: "success", message: "Страница опубликована." })
     setSaveState({ kind: "idle", message: "" })
   }
@@ -520,7 +554,7 @@ export default function SalonTemplateEditorPage() {
     <div style={{ display: "grid", gap: "20px" }}>
       <PageHeader
         title="Редактор публичной страницы"
-        subtitle={`Рабочая точка template system для салона${slug ? ` · ${slug}` : ""}. Здесь начинается draft / preview / publish flow без изменения public template.`}
+        subtitle={`Рабочая точка template system для салона${slug ? ` · ${slug}` : ""}. Здесь начинается draft / preview / publish flow без изменения публичного шаблона.`}
         actions={(
           <>
             <ActionButton tone="secondary" onClick={handleSaveDraft} disabled={!readyForWrite || pageLoading || saveState.kind === "saving"}>
@@ -580,7 +614,7 @@ export default function SalonTemplateEditorPage() {
       >
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={editorGroupStyle}>
-            <div style={editorGroupHeaderStyle}>Identity</div>
+            <div style={editorGroupHeaderStyle}>Идентичность</div>
             <div style={editorGridStyle}>
               <Field label="Название салона" value={draft.identity.salon_name} onChange={(value) => updateDraftSection("identity", "salon_name", value)} placeholder="TOTEM Demo Salon" />
               <Field label="Бейдж hero" value={draft.identity.hero_badge} onChange={(value) => updateDraftSection("identity", "hero_badge", value)} placeholder="Премиальный салон" />

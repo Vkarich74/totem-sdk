@@ -2,8 +2,11 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 
 import { getSalon, getMasters, getMetrics } from "../api/publicApi";
+import { getSalonTemplatePublished } from "../api/internal";
 import { setMeta, setCanonical, setJSONLD } from "../api/seo";
 import Skeleton from "../layout/Skeleton";
+import { normalizeTemplatePayload } from "../utils/normalizeTemplate";
+import { buildSalonTemplateViewModel } from "../utils/buildViewModel";
 
 
 const DEMO_SLUG = "totem-demo-salon";
@@ -247,6 +250,100 @@ function getBenefitsData() {
   ];
 }
 
+
+function filterActiveItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.filter((item) => item && item.is_active !== false);
+}
+
+function resolveTemplateAsset(imagesRoot, imageRef) {
+  if (!imagesRoot || !imageRef) return "";
+
+  const directUrl = pickFirstString(
+    imageRef.secure_url,
+    imageRef.url,
+    imageRef.image_url,
+    imageRef.src,
+  );
+
+  if (directUrl) return directUrl;
+
+  const assetId = pickFirstString(imageRef.image_asset_id);
+  const asset = assetId && imagesRoot.assets ? imagesRoot.assets[assetId] : null;
+
+  return pickFirstString(
+    asset?.secure_url,
+    asset?.url,
+    asset?.image_url,
+    asset?.src,
+  );
+}
+
+function getTemplateGalleryImages(publishedPayload, fallbackImages) {
+  const galleryItems = filterActiveItems(publishedPayload?.sections?.gallery);
+  const urls = galleryItems
+    .map((item) => resolveTemplateAsset(publishedPayload?.images, item))
+    .filter(Boolean);
+
+  return urls.length > 0 ? urls : fallbackImages;
+}
+
+function getTemplateServices(items, imagesRoot) {
+  return filterActiveItems(items).map((service) => ({
+    id: service.id,
+    name: pickFirstString(service.name, service.title),
+    description: normalizeText(pickFirstString(service.description, service.text, service.note)),
+    price: pickFirstNumber(service.price),
+    durationMin: pickFirstNumber(service.duration_min, service.duration),
+    imageUrl: resolveTemplateAsset(imagesRoot, service),
+  })).filter((service) => service.name);
+}
+
+function getTemplateMasters(items, imagesRoot) {
+  return filterActiveItems(items).map((master) => ({
+    id: master.id || master.slug || master.name,
+    slug: master.slug || "",
+    name: pickFirstString(master.name),
+    role: pickFirstString(master.role, master.profession),
+    bio: normalizeText(pickFirstString(master.bio, master.description)),
+    imageUrl: resolveTemplateAsset(imagesRoot, master),
+  })).filter((master) => master.name);
+}
+
+function getTemplateReviews(items) {
+  return filterActiveItems(items).map((review, index) => ({
+    id: review.id || index + 1,
+    name: pickFirstString(review.name, `Гость ${index + 1}`),
+    text: normalizeText(pickFirstString(review.text)),
+    rating: pickFirstNumber(review.rating) || 5,
+  })).filter((review) => review.text);
+}
+
+function getTemplatePromos(items) {
+  return filterActiveItems(items).map((promo, index) => ({
+    id: promo.id || index + 1,
+    title: pickFirstString(promo.title, promo.name),
+    text: normalizeText(pickFirstString(promo.text, promo.description)),
+    badge: pickFirstString(promo.badge, "Предложение"),
+  })).filter((promo) => promo.title);
+}
+
+function getTemplateBenefits(items) {
+  return filterActiveItems(items).map((item, index) => ({
+    id: item.id || index + 1,
+    title: pickFirstString(item.title),
+    text: normalizeText(pickFirstString(item.text, item.description)),
+  })).filter((item) => item.title);
+}
+
+function getTemplateAboutParagraphs(items) {
+  return filterActiveItems(items)
+    .sort((a, b) => Number(a?.slot_index || 0) - Number(b?.slot_index || 0))
+    .map((item) => normalizeText(pickFirstString(item.text)))
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
 function getServiceCatalogData(services) {
   if (services.length > 0) {
     return services.slice(0, 12);
@@ -281,6 +378,7 @@ export default function PublicSalonPage({ slug }) {
     typeof window !== "undefined" ? window.innerWidth <= 768 : true,
   );
   const [teamOpen, setTeamOpen] = useState(false);
+  const [publishedTemplate, setPublishedTemplate] = useState(null);
 
   const isDemoSalon = slug === DEMO_SLUG;
 
@@ -311,17 +409,46 @@ export default function PublicSalonPage({ slug }) {
 
         const mastersData = await getMasters(slug);
         const metricsData = await getMetrics(slug);
+        const publishedData = await getSalonTemplatePublished(slug).catch(() => ({ ok:false }));
 
         setSalon(salonData);
         setMasters(Array.isArray(mastersData) ? mastersData : []);
         setMetrics(metricsData || null);
+        setPublishedTemplate(
+          publishedData?.ok && publishedData.published_exists && publishedData.payload
+            ? normalizeTemplatePayload(publishedData.payload)
+            : null,
+        );
 
-        const title = isDemoSalon
-          ? "TOTEM Демо Салон"
-          : pickFirstString(salonData?.name, "Салон");
-        const description = isDemoSalon
-          ? "TOTEM Демо Салон: премиальная витрина салона с услугами, командой, галереей, картой и удобной онлайн записью."
-          : "Публичная страница салона в TOTEM: услуги, команда, контакты и удобная онлайн запись.";
+        const templatePayload =
+          publishedData?.ok && publishedData.payload
+            ? normalizeTemplatePayload(publishedData.payload)
+            : null;
+        const templateIdentity = templatePayload?.identity || {};
+        const templateSeo = templatePayload?.seo || {};
+        const templateContact = templatePayload?.contact || {};
+        const templateImages = templatePayload?.images || {};
+        const templateHeroImage =
+          resolveTemplateAsset(templateImages, templateImages?.hero) ||
+          (isDemoSalon ? DEMO_VISUALS.hero : "");
+        const defaultMapAddress = [
+          pickFirstString(templateContact.address, "Киевская улица, 148"),
+          pickFirstString(templateContact.district, "Первомайский район, Бишкек"),
+          pickFirstString(templateContact.city),
+        ]
+          .filter(Boolean)
+          .join(", ");
+        const title = pickFirstString(
+          templateSeo?.title,
+          templateIdentity?.salon_name,
+          isDemoSalon ? "TOTEM Демо Салон" : pickFirstString(salonData?.name, "Салон"),
+        );
+        const description = pickFirstString(
+          templateSeo?.description,
+          isDemoSalon
+            ? "TOTEM Демо Салон: премиальная витрина салона с услугами, командой, галереей, картой и удобной онлайн записью."
+            : "Публичная страница салона в TOTEM: услуги, команда, контакты и удобная онлайн запись.",
+        );
 
         document.title = `${title} | Онлайн запись`;
 
@@ -337,9 +464,9 @@ export default function PublicSalonPage({ slug }) {
           name: title,
           description,
           url: window.location.href,
-          telephone: "+996 700 123 456",
-          address: "Киевская улица, 148, Первомайский район, Бишкек",
-          image: isDemoSalon ? DEMO_VISUALS.hero : undefined,
+          telephone: pickFirstString(templateContact.phone, templateContact.whatsapp, "+996 700 123 456"),
+          address: defaultMapAddress || "Киевская улица, 148, Первомайский район, Бишкек",
+          image: templateHeroImage || undefined,
         });
       } catch (err) {
         console.error(err);
@@ -354,6 +481,24 @@ export default function PublicSalonPage({ slug }) {
 
   const services = useMemo(() => extractServices(salon), [salon]);
 
+  const templateViewModel = useMemo(() => {
+    if (!publishedTemplate) return null;
+
+    try {
+      return buildSalonTemplateViewModel({
+        template: publishedTemplate,
+        salon,
+        masters,
+        metrics,
+        slug,
+        isDemoSalon,
+      });
+    } catch (error) {
+      console.error("buildSalonTemplateViewModel failed", error);
+      return null;
+    }
+  }, [publishedTemplate, salon, masters, metrics, slug, isDemoSalon]);
+
   if (loading) return <Skeleton />;
 
   if (notFound || !salon) {
@@ -365,39 +510,108 @@ export default function PublicSalonPage({ slug }) {
     );
   }
 
-  const salonName = isDemoSalon ? "TOTEM Демо Салон" : pickFirstString(salon?.name, "Салон");
-  const slogan = isDemoSalon
-    ? "Премиальная витрина салона с живым визуалом и онлайн-записью"
-    : "Красота, сервис и онлайн-запись в одном месте";
-  const subtitle = isDemoSalon
-    ? "Современная публичная страница салона в TOTEM: услуги, команда, галерея, акции, отзывы и понятный путь от первого впечатления до записи."
-    : "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.";
-  const district = "Первомайский район, Бишкек";
-  const address = "Киевская улица, 148";
-  const phone = "+996 700 123 456";
-  const scheduleText = "Ежедневно, 10:00–20:00";
-  const ratingValue = "4.9";
-  const reviewCount = "127+";
+  const templateIdentity = templateViewModel?.identity || publishedTemplate?.identity || {};
+  const templateContact = templateViewModel?.contact || publishedTemplate?.contact || {};
+  const templateTrust = templateViewModel?.trust || publishedTemplate?.trust || {};
+  const templateSections = templateViewModel?.sections || publishedTemplate?.sections || {};
+  const templateImages = templateViewModel?.images || publishedTemplate?.images || {};
+  const templateHeroImage =
+    pickFirstString(templateViewModel?.heroImage) ||
+    resolveTemplateAsset(templateImages, templateImages?.hero) ||
+    (isDemoSalon ? DEMO_VISUALS.hero : "");
 
-  const defaultMapAddress = `${address}, ${district}`;
+  const salonName = pickFirstString(
+    templateViewModel?.identity?.salon_name,
+    templateIdentity.salon_name,
+    isDemoSalon ? "TOTEM Демо Салон" : pickFirstString(salon?.name, "Салон"),
+  );
+  const slogan = pickFirstString(
+    templateViewModel?.identity?.slogan,
+    templateIdentity.slogan,
+    isDemoSalon
+      ? "Премиальная витрина салона с живым визуалом и онлайн-записью"
+      : "Красота, сервис и онлайн-запись в одном месте",
+  );
+  const subtitle = pickFirstString(
+    templateViewModel?.identity?.subtitle,
+    templateIdentity.subtitle,
+    isDemoSalon
+      ? "Современная публичная страница салона в TOTEM: услуги, команда, галерея, акции, отзывы и понятный путь от первого впечатления до записи."
+      : "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.",
+  );
+  const district = pickFirstString(
+    templateViewModel?.contact?.district,
+    templateContact.district,
+    "Первомайский район, Бишкек",
+  );
+  const address = pickFirstString(
+    templateViewModel?.contact?.address,
+    templateContact.address,
+    "Киевская улица, 148",
+  );
+  const phone = pickFirstString(
+    templateViewModel?.contact?.phone,
+    templateContact.phone,
+    templateContact.whatsapp,
+    "+996 700 123 456",
+  );
+  const scheduleText = pickFirstString(
+    templateViewModel?.contact?.schedule_text,
+    templateContact.schedule_text,
+    "Ежедневно, 10:00–20:00",
+  );
+  const ratingValue = pickFirstString(
+    templateViewModel?.trust?.rating_value,
+    templateTrust.rating_value,
+    "4.9",
+  );
+  const reviewCount = pickFirstString(
+    templateViewModel?.trust?.review_count,
+    templateTrust.review_count,
+    "127+",
+  );
+
+  const defaultMapAddress = [address, district, pickFirstString(templateContact.city)]
+    .filter(Boolean)
+    .join(", ");
   const mapEmbedUrl =
     pickFirstString(
+      templateViewModel?.contact?.map_embed_url,
+      templateContact.map_embed_url,
       salon.map_embed_url,
       salon.google_map_embed_url,
       salon.map_url,
-    ) || createMapEmbedUrl(defaultMapAddress);
+    ) || createMapEmbedUrl(defaultMapAddress || `${address}, ${district}`);
 
-  const aboutParagraphs = splitParagraphs(
-    pickFirstString(
-      salon.about,
-      salon.description,
-      "TOTEM Демо Салон — это эталон современной витрины салона: премиальный визуальный образ, понятная подача услуг, команда, отзывы и быстрый переход к записи.",
-      "Такая страница работает не как обычная визитка, а как полноценная продуктовая витрина, которая помогает салону вызывать доверие и продавать услуги с мобильного телефона.",
-      "Клиент видит атмосферу, процесс, результат и понятную структуру услуг, а владелец получает красивую публичную страницу, которую не стыдно показывать и использовать как рабочий продукт.",
-    ),
-  );
+  const aboutParagraphs = (() => {
+    const modelParagraphs = Array.isArray(templateViewModel?.sections?.about_paragraphs)
+      ? templateViewModel.sections.about_paragraphs.filter(Boolean).slice(0, 4)
+      : [];
+    if (modelParagraphs.length > 0) return modelParagraphs;
+
+    const templateParagraphs = getTemplateAboutParagraphs(templateSections.about_paragraphs);
+    if (templateParagraphs.length > 0) return templateParagraphs;
+
+    return splitParagraphs(
+      pickFirstString(
+        salon.about,
+        salon.description,
+        "TOTEM Демо Салон — это эталон современной витрины салона: премиальный визуальный образ, понятная подача услуг, команда, отзывы и быстрый переход к записи.",
+        "Такая страница работает не как обычная визитка, а как полноценная продуктовая витрина, которая помогает салону вызывать доверие и продавать услуги с мобильного телефона.",
+        "Клиент видит атмосферу, процесс, результат и понятную структуру услуг, а владелец получает красивую публичную страницу, которую не стыдно показывать и использовать как рабочий продукт.",
+      ),
+    );
+  })();
 
   const visibleMasters = (() => {
+    const modelMasters = Array.isArray(templateViewModel?.sections?.masters)
+      ? templateViewModel.sections.masters.slice(0, 4)
+      : [];
+    if (modelMasters.length > 0) return modelMasters;
+
+    const templateMasters = getTemplateMasters(templateSections.masters, templateImages).slice(0, 4);
+    if (templateMasters.length > 0) return templateMasters;
+
     const apiMasters = Array.isArray(masters)
       ? masters.filter((master) => !!pickFirstString(master?.name)).slice(0, 4)
       : [];
@@ -419,14 +633,68 @@ export default function PublicSalonPage({ slug }) {
     return [];
   })();
 
-  const popularServices = getServiceCatalogData(services);
-  const fullServiceList = getServiceCatalogData(services);
-  const reviews = getReviewData();
-  const promos = getPromoData();
-  const benefits = getBenefitsData();
-  const galleryImages = isDemoSalon ? DEMO_VISUALS.gallery : [];
+  const popularServices = (() => {
+    const modelServices = Array.isArray(templateViewModel?.sections?.popular_services)
+      ? templateViewModel.sections.popular_services
+      : [];
+    if (modelServices.length > 0) return modelServices;
+
+    const templateServices = getTemplateServices(templateSections.popular_services, templateImages);
+    return templateServices.length > 0 ? templateServices : getServiceCatalogData(services);
+  })();
+
+  const fullServiceList = (() => {
+    const modelCatalog = Array.isArray(templateViewModel?.sections?.full_service_list)
+      ? templateViewModel.sections.full_service_list
+      : [];
+    if (modelCatalog.length > 0) return modelCatalog;
+
+    const templateCatalog = getTemplateServices(templateSections.full_service_list, templateImages);
+    return templateCatalog.length > 0 ? templateCatalog : getServiceCatalogData(services);
+  })();
+
+  const reviews = (() => {
+    const modelReviews = Array.isArray(templateViewModel?.sections?.reviews)
+      ? templateViewModel.sections.reviews
+      : [];
+    if (modelReviews.length > 0) return modelReviews;
+
+    const templateReviews = getTemplateReviews(templateSections.reviews);
+    return templateReviews.length > 0 ? templateReviews : getReviewData();
+  })();
+
+  const promos = (() => {
+    const modelPromos = Array.isArray(templateViewModel?.sections?.promos)
+      ? templateViewModel.sections.promos
+      : [];
+    if (modelPromos.length > 0) return modelPromos;
+
+    const templatePromos = getTemplatePromos(templateSections.promos);
+    return templatePromos.length > 0 ? templatePromos : getPromoData();
+  })();
+
+  const benefits = (() => {
+    const modelBenefits = Array.isArray(templateViewModel?.sections?.benefits)
+      ? templateViewModel.sections.benefits
+      : [];
+    if (modelBenefits.length > 0) return modelBenefits;
+
+    const templateBenefits = getTemplateBenefits(templateSections.benefits);
+    return templateBenefits.length > 0 ? templateBenefits : getBenefitsData();
+  })();
+
+  const galleryImages = (() => {
+    const modelGallery = Array.isArray(templateViewModel?.sections?.gallery)
+      ? templateViewModel.sections.gallery.filter(Boolean)
+      : [];
+    if (modelGallery.length > 0) return modelGallery;
+
+    return getTemplateGalleryImages(publishedTemplate, isDemoSalon ? DEMO_VISUALS.gallery : []);
+  })();
 
   const completedBookings = pickFirstNumber(
+    templateViewModel?.trust?.completed_bookings,
+    templateTrust.completed_bookings,
     metrics?.completed,
     metrics?.completed_bookings,
     metrics?.bookings_completed,
@@ -806,7 +1074,7 @@ export default function PublicSalonPage({ slug }) {
                   }}
                 >
                   <img
-                    src={DEMO_VISUALS.hero}
+                    src={templateHeroImage || DEMO_VISUALS.hero}
                     alt={`${salonName} — интерьер`}
                     loading="eager"
                     style={{
@@ -915,7 +1183,7 @@ export default function PublicSalonPage({ slug }) {
             }}
           >
             {popularServices.map((service, index) => {
-              const serviceImage = isDemoSalon ? pickDemoServiceImage(service, index) : "";
+              const serviceImage = pickFirstString(service?.imageUrl) || (isDemoSalon ? pickDemoServiceImage(service, index) : "");
 
               return (
                 <div
@@ -1201,7 +1469,7 @@ export default function PublicSalonPage({ slug }) {
         </div>
       </section>
 
-      {isDemoSalon && galleryImages.length > 0 && (
+      {galleryImages.length > 0 && (
         <section style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}>
           <div style={container}>
             <div
