@@ -32,6 +32,14 @@ function buildInternalHeaders(headers = {}){
   }
 }
 
+
+async function internalJson(url, opts = {}){
+  return safeJson(url, {
+    ...opts,
+    headers: buildInternalHeaders(opts.headers || {})
+  })
+}
+
 /* ===============================
    BILLING GUARDS
 ================================ */
@@ -75,7 +83,7 @@ export function getBillingBlockReason(billingAccess){
 ================================ */
 
 export async function getSalon(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}`);
+  const r = await internalJson(`${API_BASE}/salons/${salonSlug}`);
   if(!r.ok) return { ok:false, error:"SALON_FETCH_FAILED", detail:r };
 
   const j = r.json;
@@ -89,7 +97,7 @@ export async function getSalon(salonSlug = getSalonSlug()){
 }
 
 export async function getMetrics(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}/metrics`);
+  const r = await internalJson(`${API_BASE}/salons/${salonSlug}/metrics`);
   if(!r.ok) return { ok:false, error:"METRICS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"METRICS_API_NOT_OK", detail:j };
@@ -97,7 +105,7 @@ export async function getMetrics(salonSlug = getSalonSlug()){
 }
 
 export async function getBookings(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}/bookings`);
+  const r = await internalJson(`${API_BASE}/salons/${salonSlug}/bookings`);
   if(!r.ok) return { ok:false, error:"BOOKINGS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"BOOKINGS_API_NOT_OK", detail:j };
@@ -105,7 +113,7 @@ export async function getBookings(salonSlug = getSalonSlug()){
 }
 
 export async function getMasters(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}/masters`);
+  const r = await internalJson(`${API_BASE}/salons/${salonSlug}/masters`);
   if(!r.ok) return { ok:false, error:"MASTERS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTERS_API_NOT_OK", detail:j };
@@ -113,7 +121,7 @@ export async function getMasters(salonSlug = getSalonSlug()){
 }
 
 export async function getClients(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}/clients`);
+  const r = await internalJson(`${API_BASE}/salons/${salonSlug}/clients`);
   if(!r.ok) return { ok:false, error:"CLIENTS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"CLIENTS_API_NOT_OK", detail:j };
@@ -125,7 +133,7 @@ export async function getClients(salonSlug = getSalonSlug()){
 ================================ */
 
 export async function getMaster(masterSlug = getMasterSlug()){
-  const r = await safeJson(`${API_BASE}/masters/${masterSlug}`);
+  const r = await internalJson(`${API_BASE}/masters/${masterSlug}`);
   if(!r.ok) return { ok:false, error:"MASTER_FETCH_FAILED", detail:r };
 
   const j = r.json;
@@ -139,7 +147,7 @@ export async function getMaster(masterSlug = getMasterSlug()){
 }
 
 export async function getMasterMetrics(masterSlug = getMasterSlug()){
-  const r = await safeJson(`${API_BASE}/masters/${masterSlug}/metrics`);
+  const r = await internalJson(`${API_BASE}/masters/${masterSlug}/metrics`);
   if(!r.ok) return { ok:false, error:"MASTER_METRICS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_METRICS_API_NOT_OK", detail:j };
@@ -147,7 +155,7 @@ export async function getMasterMetrics(masterSlug = getMasterSlug()){
 }
 
 export async function getMasterBookings(masterSlug = getMasterSlug()){
-  const r = await safeJson(`${API_BASE}/masters/${masterSlug}/bookings`);
+  const r = await internalJson(`${API_BASE}/masters/${masterSlug}/bookings`);
   if(!r.ok) return { ok:false, error:"MASTER_BOOKINGS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_BOOKINGS_API_NOT_OK", detail:j };
@@ -155,7 +163,7 @@ export async function getMasterBookings(masterSlug = getMasterSlug()){
 }
 
 export async function getMasterClients(masterSlug = getMasterSlug()){
-  const r = await safeJson(`${API_BASE}/masters/${masterSlug}/clients`);
+  const r = await internalJson(`${API_BASE}/masters/${masterSlug}/clients`);
   if(!r.ok) return { ok:false, error:"MASTER_CLIENTS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_CLIENTS_API_NOT_OK", detail:j };
@@ -167,7 +175,7 @@ export async function getMasterClients(masterSlug = getMasterSlug()){
 ================================ */
 
 export async function bookingAction(id, action){
-  const r = await safeJson(`${API_BASE}/bookings/${id}/${action}`, { method:"PATCH" });
+  const r = await internalJson(`${API_BASE}/bookings/${id}/${action}`, { method:"PATCH" });
   if(!r.ok) return { ok:false, error:"BOOKING_ACTION_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"BOOKING_ACTION_API_NOT_OK", detail:j };
@@ -180,7 +188,7 @@ export async function bookingAction(id, action){
 
 export async function createBooking(payload){
 
-  const r = await safeJson(
+  const r = await internalJson(
     `${API_BASE}/bookings/create`,
     {
       method:"POST",
@@ -205,7 +213,7 @@ export async function createBooking(payload){
 
 export async function moveBooking(id,start_at){
 
-  const r = await safeJson(
+  const r = await internalJson(
     `${API_BASE}/bookings/${id}/move`,
     {
       method:"PATCH",
@@ -234,7 +242,7 @@ export async function createSalonWithdraw(amount, billingAccess, salonSlug = get
     return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
   }
 
-  const r = await safeJson(
+  const r = await internalJson(
     `${API_BASE}/salons/${salonSlug}/withdraw`,
     {
       method:"POST",
@@ -265,7 +273,7 @@ export async function createMasterWithdraw(amount, billingAccess, masterSlug = g
     return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
   }
 
-  const r = await safeJson(
+  const r = await internalJson(
     `${API_BASE}/masters/${masterSlug}/withdraw`,
     {
       method:"POST",
@@ -299,7 +307,7 @@ export function hasInternalTemplateToken(){
 }
 
 export async function getSalonTemplateDocument(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/templates/salon/${salonSlug}`, {
+  const r = await internalJson(`${API_BASE}/templates/salon/${salonSlug}`, {
     headers: buildInternalHeaders()
   })
 
@@ -312,7 +320,7 @@ export async function getSalonTemplateDocument(salonSlug = getSalonSlug()){
 }
 
 export async function saveSalonTemplateDraft(draft, salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/templates/salon/${salonSlug}/draft`, {
+  const r = await internalJson(`${API_BASE}/templates/salon/${salonSlug}/draft`, {
     method: "PUT",
     headers: buildInternalHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
