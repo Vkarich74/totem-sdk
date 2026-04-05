@@ -1,2 +1,0 @@
-name,side,route,run,url,finalUrl,duration,slow,navError,bodyLength,divs,consoleErrors,pageErrors,failedRequests,badResponses
-"salon dashboard run 1","salon","dashboard",1,"http://localhost:5173/#/salon/totem-demo-salon/dashboard","http://localhost:5173/#/salon/totem-demo-salon/dashboard",4090,false,"",1671,89,2,0,0,0

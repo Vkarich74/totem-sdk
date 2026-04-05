@@ -1,0 +1,44 @@
+TOTEM SALON INTERMEDIATE AUDIT (ODOO INCLUDED)
+Generated: 2026-04-03T05:08:57.256Z
+Base: http://localhost:5173
+Salon slug: totem-demo-salon
+Include Odoo: YES
+Total cases: 40
+FAIL cases: 0
+WARN cases: 0
+
+NOTE: Odoo bridge console/request/HTTP noise is included in fail classification.
+
+=== ROUTE SUMMARY ===
+dashboard | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3934ms | max=4759ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+calendar | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3898ms | max=4639ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+services | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3758ms | max=3815ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+transactions | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3718ms | max=3842ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+payouts | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3686ms | max=3889ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+masters | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3593ms | max=3955ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+bookings | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3571ms | max=3758ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+finance | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3570ms | max=3638ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+root-redirect | fail=0/1 | warn=0/1 | pass=1/1 | slow=0/1 | avg=3536ms | max=3536ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+contracts | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3502ms | max=3588ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+settlements | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3477ms | max=3608ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+clients | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3447ms | max=3602ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+settings | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3381ms | max=3505ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+money | fail=0/3 | warn=0/3 | pass=3/3 | slow=0/3 | avg=3379ms | max=3466ms | console=0 | page=0 | req_fail=0 | bad_http=0 | visible_empty=0 | ignored_odoo_console=0 | ignored_odoo_req_fail=0 | ignored_odoo_bad_http=0
+
+=== FAIL DETAILS ===
+No FAIL cases.
+
+=== WARN DETAILS ===
+No WARN cases.
+
+=== SLOWEST CASES TOP 10 ===
+salon dashboard run 1 | status=PASS | duration=4759ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/dashboard
+salon calendar run 2 | status=PASS | duration=4639ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/calendar
+salon masters run 1 | status=PASS | duration=3955ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/masters
+salon payouts run 3 | status=PASS | duration=3889ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/payouts
+salon transactions run 1 | status=PASS | duration=3842ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/transactions
+salon services run 1 | status=PASS | duration=3815ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/services
+salon bookings run 2 | status=PASS | duration=3758ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/bookings
+salon payouts run 2 | status=PASS | duration=3754ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/payouts
+salon services run 2 | status=PASS | duration=3749ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/services
+salon transactions run 2 | status=PASS | duration=3717ms | issues=- | final=http://localhost:5173/#/salon/totem-demo-salon/transactions

@@ -18,6 +18,7 @@ import CalendarPage from "./salon/pages/CalendarPage";
 import MoneyPage from "./salon/pages/MoneyPage";
 import SettingsPage from "./salon/pages/SettingsPage";
 import ServicesPage from "./salon/pages/ServicesPage";
+import SalonTemplateEditorPage from "./salon/pages/SalonTemplateEditorPage";
 
 /* SALON FINANCE */
 import SalonMoneyPage from "./salon/payments/SalonMoneyPage";
@@ -61,7 +62,8 @@ const SALON_STATIC_SEGMENTS = new Set([
   "transactions",
   "settlements",
   "payouts",
-  "settings"
+  "settings",
+  "template"
 ]);
 
 const MASTER_STATIC_SEGMENTS = new Set([
@@ -75,7 +77,8 @@ const MASTER_STATIC_SEGMENTS = new Set([
   "transactions",
   "settlements",
   "payouts",
-  "settings"
+  "settings",
+  "template"
 ]);
 
 function getHashParts() {
@@ -186,6 +189,7 @@ export default function App() {
             <Route path="payouts" element={<SalonPayoutsPage />} />
 
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="template" element={<SalonTemplateEditorPage />} />
           </Route>
 
           {/* SALON CABINET WITH SLUG */}
@@ -210,6 +214,7 @@ export default function App() {
             <Route path="payouts" element={<SalonPayoutsPage />} />
 
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="template" element={<SalonTemplateEditorPage />} />
           </Route>
 
           {/* MASTER CABINET REDIRECT LAYER */}

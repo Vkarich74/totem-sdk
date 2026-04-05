@@ -5,6 +5,7 @@ const path = require('path');
 const BASE = process.env.TOTEM_QA_BASE || 'http://localhost:5173';
 const SALON_SLUG = process.env.TOTEM_SALON_SLUG || 'totem-demo-salon';
 const OUTPUT_DIR = path.join(process.cwd(), 'artifacts', 'salon-intermediate-audit');
+const INCLUDE_ODOO = String(process.env.TOTEM_INCLUDE_ODOO || '').trim() === '1';
 
 const ODOO_URL_PATTERNS = [
   'https://www.totemv.com/odoo/',
@@ -59,6 +60,10 @@ function isOdooUrl(url) {
 function isOdooConsoleMessage(text) {
   const value = String(text || '');
   return ODOO_CONSOLE_PATTERNS.some((pattern) => value.includes(pattern)) || isOdooUrl(value);
+}
+
+function shouldIgnoreOdooNoise() {
+  return !INCLUDE_ODOO;
 }
 
 function classifyResult(row) {
@@ -139,7 +144,7 @@ async function auditPage(page, entry) {
   const onConsole = (msg) => {
     if (msg.type() !== 'error') return;
     const text = msg.text();
-    if (isOdooConsoleMessage(text)) {
+    if (shouldIgnoreOdooNoise() && isOdooConsoleMessage(text)) {
       ignoredOdooConsoleErrors.push(text);
       return;
     }
@@ -148,7 +153,7 @@ async function auditPage(page, entry) {
 
   const onPageError = (err) => {
     const text = err && err.message ? err.message : String(err);
-    if (isOdooConsoleMessage(text)) {
+    if (shouldIgnoreOdooNoise() && isOdooConsoleMessage(text)) {
       ignoredOdooConsoleErrors.push(text);
       return;
     }
@@ -157,7 +162,7 @@ async function auditPage(page, entry) {
 
   const onRequestFailed = (req) => {
     const text = `${req.method()} ${req.url()}`;
-    if (isOdooUrl(req.url())) {
+    if (shouldIgnoreOdooNoise() && isOdooUrl(req.url())) {
       ignoredOdooFailedRequests.push(text);
       return;
     }
@@ -167,7 +172,7 @@ async function auditPage(page, entry) {
   const onResponse = (res) => {
     if (res.status() < 400) return;
     const text = `${res.status()} ${res.url()}`;
-    if (isOdooUrl(res.url())) {
+    if (shouldIgnoreOdooNoise() && isOdooUrl(res.url())) {
       ignoredOdooBadResponses.push(text);
       return;
     }
@@ -250,7 +255,7 @@ async function auditPage(page, entry) {
   RESULTS.push(result);
 
   console.log(
-    `LOAD ${entry.name}: ${duration}ms | ${result.status}${result.issues.length ? ` | ${result.issues.join(',')}` : ''} | ignored_odoo_console=${result.ignoredOdooConsoleErrors.length} | ignored_odoo_req=${result.ignoredOdooFailedRequests.length}`
+    `LOAD ${entry.name}: ${duration}ms | ${result.status}${result.issues.length ? ` | ${result.issues.join(',')}` : ''} | include_odoo=${INCLUDE_ODOO ? 1 : 0} | ignored_odoo_console=${result.ignoredOdooConsoleErrors.length} | ignored_odoo_req=${result.ignoredOdooFailedRequests.length}`
   );
 }
 
@@ -318,16 +323,22 @@ function writeReports() {
   const failedRuns = RESULTS.filter((row) => row.status === 'FAIL');
   const warnedRuns = RESULTS.filter((row) => row.status === 'WARN');
 
+  const modeLabel = INCLUDE_ODOO ? 'TOTEM SALON INTERMEDIATE AUDIT (ODOO INCLUDED)' : 'TOTEM SALON INTERMEDIATE AUDIT (ODOO EXCLUDED)';
+  const noteLabel = INCLUDE_ODOO
+    ? 'NOTE: Odoo bridge console/request/HTTP noise is included in fail classification.'
+    : 'NOTE: Odoo bridge console/request/HTTP noise is excluded from fail classification.';
+
   const txt = [];
-  txt.push('TOTEM SALON INTERMEDIATE AUDIT (ODOO EXCLUDED)');
+  txt.push(modeLabel);
   txt.push(`Generated: ${new Date().toISOString()}`);
   txt.push(`Base: ${BASE}`);
   txt.push(`Salon slug: ${SALON_SLUG}`);
+  txt.push(`Include Odoo: ${INCLUDE_ODOO ? 'YES' : 'NO'}`);
   txt.push(`Total cases: ${RESULTS.length}`);
   txt.push(`FAIL cases: ${failedRuns.length}`);
   txt.push(`WARN cases: ${warnedRuns.length}`);
   txt.push('');
-  txt.push('NOTE: Odoo bridge console/request/HTTP noise is excluded from fail classification.');
+  txt.push(noteLabel);
   txt.push('');
   txt.push('=== ROUTE SUMMARY ===');
 
@@ -364,7 +375,12 @@ function writeReports() {
     for (const row of warnedRuns) {
       txt.push(`${row.name} | status=${row.status} | issues=${row.issues.join(',') || '-'} | duration=${row.duration}ms | final=${row.finalUrl || '-'} | bodyLength=${row.bodyLength} | divs=${row.divs} | headings=${row.headings} | buttons=${row.buttons}`);
       if (row.consoleErrors.length) txt.push(`  consoleErrors: ${row.consoleErrors.join(' || ')}`);
+      if (row.pageErrors.length) txt.push(`  pageErrors: ${row.pageErrors.join(' || ')}`);
+      if (row.failedRequests.length) txt.push(`  failedRequests: ${row.failedRequests.join(' || ')}`);
+      if (row.badResponses.length) txt.push(`  badResponses: ${row.badResponses.join(' || ')}`);
       if (row.ignoredOdooConsoleErrors.length) txt.push(`  ignoredOdooConsoleErrors: ${row.ignoredOdooConsoleErrors.join(' || ')}`);
+      if (row.ignoredOdooFailedRequests.length) txt.push(`  ignoredOdooFailedRequests: ${row.ignoredOdooFailedRequests.join(' || ')}`);
+      if (row.ignoredOdooBadResponses.length) txt.push(`  ignoredOdooBadResponses: ${row.ignoredOdooBadResponses.join(' || ')}`);
     }
   }
 
@@ -392,6 +408,7 @@ function writeReports() {
 
   console.log('');
   console.log('REPORT READY');
+  console.log(`MODE: ${INCLUDE_ODOO ? 'ODOO INCLUDED' : 'ODOO EXCLUDED'}`);
   console.log(`TXT: ${txtPath}`);
   console.log(`CSV: ${csvPath}`);
 }
@@ -400,7 +417,7 @@ test.afterAll(async () => {
   writeReports();
 });
 
-test.describe('TOTEM SALON INTERMEDIATE AUDIT (ODOO EXCLUDED)', () => {
+test.describe(INCLUDE_ODOO ? 'TOTEM SALON INTERMEDIATE AUDIT (ODOO INCLUDED)' : 'TOTEM SALON INTERMEDIATE AUDIT (ODOO EXCLUDED)', () => {
   for (const entry of CASES) {
     test(entry.name, async ({ page }) => {
       await auditPage(page, entry);

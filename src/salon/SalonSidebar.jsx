@@ -68,6 +68,7 @@ export default function SalonSidebar({ slug }) {
         <NavLink style={menuStyle} to={buildSalonPath(slug, "clients")}>Клиенты</NavLink>
         <NavLink style={menuStyle} to={buildSalonPath(slug, "services")}>Услуги</NavLink>
         <NavLink style={menuStyle} to={buildSalonPath(slug, "settings")}>Настройки</NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "template")}>Шаблон страницы</NavLink>
       </nav>
 
       <SectionTitle note="Деньги, расчёты и договорный контур">Финансы</SectionTitle>

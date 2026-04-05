@@ -1,3 +1,0 @@
-name,route,run,url,finalUrl,duration,slow,navError,bodyLength,divs,headings,buttons,hasReactCrash,hasVisibleEmpty,consoleErrors,pageErrors,failedRequests,badResponses
-"master dashboard run 1","dashboard",1,"http://localhost:5173/#/master/totem-demo-master/dashboard","http://localhost:5173/#/master/totem-demo-master/dashboard",2960,false,"",197,19,1,1,false,false,0,0,0,0
-"master bookings run 1","bookings",1,"http://localhost:5173/#/master/totem-demo-master/bookings","http://localhost:5173/#/master/totem-demo-master/bookings",3153,false,"",181,19,0,1,false,false,3,0,1,0
