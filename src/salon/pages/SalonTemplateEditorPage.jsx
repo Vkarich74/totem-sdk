@@ -1,8 +1,15 @@
+
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import PageHeader from "../../cabinet/PageHeader"
 import PageSection from "../../cabinet/PageSection"
-import { getSalonTemplateDocument, hasInternalTemplateToken, saveSalonTemplateDraft } from "../../api/internal"
+import {
+  getSalonTemplateDocument,
+  getSalonTemplatePreview,
+  hasInternalTemplateToken,
+  publishSalonTemplate,
+  saveSalonTemplateDraft
+} from "../../api/internal"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 
 const sectionItems = [
@@ -98,6 +105,83 @@ function mergeDraft(source = {}) {
   }
 }
 
+function extractMessage(result, fallback) {
+  return (
+    result?.detail?.json?.message ||
+    result?.detail?.json?.error ||
+    result?.detail?.text ||
+    result?.error ||
+    fallback
+  )
+}
+
+function buildPreviewPayload(draft, slug) {
+  return {
+    identity: draft?.identity || {},
+    contact: draft?.contact || {},
+    cta: draft?.cta || {},
+    images: draft?.images || {},
+    seo: draft?.seo || {},
+    sections: draft?.sections || {},
+    slug: slug || ""
+  }
+}
+
+function buildMapUrl(contact = {}) {
+  const parts = [contact.address, contact.district, contact.city]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+
+  if (!parts.length) {
+    return ""
+  }
+
+  return `https://maps.google.com/?q=${encodeURIComponent(parts.join(", "))}`
+}
+
+function buildLocalDocument(previous, draft, slug, mode) {
+  const nowIso = new Date().toISOString()
+  const current = previous || {}
+
+  return {
+    ...current,
+    owner_type: "salon",
+    owner_slug: slug,
+    template_version: current.template_version || "v1",
+    status: {
+      ...(current.status || {}),
+      is_dirty: mode === "save",
+      draft_exists: true,
+      publish_state: mode === "publish" ? "published" : (current.status?.publish_state || "draft"),
+      is_publishable: true,
+      published_exists: mode === "publish" ? true : Boolean(current.status?.published_exists)
+    },
+    draft,
+    published: mode === "publish" ? draft : (current.published || draft),
+    validation: {
+      ...(current.validation || {}),
+      is_ready_for_preview: true,
+      is_publishable: true,
+      completeness_score: Math.max(75, Number(current.validation?.completeness_score || 0)),
+      hard_errors: [],
+      warnings: current.validation?.warnings || [],
+      validated_at: nowIso
+    },
+    meta: {
+      ...(current.meta || {}),
+      edited_by: "local-mock",
+      published_by: mode === "publish" ? "local-mock" : (current.meta?.published_by || null),
+      last_saved_at: mode === "save" ? nowIso : (current.meta?.last_saved_at || null),
+      last_published_at: mode === "publish" ? nowIso : (current.meta?.last_published_at || null),
+      updated_at: nowIso
+    },
+    publish_state: mode === "publish" ? "published" : (current.publish_state || "draft"),
+    last_saved_at: mode === "save" ? nowIso : (current.last_saved_at || null),
+    last_published_at: mode === "publish" ? nowIso : (current.last_published_at || null),
+    updated_at: nowIso
+  }
+}
+
 function StatusCard({ title, value, note, tone = "neutral" }) {
   const palette = tone === "good"
     ? { border: "#abefc6", bg: "#ecfdf3", value: "#027a48" }
@@ -155,7 +239,7 @@ function ActionButton({ children, tone = "primary", disabled = false, onClick })
   )
 }
 
-function Field({ label, value, onChange, placeholder = "", multiline = false }) {
+function Field({ label, value, onChange, placeholder = "", multiline = false, readOnly = false }) {
   const Component = multiline ? "textarea" : "input"
 
   return (
@@ -163,9 +247,10 @@ function Field({ label, value, onChange, placeholder = "", multiline = false }) 
       <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>{label}</span>
       <Component
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={readOnly ? undefined : (event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={multiline ? 4 : undefined}
+        readOnly={readOnly}
         style={{
           width: "100%",
           border: "1px solid #d0d5dd",
@@ -173,7 +258,7 @@ function Field({ label, value, onChange, placeholder = "", multiline = false }) 
           padding: multiline ? "12px 14px" : "11px 14px",
           fontSize: "14px",
           color: "#111827",
-          background: "#ffffff",
+          background: readOnly ? "#f8fafc" : "#ffffff",
           resize: multiline ? "vertical" : "none",
           minHeight: multiline ? "108px" : undefined,
           boxSizing: "border-box"
@@ -183,24 +268,18 @@ function Field({ label, value, onChange, placeholder = "", multiline = false }) 
   )
 }
 
-function extractMessage(result, fallback) {
-  return result?.detail?.json?.message ||
-    result?.detail?.json?.error ||
-    result?.detail?.text ||
-    result?.error ||
-    fallback
-}
-
 export default function SalonTemplateEditorPage() {
   const { slug: routeSlug } = useParams()
   const slug = resolveSalonSlug(routeSlug)
-  const { identity, billingAccess, canWrite, loading, error } = useSalonContext()
+  const { identity, billingAccess, canWrite } = useSalonContext()
 
   const [documentState, setDocumentState] = useState(null)
   const [draft, setDraft] = useState(mergeDraft())
   const [pageLoading, setPageLoading] = useState(true)
   const [pageError, setPageError] = useState(null)
   const [saveState, setSaveState] = useState({ kind: "idle", message: "" })
+  const [publishState, setPublishState] = useState({ kind: "idle", message: "" })
+  const [previewState, setPreviewState] = useState({ open: false, loading: false, payload: null, mode: "idle", message: "" })
 
   const accessState = String(
     billingAccess?.access_state ||
@@ -222,8 +301,13 @@ export default function SalonTemplateEditorPage() {
       }
 
       if (!hasToken) {
+        const fallbackDraft = mergeDraft(draft)
+        const localDocument = buildLocalDocument(null, fallbackDraft, slug, "save")
+        if (cancelled) return
+        setDocumentState(localDocument)
+        setDraft(fallbackDraft)
+        setPageError(null)
         setPageLoading(false)
-        setPageError("INTERNAL_TEMPLATE_TOKEN_MISSING")
         return
       }
 
@@ -266,24 +350,107 @@ export default function SalonTemplateEditorPage() {
   const errorCount = Array.isArray(validation.hard_errors) ? validation.hard_errors.length : 0
   const completionScore = Number(validation.completeness_score || 0)
   const lastSavedAt = documentState?.meta?.last_saved_at || documentState?.last_saved_at || null
+  const mapUrl = buildMapUrl(draft.contact || {})
 
   function updateDraftSection(section, field, value) {
-    setDraft((current) => ({
-      ...current,
-      [section]: {
-        ...(current[section] || {}),
-        [field]: value
+    setDraft((current) => {
+      const next = {
+        ...current,
+        [section]: {
+          ...(current[section] || {}),
+          [field]: value
+        }
       }
-    }))
+
+      if (section === "contact" && ["address", "district", "city"].includes(field)) {
+        next.contact.map_embed_url = buildMapUrl(next.contact)
+      }
+
+      return next
+    })
     setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  async function handleOpenPreview() {
+    if (!slug) return
+
+    if (!hasToken) {
+      setPreviewState({
+        open: true,
+        loading: false,
+        payload: buildPreviewPayload(draft, slug),
+        mode: "mock",
+        message: "Локальный preview открыт без backend auth. Это mock по текущему draft."
+      })
+      return
+    }
+
+    setPreviewState({
+      open: true,
+      loading: true,
+      payload: null,
+      mode: "loading",
+      message: "Загружаем preview…"
+    })
+
+    const result = await getSalonTemplatePreview(slug)
+
+    if (!result.ok) {
+      setPreviewState({
+        open: true,
+        loading: false,
+        payload: buildPreviewPayload(draft, slug),
+        mode: "fallback",
+        message: extractMessage(result, "PREVIEW_FETCH_FAILED — открыт fallback preview.")
+      })
+      return
+    }
+
+    setPreviewState({
+      open: true,
+      loading: false,
+      payload: result.payload || buildPreviewPayload(draft, slug),
+      mode: "backend",
+      message: result.is_ready_for_preview ? "Preview получен из backend." : "Preview получен, но страница ещё not ready."
+    })
+  }
+
+  function handleClosePreview() {
+    setPreviewState({ open: false, loading: false, payload: null, mode: "idle", message: "" })
   }
 
   async function handleSaveDraft() {
-    if (!readyForWrite || !hasToken || !slug) return
+    if (!readyForWrite || !slug) return
+
+    if (!hasToken) {
+      const nextDocument = buildLocalDocument(documentState, {
+        ...draft,
+        contact: {
+          ...draft.contact,
+          map_embed_url: mapUrl
+        }
+      }, slug, "save")
+
+      setDocumentState(nextDocument)
+      setDraft(mergeDraft(nextDocument.draft || draft))
+      setSaveState({
+        kind: "success",
+        message: "Черновик сохранён локально. Это mock-режим до подключения полной цепочки доступа."
+      })
+      setPublishState({ kind: "idle", message: "" })
+      return
+    }
 
     setSaveState({ kind: "saving", message: "Сохраняем draft…" })
 
-    const result = await saveSalonTemplateDraft(draft, slug)
+    const result = await saveSalonTemplateDraft({
+      ...draft,
+      contact: {
+        ...draft.contact,
+        map_embed_url: mapUrl
+      }
+    }, slug)
 
     if (!result.ok) {
       setSaveState({
@@ -296,8 +463,58 @@ export default function SalonTemplateEditorPage() {
     const nextDocument = result.document || null
     setDocumentState(nextDocument)
     setDraft(mergeDraft(nextDocument?.draft || draft))
-    setSaveState({ kind: "success", message: "Draft сохранён." })
+    setSaveState({ kind: "success", message: "Черновик сохранён." })
+    setPublishState({ kind: "idle", message: "" })
   }
+
+  async function handlePublish() {
+    if (!readyForWrite || !slug) return
+
+    if (!hasToken) {
+      const nextDocument = buildLocalDocument(documentState, {
+        ...draft,
+        contact: {
+          ...draft.contact,
+          map_embed_url: mapUrl
+        }
+      }, slug, "publish")
+
+      setDocumentState(nextDocument)
+      setDraft(mergeDraft(nextDocument.draft || draft))
+      setPublishState({
+        kind: "success",
+        message: "Публикация выполнена локально. Это mock-режим до подключения полной цепочки доступа."
+      })
+      setSaveState({ kind: "idle", message: "" })
+      return
+    }
+
+    setPublishState({ kind: "publishing", message: "Публикуем страницу…" })
+
+    const result = await publishSalonTemplate(slug, "system:1")
+
+    if (!result.ok) {
+      setPublishState({
+        kind: "error",
+        message: extractMessage(result, "PUBLISH_FAILED")
+      })
+      return
+    }
+
+    const nextDocument = result.document || null
+    setDocumentState(nextDocument)
+    setDraft(mergeDraft(nextDocument?.draft || draft))
+    setPublishState({ kind: "success", message: "Страница опубликована." })
+    setSaveState({ kind: "idle", message: "" })
+  }
+
+  const blockTone = pageError ? "warn" : hasToken ? "good" : "neutral"
+  const blockValue = pageLoading ? "Загрузка" : pageError ? "Ошибка" : hasToken ? "Готово" : "Локальный режим"
+  const blockNote = pageError
+    ? pageError
+    : hasToken
+      ? "Страница читает document и позволяет работать с backend."
+      : "Полная цепочка доступа ещё не внедрена. Страница работает в local mock режиме без поломки кабинета."
 
   return (
     <div style={{ display: "grid", gap: "20px" }}>
@@ -306,11 +523,13 @@ export default function SalonTemplateEditorPage() {
         subtitle={`Рабочая точка template system для салона${slug ? ` · ${slug}` : ""}. Здесь начинается draft / preview / publish flow без изменения public template.`}
         actions={(
           <>
-            <ActionButton tone="secondary" onClick={handleSaveDraft} disabled={!readyForWrite || !hasToken || pageLoading || saveState.kind === "saving"}>
+            <ActionButton tone="secondary" onClick={handleSaveDraft} disabled={!readyForWrite || pageLoading || saveState.kind === "saving"}>
               {saveState.kind === "saving" ? "Сохраняем…" : "Сохранить draft"}
             </ActionButton>
-            <ActionButton tone="secondary" disabled>Открыть preview</ActionButton>
-            <ActionButton disabled>Publish</ActionButton>
+            <ActionButton tone="secondary" onClick={handleOpenPreview}>Открыть preview</ActionButton>
+            <ActionButton onClick={handlePublish} disabled={!readyForWrite || pageLoading || publishState.kind === "publishing"}>
+              {publishState.kind === "publishing" ? "Публикуем…" : "Опубликовать"}
+            </ActionButton>
           </>
         )}
       />
@@ -322,9 +541,9 @@ export default function SalonTemplateEditorPage() {
       }}>
         <StatusCard
           title="Статус блока"
-          value={pageLoading ? "Loading" : pageError ? "Blocked" : "Draft Live"}
-          note={pageError || "Страница читает document и позволяет сохранить первый рабочий draft block."}
-          tone={pageError ? "warn" : "good"}
+          value={blockValue}
+          note={blockNote}
+          tone={blockTone}
         />
         <StatusCard
           title="Slug"
@@ -332,25 +551,25 @@ export default function SalonTemplateEditorPage() {
           note={identity?.name || identity?.title || "Салон определяется из текущего маршрута и SalonContext."}
         />
         <StatusCard
-          title="Publishability"
-          value={status.is_publishable ? "Ready" : "Not ready"}
+          title="Готовность к публикации"
+          value={status.is_publishable ? "Готово" : "Не готово"}
           note={`Ошибок: ${errorCount} · Warnings: ${warningCount}`}
           tone={status.is_publishable ? "good" : errorCount ? "warn" : "neutral"}
         />
         <StatusCard
-          title="Completion"
+          title="Заполнение"
           value={`${completionScore}%`}
-          note={lastSavedAt ? `Последний save: ${new Date(lastSavedAt).toLocaleString()}` : "Сохранения ещё не было."}
+          note={lastSavedAt ? `Последнее сохранение: ${new Date(lastSavedAt).toLocaleString()}` : "Сохранения ещё не было."}
         />
       </div>
 
       {!hasToken ? (
         <PageSection
-          title="Нужен internal token"
-          subtitle="Для draft / preview / publish flow браузер должен получить TOTEM_INTERNAL_TOKEN. В локальном режиме положи токен в localStorage по ключу TOTEM_INTERNAL_TOKEN или в window.TOTEM_INTERNAL_TOKEN."
+          title="Локальный режим"
+          subtitle="Полная цепочка доступа ещё не внедрена, поэтому backend auth для browser не обязателен на этом этапе."
         >
-          <div style={warningBoxStyle}>
-            Internal template endpoints защищены. Без токена эта страница не делает fetch/save к backend.
+          <div style={infoBoxStyle}>
+            Страница работает в local mock режиме. Это не ломает контракт: сейчас мы фиксируем editor flow, preview и publish UI, не трогая login system.
           </div>
         </PageSection>
       ) : null}
@@ -363,24 +582,24 @@ export default function SalonTemplateEditorPage() {
           <div style={editorGroupStyle}>
             <div style={editorGroupHeaderStyle}>Identity</div>
             <div style={editorGridStyle}>
-              <Field label="Salon name" value={draft.identity.salon_name} onChange={(value) => updateDraftSection("identity", "salon_name", value)} placeholder="TOTEM Demo Salon" />
-              <Field label="Hero badge" value={draft.identity.hero_badge} onChange={(value) => updateDraftSection("identity", "hero_badge", value)} placeholder="Премиальный салон" />
-              <Field label="Slogan" value={draft.identity.slogan} onChange={(value) => updateDraftSection("identity", "slogan", value)} placeholder="Главный оффер салона" />
-              <Field label="Subtitle" value={draft.identity.subtitle} onChange={(value) => updateDraftSection("identity", "subtitle", value)} placeholder="Уточняющий подзаголовок" />
+              <Field label="Название салона" value={draft.identity.salon_name} onChange={(value) => updateDraftSection("identity", "salon_name", value)} placeholder="TOTEM Demo Salon" />
+              <Field label="Бейдж hero" value={draft.identity.hero_badge} onChange={(value) => updateDraftSection("identity", "hero_badge", value)} placeholder="Премиальный салон" />
+              <Field label="Главный оффер" value={draft.identity.slogan} onChange={(value) => updateDraftSection("identity", "slogan", value)} placeholder="Главный оффер салона" />
+              <Field label="Подзаголовок" value={draft.identity.subtitle} onChange={(value) => updateDraftSection("identity", "subtitle", value)} placeholder="Уточняющий подзаголовок" />
             </div>
           </div>
 
           <div style={editorGroupStyle}>
-            <div style={editorGroupHeaderStyle}>Contacts</div>
+            <div style={editorGroupHeaderStyle}>Контакты</div>
             <div style={editorGridStyle}>
-              <Field label="Address" value={draft.contact.address} onChange={(value) => updateDraftSection("contact", "address", value)} placeholder="Bishkek, Chui Avenue 100" />
-              <Field label="District" value={draft.contact.district} onChange={(value) => updateDraftSection("contact", "district", value)} placeholder="Центр" />
-              <Field label="City" value={draft.contact.city} onChange={(value) => updateDraftSection("contact", "city", value)} placeholder="Bishkek" />
-              <Field label="Phone" value={draft.contact.phone} onChange={(value) => updateDraftSection("contact", "phone", value)} placeholder="+996555000111" />
+              <Field label="Адрес" value={draft.contact.address} onChange={(value) => updateDraftSection("contact", "address", value)} placeholder="Bishkek, Chui Avenue 100" />
+              <Field label="Район" value={draft.contact.district} onChange={(value) => updateDraftSection("contact", "district", value)} placeholder="Центр" />
+              <Field label="Город" value={draft.contact.city} onChange={(value) => updateDraftSection("contact", "city", value)} placeholder="Bishkek" />
+              <Field label="Телефон" value={draft.contact.phone} onChange={(value) => updateDraftSection("contact", "phone", value)} placeholder="+996555000111" />
               <Field label="WhatsApp" value={draft.contact.whatsapp} onChange={(value) => updateDraftSection("contact", "whatsapp", value)} placeholder="+996555000111" />
-              <Field label="Schedule" value={draft.contact.schedule_text} onChange={(value) => updateDraftSection("contact", "schedule_text", value)} placeholder="Ежедневно 10:00–20:00" />
+              <Field label="График" value={draft.contact.schedule_text} onChange={(value) => updateDraftSection("contact", "schedule_text", value)} placeholder="Ежедневно 10:00–20:00" />
               <div style={{ gridColumn: "1 / -1" }}>
-                <Field label="Map URL" value={draft.contact.map_embed_url} onChange={(value) => updateDraftSection("contact", "map_embed_url", value)} placeholder="https://maps.google.com/?q=..." />
+                <Field label="Ссылка на карту" value={mapUrl} onChange={() => {}} placeholder="Собирается автоматически по адресу" readOnly />
               </div>
             </div>
           </div>
@@ -388,15 +607,25 @@ export default function SalonTemplateEditorPage() {
           <div style={editorGroupStyle}>
             <div style={editorGroupHeaderStyle}>CTA</div>
             <div style={editorGridStyle}>
-              <Field label="Booking label" value={draft.cta.booking_label} onChange={(value) => updateDraftSection("cta", "booking_label", value)} placeholder="Записаться" />
-              <Field label="Booking URL" value={draft.cta.booking_url} onChange={(value) => updateDraftSection("cta", "booking_url", value)} placeholder="/book/totem-demo-salon" />
-              <Field label="Services label" value={draft.cta.services_label} onChange={(value) => updateDraftSection("cta", "services_label", value)} placeholder="Услуги" />
-              <Field label="Services anchor" value={draft.cta.services_anchor} onChange={(value) => updateDraftSection("cta", "services_anchor", value)} placeholder="#services" />
+              <Field label="Текст кнопки записи" value={draft.cta.booking_label} onChange={(value) => updateDraftSection("cta", "booking_label", value)} placeholder="Записаться" />
+              <Field label="Ссылка кнопки записи" value={draft.cta.booking_url} onChange={(value) => updateDraftSection("cta", "booking_url", value)} placeholder="/book/totem-demo-salon" />
+              <Field label="Текст кнопки услуг" value={draft.cta.services_label} onChange={(value) => updateDraftSection("cta", "services_label", value)} placeholder="Услуги" />
+              <Field label="Якорь услуг" value={draft.cta.services_anchor} onChange={(value) => updateDraftSection("cta", "services_anchor", value)} placeholder="#services" />
             </div>
           </div>
 
-          <div style={saveState.kind === "error" ? warningBoxStyle : saveState.kind === "success" ? successBoxStyle : infoBoxStyle}>
-            {saveState.message || "Сейчас рабочим остаётся только save draft. Preview / Publish wiring идёт следующим шагом."}
+          <div style={
+            publishState.kind === "error"
+              ? warningBoxStyle
+              : publishState.kind === "success"
+                ? successBoxStyle
+                : saveState.kind === "error"
+                  ? warningBoxStyle
+                  : saveState.kind === "success"
+                    ? successBoxStyle
+                    : infoBoxStyle
+          }>
+            {publishState.message || saveState.message || "Сейчас рабочими остаются save draft, preview и publish. Остальные секции пока structure-first."}
           </div>
         </div>
       </PageSection>
@@ -434,6 +663,82 @@ export default function SalonTemplateEditorPage() {
           ))}
         </div>
       </PageSection>
+
+      {previewState.open ? (
+        <div style={previewOverlayStyle}>
+          <div style={previewModalStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+              <div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>Preview · {slug || "salon"}</div>
+                <div style={{ marginTop: "6px", fontSize: "13px", color: "#6b7280" }}>{previewState.message}</div>
+              </div>
+              <ActionButton tone="secondary" onClick={handleClosePreview}>Закрыть</ActionButton>
+            </div>
+
+            {previewState.loading ? (
+              <div style={infoBoxStyle}>Загружаем preview…</div>
+            ) : (
+              <div style={{ display: "grid", gap: "16px" }}>
+                <div style={previewHeroStyle}>
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", width: "fit-content", padding: "6px 10px", borderRadius: "999px", background: "#eef2ff", color: "#3730a3", fontSize: "12px", fontWeight: 700 }}>
+                      {previewState.payload?.identity?.hero_badge || "Премиальный салон"}
+                    </div>
+                    <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>
+                      {previewState.payload?.identity?.slogan || previewState.payload?.identity?.salon_name || "Preview салона"}
+                    </div>
+                    <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>
+                      {previewState.payload?.identity?.subtitle || "Подзаголовок preview"}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "8px" }}>
+                      <a href={previewState.payload?.cta?.booking_url || "#"} style={previewPrimaryCtaStyle}>
+                        {previewState.payload?.cta?.booking_label || "Записаться"}
+                      </a>
+                      <span style={previewSecondaryCtaStyle}>
+                        {previewState.payload?.cta?.services_label || "Услуги"}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={previewImageCardStyle}>
+                    {previewState.payload?.images?.hero?.image_asset_id ? (
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>
+                        Hero asset: {previewState.payload.images.hero.image_asset_id}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "14px", color: "#6b7280" }}>Hero image не подключён</div>
+                    )}
+                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>
+                      {previewState.payload?.images?.hero?.alt || "Hero preview"}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={previewGridStyle}>
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Identity</div>
+                    <div style={previewCardTextStyle}>Салон: {previewState.payload?.identity?.salon_name || "—"}</div>
+                    <div style={previewCardTextStyle}>Бейдж: {previewState.payload?.identity?.hero_badge || "—"}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Contacts</div>
+                    <div style={previewCardTextStyle}>{previewState.payload?.contact?.address || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewState.payload?.contact?.phone || previewState.payload?.contact?.whatsapp || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewState.payload?.contact?.schedule_text || "—"}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>CTA</div>
+                    <div style={previewCardTextStyle}>Кнопка: {previewState.payload?.cta?.booking_label || "—"}</div>
+                    <div style={previewCardTextStyle}>URL: {previewState.payload?.cta?.booking_url || "—"}</div>
+                    <div style={previewCardTextStyle}>Якорь: {previewState.payload?.cta?.services_anchor || "—"}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       <PageSection
         title="Быстрые переходы"
@@ -519,6 +824,105 @@ const sectionCardStyle = {
   background: "#ffffff",
   padding: "14px",
   minHeight: "108px"
+}
+
+const previewOverlayStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(15, 23, 42, 0.45)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "24px",
+  zIndex: 50
+}
+
+const previewModalStyle = {
+  width: "min(1100px, 100%)",
+  maxHeight: "calc(100vh - 48px)",
+  overflow: "auto",
+  borderRadius: "20px",
+  background: "#ffffff",
+  padding: "20px",
+  display: "grid",
+  gap: "16px",
+  boxShadow: "0 20px 60px rgba(15, 23, 42, 0.18)"
+}
+
+const previewHeroStyle = {
+  display: "grid",
+  gridTemplateColumns: "1.4fr 1fr",
+  gap: "16px",
+  border: "1px solid #e5e7eb",
+  borderRadius: "20px",
+  padding: "20px",
+  background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)"
+}
+
+const previewImageCardStyle = {
+  border: "1px dashed #cbd5e1",
+  borderRadius: "16px",
+  minHeight: "180px",
+  padding: "16px",
+  background: "#ffffff",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center"
+}
+
+const previewPrimaryCtaStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textDecoration: "none",
+  borderRadius: "12px",
+  padding: "10px 14px",
+  background: "#111827",
+  color: "#ffffff",
+  fontSize: "14px",
+  fontWeight: 800
+}
+
+const previewSecondaryCtaStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: "12px",
+  padding: "10px 14px",
+  border: "1px solid #d0d5dd",
+  background: "#ffffff",
+  color: "#111827",
+  fontSize: "14px",
+  fontWeight: 700
+}
+
+const previewGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: "12px"
+}
+
+const previewCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  background: "#ffffff",
+  padding: "16px",
+  display: "grid",
+  gap: "8px"
+}
+
+const previewCardTitleStyle = {
+  fontSize: "14px",
+  fontWeight: 800,
+  color: "#111827"
+}
+
+const previewCardTextStyle = {
+  fontSize: "13px",
+  color: "#475467",
+  lineHeight: 1.5
 }
 
 const linkCardStyle = {

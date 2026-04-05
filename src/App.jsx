@@ -188,8 +188,8 @@ export default function App() {
             <Route path="settlements" element={<SalonSettlementsPage />} />
             <Route path="payouts" element={<SalonPayoutsPage />} />
 
-            <Route path="settings" element={<SettingsPage />} />
             <Route path="template" element={<SalonTemplateEditorPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           {/* SALON CABINET WITH SLUG */}
@@ -213,8 +213,8 @@ export default function App() {
             <Route path="settlements" element={<SalonSettlementsPage />} />
             <Route path="payouts" element={<SalonPayoutsPage />} />
 
-            <Route path="settings" element={<SettingsPage />} />
             <Route path="template" element={<SalonTemplateEditorPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           {/* MASTER CABINET REDIRECT LAYER */}
