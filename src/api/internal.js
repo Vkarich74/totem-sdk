@@ -322,6 +322,21 @@ export async function saveSalonTemplateDraft(draft, salonSlug = getSalonSlug()){
   return { ok:true, document: j.document || null };
 }
 
+
+
+export async function getSalonTemplatePublished(salonSlug = getSalonSlug()){
+  const r = await safeTemplateJson(`/templates/salon/${salonSlug}/published?version=v1`);
+  if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_PUBLISHED_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_TEMPLATE_PUBLISHED_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    payload: j.payload || null,
+    meta: j.meta || null,
+    published_exists: Boolean(j.published_exists)
+  };
+}
+
 export async function getSalonTemplatePreview(salonSlug = getSalonSlug()){
   const r = await safeTemplateJson(`/templates/salon/${salonSlug}/preview?version=v1`);
   if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_PREVIEW_FETCH_FAILED", detail:r };
