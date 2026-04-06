@@ -322,10 +322,8 @@ export async function saveSalonTemplateDraft(draft, salonSlug = getSalonSlug()){
   return { ok:true, document: j.document || null };
 }
 
-
-
 export async function getSalonTemplatePublished(salonSlug = getSalonSlug()){
-  const r = await safeTemplateJson(`/templates/salon/${salonSlug}/published?version=v1`);
+  const r = await safeJson(`${API_BASE}/templates-public/salon/${salonSlug}/published?version=v1`);
   if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_PUBLISHED_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"SALON_TEMPLATE_PUBLISHED_API_NOT_OK", detail:j };
