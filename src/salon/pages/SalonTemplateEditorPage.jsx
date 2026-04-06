@@ -169,6 +169,21 @@ function createPopularServiceItem() {
   }
 }
 
+function createPromoItem(nextIndex = 0) {
+  return {
+    id: `promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    title: "",
+    subtitle: "",
+    promo_code: "",
+    valid_until: "",
+    cta_label: "",
+    cta_url: "",
+    image_asset_id: "",
+    is_active: true,
+    slot_index: nextIndex
+  }
+}
+
 function createGalleryItem(nextIndex = 0) {
   return {
     id: `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -415,6 +430,7 @@ export default function SalonTemplateEditorPage() {
 
   const benefits = Array.isArray(draft.sections?.benefits) ? draft.sections.benefits : []
   const popularServices = Array.isArray(draft.sections?.popular_services) ? draft.sections.popular_services : []
+  const promos = Array.isArray(draft.sections?.promos) ? draft.sections.promos : []
   const galleryItems = Array.isArray(draft.sections?.gallery) ? draft.sections.gallery : []
   const reviews = Array.isArray(draft.sections?.reviews) ? draft.sections.reviews : []
   const masters = Array.isArray(draft.sections?.masters) ? draft.sections.masters : []
@@ -513,6 +529,58 @@ export default function SalonTemplateEditorPage() {
       sections: {
         ...(current.sections || {}),
         popular_services: (current.sections?.popular_services || []).filter((item) => item.id !== itemId)
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+
+  function updatePromoItem(itemId, field, value) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        promos: (current.sections?.promos || []).map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                [field]:
+                  field === "slot_index"
+                    ? Number(value || 0)
+                    : field === "is_active"
+                      ? Boolean(value)
+                      : value
+              }
+            : item
+        )
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleAddPromo() {
+    setDraft((current) => {
+      const currentPromos = current.sections?.promos || []
+      return {
+        ...current,
+        sections: {
+          ...(current.sections || {}),
+          promos: [...currentPromos, createPromoItem(currentPromos.length)]
+        }
+      }
+    })
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleRemovePromo(itemId) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        promos: (current.sections?.promos || []).filter((item) => item.id !== itemId)
       }
     }))
     setSaveState({ kind: "idle", message: "" })
@@ -941,7 +1009,7 @@ export default function SalonTemplateEditorPage() {
 
       <PageSection
         title="Рабочий блок v1"
-        subtitle="Живой binding: Identity + Contacts + Benefits + Popular Services + Gallery + Reviews + Team + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
+        subtitle="Живой binding: Identity + Contacts + Benefits + Popular Services + Promos + Gallery + Reviews + Team + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
       >
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={editorGroupStyle}>
@@ -1076,6 +1144,105 @@ export default function SalonTemplateEditorPage() {
               </div>
             ) : (
               <div style={infoBoxStyle}>Популярные услуги ещё не добавлены.</div>
+            )}
+          </div>
+
+          <div style={editorGroupStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+              <div>
+                <div style={editorGroupHeaderStyle}>Акции</div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
+                  Карточки сохраняются в draft.sections.promos. Это рабочий блок акций до полной preview parity.
+                </div>
+              </div>
+              <ActionButton tone="secondary" onClick={handleAddPromo}>Добавить акцию</ActionButton>
+            </div>
+
+            {promos.length ? (
+              <div style={{ display: "grid", gap: "12px" }}>
+                {promos.map((item, index) => (
+                  <div key={item.id} style={nestedCardStyle}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+                        Акция #{index + 1}
+                      </div>
+                      <ActionButton tone="secondary" onClick={() => handleRemovePromo(item.id)}>Удалить</ActionButton>
+                    </div>
+                    <div style={editorGridStyle}>
+                      <Field
+                        label="Заголовок"
+                        value={item.title || ""}
+                        onChange={(value) => updatePromoItem(item.id, "title", value)}
+                        placeholder="Например: -20% на первое посещение"
+                      />
+                      <Field
+                        label="Подзаголовок"
+                        value={item.subtitle || ""}
+                        onChange={(value) => updatePromoItem(item.id, "subtitle", value)}
+                        placeholder="Короткое описание акции"
+                      />
+                      <Field
+                        label="Промокод"
+                        value={item.promo_code || ""}
+                        onChange={(value) => updatePromoItem(item.id, "promo_code", value)}
+                        placeholder="WELCOME20"
+                      />
+                      <Field
+                        label="Действует до"
+                        value={item.valid_until || ""}
+                        onChange={(value) => updatePromoItem(item.id, "valid_until", value)}
+                        placeholder="2026-05-01"
+                      />
+                      <Field
+                        label="Текст CTA"
+                        value={item.cta_label || ""}
+                        onChange={(value) => updatePromoItem(item.id, "cta_label", value)}
+                        placeholder="Записаться по акции"
+                      />
+                      <Field
+                        label="Ссылка CTA"
+                        value={item.cta_url || ""}
+                        onChange={(value) => updatePromoItem(item.id, "cta_url", value)}
+                        placeholder="/book/totem-demo-salon?promo=welcome20"
+                      />
+                      <Field
+                        label="Image asset id"
+                        value={item.image_asset_id || ""}
+                        onChange={(value) => updatePromoItem(item.id, "image_asset_id", value)}
+                        placeholder="asset-promo-001"
+                      />
+                      <Field
+                        label="Порядок"
+                        value={String(item.slot_index ?? index)}
+                        onChange={(value) => updatePromoItem(item.id, "slot_index", value)}
+                        placeholder="0"
+                      />
+                      <label style={{ display: "grid", gap: "8px" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Активна</span>
+                        <select
+                          value={item.is_active ? "true" : "false"}
+                          onChange={(event) => updatePromoItem(item.id, "is_active", event.target.value === "true")}
+                          style={{
+                            width: "100%",
+                            border: "1px solid #d0d5dd",
+                            borderRadius: "12px",
+                            padding: "11px 14px",
+                            fontSize: "14px",
+                            color: "#111827",
+                            background: "#ffffff",
+                            boxSizing: "border-box"
+                          }}
+                        >
+                          <option value="true">Да</option>
+                          <option value="false">Нет</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={infoBoxStyle}>Акции ещё не добавлены.</div>
             )}
           </div>
 
