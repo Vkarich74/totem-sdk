@@ -1,0 +1,124 @@
+{
+  "path": "totem_media",
+  "children": [
+    {
+      "path": "totem_media/master",
+      "children": [
+        {
+          "path": "totem_media/master/bootstrap-master",
+          "children": [
+            {
+              "path": "totem_media/master/bootstrap-master/gallery",
+              "children": []
+            },
+            {
+              "path": "totem_media/master/bootstrap-master/hero",
+              "children": []
+            },
+            {
+              "path": "totem_media/master/bootstrap-master/logo",
+              "children": []
+            },
+            {
+              "path": "totem_media/master/bootstrap-master/promo",
+              "children": []
+            },
+            {
+              "path": "totem_media/master/bootstrap-master/reviews",
+              "children": []
+            },
+            {
+              "path": "totem_media/master/bootstrap-master/services",
+              "children": []
+            },
+            {
+              "path": "totem_media/master/bootstrap-master/team",
+              "children": []
+            }
+          ]
+        },
+        {
+          "path": "totem_media/master/demo-master",
+          "children": [
+            {
+              "path": "totem_media/master/demo-master/avatar",
+              "children": []
+            },
+            {
+              "path": "totem_media/master/demo-master/gallery",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "totem_media/salon",
+      "children": [
+        {
+          "path": "totem_media/salon/bootstrap-salon",
+          "children": [
+            {
+              "path": "totem_media/salon/bootstrap-salon/gallery",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/bootstrap-salon/hero",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/bootstrap-salon/logo",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/bootstrap-salon/promo",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/bootstrap-salon/reviews",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/bootstrap-salon/services",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/bootstrap-salon/team",
+              "children": []
+            }
+          ]
+        },
+        {
+          "path": "totem_media/salon/demo-salon",
+          "children": [
+            {
+              "path": "totem_media/salon/demo-salon/gallery",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/demo-salon/hero",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/demo-salon/promo",
+              "children": []
+            },
+            {
+              "path": "totem_media/salon/demo-salon/services",
+              "children": []
+            }
+          ]
+        },
+        {
+          "path": "totem_media/salon/test-salon",
+          "children": [
+            {
+              "path": "totem_media/salon/test-salon/hero",
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

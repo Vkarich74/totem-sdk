@@ -81,11 +81,21 @@ const EMPTY_DRAFT = {
     title: "",
     description: "",
     canonical_url: ""
-  }
+  }}
+
+const SALON_OWNER_TYPE = "salon"
+const SALON_ASSET_KINDS = {
+  hero: "hero",
+  logo: "logo",
+  promo: "promo",
+  gallery: "gallery",
+  services: "services",
+  reviews: "reviews",
+  team: "team"
 }
 
-function mergeDraft(source = {}) {
-  return {
+
+function mergeDraft(source = {}) {  return {
     ...EMPTY_DRAFT,
     ...source,
     identity: { ...EMPTY_DRAFT.identity, ...(source.identity || {}) },
