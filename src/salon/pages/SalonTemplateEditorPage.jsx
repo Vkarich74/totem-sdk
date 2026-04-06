@@ -165,6 +165,8 @@ function createPopularServiceItem() {
     price: "",
     duration_min: "",
     image_asset_id: "",
+    image_secure_url: "",
+    image_public_id: "",
     is_active: true
   }
 }
@@ -179,6 +181,8 @@ function createPromoItem(nextIndex = 0) {
     cta_label: "",
     cta_url: "",
     image_asset_id: "",
+    image_secure_url: "",
+    image_public_id: "",
     is_active: true,
     slot_index: nextIndex
   }
@@ -188,6 +192,8 @@ function createGalleryItem(nextIndex = 0) {
   return {
     id: `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     image_asset_id: "",
+    image_secure_url: "",
+    image_public_id: "",
     alt: "",
     slot_index: nextIndex,
     is_active: true
@@ -211,6 +217,8 @@ function createMasterItem(nextIndex = 0) {
     name: "",
     role: "",
     avatar_asset_id: "",
+    avatar_secure_url: "",
+    avatar_public_id: "",
     bio: "",
     experience_years: "",
     is_active: true,
@@ -265,6 +273,123 @@ function getValidationList(values) {
     if (item?.code) return item.code
     return JSON.stringify(item)
   })
+}
+
+function getCloudinaryConfig() {
+  return {
+    cloudName: String(import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "").trim(),
+    uploadPreset: String(import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "").trim(),
+    rootFolder: String(import.meta.env.VITE_CLOUDINARY_ROOT_FOLDER || "totem_media").trim() || "totem_media"
+  }
+}
+
+function buildCloudinaryAssetFolder(ownerType, ownerSlug, assetKind, rootFolder) {
+  return `${rootFolder}/${ownerType}/${ownerSlug}/${assetKind}`
+}
+
+function buildCloudinaryContext(meta) {
+  return `owner_type=${meta.ownerType}|owner_slug=${meta.ownerSlug}|asset_kind=${meta.assetKind}`
+}
+
+function buildCloudinaryTags(meta) {
+  return ["totem", meta.ownerType, meta.assetKind].filter(Boolean).join(",")
+}
+
+function normalizeCloudinaryAsset(payload, meta) {
+  return {
+    asset_id: `cld:${payload?.public_id || ""}`,
+    public_id: payload?.public_id || "",
+    secure_url: payload?.secure_url || "",
+    asset_folder: payload?.asset_folder || meta.assetFolder,
+    width: payload?.width || null,
+    height: payload?.height || null,
+    format: payload?.format || "",
+    bytes: payload?.bytes || null,
+    resource_type: payload?.resource_type || "image",
+    owner_type: meta.ownerType,
+    owner_slug: meta.ownerSlug,
+    asset_kind: meta.assetKind,
+    alt: meta.alt || ""
+  }
+}
+
+async function uploadImageToCloudinary(file, meta) {
+  const config = getCloudinaryConfig()
+
+  if (!config.cloudName || !config.uploadPreset) {
+    throw new Error("CLOUDINARY_CONFIG_MISSING")
+  }
+
+  const assetFolder = buildCloudinaryAssetFolder(meta.ownerType, meta.ownerSlug, meta.assetKind, config.rootFolder)
+  const form = new FormData()
+  form.append("file", file)
+  form.append("upload_preset", config.uploadPreset)
+  form.append("asset_folder", assetFolder)
+  form.append("context", buildCloudinaryContext(meta))
+  form.append("tags", buildCloudinaryTags(meta))
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {
+    method: "POST",
+    body: form
+  })
+
+  const text = await response.text()
+  let json = null
+  try {
+    json = text ? JSON.parse(text) : null
+  } catch {
+    json = null
+  }
+
+  if (!response.ok || !json) {
+    throw new Error(json?.error?.message || text || "CLOUDINARY_UPLOAD_FAILED")
+  }
+
+  return normalizeCloudinaryAsset(json, { ...meta, assetFolder })
+}
+
+function getAssetPreviewUrl(entity = {}) {
+  return entity?.secure_url || entity?.image_secure_url || entity?.avatar_secure_url || ""
+}
+
+function AssetPreview({ title = "Preview", entity = {}, emptyNote = "Изображение ещё не загружено." }) {
+  const previewUrl = getAssetPreviewUrl(entity)
+  const assetId = entity?.image_asset_id || entity?.avatar_asset_id || entity?.asset_id || ""
+
+  return (
+    <div style={assetPreviewCardStyle}>
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>{title}</div>
+      {previewUrl ? (
+        <>
+          <img src={previewUrl} alt={entity?.alt || title} style={assetPreviewImageStyle} />
+          <div style={assetPreviewMetaStyle}>{assetId || "Asset attached"}</div>
+        </>
+      ) : (
+        <div style={assetPreviewEmptyStyle}>{emptyNote}</div>
+      )}
+    </div>
+  )
+}
+
+function UploadInput({ onSelect, disabled = false }) {
+  return (
+    <label style={uploadFieldStyle}>
+      <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Загрузка изображения</span>
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/webp"
+        disabled={disabled}
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file) {
+            onSelect(file)
+          }
+          event.target.value = ""
+        }}
+        style={{ fontSize: "13px" }}
+      />
+    </label>
+  )
 }
 
 function StatusCard({ title, value, note, tone = "neutral" }) {
@@ -365,6 +490,7 @@ export default function SalonTemplateEditorPage() {
   const [saveState, setSaveState] = useState({ kind: "idle", message: "" })
   const [publishState, setPublishState] = useState({ kind: "idle", message: "" })
   const [previewState, setPreviewState] = useState({ open: false, loading: false, payload: null, mode: "idle", message: "" })
+  const [uploadState, setUploadState] = useState({})
 
   const accessState = String(
     billingAccess?.access_state ||
@@ -374,6 +500,8 @@ export default function SalonTemplateEditorPage() {
 
   const readyForWrite = canWrite !== false && accessState !== "blocked"
   const hasToken = hasInternalTemplateToken()
+  const cloudinaryConfig = getCloudinaryConfig()
+  const cloudinaryReady = Boolean(cloudinaryConfig.cloudName && cloudinaryConfig.uploadPreset)
 
   useEffect(() => {
     let cancelled = false
@@ -431,7 +559,6 @@ export default function SalonTemplateEditorPage() {
   }), [slug])
 
   const validation = documentState?.validation || {}
-  const status = documentState?.status || {}
   const mapUrl = buildMapUrl(draft.contact || {})
 
   const previewDraft = useMemo(() => ({
@@ -457,6 +584,15 @@ export default function SalonTemplateEditorPage() {
   const reviews = Array.isArray(draft.sections?.reviews) ? draft.sections.reviews : []
   const masters = Array.isArray(draft.sections?.masters) ? draft.sections.masters : []
 
+  function resetStateMessages() {
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function setUploadFlag(key, value) {
+    setUploadState((current) => ({ ...current, [key]: value }))
+  }
+
   function updateDraftSection(section, field, value) {
     setDraft((current) => {
       const next = {
@@ -473,8 +609,65 @@ export default function SalonTemplateEditorPage() {
 
       return next
     })
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
+  }
+
+  function updateRootImage(slot, patch) {
+    setDraft((current) => ({
+      ...current,
+      images: {
+        ...(current.images || {}),
+        [slot]: {
+          ...(current.images?.[slot] || {}),
+          ...patch
+        },
+        assets: {
+          ...(current.images?.assets || {}),
+          [slot]: {
+            ...(current.images?.assets?.[slot] || {}),
+            ...patch
+          }
+        }
+      }
+    }))
+    resetStateMessages()
+  }
+
+  function applyCloudinaryAssetToRootImage(slot, asset) {
+    updateRootImage(slot, {
+      image_asset_id: asset.asset_id,
+      secure_url: asset.secure_url,
+      public_id: asset.public_id,
+      asset_folder: asset.asset_folder,
+      width: asset.width,
+      height: asset.height,
+      format: asset.format,
+      bytes: asset.bytes,
+      resource_type: asset.resource_type,
+      owner_type: asset.owner_type,
+      owner_slug: asset.owner_slug,
+      asset_kind: asset.asset_kind
+    })
+  }
+
+  async function handleRootImageUpload(slot, file) {
+    if (!slug) return
+
+    const uploadKey = `root:${slot}`
+    setUploadFlag(uploadKey, { loading: true, error: "" })
+
+    try {
+      const asset = await uploadImageToCloudinary(file, {
+        ownerType: "salon",
+        ownerSlug: slug,
+        assetKind: slot,
+        alt: draft.images?.[slot]?.alt || ""
+      })
+      applyCloudinaryAssetToRootImage(slot, asset)
+      setUploadFlag(uploadKey, { loading: false, error: "" })
+    } catch (error) {
+      setUploadFlag(uploadKey, { loading: false, error: error?.message || "UPLOAD_FAILED" })
+    }
   }
 
   function updateBenefitsItem(itemId, field, value) {
@@ -489,8 +682,7 @@ export default function SalonTemplateEditorPage() {
         )
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function handleAddBenefit() {
@@ -501,8 +693,7 @@ export default function SalonTemplateEditorPage() {
         benefits: [...(current.sections?.benefits || []), createBenefitItem()]
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function handleRemoveBenefit(itemId) {
@@ -513,8 +704,7 @@ export default function SalonTemplateEditorPage() {
         benefits: (current.sections?.benefits || []).filter((item) => item.id !== itemId)
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function updatePopularServiceItem(itemId, field, value) {
@@ -529,8 +719,32 @@ export default function SalonTemplateEditorPage() {
         )
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
+  }
+
+  function applyPopularServiceAsset(itemId, asset) {
+    updatePopularServiceItem(itemId, "image_asset_id", asset.asset_id)
+    updatePopularServiceItem(itemId, "image_secure_url", asset.secure_url)
+    updatePopularServiceItem(itemId, "image_public_id", asset.public_id)
+  }
+
+  async function handlePopularServiceUpload(itemId, file) {
+    if (!slug) return
+
+    const uploadKey = `popular:${itemId}`
+    setUploadFlag(uploadKey, { loading: true, error: "" })
+
+    try {
+      const asset = await uploadImageToCloudinary(file, {
+        ownerType: "salon",
+        ownerSlug: slug,
+        assetKind: "services"
+      })
+      applyPopularServiceAsset(itemId, asset)
+      setUploadFlag(uploadKey, { loading: false, error: "" })
+    } catch (error) {
+      setUploadFlag(uploadKey, { loading: false, error: error?.message || "UPLOAD_FAILED" })
+    }
   }
 
   function handleAddPopularService() {
@@ -541,8 +755,7 @@ export default function SalonTemplateEditorPage() {
         popular_services: [...(current.sections?.popular_services || []), createPopularServiceItem()]
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function handleRemovePopularService(itemId) {
@@ -553,8 +766,7 @@ export default function SalonTemplateEditorPage() {
         popular_services: (current.sections?.popular_services || []).filter((item) => item.id !== itemId)
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function updatePromoItem(itemId, field, value) {
@@ -577,8 +789,32 @@ export default function SalonTemplateEditorPage() {
         )
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
+  }
+
+  function applyPromoAsset(itemId, asset) {
+    updatePromoItem(itemId, "image_asset_id", asset.asset_id)
+    updatePromoItem(itemId, "image_secure_url", asset.secure_url)
+    updatePromoItem(itemId, "image_public_id", asset.public_id)
+  }
+
+  async function handlePromoUpload(itemId, file) {
+    if (!slug) return
+
+    const uploadKey = `promo:${itemId}`
+    setUploadFlag(uploadKey, { loading: true, error: "" })
+
+    try {
+      const asset = await uploadImageToCloudinary(file, {
+        ownerType: "salon",
+        ownerSlug: slug,
+        assetKind: "promo"
+      })
+      applyPromoAsset(itemId, asset)
+      setUploadFlag(uploadKey, { loading: false, error: "" })
+    } catch (error) {
+      setUploadFlag(uploadKey, { loading: false, error: error?.message || "UPLOAD_FAILED" })
+    }
   }
 
   function handleAddPromo() {
@@ -592,8 +828,7 @@ export default function SalonTemplateEditorPage() {
         }
       }
     })
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function handleRemovePromo(itemId) {
@@ -604,8 +839,7 @@ export default function SalonTemplateEditorPage() {
         promos: (current.sections?.promos || []).filter((item) => item.id !== itemId)
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function updateGalleryItem(itemId, field, value) {
@@ -620,8 +854,32 @@ export default function SalonTemplateEditorPage() {
         )
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
+  }
+
+  function applyGalleryAsset(itemId, asset) {
+    updateGalleryItem(itemId, "image_asset_id", asset.asset_id)
+    updateGalleryItem(itemId, "image_secure_url", asset.secure_url)
+    updateGalleryItem(itemId, "image_public_id", asset.public_id)
+  }
+
+  async function handleGalleryUpload(itemId, file) {
+    if (!slug) return
+
+    const uploadKey = `gallery:${itemId}`
+    setUploadFlag(uploadKey, { loading: true, error: "" })
+
+    try {
+      const asset = await uploadImageToCloudinary(file, {
+        ownerType: "salon",
+        ownerSlug: slug,
+        assetKind: "gallery"
+      })
+      applyGalleryAsset(itemId, asset)
+      setUploadFlag(uploadKey, { loading: false, error: "" })
+    } catch (error) {
+      setUploadFlag(uploadKey, { loading: false, error: error?.message || "UPLOAD_FAILED" })
+    }
   }
 
   function handleAddGalleryItem() {
@@ -635,8 +893,7 @@ export default function SalonTemplateEditorPage() {
         }
       }
     })
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function handleRemoveGalleryItem(itemId) {
@@ -647,8 +904,7 @@ export default function SalonTemplateEditorPage() {
         gallery: (current.sections?.gallery || []).filter((item) => item.id !== itemId)
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function updateReviewItem(itemId, field, value) {
@@ -671,8 +927,7 @@ export default function SalonTemplateEditorPage() {
         )
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function handleAddReview() {
@@ -686,8 +941,7 @@ export default function SalonTemplateEditorPage() {
         }
       }
     })
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function handleRemoveReview(itemId) {
@@ -698,8 +952,7 @@ export default function SalonTemplateEditorPage() {
         reviews: (current.sections?.reviews || []).filter((item) => item.id !== itemId)
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function updateMasterItem(itemId, field, value) {
@@ -722,8 +975,32 @@ export default function SalonTemplateEditorPage() {
         )
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
+  }
+
+  function applyMasterAsset(itemId, asset) {
+    updateMasterItem(itemId, "avatar_asset_id", asset.asset_id)
+    updateMasterItem(itemId, "avatar_secure_url", asset.secure_url)
+    updateMasterItem(itemId, "avatar_public_id", asset.public_id)
+  }
+
+  async function handleMasterAvatarUpload(itemId, file) {
+    if (!slug) return
+
+    const uploadKey = `team:${itemId}`
+    setUploadFlag(uploadKey, { loading: true, error: "" })
+
+    try {
+      const asset = await uploadImageToCloudinary(file, {
+        ownerType: "salon",
+        ownerSlug: slug,
+        assetKind: "team"
+      })
+      applyMasterAsset(itemId, asset)
+      setUploadFlag(uploadKey, { loading: false, error: "" })
+    } catch (error) {
+      setUploadFlag(uploadKey, { loading: false, error: error?.message || "UPLOAD_FAILED" })
+    }
   }
 
   function handleAddMaster() {
@@ -737,8 +1014,7 @@ export default function SalonTemplateEditorPage() {
         }
       }
     })
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   function handleRemoveMaster(itemId) {
@@ -749,8 +1025,7 @@ export default function SalonTemplateEditorPage() {
         masters: (current.sections?.masters || []).filter((item) => item.id !== itemId)
       }
     }))
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    resetStateMessages()
   }
 
   async function handleOpenPreview() {
@@ -984,12 +1259,7 @@ export default function SalonTemplateEditorPage() {
         gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
         gap: "12px"
       }}>
-        <StatusCard
-          title="Статус блока"
-          value={blockValue}
-          note={blockNote}
-          tone={blockTone}
-        />
+        <StatusCard title="Статус блока" value={blockValue} note={blockNote} tone={blockTone} />
         <StatusCard
           title="Slug"
           value={slug || "—"}
@@ -1009,50 +1279,39 @@ export default function SalonTemplateEditorPage() {
       </div>
 
       {!hasToken ? (
-        <PageSection
-          title="Локальный режим"
-          subtitle="Полная цепочка доступа ещё не внедрена, поэтому backend auth для browser не обязателен на этом этапе."
-        >
+        <PageSection title="Локальный режим" subtitle="Полная цепочка доступа ещё не внедрена, поэтому backend auth для browser не обязателен на этом этапе.">
           <div style={infoBoxStyle}>
             Страница работает в local mock режиме. Это не ломает контракт: сейчас мы фиксируем editor flow, preview и publish UI, не трогая login system.
           </div>
         </PageSection>
       ) : null}
 
-      <PageSection
-        title="Validation UX"
-        subtitle="Живая проверка текущего draft без ожидания save. Это финальный контроль перед publish."
-      >
+      <PageSection title="Cloudinary pipeline" subtitle="Upload layer подключён прямо в editor. Ручной image_asset_id оставлен как резерв, ничего не удалено.">
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
             gap: "12px"
           }}>
-            <StatusCard
-              title="Live publish state"
-              value={liveValidation?.is_publishable ? "READY" : "BLOCKED"}
-              note="Статус считается по текущему draft, а не только по последнему save."
-              tone={liveValidation?.is_publishable ? "good" : "warn"}
-            />
-            <StatusCard
-              title="Hard errors"
-              value={String(errorCount)}
-              note="Эти ошибки блокируют publish."
-              tone={errorCount ? "warn" : "good"}
-            />
-            <StatusCard
-              title="Warnings"
-              value={String(warningCount)}
-              note="Не блокируют publish, но ухудшают готовность."
-              tone={warningCount ? "warn" : "good"}
-            />
-            <StatusCard
-              title="Section coverage"
-              value={`${sectionHealthItems.filter((item) => item.value > 0).length}/6`}
-              note="Покрытие ключевых editor-секций."
-              tone="neutral"
-            />
+            <StatusCard title="Cloud name" value={cloudinaryConfig.cloudName || "MISSING"} tone={cloudinaryConfig.cloudName ? "good" : "warn"} />
+            <StatusCard title="Upload preset" value={cloudinaryConfig.uploadPreset || "MISSING"} tone={cloudinaryConfig.uploadPreset ? "good" : "warn"} />
+            <StatusCard title="Root folder" value={cloudinaryConfig.rootFolder} note="Storage contract: totem_media/salon/<slug>/<asset_kind>" tone="neutral" />
+            <StatusCard title="Upload state" value={cloudinaryReady ? "READY" : "BLOCKED"} note={cloudinaryReady ? "Можно загружать изображения прямо из editor." : "Нужно заполнить VITE_CLOUDINARY_* в SDK env."} tone={cloudinaryReady ? "good" : "warn"} />
+          </div>
+        </div>
+      </PageSection>
+
+      <PageSection title="Validation UX" subtitle="Живая проверка текущего draft без ожидания save. Это финальный контроль перед publish.">
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "12px"
+          }}>
+            <StatusCard title="Live publish state" value={liveValidation?.is_publishable ? "READY" : "BLOCKED"} note="Статус считается по текущему draft, а не только по последнему save." tone={liveValidation?.is_publishable ? "good" : "warn"} />
+            <StatusCard title="Hard errors" value={String(errorCount)} note="Эти ошибки блокируют publish." tone={errorCount ? "warn" : "good"} />
+            <StatusCard title="Warnings" value={String(warningCount)} note="Не блокируют publish, но ухудшают готовность." tone={warningCount ? "warn" : "good"} />
+            <StatusCard title="Section coverage" value={`${sectionHealthItems.filter((item) => item.value > 0).length}/6`} note="Покрытие ключевых editor-секций." tone="neutral" />
           </div>
 
           {hardErrors.length ? (
@@ -1094,10 +1353,7 @@ export default function SalonTemplateEditorPage() {
         </div>
       </PageSection>
 
-      <PageSection
-        title="Рабочий блок v1"
-        subtitle="Живой binding: Identity + Contacts + Benefits + Popular Services + Promos + Gallery + Reviews + Team + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
-      >
+      <PageSection title="Рабочий блок v1" subtitle="Живой binding: Identity + Contacts + Benefits + Popular Services + Promos + Gallery + Reviews + Team + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы.">
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={editorGroupStyle}>
             <div style={editorGroupHeaderStyle}>Идентичность</div>
@@ -1125,429 +1381,253 @@ export default function SalonTemplateEditorPage() {
           </div>
 
           <div style={editorGroupStyle}>
+            <div style={editorGroupHeaderStyle}>Brand assets</div>
+            <div style={{ display: "grid", gap: "16px" }}>
+              <div style={nestedCardStyle}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
+                  <div style={{ display: "grid", gap: "14px" }}>
+                    <Field label="Hero image asset id" value={draft.images?.hero?.image_asset_id || ""} onChange={(value) => updateRootImage("hero", { image_asset_id: value })} placeholder="cld:..." />
+                    <Field label="Hero alt" value={draft.images?.hero?.alt || ""} onChange={(value) => updateRootImage("hero", { alt: value })} placeholder="Главное фото салона" />
+                    <UploadInput onSelect={(file) => handleRootImageUpload("hero", file)} disabled={!cloudinaryReady || !slug || uploadState["root:hero"]?.loading} />
+                    {uploadState["root:hero"]?.error ? <div style={warningBoxStyle}>{uploadState["root:hero"].error}</div> : null}
+                  </div>
+                  <AssetPreview title="Hero preview" entity={draft.images?.hero || {}} emptyNote="Hero пока не загружен." />
+                </div>
+              </div>
+
+              <div style={nestedCardStyle}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
+                  <div style={{ display: "grid", gap: "14px" }}>
+                    <Field label="Logo image asset id" value={draft.images?.logo?.image_asset_id || ""} onChange={(value) => updateRootImage("logo", { image_asset_id: value })} placeholder="cld:..." />
+                    <Field label="Logo alt" value={draft.images?.logo?.alt || ""} onChange={(value) => updateRootImage("logo", { alt: value })} placeholder="Логотип салона" />
+                    <UploadInput onSelect={(file) => handleRootImageUpload("logo", file)} disabled={!cloudinaryReady || !slug || uploadState["root:logo"]?.loading} />
+                    {uploadState["root:logo"]?.error ? <div style={warningBoxStyle}>{uploadState["root:logo"].error}</div> : null}
+                  </div>
+                  <AssetPreview title="Logo preview" entity={draft.images?.logo || {}} emptyNote="Logo пока не загружен." />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={editorGroupStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <div>
                 <div style={editorGroupHeaderStyle}>Преимущества</div>
-                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
-                  Карточки сохраняются в draft.sections.benefits без ломки текущего draft flow.
-                </div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>Карточки сохраняются в draft.sections.benefits без ломки текущего draft flow.</div>
               </div>
               <ActionButton tone="secondary" onClick={handleAddBenefit}>Добавить преимущество</ActionButton>
             </div>
-
             {benefits.length ? (
               <div style={{ display: "grid", gap: "12px" }}>
                 {benefits.map((item, index) => (
                   <div key={item.id} style={nestedCardStyle}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                        Преимущество #{index + 1}
-                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>Преимущество #{index + 1}</div>
                       <ActionButton tone="secondary" onClick={() => handleRemoveBenefit(item.id)}>Удалить</ActionButton>
                     </div>
                     <div style={editorGridStyle}>
-                      <Field
-                        label="Заголовок"
-                        value={item.title || ""}
-                        onChange={(value) => updateBenefitsItem(item.id, "title", value)}
-                        placeholder="Например: Сильная команда мастеров"
-                      />
+                      <Field label="Заголовок" value={item.title || ""} onChange={(value) => updateBenefitsItem(item.id, "title", value)} placeholder="Например: Сильная команда мастеров" />
                       <div style={{ gridColumn: "1 / -1" }}>
-                        <Field
-                          label="Описание"
-                          value={item.text || ""}
-                          onChange={(value) => updateBenefitsItem(item.id, "text", value)}
-                          placeholder="Короткое описание преимущества"
-                          multiline
-                        />
+                        <Field label="Описание" value={item.text || ""} onChange={(value) => updateBenefitsItem(item.id, "text", value)} placeholder="Короткое описание преимущества" multiline />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={infoBoxStyle}>Преимущества ещё не добавлены.</div>
-            )}
+            ) : <div style={infoBoxStyle}>Преимущества ещё не добавлены.</div>}
           </div>
 
           <div style={editorGroupStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <div>
                 <div style={editorGroupHeaderStyle}>Популярные услуги</div>
-                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
-                  Карточки сохраняются в draft.sections.popular_services без ломки текущего draft flow.
-                </div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>Карточки сохраняются в draft.sections.popular_services без ломки текущего draft flow.</div>
               </div>
               <ActionButton tone="secondary" onClick={handleAddPopularService}>Добавить услугу</ActionButton>
             </div>
-
             {popularServices.length ? (
               <div style={{ display: "grid", gap: "12px" }}>
                 {popularServices.map((item, index) => (
                   <div key={item.id} style={nestedCardStyle}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                        Популярная услуга #{index + 1}
-                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>Популярная услуга #{index + 1}</div>
                       <ActionButton tone="secondary" onClick={() => handleRemovePopularService(item.id)}>Удалить</ActionButton>
                     </div>
-                    <div style={editorGridStyle}>
-                      <Field
-                        label="Название услуги"
-                        value={item.name || ""}
-                        onChange={(value) => updatePopularServiceItem(item.id, "name", value)}
-                        placeholder="Например: Женская стрижка"
-                      />
-                      <Field
-                        label="Цена"
-                        value={item.price || ""}
-                        onChange={(value) => updatePopularServiceItem(item.id, "price", value)}
-                        placeholder="от 1500 KGS"
-                      />
-                      <Field
-                        label="Длительность (мин)"
-                        value={item.duration_min || ""}
-                        onChange={(value) => updatePopularServiceItem(item.id, "duration_min", value)}
-                        placeholder="90"
-                      />
-                      <Field
-                        label="Image asset id"
-                        value={item.image_asset_id || ""}
-                        onChange={(value) => updatePopularServiceItem(item.id, "image_asset_id", value)}
-                        placeholder="Пока вручную, до image pipeline"
-                      />
-                      <div style={{ gridColumn: "1 / -1" }}>
-                        <Field
-                          label="Описание"
-                          value={item.description || ""}
-                          onChange={(value) => updatePopularServiceItem(item.id, "description", value)}
-                          placeholder="Короткое описание услуги"
-                          multiline
-                        />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
+                      <div style={editorGridStyle}>
+                        <Field label="Название услуги" value={item.name || ""} onChange={(value) => updatePopularServiceItem(item.id, "name", value)} placeholder="Например: Женская стрижка" />
+                        <Field label="Цена" value={item.price || ""} onChange={(value) => updatePopularServiceItem(item.id, "price", value)} placeholder="от 1500 KGS" />
+                        <Field label="Длительность (мин)" value={item.duration_min || ""} onChange={(value) => updatePopularServiceItem(item.id, "duration_min", value)} placeholder="90" />
+                        <Field label="Image asset id" value={item.image_asset_id || ""} onChange={(value) => updatePopularServiceItem(item.id, "image_asset_id", value)} placeholder="cld:..." />
+                        <UploadInput onSelect={(file) => handlePopularServiceUpload(item.id, file)} disabled={!cloudinaryReady || !slug || uploadState[`popular:${item.id}`]?.loading} />
+                        {uploadState[`popular:${item.id}`]?.error ? <div style={warningBoxStyle}>{uploadState[`popular:${item.id}`].error}</div> : null}
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <Field label="Описание" value={item.description || ""} onChange={(value) => updatePopularServiceItem(item.id, "description", value)} placeholder="Короткое описание услуги" multiline />
+                        </div>
                       </div>
+                      <AssetPreview title="Service image" entity={item} emptyNote="Фото услуги пока не загружено." />
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={infoBoxStyle}>Популярные услуги ещё не добавлены.</div>
-            )}
+            ) : <div style={infoBoxStyle}>Популярные услуги ещё не добавлены.</div>}
           </div>
 
           <div style={editorGroupStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <div>
                 <div style={editorGroupHeaderStyle}>Акции</div>
-                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
-                  Карточки сохраняются в draft.sections.promos. Это рабочий блок акций до полной preview parity.
-                </div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>Карточки сохраняются в draft.sections.promos. Это рабочий блок акций до полной preview parity.</div>
               </div>
               <ActionButton tone="secondary" onClick={handleAddPromo}>Добавить акцию</ActionButton>
             </div>
-
             {promos.length ? (
               <div style={{ display: "grid", gap: "12px" }}>
                 {promos.map((item, index) => (
                   <div key={item.id} style={nestedCardStyle}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                        Акция #{index + 1}
-                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>Акция #{index + 1}</div>
                       <ActionButton tone="secondary" onClick={() => handleRemovePromo(item.id)}>Удалить</ActionButton>
                     </div>
-                    <div style={editorGridStyle}>
-                      <Field
-                        label="Заголовок"
-                        value={item.title || ""}
-                        onChange={(value) => updatePromoItem(item.id, "title", value)}
-                        placeholder="Например: -20% на первое посещение"
-                      />
-                      <Field
-                        label="Подзаголовок"
-                        value={item.subtitle || ""}
-                        onChange={(value) => updatePromoItem(item.id, "subtitle", value)}
-                        placeholder="Короткое описание акции"
-                      />
-                      <Field
-                        label="Промокод"
-                        value={item.promo_code || ""}
-                        onChange={(value) => updatePromoItem(item.id, "promo_code", value)}
-                        placeholder="WELCOME20"
-                      />
-                      <Field
-                        label="Действует до"
-                        value={item.valid_until || ""}
-                        onChange={(value) => updatePromoItem(item.id, "valid_until", value)}
-                        placeholder="2026-05-01"
-                      />
-                      <Field
-                        label="Текст CTA"
-                        value={item.cta_label || ""}
-                        onChange={(value) => updatePromoItem(item.id, "cta_label", value)}
-                        placeholder="Записаться по акции"
-                      />
-                      <Field
-                        label="Ссылка CTA"
-                        value={item.cta_url || ""}
-                        onChange={(value) => updatePromoItem(item.id, "cta_url", value)}
-                        placeholder="/book/totem-demo-salon?promo=welcome20"
-                      />
-                      <Field
-                        label="Image asset id"
-                        value={item.image_asset_id || ""}
-                        onChange={(value) => updatePromoItem(item.id, "image_asset_id", value)}
-                        placeholder="asset-promo-001"
-                      />
-                      <Field
-                        label="Порядок"
-                        value={String(item.slot_index ?? index)}
-                        onChange={(value) => updatePromoItem(item.id, "slot_index", value)}
-                        placeholder="0"
-                      />
-                      <label style={{ display: "grid", gap: "8px" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Активна</span>
-                        <select
-                          value={item.is_active ? "true" : "false"}
-                          onChange={(event) => updatePromoItem(item.id, "is_active", event.target.value === "true")}
-                          style={{
-                            width: "100%",
-                            border: "1px solid #d0d5dd",
-                            borderRadius: "12px",
-                            padding: "11px 14px",
-                            fontSize: "14px",
-                            color: "#111827",
-                            background: "#ffffff",
-                            boxSizing: "border-box"
-                          }}
-                        >
-                          <option value="true">Да</option>
-                          <option value="false">Нет</option>
-                        </select>
-                      </label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
+                      <div style={editorGridStyle}>
+                        <Field label="Заголовок" value={item.title || ""} onChange={(value) => updatePromoItem(item.id, "title", value)} placeholder="Например: -20% на первое посещение" />
+                        <Field label="Подзаголовок" value={item.subtitle || ""} onChange={(value) => updatePromoItem(item.id, "subtitle", value)} placeholder="Короткое описание акции" />
+                        <Field label="Промокод" value={item.promo_code || ""} onChange={(value) => updatePromoItem(item.id, "promo_code", value)} placeholder="WELCOME20" />
+                        <Field label="Действует до" value={item.valid_until || ""} onChange={(value) => updatePromoItem(item.id, "valid_until", value)} placeholder="2026-05-01" />
+                        <Field label="Текст CTA" value={item.cta_label || ""} onChange={(value) => updatePromoItem(item.id, "cta_label", value)} placeholder="Записаться по акции" />
+                        <Field label="Ссылка CTA" value={item.cta_url || ""} onChange={(value) => updatePromoItem(item.id, "cta_url", value)} placeholder="/book/totem-demo-salon?promo=welcome20" />
+                        <Field label="Image asset id" value={item.image_asset_id || ""} onChange={(value) => updatePromoItem(item.id, "image_asset_id", value)} placeholder="cld:..." />
+                        <Field label="Порядок" value={String(item.slot_index ?? index)} onChange={(value) => updatePromoItem(item.id, "slot_index", value)} placeholder="0" />
+                        <UploadInput onSelect={(file) => handlePromoUpload(item.id, file)} disabled={!cloudinaryReady || !slug || uploadState[`promo:${item.id}`]?.loading} />
+                        {uploadState[`promo:${item.id}`]?.error ? <div style={warningBoxStyle}>{uploadState[`promo:${item.id}`].error}</div> : null}
+                        <label style={{ display: "grid", gap: "8px" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Активна</span>
+                          <select value={item.is_active ? "true" : "false"} onChange={(event) => updatePromoItem(item.id, "is_active", event.target.value === "true")} style={selectStyle}>
+                            <option value="true">Да</option>
+                            <option value="false">Нет</option>
+                          </select>
+                        </label>
+                      </div>
+                      <AssetPreview title="Promo image" entity={item} emptyNote="Изображение акции пока не загружено." />
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={infoBoxStyle}>Акции ещё не добавлены.</div>
-            )}
+            ) : <div style={infoBoxStyle}>Акции ещё не добавлены.</div>}
           </div>
 
           <div style={editorGroupStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <div>
                 <div style={editorGroupHeaderStyle}>Галерея</div>
-                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
-                  Карточки сохраняются в draft.sections.gallery. Пока работаем через manual image asset id до image pipeline.
-                </div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>Карточки сохраняются в draft.sections.gallery. Теперь upload идёт через Cloudinary, manual image asset id оставлен как резерв.</div>
               </div>
               <ActionButton tone="secondary" onClick={handleAddGalleryItem}>Добавить изображение</ActionButton>
             </div>
-
             {galleryItems.length ? (
               <div style={{ display: "grid", gap: "12px" }}>
                 {galleryItems.map((item, index) => (
                   <div key={item.id} style={nestedCardStyle}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                        Изображение галереи #{index + 1}
-                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>Изображение галереи #{index + 1}</div>
                       <ActionButton tone="secondary" onClick={() => handleRemoveGalleryItem(item.id)}>Удалить</ActionButton>
                     </div>
-                    <div style={editorGridStyle}>
-                      <Field
-                        label="Image asset id"
-                        value={item.image_asset_id || ""}
-                        onChange={(value) => updateGalleryItem(item.id, "image_asset_id", value)}
-                        placeholder="asset-gallery-001"
-                      />
-                      <Field
-                        label="Alt"
-                        value={item.alt || ""}
-                        onChange={(value) => updateGalleryItem(item.id, "alt", value)}
-                        placeholder="Например: Интерьер салона"
-                      />
-                      <Field
-                        label="Порядок"
-                        value={String(item.slot_index ?? index)}
-                        onChange={(value) => updateGalleryItem(item.id, "slot_index", value)}
-                        placeholder="0"
-                      />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
+                      <div style={editorGridStyle}>
+                        <Field label="Image asset id" value={item.image_asset_id || ""} onChange={(value) => updateGalleryItem(item.id, "image_asset_id", value)} placeholder="cld:..." />
+                        <Field label="Alt" value={item.alt || ""} onChange={(value) => updateGalleryItem(item.id, "alt", value)} placeholder="Например: Интерьер салона" />
+                        <Field label="Порядок" value={String(item.slot_index ?? index)} onChange={(value) => updateGalleryItem(item.id, "slot_index", value)} placeholder="0" />
+                        <UploadInput onSelect={(file) => handleGalleryUpload(item.id, file)} disabled={!cloudinaryReady || !slug || uploadState[`gallery:${item.id}`]?.loading} />
+                        {uploadState[`gallery:${item.id}`]?.error ? <div style={warningBoxStyle}>{uploadState[`gallery:${item.id}`].error}</div> : null}
+                      </div>
+                      <AssetPreview title="Gallery image" entity={item} emptyNote="Изображение галереи пока не загружено." />
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={infoBoxStyle}>Галерея ещё не добавлена.</div>
-            )}
+            ) : <div style={infoBoxStyle}>Галерея ещё не добавлена.</div>}
           </div>
 
           <div style={editorGroupStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <div>
                 <div style={editorGroupHeaderStyle}>Отзывы</div>
-                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
-                  Карточки сохраняются в draft.sections.reviews. Это рабочий блок отзывов до полной preview parity.
-                </div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>Карточки сохраняются в draft.sections.reviews. Это рабочий блок отзывов до полной preview parity.</div>
               </div>
               <ActionButton tone="secondary" onClick={handleAddReview}>Добавить отзыв</ActionButton>
             </div>
-
             {reviews.length ? (
               <div style={{ display: "grid", gap: "12px" }}>
                 {reviews.map((item, index) => (
                   <div key={item.id} style={nestedCardStyle}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                        Отзыв #{index + 1}
-                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>Отзыв #{index + 1}</div>
                       <ActionButton tone="secondary" onClick={() => handleRemoveReview(item.id)}>Удалить</ActionButton>
                     </div>
                     <div style={editorGridStyle}>
-                      <Field
-                        label="Автор"
-                        value={item.author || ""}
-                        onChange={(value) => updateReviewItem(item.id, "author", value)}
-                        placeholder="Имя клиента"
-                      />
-                      <Field
-                        label="Рейтинг"
-                        value={String(item.rating ?? 5)}
-                        onChange={(value) => updateReviewItem(item.id, "rating", value)}
-                        placeholder="5"
-                      />
-                      <Field
-                        label="Порядок"
-                        value={String(item.slot_index ?? index)}
-                        onChange={(value) => updateReviewItem(item.id, "slot_index", value)}
-                        placeholder="0"
-                      />
+                      <Field label="Автор" value={item.author || ""} onChange={(value) => updateReviewItem(item.id, "author", value)} placeholder="Имя клиента" />
+                      <Field label="Рейтинг" value={String(item.rating ?? 5)} onChange={(value) => updateReviewItem(item.id, "rating", value)} placeholder="5" />
+                      <Field label="Порядок" value={String(item.slot_index ?? index)} onChange={(value) => updateReviewItem(item.id, "slot_index", value)} placeholder="0" />
                       <label style={{ display: "grid", gap: "8px" }}>
                         <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Активен</span>
-                        <select
-                          value={item.is_active ? "true" : "false"}
-                          onChange={(event) => updateReviewItem(item.id, "is_active", event.target.value === "true")}
-                          style={{
-                            width: "100%",
-                            border: "1px solid #d0d5dd",
-                            borderRadius: "12px",
-                            padding: "11px 14px",
-                            fontSize: "14px",
-                            color: "#111827",
-                            background: "#ffffff",
-                            boxSizing: "border-box"
-                          }}
-                        >
+                        <select value={item.is_active ? "true" : "false"} onChange={(event) => updateReviewItem(item.id, "is_active", event.target.value === "true")} style={selectStyle}>
                           <option value="true">Да</option>
                           <option value="false">Нет</option>
                         </select>
                       </label>
                       <div style={{ gridColumn: "1 / -1" }}>
-                        <Field
-                          label="Текст отзыва"
-                          value={item.text || ""}
-                          onChange={(value) => updateReviewItem(item.id, "text", value)}
-                          placeholder="Текст отзыва клиента"
-                          multiline
-                        />
+                        <Field label="Текст отзыва" value={item.text || ""} onChange={(value) => updateReviewItem(item.id, "text", value)} placeholder="Текст отзыва клиента" multiline />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={infoBoxStyle}>Отзывы ещё не добавлены.</div>
-            )}
+            ) : <div style={infoBoxStyle}>Отзывы ещё не добавлены.</div>}
           </div>
 
           <div style={editorGroupStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <div>
                 <div style={editorGroupHeaderStyle}>Команда</div>
-                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
-                  Карточки мастеров сохраняются в draft.sections.masters. Это блок команды салона до полной preview parity.
-                </div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>Карточки мастеров сохраняются в draft.sections.masters. Upload avatar встроен, manual asset id сохранён как резерв.</div>
               </div>
               <ActionButton tone="secondary" onClick={handleAddMaster}>Добавить мастера</ActionButton>
             </div>
-
             {masters.length ? (
               <div style={{ display: "grid", gap: "12px" }}>
                 {masters.map((item, index) => (
                   <div key={item.id} style={nestedCardStyle}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                        Мастер #{index + 1}
-                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>Мастер #{index + 1}</div>
                       <ActionButton tone="secondary" onClick={() => handleRemoveMaster(item.id)}>Удалить</ActionButton>
                     </div>
-                    <div style={editorGridStyle}>
-                      <Field
-                        label="Имя"
-                        value={item.name || ""}
-                        onChange={(value) => updateMasterItem(item.id, "name", value)}
-                        placeholder="Имя мастера"
-                      />
-                      <Field
-                        label="Роль"
-                        value={item.role || ""}
-                        onChange={(value) => updateMasterItem(item.id, "role", value)}
-                        placeholder="Топ-стилист / Барбер / Колорист"
-                      />
-                      <Field
-                        label="Avatar asset id"
-                        value={item.avatar_asset_id || ""}
-                        onChange={(value) => updateMasterItem(item.id, "avatar_asset_id", value)}
-                        placeholder="asset-master-001"
-                      />
-                      <Field
-                        label="Опыт (лет)"
-                        value={item.experience_years === "" ? "" : String(item.experience_years ?? "")}
-                        onChange={(value) => updateMasterItem(item.id, "experience_years", value)}
-                        placeholder="5"
-                      />
-                      <Field
-                        label="Порядок"
-                        value={String(item.slot_index ?? index)}
-                        onChange={(value) => updateMasterItem(item.id, "slot_index", value)}
-                        placeholder="0"
-                      />
-                      <label style={{ display: "grid", gap: "8px" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Активен</span>
-                        <select
-                          value={item.is_active ? "true" : "false"}
-                          onChange={(event) => updateMasterItem(item.id, "is_active", event.target.value === "true")}
-                          style={{
-                            width: "100%",
-                            border: "1px solid #d0d5dd",
-                            borderRadius: "12px",
-                            padding: "11px 14px",
-                            fontSize: "14px",
-                            color: "#111827",
-                            background: "#ffffff",
-                            boxSizing: "border-box"
-                          }}
-                        >
-                          <option value="true">Да</option>
-                          <option value="false">Нет</option>
-                        </select>
-                      </label>
-                      <div style={{ gridColumn: "1 / -1" }}>
-                        <Field
-                          label="Bio"
-                          value={item.bio || ""}
-                          onChange={(value) => updateMasterItem(item.id, "bio", value)}
-                          placeholder="Короткое описание мастера"
-                          multiline
-                        />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
+                      <div style={editorGridStyle}>
+                        <Field label="Имя" value={item.name || ""} onChange={(value) => updateMasterItem(item.id, "name", value)} placeholder="Имя мастера" />
+                        <Field label="Роль" value={item.role || ""} onChange={(value) => updateMasterItem(item.id, "role", value)} placeholder="Топ-стилист / Барбер / Колорист" />
+                        <Field label="Avatar asset id" value={item.avatar_asset_id || ""} onChange={(value) => updateMasterItem(item.id, "avatar_asset_id", value)} placeholder="cld:..." />
+                        <Field label="Опыт (лет)" value={item.experience_years === "" ? "" : String(item.experience_years ?? "")} onChange={(value) => updateMasterItem(item.id, "experience_years", value)} placeholder="5" />
+                        <Field label="Порядок" value={String(item.slot_index ?? index)} onChange={(value) => updateMasterItem(item.id, "slot_index", value)} placeholder="0" />
+                        <UploadInput onSelect={(file) => handleMasterAvatarUpload(item.id, file)} disabled={!cloudinaryReady || !slug || uploadState[`team:${item.id}`]?.loading} />
+                        {uploadState[`team:${item.id}`]?.error ? <div style={warningBoxStyle}>{uploadState[`team:${item.id}`].error}</div> : null}
+                        <label style={{ display: "grid", gap: "8px" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Активен</span>
+                          <select value={item.is_active ? "true" : "false"} onChange={(event) => updateMasterItem(item.id, "is_active", event.target.value === "true")} style={selectStyle}>
+                            <option value="true">Да</option>
+                            <option value="false">Нет</option>
+                          </select>
+                        </label>
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <Field label="Bio" value={item.bio || ""} onChange={(value) => updateMasterItem(item.id, "bio", value)} placeholder="Короткое описание мастера" multiline />
+                        </div>
                       </div>
+                      <AssetPreview title="Team image" entity={item} emptyNote="Фото мастера пока не загружено." />
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={infoBoxStyle}>Команда ещё не добавлена.</div>
-            )}
+            ) : <div style={infoBoxStyle}>Команда ещё не добавлена.</div>}
           </div>
 
           <div style={editorGroupStyle}>
@@ -1571,15 +1651,12 @@ export default function SalonTemplateEditorPage() {
                     ? successBoxStyle
                     : infoBoxStyle
           }>
-            {publishState.message || saveState.message || "Сейчас рабочими остаются save draft, preview и publish. Остальные секции пока structure-first."}
+            {publishState.message || saveState.message || "Сейчас рабочими остаются save draft, preview и publish. Cloudinary upload layer встроен без удаления ручных резервных полей."}
           </div>
         </div>
       </PageSection>
 
-      <PageSection
-        title="Секции шаблона"
-        subtitle="Это жёсткая карта секций, на которые дальше будут вешаться рабочие поля и image slots."
-      >
+      <PageSection title="Секции шаблона" subtitle="Это жёсткая карта секций, на которые дальше будут вешаться рабочие поля и image slots.">
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
@@ -1589,20 +1666,7 @@ export default function SalonTemplateEditorPage() {
             <div key={item.id} style={sectionCardStyle}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "8px" }}>
                 <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}>{item.label}</div>
-                <div style={{
-                  minWidth: "28px",
-                  height: "28px",
-                  borderRadius: "999px",
-                  background: "#eff6ff",
-                  color: "#1d4ed8",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "12px",
-                  fontWeight: 800
-                }}>
-                  {index + 1}
-                </div>
+                <div style={badgeIndexStyle}>{index + 1}</div>
               </div>
               <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.5 }}>{item.note}</div>
             </div>
@@ -1627,35 +1691,23 @@ export default function SalonTemplateEditorPage() {
               <div style={{ display: "grid", gap: "16px" }}>
                 <div style={previewHeroStyle}>
                   <div style={{ display: "grid", gap: "10px" }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", width: "fit-content", padding: "6px 10px", borderRadius: "999px", background: "#eef2ff", color: "#3730a3", fontSize: "12px", fontWeight: 700 }}>
-                      {previewState.payload?.identity?.hero_badge || "Премиальный салон"}
-                    </div>
-                    <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>
-                      {previewState.payload?.identity?.slogan || previewState.payload?.identity?.salon_name || "Preview салона"}
-                    </div>
-                    <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>
-                      {previewState.payload?.identity?.subtitle || "Подзаголовок preview"}
-                    </div>
+                    <div style={previewBadgeStyle}>{previewState.payload?.identity?.hero_badge || "Премиальный салон"}</div>
+                    <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>{previewState.payload?.identity?.slogan || previewState.payload?.identity?.salon_name || "Preview салона"}</div>
+                    <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>{previewState.payload?.identity?.subtitle || "Подзаголовок preview"}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "8px" }}>
-                      <a href={previewState.payload?.cta?.booking_url || "#"} style={previewPrimaryCtaStyle}>
-                        {previewState.payload?.cta?.booking_label || "Записаться"}
-                      </a>
-                      <span style={previewSecondaryCtaStyle}>
-                        {previewState.payload?.cta?.services_label || "Услуги"}
-                      </span>
+                      <a href={previewState.payload?.cta?.booking_url || "#"} style={previewPrimaryCtaStyle}>{previewState.payload?.cta?.booking_label || "Записаться"}</a>
+                      <span style={previewSecondaryCtaStyle}>{previewState.payload?.cta?.services_label || "Услуги"}</span>
                     </div>
                   </div>
                   <div style={previewImageCardStyle}>
-                    {previewState.payload?.images?.hero?.image_asset_id ? (
-                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>
-                        Hero asset: {previewState.payload.images.hero.image_asset_id}
-                      </div>
+                    {previewState.payload?.images?.hero?.secure_url ? (
+                      <img src={previewState.payload.images.hero.secure_url} alt={previewState.payload?.images?.hero?.alt || "Hero preview"} style={previewImageRealStyle} />
+                    ) : previewState.payload?.images?.hero?.image_asset_id ? (
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>Hero asset: {previewState.payload.images.hero.image_asset_id}</div>
                     ) : (
                       <div style={{ fontSize: "14px", color: "#6b7280" }}>Hero image не подключён</div>
                     )}
-                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>
-                      {previewState.payload?.images?.hero?.alt || "Hero preview"}
-                    </div>
+                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>{previewState.payload?.images?.hero?.alt || "Hero preview"}</div>
                   </div>
                 </div>
 
@@ -1696,10 +1748,7 @@ export default function SalonTemplateEditorPage() {
         </div>
       ) : null}
 
-      <PageSection
-        title="Быстрые переходы"
-        subtitle="Рабочая навигация вокруг template entry point без смешивания с public template."
-      >
+      <PageSection title="Быстрые переходы" subtitle="Рабочая навигация вокруг template entry point без смешивания с public template.">
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -1803,6 +1852,67 @@ const miniMetricCardStyle = {
   padding: "14px"
 }
 
+const selectStyle = {
+  width: "100%",
+  border: "1px solid #d0d5dd",
+  borderRadius: "12px",
+  padding: "11px 14px",
+  fontSize: "14px",
+  color: "#111827",
+  background: "#ffffff",
+  boxSizing: "border-box"
+}
+
+const uploadFieldStyle = {
+  display: "grid",
+  gap: "8px"
+}
+
+const assetPreviewCardStyle = {
+  border: "1px dashed #cbd5e1",
+  borderRadius: "16px",
+  minHeight: "180px",
+  padding: "14px",
+  background: "#ffffff",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center",
+  gap: "8px"
+}
+
+const assetPreviewImageStyle = {
+  maxWidth: "100%",
+  maxHeight: "180px",
+  objectFit: "cover",
+  borderRadius: "12px"
+}
+
+const assetPreviewMetaStyle = {
+  fontSize: "12px",
+  color: "#475467",
+  wordBreak: "break-word"
+}
+
+const assetPreviewEmptyStyle = {
+  fontSize: "13px",
+  color: "#6b7280"
+}
+
+const badgeIndexStyle = {
+  minWidth: "28px",
+  height: "28px",
+  borderRadius: "999px",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "12px",
+  fontWeight: 800
+}
+
 const previewOverlayStyle = {
   position: "fixed",
   inset: 0,
@@ -1847,6 +1957,26 @@ const previewImageCardStyle = {
   justifyContent: "center",
   alignItems: "center",
   textAlign: "center"
+}
+
+const previewImageRealStyle = {
+  maxWidth: "100%",
+  maxHeight: "180px",
+  objectFit: "cover",
+  borderRadius: "12px"
+}
+
+const previewBadgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "8px",
+  width: "fit-content",
+  padding: "6px 10px",
+  borderRadius: "999px",
+  background: "#eef2ff",
+  color: "#3730a3",
+  fontSize: "12px",
+  fontWeight: 700
 }
 
 const previewPrimaryCtaStyle = {

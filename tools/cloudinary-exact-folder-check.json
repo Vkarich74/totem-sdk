@@ -1,0 +1,47 @@
+{
+  "checked_at": "2026-04-06T10:06:18.104Z",
+  "folders": {
+    "totem_media/salon/bootstrap-salon/hero": {
+      "exact_total": 51
+    },
+    "totem_media/salon/bootstrap-salon/logo": {
+      "exact_total": 51
+    },
+    "totem_media/salon/bootstrap-salon/gallery": {
+      "exact_total": 51
+    },
+    "totem_media/salon/bootstrap-salon/promo": {
+      "exact_total": 51
+    },
+    "totem_media/salon/bootstrap-salon/services": {
+      "exact_total": 51
+    },
+    "totem_media/salon/bootstrap-salon/reviews": {
+      "exact_total": 51
+    },
+    "totem_media/salon/bootstrap-salon/team": {
+      "exact_total": 51
+    },
+    "totem_media/master/bootstrap-master/hero": {
+      "exact_total": 51
+    },
+    "totem_media/master/bootstrap-master/logo": {
+      "exact_total": 51
+    },
+    "totem_media/master/bootstrap-master/gallery": {
+      "exact_total": 51
+    },
+    "totem_media/master/bootstrap-master/promo": {
+      "exact_total": 51
+    },
+    "totem_media/master/bootstrap-master/services": {
+      "exact_total": 51
+    },
+    "totem_media/master/bootstrap-master/reviews": {
+      "exact_total": 51
+    },
+    "totem_media/master/bootstrap-master/team": {
+      "exact_total": 51
+    }
+  }
+}

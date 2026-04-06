@@ -1,0 +1,237 @@
+{
+  "ok": true,
+  "cloud_name": "dgcec21nz",
+  "preset_name": "totem_unsigned_upload_v1",
+  "root_folder": "totem_media",
+  "allowed_formats": [
+    "jpg",
+    "jpeg",
+    "png",
+    "webp"
+  ],
+  "max_file_size_bytes": 10485760,
+  "test_slugs": {
+    "salon": "bootstrap-salon",
+    "master": "bootstrap-master"
+  },
+  "preset_summary": {
+    "name": "totem_unsigned_upload_v1",
+    "unsigned": true,
+    "resource_type": "image",
+    "allowed_formats": [
+      "jpg",
+      "jpeg",
+      "png",
+      "webp"
+    ],
+    "use_asset_folder_as_public_id_prefix": true
+  },
+  "role_strategy": {
+    "salon": [
+      "totem_media/salon/<slug>/hero",
+      "totem_media/salon/<slug>/logo",
+      "totem_media/salon/<slug>/gallery",
+      "totem_media/salon/<slug>/promo",
+      "totem_media/salon/<slug>/services",
+      "totem_media/salon/<slug>/reviews",
+      "totem_media/salon/<slug>/team"
+    ],
+    "master": [
+      "totem_media/master/<slug>/hero",
+      "totem_media/master/<slug>/logo",
+      "totem_media/master/<slug>/gallery",
+      "totem_media/master/<slug>/promo",
+      "totem_media/master/<slug>/services",
+      "totem_media/master/<slug>/reviews",
+      "totem_media/master/<slug>/team"
+    ]
+  },
+  "created_paths": {
+    "salon_hero": "totem_media/salon/bootstrap-salon/hero",
+    "master_hero": "totem_media/master/bootstrap-master/hero",
+    "salon_logo": "totem_media/salon/bootstrap-salon/logo",
+    "master_logo": "totem_media/master/bootstrap-master/logo",
+    "salon_gallery": "totem_media/salon/bootstrap-salon/gallery",
+    "master_gallery": "totem_media/master/bootstrap-master/gallery",
+    "salon_promo": "totem_media/salon/bootstrap-salon/promo",
+    "master_promo": "totem_media/master/bootstrap-master/promo",
+    "salon_services": "totem_media/salon/bootstrap-salon/services",
+    "master_services": "totem_media/master/bootstrap-master/services",
+    "salon_reviews": "totem_media/salon/bootstrap-salon/reviews",
+    "master_reviews": "totem_media/master/bootstrap-master/reviews",
+    "salon_team": "totem_media/salon/bootstrap-salon/team",
+    "master_team": "totem_media/master/bootstrap-master/team"
+  },
+  "smoke_uploads": {
+    "salon_hero": {
+      "asset_id": "b675a4b79db946f47501e756b8e12ad4",
+      "public_id": "salon-hero-1775469110568-3fljs4",
+      "asset_folder": "totem_media/salon/bootstrap-salon/hero",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469110/salon-hero-1775469110568-3fljs4.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "master_hero": {
+      "asset_id": "bfcdb242f2f40182826c3bed5c8fde42",
+      "public_id": "master-hero-1775469110571-6bkaed",
+      "asset_folder": "totem_media/master/bootstrap-master/hero",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469110/master-hero-1775469110571-6bkaed.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "salon_logo": {
+      "asset_id": "5901aef3fd55c3124a3be3e9da3e0be4",
+      "public_id": "salon-logo-1775469110571-4vhgj1",
+      "asset_folder": "totem_media/salon/bootstrap-salon/logo",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469111/salon-logo-1775469110571-4vhgj1.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "master_logo": {
+      "asset_id": "56c186700bf42f76e16712cae77bec91",
+      "public_id": "master-logo-1775469110571-1f2dg4",
+      "asset_folder": "totem_media/master/bootstrap-master/logo",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469112/master-logo-1775469110571-1f2dg4.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "salon_gallery": {
+      "asset_id": "cae51ef0adb4549c3dcaa45d955d64c2",
+      "public_id": "salon-gallery-1775469110571-routbf",
+      "asset_folder": "totem_media/salon/bootstrap-salon/gallery",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469112/salon-gallery-1775469110571-routbf.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "master_gallery": {
+      "asset_id": "c86071d9909be4cc65aa877f7bf92831",
+      "public_id": "master-gallery-1775469110571-bbs56u",
+      "asset_folder": "totem_media/master/bootstrap-master/gallery",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469113/master-gallery-1775469110571-bbs56u.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "salon_promo": {
+      "asset_id": "74eb17610383d69df6e2966ed41b6388",
+      "public_id": "salon-promo-1775469110571-1jj4w9",
+      "asset_folder": "totem_media/salon/bootstrap-salon/promo",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469114/salon-promo-1775469110571-1jj4w9.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "master_promo": {
+      "asset_id": "6123c283c0814c8c8252b3ee0dade540",
+      "public_id": "master-promo-1775469110571-48v7pb",
+      "asset_folder": "totem_media/master/bootstrap-master/promo",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469115/master-promo-1775469110571-48v7pb.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "salon_services": {
+      "asset_id": "7427ee7fbe5a1108bc91cb3542ef5250",
+      "public_id": "salon-services-1775469110571-kutw0d",
+      "asset_folder": "totem_media/salon/bootstrap-salon/services",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469115/salon-services-1775469110571-kutw0d.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "master_services": {
+      "asset_id": "192497ea44c128f946c3b49f587c4cda",
+      "public_id": "master-services-1775469110572-ny6dak",
+      "asset_folder": "totem_media/master/bootstrap-master/services",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469116/master-services-1775469110572-ny6dak.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "salon_reviews": {
+      "asset_id": "bb063862b4975dd3f6f5b005e08bbf97",
+      "public_id": "salon-reviews-1775469110572-si074r",
+      "asset_folder": "totem_media/salon/bootstrap-salon/reviews",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469117/salon-reviews-1775469110572-si074r.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "master_reviews": {
+      "asset_id": "fb04678ab8971cfca31931ab69441d0f",
+      "public_id": "master-reviews-1775469110572-3pxp9v",
+      "asset_folder": "totem_media/master/bootstrap-master/reviews",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469117/master-reviews-1775469110572-3pxp9v.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "salon_team": {
+      "asset_id": "5f81ef7195ef39443e2c8cd4da76648a",
+      "public_id": "salon-team-1775469110572-g7d01k",
+      "asset_folder": "totem_media/salon/bootstrap-salon/team",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469118/salon-team-1775469110572-g7d01k.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    },
+    "master_team": {
+      "asset_id": "5ae19b29518fde4c629834c8d736fbb1",
+      "public_id": "master-team-1775469110572-teaco8",
+      "asset_folder": "totem_media/master/bootstrap-master/team",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775469119/master-team-1775469110572-teaco8.png",
+      "width": 1,
+      "height": 1,
+      "format": "png",
+      "resource_type": "image",
+      "bytes": 68
+    }
+  },
+  "folder_checks": {
+    "salon_hero_count": 50,
+    "master_hero_count": 50,
+    "salon_logo_count": 50,
+    "master_logo_count": 50,
+    "salon_gallery_count": 50,
+    "master_gallery_count": 50,
+    "salon_promo_count": 50,
+    "master_promo_count": 50,
+    "salon_services_count": 50,
+    "master_services_count": 50,
+    "salon_reviews_count": 50,
+    "master_reviews_count": 50,
+    "salon_team_count": 50,
+    "master_team_count": 50
+  }
+}
