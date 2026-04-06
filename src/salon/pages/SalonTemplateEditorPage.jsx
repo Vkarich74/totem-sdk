@@ -94,8 +94,18 @@ const SALON_ASSET_KINDS = {
   team: "team"
 }
 
+const SALON_ASSET_KIND_VALUES = Object.freeze(Object.values(SALON_ASSET_KINDS))
 
-function mergeDraft(source = {}) {  return {
+function resolveSalonAssetKind(assetKind) {
+  const normalized = String(assetKind || "").trim().toLowerCase()
+  if (!SALON_ASSET_KIND_VALUES.includes(normalized)) {
+    throw new Error(`SALON_ASSET_KIND_INVALID:${assetKind || "unknown"}`)
+  }
+  return normalized
+}
+
+function mergeDraft(source = {}) {
+  return {
     ...EMPTY_DRAFT,
     ...source,
     identity: { ...EMPTY_DRAFT.identity, ...(source.identity || {}) },
@@ -243,7 +253,7 @@ function buildLocalDocument(previous, draft, slug, mode, validationResult) {
 
   return {
     ...current,
-    owner_type: "salon",
+    owner_type: SALON_OWNER_TYPE,
     owner_slug: slug,
     template_version: current.template_version || "v1",
     status: {
@@ -294,18 +304,27 @@ function getCloudinaryConfig() {
 }
 
 function buildCloudinaryAssetFolder(ownerType, ownerSlug, assetKind, rootFolder) {
-  return `${rootFolder}/${ownerType}/${ownerSlug}/${assetKind}`
+  const normalizedOwnerType = String(ownerType || SALON_OWNER_TYPE).trim().toLowerCase() || SALON_OWNER_TYPE
+  const normalizedAssetKind = resolveSalonAssetKind(assetKind)
+  return `${rootFolder}/${normalizedOwnerType}/${ownerSlug}/${normalizedAssetKind}`
 }
 
 function buildCloudinaryContext(meta) {
-  return `owner_type=${meta.ownerType}|owner_slug=${meta.ownerSlug}|asset_kind=${meta.assetKind}`
+  const ownerType = String(meta.ownerType || SALON_OWNER_TYPE).trim().toLowerCase() || SALON_OWNER_TYPE
+  const assetKind = resolveSalonAssetKind(meta.assetKind)
+  return `owner_type=${ownerType}|owner_slug=${meta.ownerSlug}|asset_kind=${assetKind}`
 }
 
 function buildCloudinaryTags(meta) {
-  return ["totem", meta.ownerType, meta.assetKind].filter(Boolean).join(",")
+  const ownerType = String(meta.ownerType || SALON_OWNER_TYPE).trim().toLowerCase() || SALON_OWNER_TYPE
+  const assetKind = resolveSalonAssetKind(meta.assetKind)
+  return ["totem", ownerType, assetKind].filter(Boolean).join(",")
 }
 
 function normalizeCloudinaryAsset(payload, meta) {
+  const ownerType = String(meta.ownerType || SALON_OWNER_TYPE).trim().toLowerCase() || SALON_OWNER_TYPE
+  const assetKind = resolveSalonAssetKind(meta.assetKind)
+
   return {
     asset_id: `cld:${payload?.public_id || ""}`,
     public_id: payload?.public_id || "",
@@ -316,9 +335,9 @@ function normalizeCloudinaryAsset(payload, meta) {
     format: payload?.format || "",
     bytes: payload?.bytes || null,
     resource_type: payload?.resource_type || "image",
-    owner_type: meta.ownerType,
+    owner_type: ownerType,
     owner_slug: meta.ownerSlug,
-    asset_kind: meta.assetKind,
+    asset_kind: assetKind,
     alt: meta.alt || ""
   }
 }
@@ -668,9 +687,9 @@ export default function SalonTemplateEditorPage() {
 
     try {
       const asset = await uploadImageToCloudinary(file, {
-        ownerType: "salon",
+        ownerType: SALON_OWNER_TYPE,
         ownerSlug: slug,
-        assetKind: slot,
+        assetKind: resolveSalonAssetKind(slot),
         alt: draft.images?.[slot]?.alt || ""
       })
       applyCloudinaryAssetToRootImage(slot, asset)
@@ -746,9 +765,9 @@ export default function SalonTemplateEditorPage() {
 
     try {
       const asset = await uploadImageToCloudinary(file, {
-        ownerType: "salon",
+        ownerType: SALON_OWNER_TYPE,
         ownerSlug: slug,
-        assetKind: "services"
+        assetKind: SALON_ASSET_KINDS.services
       })
       applyPopularServiceAsset(itemId, asset)
       setUploadFlag(uploadKey, { loading: false, error: "" })
@@ -816,9 +835,9 @@ export default function SalonTemplateEditorPage() {
 
     try {
       const asset = await uploadImageToCloudinary(file, {
-        ownerType: "salon",
+        ownerType: SALON_OWNER_TYPE,
         ownerSlug: slug,
-        assetKind: "promo"
+        assetKind: SALON_ASSET_KINDS.promo
       })
       applyPromoAsset(itemId, asset)
       setUploadFlag(uploadKey, { loading: false, error: "" })
@@ -881,9 +900,9 @@ export default function SalonTemplateEditorPage() {
 
     try {
       const asset = await uploadImageToCloudinary(file, {
-        ownerType: "salon",
+        ownerType: SALON_OWNER_TYPE,
         ownerSlug: slug,
-        assetKind: "gallery"
+        assetKind: SALON_ASSET_KINDS.gallery
       })
       applyGalleryAsset(itemId, asset)
       setUploadFlag(uploadKey, { loading: false, error: "" })
@@ -1002,9 +1021,9 @@ export default function SalonTemplateEditorPage() {
 
     try {
       const asset = await uploadImageToCloudinary(file, {
-        ownerType: "salon",
+        ownerType: SALON_OWNER_TYPE,
         ownerSlug: slug,
-        assetKind: "team"
+        assetKind: SALON_ASSET_KINDS.team
       })
       applyMasterAsset(itemId, asset)
       setUploadFlag(uploadKey, { loading: false, error: "" })
@@ -1305,7 +1324,7 @@ export default function SalonTemplateEditorPage() {
           }}>
             <StatusCard title="Cloud name" value={cloudinaryConfig.cloudName || "MISSING"} tone={cloudinaryConfig.cloudName ? "good" : "warn"} />
             <StatusCard title="Upload preset" value={cloudinaryConfig.uploadPreset || "MISSING"} tone={cloudinaryConfig.uploadPreset ? "good" : "warn"} />
-            <StatusCard title="Root folder" value={cloudinaryConfig.rootFolder} note="Storage contract: totem_media/salon/<slug>/<asset_kind>" tone="neutral" />
+            <StatusCard title="Root folder" value={cloudinaryConfig.rootFolder} note={`Storage contract: ${cloudinaryConfig.rootFolder}/${SALON_OWNER_TYPE}/<slug>/<asset_kind>`} tone="neutral" />
             <StatusCard title="Upload state" value={cloudinaryReady ? "READY" : "BLOCKED"} note={cloudinaryReady ? "Можно загружать изображения прямо из editor." : "Нужно заполнить VITE_CLOUDINARY_* в SDK env."} tone={cloudinaryReady ? "good" : "warn"} />
           </div>
         </div>
