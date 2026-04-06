@@ -257,6 +257,16 @@ function buildLocalDocument(previous, draft, slug, mode, validationResult) {
   }
 }
 
+function getValidationList(values) {
+  if (!Array.isArray(values)) return []
+  return values.map((item) => {
+    if (typeof item === "string") return item
+    if (item?.message) return item.message
+    if (item?.code) return item.code
+    return JSON.stringify(item)
+  })
+}
+
 function StatusCard({ title, value, note, tone = "neutral" }) {
   const palette = tone === "good"
     ? { border: "#abefc6", bg: "#ecfdf3", value: "#027a48" }
@@ -422,11 +432,23 @@ export default function SalonTemplateEditorPage() {
 
   const validation = documentState?.validation || {}
   const status = documentState?.status || {}
-  const warningCount = Array.isArray(validation.warnings) ? validation.warnings.length : 0
-  const errorCount = Array.isArray(validation.hard_errors) ? validation.hard_errors.length : 0
-  const completionScore = Number(validation.completeness_score || 0)
-  const lastSavedAt = documentState?.meta?.last_saved_at || documentState?.last_saved_at || null
   const mapUrl = buildMapUrl(draft.contact || {})
+
+  const previewDraft = useMemo(() => ({
+    ...draft,
+    contact: {
+      ...draft.contact,
+      map_embed_url: mapUrl
+    }
+  }), [draft, mapUrl])
+
+  const liveValidation = useMemo(() => validateTemplatePayload(previewDraft), [previewDraft])
+  const hardErrors = getValidationList(liveValidation?.hard_errors)
+  const warnings = getValidationList(liveValidation?.warnings)
+  const warningCount = warnings.length
+  const errorCount = hardErrors.length
+  const completionScore = Number(liveValidation?.completeness_score || validation?.completeness_score || 0)
+  const lastSavedAt = documentState?.meta?.last_saved_at || documentState?.last_saved_at || null
 
   const benefits = Array.isArray(draft.sections?.benefits) ? draft.sections.benefits : []
   const popularServices = Array.isArray(draft.sections?.popular_services) ? draft.sections.popular_services : []
@@ -534,7 +556,6 @@ export default function SalonTemplateEditorPage() {
     setSaveState({ kind: "idle", message: "" })
     setPublishState({ kind: "idle", message: "" })
   }
-
 
   function updatePromoItem(itemId, field, value) {
     setDraft((current) => ({
@@ -735,13 +756,7 @@ export default function SalonTemplateEditorPage() {
   async function handleOpenPreview() {
     if (!slug) return
 
-    const nextDraft = {
-      ...draft,
-      contact: {
-        ...draft.contact,
-        map_embed_url: mapUrl
-      }
-    }
+    const nextDraft = previewDraft
 
     if (!hasToken) {
       setPreviewState({
@@ -819,13 +834,7 @@ export default function SalonTemplateEditorPage() {
   async function handleSaveDraft() {
     if (!readyForWrite || !slug) return
 
-    const nextDraft = {
-      ...draft,
-      contact: {
-        ...draft.contact,
-        map_embed_url: mapUrl
-      }
-    }
+    const nextDraft = previewDraft
     const validationResult = validateTemplatePayload(nextDraft)
 
     if (!hasToken) {
@@ -872,13 +881,7 @@ export default function SalonTemplateEditorPage() {
   async function handlePublish() {
     if (!readyForWrite || !slug) return
 
-    const nextDraft = {
-      ...draft,
-      contact: {
-        ...draft.contact,
-        map_embed_url: mapUrl
-      }
-    }
+    const nextDraft = previewDraft
     const validationResult = validateTemplatePayload(nextDraft)
 
     if (!isTemplatePublishable(validationResult)) {
@@ -949,6 +952,15 @@ export default function SalonTemplateEditorPage() {
       ? "Страница читает document и позволяет работать с backend."
       : "Полная цепочка доступа ещё не внедрена. Страница работает в local mock режиме без поломки кабинета."
 
+  const sectionHealthItems = [
+    { label: "Benefits", value: benefits.length },
+    { label: "Popular services", value: popularServices.length },
+    { label: "Promos", value: promos.length },
+    { label: "Gallery", value: galleryItems.length },
+    { label: "Reviews", value: reviews.length },
+    { label: "Team", value: masters.length }
+  ]
+
   return (
     <div style={{ display: "grid", gap: "20px" }}>
       <PageHeader
@@ -985,9 +997,9 @@ export default function SalonTemplateEditorPage() {
         />
         <StatusCard
           title="Готовность к публикации"
-          value={status.is_publishable ? "Готово" : "Не готово"}
+          value={liveValidation?.is_publishable ? "Готово" : "Не готово"}
           note={`Ошибок: ${errorCount} · Warnings: ${warningCount}`}
-          tone={status.is_publishable ? "good" : errorCount ? "warn" : "neutral"}
+          tone={liveValidation?.is_publishable ? "good" : errorCount ? "warn" : "neutral"}
         />
         <StatusCard
           title="Заполнение"
@@ -1006,6 +1018,81 @@ export default function SalonTemplateEditorPage() {
           </div>
         </PageSection>
       ) : null}
+
+      <PageSection
+        title="Validation UX"
+        subtitle="Живая проверка текущего draft без ожидания save. Это финальный контроль перед publish."
+      >
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "12px"
+          }}>
+            <StatusCard
+              title="Live publish state"
+              value={liveValidation?.is_publishable ? "READY" : "BLOCKED"}
+              note="Статус считается по текущему draft, а не только по последнему save."
+              tone={liveValidation?.is_publishable ? "good" : "warn"}
+            />
+            <StatusCard
+              title="Hard errors"
+              value={String(errorCount)}
+              note="Эти ошибки блокируют publish."
+              tone={errorCount ? "warn" : "good"}
+            />
+            <StatusCard
+              title="Warnings"
+              value={String(warningCount)}
+              note="Не блокируют publish, но ухудшают готовность."
+              tone={warningCount ? "warn" : "good"}
+            />
+            <StatusCard
+              title="Section coverage"
+              value={`${sectionHealthItems.filter((item) => item.value > 0).length}/6`}
+              note="Покрытие ключевых editor-секций."
+              tone="neutral"
+            />
+          </div>
+
+          {hardErrors.length ? (
+            <div style={warningBoxStyle}>
+              <div style={{ fontSize: "14px", fontWeight: 800, marginBottom: "8px" }}>Блокеры публикации</div>
+              <div style={{ display: "grid", gap: "8px" }}>
+                {hardErrors.map((item, index) => (
+                  <div key={`${item}-${index}`} style={validationLineStyle}>• {item}</div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={successBoxStyle}>Блокеров публикации по текущему draft нет.</div>
+          )}
+
+          {warnings.length ? (
+            <div style={infoBoxStyle}>
+              <div style={{ fontSize: "14px", fontWeight: 800, marginBottom: "8px", color: "#111827" }}>Warnings</div>
+              <div style={{ display: "grid", gap: "8px" }}>
+                {warnings.map((item, index) => (
+                  <div key={`${item}-${index}`} style={validationLineStyle}>• {item}</div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "12px"
+          }}>
+            {sectionHealthItems.map((item) => (
+              <div key={item.label} style={miniMetricCardStyle}>
+                <div style={{ fontSize: "12px", color: "#6b7280" }}>{item.label}</div>
+                <div style={{ fontSize: "22px", fontWeight: 800, color: "#111827" }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </PageSection>
 
       <PageSection
         title="Рабочий блок v1"
@@ -1463,7 +1550,6 @@ export default function SalonTemplateEditorPage() {
             )}
           </div>
 
-
           <div style={editorGroupStyle}>
             <div style={editorGroupHeaderStyle}>CTA</div>
             <div style={editorGridStyle}>
@@ -1593,6 +1679,16 @@ export default function SalonTemplateEditorPage() {
                     <div style={previewCardTextStyle}>URL: {previewState.payload?.cta?.booking_url || "—"}</div>
                     <div style={previewCardTextStyle}>Якорь: {previewState.payload?.cta?.services_anchor || "—"}</div>
                   </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Sections coverage</div>
+                    <div style={previewCardTextStyle}>Benefits: {previewState.payload?.sections?.benefits?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Popular services: {previewState.payload?.sections?.popular_services?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Promos: {previewState.payload?.sections?.promos?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Gallery: {previewState.payload?.sections?.gallery?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Reviews: {previewState.payload?.sections?.reviews?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Team: {previewState.payload?.sections?.masters?.length || 0}</div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1693,6 +1789,18 @@ const sectionCardStyle = {
   background: "#ffffff",
   padding: "14px",
   minHeight: "108px"
+}
+
+const validationLineStyle = {
+  fontSize: "13px",
+  lineHeight: 1.5
+}
+
+const miniMetricCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "14px",
+  background: "#ffffff",
+  padding: "14px"
 }
 
 const previewOverlayStyle = {
