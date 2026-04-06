@@ -159,6 +159,19 @@ function createBenefitItem() {
   }
 }
 
+function createPopularServiceItem() {
+  return {
+    id: `popular-service-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: "",
+    description: "",
+    price: "",
+    duration_min: "",
+    image_asset_id: "",
+    is_active: true
+  }
+}
+
+
 function buildLocalDocument(previous, draft, slug, mode, validationResult) {
   const nowIso = new Date().toISOString()
   const current = previous || {}
@@ -368,7 +381,9 @@ export default function SalonTemplateEditorPage() {
   const completionScore = Number(validation.completeness_score || 0)
   const lastSavedAt = documentState?.meta?.last_saved_at || documentState?.last_saved_at || null
   const mapUrl = buildMapUrl(draft.contact || {})
+
   const benefits = Array.isArray(draft.sections?.benefits) ? draft.sections.benefits : []
+  const popularServices = Array.isArray(draft.sections?.popular_services) ? draft.sections.popular_services : []
 
   function updateDraftSection(section, field, value) {
     setDraft((current) => {
@@ -430,6 +445,47 @@ export default function SalonTemplateEditorPage() {
     setSaveState({ kind: "idle", message: "" })
     setPublishState({ kind: "idle", message: "" })
   }
+
+  function updatePopularServiceItem(itemId, field, value) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        popular_services: (current.sections?.popular_services || []).map((item) =>
+          item.id === itemId
+            ? { ...item, [field]: value }
+            : item
+        )
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleAddPopularService() {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        popular_services: [...(current.sections?.popular_services || []), createPopularServiceItem()]
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleRemovePopularService(itemId) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        popular_services: (current.sections?.popular_services || []).filter((item) => item.id !== itemId)
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
 
   async function handleOpenPreview() {
     if (!slug) return
@@ -736,6 +792,71 @@ export default function SalonTemplateEditorPage() {
             </div>
           </div>
 
+
+          <div style={editorGroupStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+              <div>
+                <div style={editorGroupHeaderStyle}>Популярные услуги</div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
+                  Карточки сохраняются в draft.sections.popular_services без ломки текущего draft flow.
+                </div>
+              </div>
+              <ActionButton tone="secondary" onClick={handleAddPopularService}>Добавить услугу</ActionButton>
+            </div>
+
+            {popularServices.length ? (
+              <div style={{ display: "grid", gap: "12px" }}>
+                {popularServices.map((item, index) => (
+                  <div key={item.id} style={nestedCardStyle}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+                        Популярная услуга #{index + 1}
+                      </div>
+                      <ActionButton tone="secondary" onClick={() => handleRemovePopularService(item.id)}>Удалить</ActionButton>
+                    </div>
+                    <div style={editorGridStyle}>
+                      <Field
+                        label="Название услуги"
+                        value={item.name || ""}
+                        onChange={(value) => updatePopularServiceItem(item.id, "name", value)}
+                        placeholder="Например: Женская стрижка"
+                      />
+                      <Field
+                        label="Цена"
+                        value={item.price || ""}
+                        onChange={(value) => updatePopularServiceItem(item.id, "price", value)}
+                        placeholder="от 1500 KGS"
+                      />
+                      <Field
+                        label="Длительность (мин)"
+                        value={item.duration_min || ""}
+                        onChange={(value) => updatePopularServiceItem(item.id, "duration_min", value)}
+                        placeholder="90"
+                      />
+                      <Field
+                        label="Image asset id"
+                        value={item.image_asset_id || ""}
+                        onChange={(value) => updatePopularServiceItem(item.id, "image_asset_id", value)}
+                        placeholder="Пока вручную, до image pipeline"
+                      />
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <Field
+                          label="Описание"
+                          value={item.description || ""}
+                          onChange={(value) => updatePopularServiceItem(item.id, "description", value)}
+                          placeholder="Короткое описание услуги"
+                          multiline
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={infoBoxStyle}>Популярные услуги ещё не добавлены.</div>
+            )}
+          </div>
+
           <div style={editorGroupStyle}>
             <div style={editorGroupHeaderStyle}>CTA</div>
             <div style={editorGridStyle}>
@@ -945,18 +1066,36 @@ const editorGroupHeaderStyle = {
 }
 
 const nestedEditorCardStyle = {
+
   border: "1px solid #e5e7eb",
+
   borderRadius: "14px",
+
   background: "#f8fafc",
+
   padding: "14px",
+
   display: "grid",
+
   gap: "14px"
+
 }
+
+
 
 const editorGridStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   gap: "14px"
+}
+
+const nestedCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "14px",
+  background: "#f8fafc",
+  padding: "14px",
+  display: "grid",
+  gap: "12px"
 }
 
 const sectionCardStyle = {
