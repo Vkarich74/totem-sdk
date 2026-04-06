@@ -1,0 +1,5 @@
+C:\Work\totem-sdk\src\master\payments\MasterFinancePage.jsx
+C:\Work\totem-sdk\src\master\payments\MasterMoneyPage.jsx
+C:\Work\totem-sdk\src\master\payments\MasterPayoutsPage.jsx
+C:\Work\totem-sdk\src\master\payments\MasterSettlementsPage.jsx
+C:\Work\totem-sdk\src\master\payments\MasterTransactionsPage.jsx
