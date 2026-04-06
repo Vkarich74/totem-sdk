@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import PageHeader from "../../cabinet/PageHeader"
@@ -176,6 +177,17 @@ function createGalleryItem(nextIndex = 0) {
     alt: "",
     slot_index: nextIndex,
     is_active: true
+  }
+}
+
+function createReviewItem(nextIndex = 0) {
+  return {
+    id: `review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    author: "",
+    text: "",
+    rating: 5,
+    is_active: true,
+    slot_index: nextIndex
   }
 }
 
@@ -392,6 +404,7 @@ export default function SalonTemplateEditorPage() {
   const benefits = Array.isArray(draft.sections?.benefits) ? draft.sections.benefits : []
   const popularServices = Array.isArray(draft.sections?.popular_services) ? draft.sections.popular_services : []
   const galleryItems = Array.isArray(draft.sections?.gallery) ? draft.sections.gallery : []
+  const reviews = Array.isArray(draft.sections?.reviews) ? draft.sections.reviews : []
 
   function updateDraftSection(section, field, value) {
     setDraft((current) => {
@@ -530,6 +543,57 @@ export default function SalonTemplateEditorPage() {
       sections: {
         ...(current.sections || {}),
         gallery: (current.sections?.gallery || []).filter((item) => item.id !== itemId)
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function updateReviewItem(itemId, field, value) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        reviews: (current.sections?.reviews || []).map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                [field]:
+                  field === "rating" || field === "slot_index"
+                    ? Number(value || 0)
+                    : field === "is_active"
+                      ? Boolean(value)
+                      : value
+              }
+            : item
+        )
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleAddReview() {
+    setDraft((current) => {
+      const currentReviews = current.sections?.reviews || []
+      return {
+        ...current,
+        sections: {
+          ...(current.sections || {}),
+          reviews: [...currentReviews, createReviewItem(currentReviews.length)]
+        }
+      }
+    })
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleRemoveReview(itemId) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        reviews: (current.sections?.reviews || []).filter((item) => item.id !== itemId)
       }
     }))
     setSaveState({ kind: "idle", message: "" })
@@ -813,7 +877,7 @@ export default function SalonTemplateEditorPage() {
 
       <PageSection
         title="Рабочий блок v1"
-        subtitle="Живой binding: Identity + Contacts + Benefits + Popular Services + Gallery + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
+        subtitle="Живой binding: Identity + Contacts + Benefits + Popular Services + Gallery + Reviews + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
       >
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={editorGroupStyle}>
@@ -997,6 +1061,84 @@ export default function SalonTemplateEditorPage() {
               </div>
             ) : (
               <div style={infoBoxStyle}>Галерея ещё не добавлена.</div>
+            )}
+          </div>
+
+          <div style={editorGroupStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+              <div>
+                <div style={editorGroupHeaderStyle}>Отзывы</div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
+                  Карточки сохраняются в draft.sections.reviews. Это рабочий блок отзывов до полной preview parity.
+                </div>
+              </div>
+              <ActionButton tone="secondary" onClick={handleAddReview}>Добавить отзыв</ActionButton>
+            </div>
+
+            {reviews.length ? (
+              <div style={{ display: "grid", gap: "12px" }}>
+                {reviews.map((item, index) => (
+                  <div key={item.id} style={nestedCardStyle}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+                        Отзыв #{index + 1}
+                      </div>
+                      <ActionButton tone="secondary" onClick={() => handleRemoveReview(item.id)}>Удалить</ActionButton>
+                    </div>
+                    <div style={editorGridStyle}>
+                      <Field
+                        label="Автор"
+                        value={item.author || ""}
+                        onChange={(value) => updateReviewItem(item.id, "author", value)}
+                        placeholder="Имя клиента"
+                      />
+                      <Field
+                        label="Рейтинг"
+                        value={String(item.rating ?? 5)}
+                        onChange={(value) => updateReviewItem(item.id, "rating", value)}
+                        placeholder="5"
+                      />
+                      <Field
+                        label="Порядок"
+                        value={String(item.slot_index ?? index)}
+                        onChange={(value) => updateReviewItem(item.id, "slot_index", value)}
+                        placeholder="0"
+                      />
+                      <label style={{ display: "grid", gap: "8px" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Активен</span>
+                        <select
+                          value={item.is_active ? "true" : "false"}
+                          onChange={(event) => updateReviewItem(item.id, "is_active", event.target.value === "true")}
+                          style={{
+                            width: "100%",
+                            border: "1px solid #d0d5dd",
+                            borderRadius: "12px",
+                            padding: "11px 14px",
+                            fontSize: "14px",
+                            color: "#111827",
+                            background: "#ffffff",
+                            boxSizing: "border-box"
+                          }}
+                        >
+                          <option value="true">Да</option>
+                          <option value="false">Нет</option>
+                        </select>
+                      </label>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <Field
+                          label="Текст отзыва"
+                          value={item.text || ""}
+                          onChange={(value) => updateReviewItem(item.id, "text", value)}
+                          placeholder="Текст отзыва клиента"
+                          multiline
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={infoBoxStyle}>Отзывы ещё не добавлены.</div>
             )}
           </div>
 
