@@ -119,6 +119,7 @@ function buildPreviewPayload(draft, slug) {
   return {
     identity: draft?.identity || {},
     contact: draft?.contact || {},
+    trust: draft?.trust || {},
     cta: draft?.cta || {},
     images: draft?.images || {},
     seo: draft?.seo || {},
@@ -137,6 +138,25 @@ function buildMapUrl(contact = {}) {
   }
 
   return `https://maps.google.com/?q=${encodeURIComponent(parts.join(", "))}`
+}
+
+function hasHardErrors(validationResult) {
+  return Array.isArray(validationResult?.hard_errors) && validationResult.hard_errors.length > 0
+}
+
+function isTemplatePublishable(validationResult) {
+  return Boolean(validationResult?.is_publishable) && !hasHardErrors(validationResult)
+}
+
+
+
+function createBenefitItem() {
+  return {
+    id: `benefit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    title: "",
+    text: "",
+    is_active: true
+  }
 }
 
 function buildLocalDocument(previous, draft, slug, mode, validationResult) {
@@ -348,6 +368,7 @@ export default function SalonTemplateEditorPage() {
   const completionScore = Number(validation.completeness_score || 0)
   const lastSavedAt = documentState?.meta?.last_saved_at || documentState?.last_saved_at || null
   const mapUrl = buildMapUrl(draft.contact || {})
+  const benefits = Array.isArray(draft.sections?.benefits) ? draft.sections.benefits : []
 
   function updateDraftSection(section, field, value) {
     setDraft((current) => {
@@ -369,14 +390,63 @@ export default function SalonTemplateEditorPage() {
     setPublishState({ kind: "idle", message: "" })
   }
 
+
+  function updateBenefitsItem(itemId, field, value) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        benefits: (current.sections?.benefits || []).map((item) =>
+          item.id === itemId
+            ? { ...item, [field]: value }
+            : item
+        )
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleAddBenefit() {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        benefits: [...(current.sections?.benefits || []), createBenefitItem()]
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleRemoveBenefit(itemId) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        benefits: (current.sections?.benefits || []).filter((item) => item.id !== itemId)
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
   async function handleOpenPreview() {
     if (!slug) return
+
+    const nextDraft = {
+      ...draft,
+      contact: {
+        ...draft.contact,
+        map_embed_url: mapUrl
+      }
+    }
 
     if (!hasToken) {
       setPreviewState({
         open: true,
         loading: false,
-        payload: buildPreviewPayload(draft, slug),
+        payload: buildPreviewPayload(nextDraft, slug),
         mode: "mock",
         message: "Локальный preview открыт без backend auth. Это mock по текущему draft."
       })
@@ -388,8 +458,36 @@ export default function SalonTemplateEditorPage() {
       loading: true,
       payload: null,
       mode: "loading",
-      message: "Загружаем preview…"
+      message: "Сохраняем draft и загружаем preview…"
     })
+
+    const saveResult = await saveSalonTemplateDraft(nextDraft, slug)
+
+    if (!saveResult.ok) {
+      setPreviewState({
+        open: true,
+        loading: false,
+        payload: buildPreviewPayload(nextDraft, slug),
+        mode: "fallback",
+        message: extractMessage(saveResult, "DRAFT_SAVE_BEFORE_PREVIEW_FAILED — открыт fallback preview.")
+      })
+      return
+    }
+
+    const savedDocument = saveResult.document || null
+    const savedValidation = savedDocument?.validation || validateTemplatePayload(nextDraft)
+
+    setDocumentState(savedDocument ? {
+      ...savedDocument,
+      validation: savedValidation,
+      status: {
+        ...(savedDocument?.status || {}),
+        is_publishable: Boolean(savedValidation?.is_publishable)
+      }
+    } : null)
+    setDraft(mergeDraft(savedDocument?.draft || nextDraft))
+    setSaveState({ kind: "success", message: "Черновик сохранён перед preview." })
+    setPublishState({ kind: "idle", message: "" })
 
     const result = await getSalonTemplatePreview(slug)
 
@@ -397,7 +495,7 @@ export default function SalonTemplateEditorPage() {
       setPreviewState({
         open: true,
         loading: false,
-        payload: buildPreviewPayload(draft, slug),
+        payload: buildPreviewPayload(nextDraft, slug),
         mode: "fallback",
         message: extractMessage(result, "PREVIEW_FETCH_FAILED — открыт fallback preview.")
       })
@@ -407,7 +505,7 @@ export default function SalonTemplateEditorPage() {
     setPreviewState({
       open: true,
       loading: false,
-      payload: result.payload || buildPreviewPayload(draft, slug),
+      payload: result.payload || buildPreviewPayload(nextDraft, slug),
       mode: "backend",
       message: result.is_ready_for_preview ? "Preview получен из backend." : "Preview получен, но страница ещё not ready."
     })
@@ -435,7 +533,7 @@ export default function SalonTemplateEditorPage() {
       setDraft(mergeDraft(nextDocument.draft || nextDraft))
       setSaveState({
         kind: "success",
-        message: validationResult.ok
+        message: !hasHardErrors(validationResult)
           ? "Черновик сохранён локально. Это mock-режим до подключения полной цепочки доступа."
           : "Черновик сохранён локально с validation errors. Проверь обязательные поля перед публикацией."
       })
@@ -482,7 +580,7 @@ export default function SalonTemplateEditorPage() {
     }
     const validationResult = validateTemplatePayload(nextDraft)
 
-    if (!validationResult.ok) {
+    if (!isTemplatePublishable(validationResult)) {
       const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "save", validationResult)
       setDocumentState(nextDocument)
       setDraft(mergeDraft(nextDraft))
@@ -610,7 +708,7 @@ export default function SalonTemplateEditorPage() {
 
       <PageSection
         title="Рабочий блок v1"
-        subtitle="Первый живой binding: Identity + Contacts + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
+        subtitle="Первый живой binding: Identity + Contacts + Benefits + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
       >
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={editorGroupStyle}>
@@ -844,6 +942,15 @@ const editorGroupHeaderStyle = {
   fontWeight: 800,
   color: "#111827",
   marginBottom: "14px"
+}
+
+const nestedEditorCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "14px",
+  background: "#f8fafc",
+  padding: "14px",
+  display: "grid",
+  gap: "14px"
 }
 
 const editorGridStyle = {

@@ -486,12 +486,21 @@ export default function PublicSalonPage({ slug }) {
 
     try {
       return buildSalonTemplateViewModel({
-        template: publishedTemplate,
         salon,
         masters,
         metrics,
-        slug,
+        publishedTemplate,
         isDemoSalon,
+        demoSlug: slug || DEMO_SLUG,
+        demoVisuals: DEMO_VISUALS,
+        demoMasterFallbacks: DEMO_MASTER_FALLBACKS,
+        demoBenefits: getBenefitsData(),
+        demoPromos: getPromoData(),
+        demoReviews: getReviewData(),
+        demoServiceCatalog: getServiceCatalogData(services).map((service, index) => ({
+          ...service,
+          imageUrl: pickDemoServiceImage(service, index),
+        })),
       });
     } catch (error) {
       console.error("buildSalonTemplateViewModel failed", error);
@@ -510,63 +519,68 @@ export default function PublicSalonPage({ slug }) {
     );
   }
 
-  const templateIdentity = templateViewModel?.identity || publishedTemplate?.identity || {};
-  const templateContact = templateViewModel?.contact || publishedTemplate?.contact || {};
-  const templateTrust = templateViewModel?.trust || publishedTemplate?.trust || {};
-  const templateSections = templateViewModel?.sections || publishedTemplate?.sections || {};
-  const templateImages = templateViewModel?.images || publishedTemplate?.images || {};
+  const renderMeta = templateViewModel?.meta || {};
+  const renderValidation = templateViewModel?.validation || {};
+  const renderSafe = renderMeta.render_safe !== false;
+  const renderFallbackUsed = renderMeta.fallback_used === true;
+
+  const templateIdentity = publishedTemplate?.identity || {};
+  const templateContact = publishedTemplate?.contact || {};
+  const templateTrust = publishedTemplate?.trust || {};
+  const templateSections = publishedTemplate?.sections || {};
+  const templateImages = publishedTemplate?.images || {};
   const templateHeroImage =
     pickFirstString(templateViewModel?.heroImage) ||
     resolveTemplateAsset(templateImages, templateImages?.hero) ||
     (isDemoSalon ? DEMO_VISUALS.hero : "");
 
   const salonName = pickFirstString(
-    templateViewModel?.identity?.salon_name,
+    templateViewModel?.salonName,
     templateIdentity.salon_name,
     isDemoSalon ? "TOTEM Демо Салон" : pickFirstString(salon?.name, "Салон"),
   );
   const slogan = pickFirstString(
-    templateViewModel?.identity?.slogan,
+    templateViewModel?.slogan,
     templateIdentity.slogan,
     isDemoSalon
       ? "Премиальная витрина салона с живым визуалом и онлайн-записью"
       : "Красота, сервис и онлайн-запись в одном месте",
   );
   const subtitle = pickFirstString(
-    templateViewModel?.identity?.subtitle,
+    templateViewModel?.subtitle,
     templateIdentity.subtitle,
     isDemoSalon
       ? "Современная публичная страница салона в TOTEM: услуги, команда, галерея, акции, отзывы и понятный путь от первого впечатления до записи."
       : "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.",
   );
   const district = pickFirstString(
-    templateViewModel?.contact?.district,
+    templateViewModel?.district,
     templateContact.district,
     "Первомайский район, Бишкек",
   );
   const address = pickFirstString(
-    templateViewModel?.contact?.address,
+    templateViewModel?.address,
     templateContact.address,
     "Киевская улица, 148",
   );
   const phone = pickFirstString(
-    templateViewModel?.contact?.phone,
+    templateViewModel?.phone,
     templateContact.phone,
     templateContact.whatsapp,
     "+996 700 123 456",
   );
   const scheduleText = pickFirstString(
-    templateViewModel?.contact?.schedule_text,
+    templateViewModel?.scheduleText,
     templateContact.schedule_text,
     "Ежедневно, 10:00–20:00",
   );
   const ratingValue = pickFirstString(
-    templateViewModel?.trust?.rating_value,
+    templateViewModel?.ratingValue,
     templateTrust.rating_value,
     "4.9",
   );
   const reviewCount = pickFirstString(
-    templateViewModel?.trust?.review_count,
+    templateViewModel?.reviewCount,
     templateTrust.review_count,
     "127+",
   );
@@ -576,7 +590,7 @@ export default function PublicSalonPage({ slug }) {
     .join(", ");
   const mapEmbedUrl =
     pickFirstString(
-      templateViewModel?.contact?.map_embed_url,
+      templateViewModel?.mapEmbedUrl,
       templateContact.map_embed_url,
       salon.map_embed_url,
       salon.google_map_embed_url,
@@ -584,8 +598,8 @@ export default function PublicSalonPage({ slug }) {
     ) || createMapEmbedUrl(defaultMapAddress || `${address}, ${district}`);
 
   const aboutParagraphs = (() => {
-    const modelParagraphs = Array.isArray(templateViewModel?.sections?.about_paragraphs)
-      ? templateViewModel.sections.about_paragraphs.filter(Boolean).slice(0, 4)
+    const modelParagraphs = Array.isArray(templateViewModel?.sections?.aboutParagraphs)
+      ? templateViewModel.sections.aboutParagraphs.filter(Boolean).slice(0, 4)
       : [];
     if (modelParagraphs.length > 0) return modelParagraphs;
 
@@ -634,8 +648,8 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const popularServices = (() => {
-    const modelServices = Array.isArray(templateViewModel?.sections?.popular_services)
-      ? templateViewModel.sections.popular_services
+    const modelServices = Array.isArray(templateViewModel?.sections?.popularServices)
+      ? templateViewModel.sections.popularServices
       : [];
     if (modelServices.length > 0) return modelServices;
 
@@ -644,8 +658,8 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const fullServiceList = (() => {
-    const modelCatalog = Array.isArray(templateViewModel?.sections?.full_service_list)
-      ? templateViewModel.sections.full_service_list
+    const modelCatalog = Array.isArray(templateViewModel?.sections?.fullServiceList)
+      ? templateViewModel.sections.fullServiceList
       : [];
     if (modelCatalog.length > 0) return modelCatalog;
 
@@ -684,8 +698,8 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const galleryImages = (() => {
-    const modelGallery = Array.isArray(templateViewModel?.sections?.gallery)
-      ? templateViewModel.sections.gallery.filter(Boolean)
+    const modelGallery = Array.isArray(templateViewModel?.sections?.galleryImages)
+      ? templateViewModel.sections.galleryImages.filter(Boolean)
       : [];
     if (modelGallery.length > 0) return modelGallery;
 
@@ -693,7 +707,7 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const completedBookings = pickFirstNumber(
-    templateViewModel?.trust?.completed_bookings,
+    templateViewModel?.completedBookings,
     templateTrust.completed_bookings,
     metrics?.completed,
     metrics?.completed_bookings,
@@ -826,6 +840,42 @@ export default function PublicSalonPage({ slug }) {
         paddingBottom: pagePaddingBottom,
       }}
     >
+      {publishedTemplate && (!renderSafe || renderFallbackUsed || renderValidation?.is_valid === false) && (
+        <section style={{ padding: isMobile ? "12px 0 4px" : "16px 0 8px" }}>
+          <div style={container}>
+            <div
+              style={{
+                ...cardStyle,
+                padding: "12px 14px",
+                background: "#FFF7E8",
+                border: "1px solid #F2D19C",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  color: "#73510D",
+                  fontWeight: 600,
+                }}
+              >
+                Template render safety mode активирован
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  color: "#73510D",
+                }}
+              >
+                Публичная страница отрисована через безопасный fallback, чтобы не допустить падение layout.
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section style={{ padding: isMobile ? "18px 0 12px" : "34px 0 16px" }}>
         <div style={container}>
           <div
