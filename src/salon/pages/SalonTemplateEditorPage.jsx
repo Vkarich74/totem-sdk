@@ -148,8 +148,6 @@ function isTemplatePublishable(validationResult) {
   return Boolean(validationResult?.is_publishable) && !hasHardErrors(validationResult)
 }
 
-
-
 function createBenefitItem() {
   return {
     id: `benefit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -171,6 +169,15 @@ function createPopularServiceItem() {
   }
 }
 
+function createGalleryItem(nextIndex = 0) {
+  return {
+    id: `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    image_asset_id: "",
+    alt: "",
+    slot_index: nextIndex,
+    is_active: true
+  }
+}
 
 function buildLocalDocument(previous, draft, slug, mode, validationResult) {
   const nowIso = new Date().toISOString()
@@ -384,6 +391,7 @@ export default function SalonTemplateEditorPage() {
 
   const benefits = Array.isArray(draft.sections?.benefits) ? draft.sections.benefits : []
   const popularServices = Array.isArray(draft.sections?.popular_services) ? draft.sections.popular_services : []
+  const galleryItems = Array.isArray(draft.sections?.gallery) ? draft.sections.gallery : []
 
   function updateDraftSection(section, field, value) {
     setDraft((current) => {
@@ -404,7 +412,6 @@ export default function SalonTemplateEditorPage() {
     setSaveState({ kind: "idle", message: "" })
     setPublishState({ kind: "idle", message: "" })
   }
-
 
   function updateBenefitsItem(itemId, field, value) {
     setDraft((current) => ({
@@ -486,6 +493,48 @@ export default function SalonTemplateEditorPage() {
     setPublishState({ kind: "idle", message: "" })
   }
 
+  function updateGalleryItem(itemId, field, value) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        gallery: (current.sections?.gallery || []).map((item) =>
+          item.id === itemId
+            ? { ...item, [field]: field === "slot_index" ? Number(value || 0) : value }
+            : item
+        )
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleAddGalleryItem() {
+    setDraft((current) => {
+      const currentGallery = current.sections?.gallery || []
+      return {
+        ...current,
+        sections: {
+          ...(current.sections || {}),
+          gallery: [...currentGallery, createGalleryItem(currentGallery.length)]
+        }
+      }
+    })
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
+
+  function handleRemoveGalleryItem(itemId) {
+    setDraft((current) => ({
+      ...current,
+      sections: {
+        ...(current.sections || {}),
+        gallery: (current.sections?.gallery || []).filter((item) => item.id !== itemId)
+      }
+    }))
+    setSaveState({ kind: "idle", message: "" })
+    setPublishState({ kind: "idle", message: "" })
+  }
 
   async function handleOpenPreview() {
     if (!slug) return
@@ -764,7 +813,7 @@ export default function SalonTemplateEditorPage() {
 
       <PageSection
         title="Рабочий блок v1"
-        subtitle="Первый живой binding: Identity + Contacts + Benefits + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
+        subtitle="Живой binding: Identity + Contacts + Benefits + Popular Services + Gallery + CTA. Остальные секции пока остаются structure-first, без тяжёлой формы."
       >
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={editorGroupStyle}>
@@ -792,6 +841,51 @@ export default function SalonTemplateEditorPage() {
             </div>
           </div>
 
+          <div style={editorGroupStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+              <div>
+                <div style={editorGroupHeaderStyle}>Преимущества</div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
+                  Карточки сохраняются в draft.sections.benefits без ломки текущего draft flow.
+                </div>
+              </div>
+              <ActionButton tone="secondary" onClick={handleAddBenefit}>Добавить преимущество</ActionButton>
+            </div>
+
+            {benefits.length ? (
+              <div style={{ display: "grid", gap: "12px" }}>
+                {benefits.map((item, index) => (
+                  <div key={item.id} style={nestedCardStyle}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+                        Преимущество #{index + 1}
+                      </div>
+                      <ActionButton tone="secondary" onClick={() => handleRemoveBenefit(item.id)}>Удалить</ActionButton>
+                    </div>
+                    <div style={editorGridStyle}>
+                      <Field
+                        label="Заголовок"
+                        value={item.title || ""}
+                        onChange={(value) => updateBenefitsItem(item.id, "title", value)}
+                        placeholder="Например: Сильная команда мастеров"
+                      />
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <Field
+                          label="Описание"
+                          value={item.text || ""}
+                          onChange={(value) => updateBenefitsItem(item.id, "text", value)}
+                          placeholder="Короткое описание преимущества"
+                          multiline
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={infoBoxStyle}>Преимущества ещё не добавлены.</div>
+            )}
+          </div>
 
           <div style={editorGroupStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
@@ -854,6 +948,55 @@ export default function SalonTemplateEditorPage() {
               </div>
             ) : (
               <div style={infoBoxStyle}>Популярные услуги ещё не добавлены.</div>
+            )}
+          </div>
+
+          <div style={editorGroupStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+              <div>
+                <div style={editorGroupHeaderStyle}>Галерея</div>
+                <div style={{ marginTop: "-8px", fontSize: "13px", color: "#6b7280" }}>
+                  Карточки сохраняются в draft.sections.gallery. Пока работаем через manual image asset id до image pipeline.
+                </div>
+              </div>
+              <ActionButton tone="secondary" onClick={handleAddGalleryItem}>Добавить изображение</ActionButton>
+            </div>
+
+            {galleryItems.length ? (
+              <div style={{ display: "grid", gap: "12px" }}>
+                {galleryItems.map((item, index) => (
+                  <div key={item.id} style={nestedCardStyle}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+                        Изображение галереи #{index + 1}
+                      </div>
+                      <ActionButton tone="secondary" onClick={() => handleRemoveGalleryItem(item.id)}>Удалить</ActionButton>
+                    </div>
+                    <div style={editorGridStyle}>
+                      <Field
+                        label="Image asset id"
+                        value={item.image_asset_id || ""}
+                        onChange={(value) => updateGalleryItem(item.id, "image_asset_id", value)}
+                        placeholder="asset-gallery-001"
+                      />
+                      <Field
+                        label="Alt"
+                        value={item.alt || ""}
+                        onChange={(value) => updateGalleryItem(item.id, "alt", value)}
+                        placeholder="Например: Интерьер салона"
+                      />
+                      <Field
+                        label="Порядок"
+                        value={String(item.slot_index ?? index)}
+                        onChange={(value) => updateGalleryItem(item.id, "slot_index", value)}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={infoBoxStyle}>Галерея ещё не добавлена.</div>
             )}
           </div>
 
@@ -1064,24 +1207,6 @@ const editorGroupHeaderStyle = {
   color: "#111827",
   marginBottom: "14px"
 }
-
-const nestedEditorCardStyle = {
-
-  border: "1px solid #e5e7eb",
-
-  borderRadius: "14px",
-
-  background: "#f8fafc",
-
-  padding: "14px",
-
-  display: "grid",
-
-  gap: "14px"
-
-}
-
-
 
 const editorGridStyle = {
   display: "grid",
