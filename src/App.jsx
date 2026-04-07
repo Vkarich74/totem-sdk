@@ -38,6 +38,7 @@ import MasterClientsPage from "./master/MasterClientsPage";
 import MasterSchedulePage from "./master/MasterSchedulePage";
 import MasterSettingsPage from "./master/MasterSettingsPage";
 import MasterServicesPage from "./master/MasterServicesPage";
+import MasterTemplateEditorPage from "./master/pages/MasterTemplateEditorPage";
 
 /* MASTER FINANCE */
 import MasterMoneyPage from "./master/payments/MasterMoneyPage";
@@ -237,6 +238,7 @@ export default function App() {
           <Route path="master/settlements" element={<RedirectToMasterSlug tail="settlements" />} />
           <Route path="master/payouts" element={<RedirectToMasterSlug tail="payouts" />} />
           <Route path="master/settings" element={<RedirectToMasterSlug tail="settings" />} />
+          <Route path="master/template" element={<RedirectToMasterSlug tail="template" />} />
 
           {/* MASTER CABINET WITH SLUG */}
           <Route path="master/:slug" element={<MasterLayout />}>
@@ -262,6 +264,7 @@ export default function App() {
             <Route path="settlements" element={<MasterSettlementsPage />} />
             <Route path="payouts" element={<MasterPayoutsPage />} />
 
+            <Route path="template" element={<MasterTemplateEditorPage />} />
             <Route path="settings" element={<MasterSettingsPage />} />
           </Route>
         </Routes>
