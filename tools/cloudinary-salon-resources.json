@@ -1,0 +1,24 @@
+{
+  "resources": [
+    {
+      "asset_id": "c4b913ec467ea0c2e9c8bed6e1ede674",
+      "public_id": "totem_media/salon/test-salon/hero/bcpfmqlbb9i1zjmv1qtv",
+      "format": "jpg",
+      "version": 1775472538,
+      "resource_type": "image",
+      "type": "upload",
+      "created_at": "2026-04-06T10:48:58Z",
+      "bytes": 83291,
+      "width": 800,
+      "height": 800,
+      "asset_folder": "totem_media/salon/test-salon/hero",
+      "display_name": "bcpfmqlbb9i1zjmv1qtv",
+      "access_mode": "public",
+      "url": "http://res.cloudinary.com/dgcec21nz/image/upload/v1775472538/totem_media/salon/test-salon/hero/bcpfmqlbb9i1zjmv1qtv.jpg",
+      "secure_url": "https://res.cloudinary.com/dgcec21nz/image/upload/v1775472538/totem_media/salon/test-salon/hero/bcpfmqlbb9i1zjmv1qtv.jpg"
+    }
+  ],
+  "rate_limit_allowed": 500,
+  "rate_limit_reset_at": "2026-04-06T13:00:00.000Z",
+  "rate_limit_remaining": 499
+}
