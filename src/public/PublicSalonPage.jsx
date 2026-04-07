@@ -159,7 +159,34 @@ function extractServices(salon) {
 
 function createMapEmbedUrl(addressValue) {
   const query = encodeURIComponent(addressValue);
-  return `https://www.google.com/maps?q=${query}&z=16&output=embed`;
+  return `https://maps.google.com/maps?output=embed&q=${query}&z=16`;
+}
+
+function normalizeMapEmbedUrl(rawUrl, fallbackAddress) {
+  const value = pickFirstString(rawUrl);
+  if (!value) {
+    return createMapEmbedUrl(fallbackAddress);
+  }
+
+  if (/output=embed/i.test(value) || /\/maps\/embed/i.test(value)) {
+    return value;
+  }
+
+  if (/google\.[^/]+\/maps/i.test(value)) {
+    try {
+      const parsed = new URL(value);
+      const query =
+        parsed.searchParams.get("q") ||
+        parsed.searchParams.get("query") ||
+        parsed.searchParams.get("destination") ||
+        fallbackAddress;
+      return createMapEmbedUrl(query);
+    } catch (error) {
+      return createMapEmbedUrl(fallbackAddress);
+    }
+  }
+
+  return value;
 }
 
 function getInitials(name) {
@@ -588,14 +615,16 @@ export default function PublicSalonPage({ slug }) {
   const defaultMapAddress = [address, district, pickFirstString(templateContact.city)]
     .filter(Boolean)
     .join(", ");
-  const mapEmbedUrl =
+  const mapEmbedUrl = normalizeMapEmbedUrl(
     pickFirstString(
       templateViewModel?.mapEmbedUrl,
       templateContact.map_embed_url,
       salon.map_embed_url,
       salon.google_map_embed_url,
       salon.map_url,
-    ) || createMapEmbedUrl(defaultMapAddress || `${address}, ${district}`);
+    ),
+    defaultMapAddress || `${address}, ${district}`,
+  );
 
   const aboutParagraphs = (() => {
     const modelParagraphs = Array.isArray(templateViewModel?.sections?.aboutParagraphs)
