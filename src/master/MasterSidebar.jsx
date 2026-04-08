@@ -15,6 +15,21 @@ function buildMenuStyle(isActive) {
   }
 }
 
+function buildPublicLinkStyle() {
+  return {
+    display: "block",
+    padding: "9px 12px",
+    marginBottom: "4px",
+    textDecoration: "none",
+    color: "#374151",
+    background: "transparent",
+    border: "1px solid transparent",
+    borderRadius: "10px",
+    fontWeight: 500,
+    boxShadow: "none",
+  }
+}
+
 function SectionTitle({ children, note }) {
   return (
     <div style={{ marginTop: "22px", marginBottom: "10px" }}>
@@ -49,6 +64,14 @@ function buildMasterPath(slug, tail = "") {
   return safeTail ? `/master/${safeSlug}/${safeTail}` : `/master/${safeSlug}`
 }
 
+function buildMasterPublicPath(slug) {
+  const safeSlug = String(slug || "").trim()
+  if (!safeSlug) {
+    return "/master"
+  }
+  return `/master/${safeSlug}`
+}
+
 function renderMenu(items, menuStyle) {
   return (
     <nav>
@@ -63,6 +86,7 @@ function renderMenu(items, menuStyle) {
 
 export default function MasterSidebar({ slug }) {
   const menuStyle = ({ isActive }) => buildMenuStyle(isActive)
+  const publicLinkStyle = buildPublicLinkStyle()
 
   const mainItems = [
     { to: buildMasterPath(slug, "dashboard"), label: "Главная" },
@@ -75,7 +99,6 @@ export default function MasterSidebar({ slug }) {
 
   const showcaseItems = [
     { to: buildMasterPath(slug, "template"), label: "Шаблон страницы" },
-    { to: `/master/${slug}`, label: "Публичная страница" },
   ]
 
   const financeItems = [
@@ -85,6 +108,8 @@ export default function MasterSidebar({ slug }) {
     { to: buildMasterPath(slug, "payouts"), label: "Выплаты" },
     { to: buildMasterPath(slug, "transactions"), label: "Транзакции" },
   ]
+
+  const publicHref = buildMasterPublicPath(slug)
 
   return (
     <div
@@ -112,6 +137,11 @@ export default function MasterSidebar({ slug }) {
 
       <SectionTitle note="Публичная страница, контент и публикация">Витрина</SectionTitle>
       {renderMenu(showcaseItems, menuStyle)}
+      <nav>
+        <a href={publicHref} style={publicLinkStyle}>
+          Публичная страница
+        </a>
+      </nav>
 
       <SectionTitle note="Деньги, расчёты и выплаты">Финансы</SectionTitle>
       {renderMenu(financeItems, menuStyle)}
