@@ -16,25 +16,6 @@ function buildMenuStyle(isActive) {
   }
 }
 
-function buildPublicButtonStyle() {
-  return {
-    display: "block",
-    width: "100%",
-    padding: "9px 12px",
-    marginBottom: "4px",
-    textDecoration: "none",
-    textAlign: "left",
-    color: "#374151",
-    background: "transparent",
-    border: "1px solid transparent",
-    borderRadius: "10px",
-    fontWeight: 500,
-    boxShadow: "none",
-    cursor: "pointer",
-    font: "inherit",
-  }
-}
-
 function SectionTitle({ children, note }) {
   return (
     <div style={{ marginTop: "22px", marginBottom: "10px" }}>
@@ -69,17 +50,6 @@ function buildMasterPath(slug, tail = "") {
   return safeTail ? `/master/${safeSlug}/${safeTail}` : `/master/${safeSlug}`
 }
 
-function buildMasterPublicUrl(slug) {
-  const safeSlug = String(slug || "").trim()
-  const origin = typeof window !== "undefined" ? window.location.origin : ""
-
-  if (!safeSlug) {
-    return origin ? `${origin}/master` : "/master"
-  }
-
-  return origin ? `${origin}/master/${safeSlug}` : `/master/${safeSlug}`
-}
-
 function renderMenu(items, menuStyle) {
   return (
     <nav>
@@ -94,7 +64,6 @@ function renderMenu(items, menuStyle) {
 
 export default function MasterSidebar({ slug }) {
   const menuStyle = ({ isActive }) => buildMenuStyle(isActive)
-  const publicButtonStyle = buildPublicButtonStyle()
 
   const mainItems = [
     { to: buildMasterPath(slug, "dashboard"), label: "Главная" },
@@ -116,19 +85,6 @@ export default function MasterSidebar({ slug }) {
     { to: buildMasterPath(slug, "payouts"), label: "Выплаты" },
     { to: buildMasterPath(slug, "transactions"), label: "Транзакции" },
   ]
-
-  function openPublicPage() {
-    const targetUrl = buildMasterPublicUrl(slug)
-
-    if (typeof window !== "undefined" && typeof window.open === "function") {
-      window.open(targetUrl, "_top")
-      return
-    }
-
-    if (typeof window !== "undefined" && window.location) {
-      window.location.href = targetUrl
-    }
-  }
 
   return (
     <div
@@ -156,11 +112,6 @@ export default function MasterSidebar({ slug }) {
 
       <SectionTitle note="Публичная страница, контент и публикация">Витрина</SectionTitle>
       {renderMenu(showcaseItems, menuStyle)}
-      <nav>
-        <button type="button" onClick={openPublicPage} style={publicButtonStyle}>
-          Публичная страница
-        </button>
-      </nav>
 
       <SectionTitle note="Деньги, расчёты и выплаты">Финансы</SectionTitle>
       {renderMenu(financeItems, menuStyle)}
