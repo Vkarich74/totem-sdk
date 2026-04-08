@@ -1,19 +1,26 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
+import { getMaster } from "../api/internal"
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com"
+const MasterContext = createContext(null)
 
-const C = createContext(null)
-
-function resolveSlug(routeSlug){
+export function resolveMasterSlug(routeSlug){
   if(routeSlug) return routeSlug
 
   if(window.MASTER_SLUG) return window.MASTER_SLUG
 
   return null
+}
+
+export function buildMasterPath(slug, section = "dashboard"){
+  const targetSection = section || "dashboard"
+
+  if(slug){
+    return `/master/${slug}/${targetSection}`
+  }
+
+  console.error("MASTER PATH ERROR: SLUG_MISSING", { section: targetSection })
+  return "/master"
 }
 
 function normalizeMasterRoot(payload){
@@ -87,14 +94,13 @@ function deriveBillingBlockReason(billingAccess){
 
 export function MasterProvider({ children }){
   const { slug: routeSlug } = useParams()
-  const slug = useMemo(()=>resolveSlug(routeSlug),[routeSlug])
+  const slug = useMemo(() => resolveMasterSlug(routeSlug), [routeSlug])
 
-  const [master,setMaster] = useState(null)
-  const [billingAccess,setBillingAccess] = useState(null)
-
-  const [loading,setLoading] = useState(true)
-  const [error,setError] = useState(null)
-  const [empty,setEmpty] = useState(false)
+  const [master, setMaster] = useState(null)
+  const [billingAccess, setBillingAccess] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [empty, setEmpty] = useState(false)
 
   async function load(currentSlug){
     if(!currentSlug){
@@ -110,28 +116,11 @@ export function MasterProvider({ children }){
     setMaster(null)
     setBillingAccess(null)
     setEmpty(false)
-
     setLoading(true)
     setError(null)
 
     try{
-      const response = await fetch(
-        API_BASE + "/internal/masters/" + encodeURIComponent(currentSlug)
-      )
-
-      const text = await response.text()
-      let raw = null
-
-      try{
-        raw = JSON.parse(text)
-      }catch{
-        raw = null
-      }
-
-      if(!response.ok){
-        throw new Error("MASTER_CONTEXT_HTTP_" + response.status)
-      }
-
+      const raw = await getMaster(currentSlug)
       const normalized = normalizeMasterRoot(raw)
       const masterData = extractMaster(normalized, currentSlug)
       const billing = extractBillingAccess(normalized)
@@ -158,9 +147,9 @@ export function MasterProvider({ children }){
     }
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     load(slug)
-  },[slug])
+  }, [slug])
 
   const canWrite = deriveCanWrite(billingAccess)
   const canWithdraw = deriveCanWithdraw(billingAccess)
@@ -173,11 +162,12 @@ export function MasterProvider({ children }){
     null
 
   return (
-    <C.Provider
+    <MasterContext.Provider
       value={{
         slug,
         salonSlug,
         master,
+        billing_access: billingAccess,
         billingAccess,
         canWrite,
         canWithdraw,
@@ -185,14 +175,32 @@ export function MasterProvider({ children }){
         loading,
         error,
         empty,
-        reload: ()=>load(slug)
+        reload: () => load(slug)
       }}
     >
       {children}
-    </C.Provider>
+    </MasterContext.Provider>
   )
 }
 
+export function useMasterContext(){
+  const context = useContext(MasterContext)
+
+  if(!context){
+    throw new Error("useMasterContext must be used inside MasterProvider")
+  }
+
+  return context
+}
+
 export function useMaster(){
-  return useContext(C)
+  return useMasterContext()
+}
+
+export function useMasterSlug(){
+  return useMasterContext().slug
+}
+
+export function useMasterBillingAccess(){
+  return useMasterContext().billing_access
 }

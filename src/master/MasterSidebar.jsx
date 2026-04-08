@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom"
 
-function buildMenuStyle(isActive){
+function buildMenuStyle(isActive) {
   return {
     display: "block",
     padding: "9px 12px",
@@ -11,20 +11,22 @@ function buildMenuStyle(isActive){
     border: isActive ? "1px solid #e5e7eb" : "1px solid transparent",
     borderRadius: "10px",
     fontWeight: isActive ? 700 : 500,
-    boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.04)" : "none"
+    boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.04)" : "none",
   }
 }
 
-function SectionTitle({ children, note }){
+function SectionTitle({ children, note }) {
   return (
     <div style={{ marginTop: "22px", marginBottom: "10px" }}>
-      <div style={{
-        fontSize: "11px",
-        color: "#6b7280",
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        fontWeight: 700
-      }}>
+      <div
+        style={{
+          fontSize: "11px",
+          color: "#6b7280",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          fontWeight: 700,
+        }}
+      >
         {children}
       </div>
       {note ? (
@@ -36,23 +38,67 @@ function SectionTitle({ children, note }){
   )
 }
 
-export default function MasterSidebar({ slug }) {
-  const base = `/master/${slug}`
+function buildMasterPath(slug, tail = "") {
+  const safeSlug = String(slug || "").trim()
+  const safeTail = String(tail || "").trim().replace(/^\/+/, "")
 
+  if (!safeSlug) {
+    return "/master"
+  }
+
+  return safeTail ? `/master/${safeSlug}/${safeTail}` : `/master/${safeSlug}`
+}
+
+function renderMenu(items, menuStyle) {
+  return (
+    <nav>
+      {items.map((item) => (
+        <NavLink key={item.to} style={menuStyle} to={item.to}>
+          {item.label}
+        </NavLink>
+      ))}
+    </nav>
+  )
+}
+
+export default function MasterSidebar({ slug }) {
   const menuStyle = ({ isActive }) => buildMenuStyle(isActive)
 
+  const mainItems = [
+    { to: buildMasterPath(slug, "dashboard"), label: "Главная" },
+    { to: buildMasterPath(slug, "bookings"), label: "Записи" },
+    { to: buildMasterPath(slug, "schedule"), label: "Расписание" },
+    { to: buildMasterPath(slug, "clients"), label: "Клиенты" },
+    { to: buildMasterPath(slug, "services"), label: "Услуги" },
+    { to: buildMasterPath(slug, "settings"), label: "Настройки" },
+  ]
+
+  const showcaseItems = [
+    { to: buildMasterPath(slug, "template"), label: "Шаблон страницы" },
+  ]
+
+  const financeItems = [
+    { to: buildMasterPath(slug, "finance"), label: "Финансы" },
+    { to: buildMasterPath(slug, "money"), label: "Доход" },
+    { to: buildMasterPath(slug, "settlements"), label: "Сеты" },
+    { to: buildMasterPath(slug, "payouts"), label: "Выплаты" },
+    { to: buildMasterPath(slug, "transactions"), label: "Транзакции" },
+  ]
+
   return (
-    <div style={{
-      width: "240px",
-      flexShrink: 0,
-      borderRight: "1px solid #eee",
-      padding: "20px",
-      background: "#fafafa",
-      position: "sticky",
-      top: 0,
-      height: "100%",
-      alignSelf: "flex-start"
-    }}>
+    <div
+      style={{
+        width: "240px",
+        flexShrink: 0,
+        borderRight: "1px solid #eee",
+        padding: "20px",
+        background: "#fafafa",
+        position: "sticky",
+        top: 0,
+        height: "100%",
+        alignSelf: "flex-start",
+      }}
+    >
       <div style={{ marginBottom: "24px" }}>
         <strong style={{ fontSize: "16px" }}>Кабинет мастера</strong>
         <div style={{ fontSize: "12px", color: "#777", marginTop: "6px", wordBreak: "break-word" }}>
@@ -61,34 +107,28 @@ export default function MasterSidebar({ slug }) {
       </div>
 
       <SectionTitle note="Операционка и ежедневная работа">Основное</SectionTitle>
-      <nav>
-        <NavLink style={menuStyle} to={`${base}/dashboard`}>Главная</NavLink>
-        <NavLink style={menuStyle} to={`${base}/bookings`}>Записи</NavLink>
-        <NavLink style={menuStyle} to={`${base}/schedule`}>Расписание</NavLink>
-        <NavLink style={menuStyle} to={`${base}/clients`}>Клиенты</NavLink>
-        <NavLink style={menuStyle} to={`${base}/services`}>Услуги</NavLink>
-        <NavLink style={menuStyle} to={`${base}/settings`}>Настройки</NavLink>
-      </nav>
+      {renderMenu(mainItems, menuStyle)}
+
+      <SectionTitle note="Публичная страница, контент и публикация">Витрина</SectionTitle>
+      {renderMenu(showcaseItems, menuStyle)}
 
       <SectionTitle note="Деньги, расчёты и выплаты">Финансы</SectionTitle>
-      <nav>
-        <NavLink style={menuStyle} to={`${base}/finance`}>Финансы</NavLink>
-        <NavLink style={menuStyle} to={`${base}/money`}>Доход</NavLink>
-        <NavLink style={menuStyle} to={`${base}/settlements`}>Сеты</NavLink>
-        <NavLink style={menuStyle} to={`${base}/payouts`}>Выплаты</NavLink>
-        <NavLink style={menuStyle} to={`${base}/transactions`}>Транзакции</NavLink>
-      </nav>
+      {renderMenu(financeItems, menuStyle)}
 
-      <div style={{
-        marginTop: "22px",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        background: "#fff",
-        padding: "12px"
-      }}>
-        <div style={{ fontSize: "12px", fontWeight: 700, color: "#111827", marginBottom: "6px" }}>Логика кабинета</div>
+      <div
+        style={{
+          marginTop: "22px",
+          border: "1px solid #e5e7eb",
+          borderRadius: "12px",
+          background: "#fff",
+          padding: "12px",
+        }}
+      >
+        <div style={{ fontSize: "12px", fontWeight: 700, color: "#111827", marginBottom: "6px" }}>
+          Логика кабинета
+        </div>
         <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}>
-          Стартуй с dashboard. Операционные задачи держи в верхнем блоке, деньги и расчёты — в нижнем.
+          Стартуй с dashboard. Операционные задачи держи в верхнем блоке, шаблон и публикацию — в витрине, деньги и расчёты — в нижнем блоке.
         </div>
       </div>
     </div>

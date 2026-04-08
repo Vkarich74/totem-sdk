@@ -1,9 +1,27 @@
-
 import { useEffect, useMemo, useState } from "react";
 
 const PUBLIC_API_BASE =
   String(import.meta.env.VITE_PUBLIC_API_BASE || "https://api.totemv.com/public").trim() ||
   "https://api.totemv.com/public";
+
+const UI_TEXT = {
+  benefitsTitle: "Почему выбирают этого мастера",
+  metricsTitle: "Быстрое доверие",
+  featuredServicesTitle: "Популярные услуги",
+  serviceCatalogTitle: "Каталог услуг",
+  reviewsTitle: "Отзывы клиентов",
+  aboutTitle: "О мастере",
+  contactsTitle: "Контакты и локация",
+  locationCardTitle: "Локация",
+  trustCardTitle: "Доверие и отзывы",
+  addressLabel: "Адрес",
+  scheduleLabel: "График",
+  phoneLabel: "Телефон",
+  statsYearsLabel: "года практики",
+  statsRatingLabel: "рейтинг клиентов",
+  statsBookingsLabel: "записей",
+  benefitIcon: "✦",
+};
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -373,7 +391,7 @@ export default function PublicMasterPage({ slug }) {
   const locationLine = joinText([address, district], ", ");
   const cityLine = joinText([district, city], ", ");
   const titleLine = joinText([masterName, profession], " — ");
-  const topMetaLine = joinText([city, hasText(city) ? "Персональная страница мастера" : ""], " • ");
+  const topMetaLine = city;
   const professionLine = joinText([profession, subtitle], ". ");
   const hasTopIdentity = hasAnyText([masterName, profession, city, bookingLabel, bookingUrl]);
   const hasHeroInfo = hasAnyText([heroBadge, masterName, profession, subtitle, description, heroImage]);
@@ -387,9 +405,9 @@ export default function PublicMasterPage({ slug }) {
   const hasReviews = reviews.length > 0;
   const hasAbout = aboutParagraphs.length > 0;
   const statsItems = [
-    { value: stats.years, label: "года практики" },
-    { value: stats.rating, label: "рейтинг клиентов" },
-    { value: stats.bookings, label: "записей" },
+    { value: stats.years, label: UI_TEXT.statsYearsLabel },
+    { value: stats.rating, label: UI_TEXT.statsRatingLabel },
+    { value: stats.bookings, label: UI_TEXT.statsBookingsLabel },
   ].filter((item) => hasText(item.value));
   const hasStats = statsItems.length > 0;
   const hasAboutBlock = hasAbout || hasStats;
@@ -448,6 +466,14 @@ export default function PublicMasterPage({ slug }) {
     fontWeight: 600,
     letterSpacing: "-0.2px",
     color: palette.textMain,
+  };
+
+  const cardSectionTitleStyle = {
+    margin: 0,
+    fontSize: "12px",
+    lineHeight: 1.4,
+    fontWeight: 400,
+    color: palette.textSecondary,
   };
 
   const sectionTextStyle = {
@@ -690,7 +716,7 @@ export default function PublicMasterPage({ slug }) {
                     >
                       {hasLocationCard ? (
                         <div style={{ ...cardStyle, padding: "14px", background: palette.card }}>
-                          <div style={{ fontSize: "12px", color: palette.textSecondary }}>Локация</div>
+                          <div style={cardSectionTitleStyle}>{UI_TEXT.locationCardTitle}</div>
                           {hasText(locationLine) ? (
                             <div
                               style={{
@@ -731,7 +757,7 @@ export default function PublicMasterPage({ slug }) {
                             justifyContent: "center",
                           }}
                         >
-                          <div style={{ fontSize: "12px", color: palette.textSecondary }}>Доверие и отзывы</div>
+                          <div style={cardSectionTitleStyle}>{UI_TEXT.trustCardTitle}</div>
                           {hasAnyText([ratingValue, reviewCount]) ? (
                             <div
                               style={{
@@ -746,7 +772,6 @@ export default function PublicMasterPage({ slug }) {
                                   {ratingValue}
                                 </div>
                               ) : null}
-                              <div style={{ fontSize: "15px", color: palette.star, letterSpacing: "1px" }}>★★★★★</div>
                               {hasText(reviewCount) ? (
                                 <div style={{ fontSize: "13px", color: palette.textSecondary }}>{reviewCount}</div>
                               ) : null}
@@ -780,17 +805,19 @@ export default function PublicMasterPage({ slug }) {
                     minHeight: "560px",
                     borderRadius: "20px",
                     overflow: "hidden",
-                    background: "#ECE4DB",
+                    background: heroImage ? "#ECE4DB" : "transparent",
                   }}
                 >
                   {heroVisual}
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background: palette.heroOverlay,
-                    }}
-                  />
+                  {heroImage ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: palette.heroOverlay,
+                      }}
+                    />
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -802,7 +829,7 @@ export default function PublicMasterPage({ slug }) {
         <section style={{ paddingBottom: "44px" }}>
           <div style={containerStyle}>
             <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-              <h2 style={sectionTitleStyle}>Почему выбирают этого мастера</h2>
+              <h2 style={sectionTitleStyle}>{UI_TEXT.benefitsTitle}</h2>
             </div>
 
             <div
@@ -827,7 +854,7 @@ export default function PublicMasterPage({ slug }) {
                       marginBottom: "10px",
                     }}
                   >
-                    ✦
+                    {UI_TEXT.benefitIcon}
                   </div>
                   {hasText(item.title) ? (
                     <div style={{ fontSize: "15px", lineHeight: 1.35, fontWeight: 600, color: palette.textMain }}>
@@ -850,7 +877,7 @@ export default function PublicMasterPage({ slug }) {
         <section style={{ paddingBottom: "44px" }}>
           <div style={containerStyle}>
             <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-              <h2 style={sectionTitleStyle}>Быстрое доверие</h2>
+              <h2 style={sectionTitleStyle}>{UI_TEXT.metricsTitle}</h2>
             </div>
 
             <div
@@ -883,7 +910,7 @@ export default function PublicMasterPage({ slug }) {
         <section style={{ paddingBottom: "44px" }}>
           <div style={containerStyle}>
             <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-              <h2 style={sectionTitleStyle}>Популярные услуги</h2>
+              <h2 style={sectionTitleStyle}>{UI_TEXT.featuredServicesTitle}</h2>
             </div>
 
             <div
@@ -963,7 +990,7 @@ export default function PublicMasterPage({ slug }) {
           <div style={containerStyle}>
             <div style={{ ...cardStyle, padding: "16px" }}>
               <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-                <h2 style={sectionTitleStyle}>Каталог услуг</h2>
+                <h2 style={sectionTitleStyle}>{UI_TEXT.serviceCatalogTitle}</h2>
               </div>
 
               <div style={{ display: "grid", gap: "10px" }}>
@@ -1002,7 +1029,7 @@ export default function PublicMasterPage({ slug }) {
         <section style={{ paddingBottom: "44px" }}>
           <div style={containerStyle}>
             <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-              <h2 style={sectionTitleStyle}>Отзывы клиентов</h2>
+              <h2 style={sectionTitleStyle}>{UI_TEXT.reviewsTitle}</h2>
             </div>
 
             <div
@@ -1014,9 +1041,11 @@ export default function PublicMasterPage({ slug }) {
             >
               {reviews.map((review) => (
                 <div key={`${review.name}_${review.text}_${review.rating}`} style={{ ...cardStyle, padding: "14px", background: palette.card }}>
-                  <div style={{ fontSize: "14px", color: palette.star, letterSpacing: "1px" }}>
-                    {hasText(review.rating) ? review.rating : "★★★★★"}
-                  </div>
+                  {hasText(review.rating) ? (
+                    <div style={{ fontSize: "14px", color: palette.star, letterSpacing: "1px" }}>
+                      {review.rating}
+                    </div>
+                  ) : null}
                   {hasText(review.text) ? (
                     <div style={{ marginTop: "8px", fontSize: "13px", lineHeight: 1.6, color: palette.textSecondary }}>
                       {review.text}
@@ -1047,7 +1076,7 @@ export default function PublicMasterPage({ slug }) {
             >
               {hasAboutBlock ? (
                 <div style={{ ...cardStyle, padding: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <h2 style={sectionTitleStyle}>О мастере</h2>
+                  <h2 style={sectionTitleStyle}>{UI_TEXT.aboutTitle}</h2>
 
                   {aboutParagraphs.map((paragraph, index) => (
                     <p key={`about_${index}`} style={sectionTextStyle}>
@@ -1078,12 +1107,12 @@ export default function PublicMasterPage({ slug }) {
               {hasContactsBlock ? (
                 <div style={{ ...cardStyle, padding: "20px", display: "flex", flexDirection: "column", gap: "12px", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <h2 style={sectionTitleStyle}>Контакты и локация</h2>
+                    <h2 style={sectionTitleStyle}>{UI_TEXT.contactsTitle}</h2>
                   </div>
 
                   {hasText(address) ? (
                     <div>
-                      <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>Адрес</div>
+                      <div style={cardSectionTitleStyle}>{UI_TEXT.addressLabel}</div>
                       <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
                         {address}
                       </div>
@@ -1097,7 +1126,7 @@ export default function PublicMasterPage({ slug }) {
 
                   {hasText(schedule) ? (
                     <div>
-                      <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>График</div>
+                      <div style={cardSectionTitleStyle}>{UI_TEXT.scheduleLabel}</div>
                       <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
                         {schedule}
                       </div>
@@ -1106,7 +1135,7 @@ export default function PublicMasterPage({ slug }) {
 
                   {hasText(phone) ? (
                     <div>
-                      <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>Телефон</div>
+                      <div style={cardSectionTitleStyle}>{UI_TEXT.phoneLabel}</div>
                       <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
                         {phone}
                       </div>
