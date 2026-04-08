@@ -27,6 +27,7 @@ function buildPublicLinkStyle() {
     borderRadius: "10px",
     fontWeight: 500,
     boxShadow: "none",
+    cursor: "pointer",
   }
 }
 
@@ -66,9 +67,11 @@ function buildMasterPath(slug, tail = "") {
 
 function buildMasterPublicPath(slug) {
   const safeSlug = String(slug || "").trim()
+
   if (!safeSlug) {
     return "/master"
   }
+
   return `/master/${safeSlug}`
 }
 
@@ -111,6 +114,11 @@ export default function MasterSidebar({ slug }) {
 
   const publicHref = buildMasterPublicPath(slug)
 
+  function openPublicPage(event) {
+    event.preventDefault()
+    window.location.assign(publicHref)
+  }
+
   return (
     <div
       style={{
@@ -138,7 +146,7 @@ export default function MasterSidebar({ slug }) {
       <SectionTitle note="Публичная страница, контент и публикация">Витрина</SectionTitle>
       {renderMenu(showcaseItems, menuStyle)}
       <nav>
-        <a href={publicHref} style={publicLinkStyle}>
+        <a href={publicHref} onClick={openPublicPage} style={publicLinkStyle}>
           Публичная страница
         </a>
       </nav>
