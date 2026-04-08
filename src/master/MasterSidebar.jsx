@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom"
 function buildMenuStyle(isActive) {
   return {
     display: "block",
+    width: "100%",
     padding: "9px 12px",
     marginBottom: "4px",
     textDecoration: "none",
@@ -15,12 +16,14 @@ function buildMenuStyle(isActive) {
   }
 }
 
-function buildPublicLinkStyle() {
+function buildPublicButtonStyle() {
   return {
     display: "block",
+    width: "100%",
     padding: "9px 12px",
     marginBottom: "4px",
     textDecoration: "none",
+    textAlign: "left",
     color: "#374151",
     background: "transparent",
     border: "1px solid transparent",
@@ -28,6 +31,7 @@ function buildPublicLinkStyle() {
     fontWeight: 500,
     boxShadow: "none",
     cursor: "pointer",
+    font: "inherit",
   }
 }
 
@@ -65,14 +69,15 @@ function buildMasterPath(slug, tail = "") {
   return safeTail ? `/master/${safeSlug}/${safeTail}` : `/master/${safeSlug}`
 }
 
-function buildMasterPublicPath(slug) {
+function buildMasterPublicUrl(slug) {
   const safeSlug = String(slug || "").trim()
+  const origin = typeof window !== "undefined" ? window.location.origin : ""
 
   if (!safeSlug) {
-    return "/master"
+    return origin ? `${origin}/master` : "/master"
   }
 
-  return `/master/${safeSlug}`
+  return origin ? `${origin}/master/${safeSlug}` : `/master/${safeSlug}`
 }
 
 function renderMenu(items, menuStyle) {
@@ -89,7 +94,7 @@ function renderMenu(items, menuStyle) {
 
 export default function MasterSidebar({ slug }) {
   const menuStyle = ({ isActive }) => buildMenuStyle(isActive)
-  const publicLinkStyle = buildPublicLinkStyle()
+  const publicButtonStyle = buildPublicButtonStyle()
 
   const mainItems = [
     { to: buildMasterPath(slug, "dashboard"), label: "Главная" },
@@ -112,11 +117,17 @@ export default function MasterSidebar({ slug }) {
     { to: buildMasterPath(slug, "transactions"), label: "Транзакции" },
   ]
 
-  const publicHref = buildMasterPublicPath(slug)
+  function openPublicPage() {
+    const targetUrl = buildMasterPublicUrl(slug)
 
-  function openPublicPage(event) {
-    event.preventDefault()
-    window.location.assign(publicHref)
+    if (typeof window !== "undefined" && window.top && window.top.location) {
+      window.top.location.assign(targetUrl)
+      return
+    }
+
+    if (typeof window !== "undefined" && window.location) {
+      window.location.assign(targetUrl)
+    }
   }
 
   return (
@@ -146,9 +157,9 @@ export default function MasterSidebar({ slug }) {
       <SectionTitle note="Публичная страница, контент и публикация">Витрина</SectionTitle>
       {renderMenu(showcaseItems, menuStyle)}
       <nav>
-        <a href={publicHref} onClick={openPublicPage} style={publicLinkStyle}>
+        <button type="button" onClick={openPublicPage} style={publicButtonStyle}>
           Публичная страница
-        </a>
+        </button>
       </nav>
 
       <SectionTitle note="Деньги, расчёты и выплаты">Финансы</SectionTitle>
