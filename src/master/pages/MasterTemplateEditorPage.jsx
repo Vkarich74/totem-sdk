@@ -24,7 +24,7 @@ const sectionItems = [
   { id: "about", label: "About", note: "О мастере и параграфы описания." },
   { id: "stats", label: "Stats", note: "Годы, рейтинг, бронирования." },
   { id: "images", label: "Images", note: "Hero mandatory, avatar/portfolio/service-card reserved." },
-  { id: "cta", label: "CTA", note: "Booking CTA, services anchor, contact map и sticky CTA." },
+  { id: "cta", label: "CTA", note: "Booking CTA, services anchor и sticky CTA." },
   { id: "seo", label: "SEO", note: "Title, description и canonical URL." },
   { id: "preview-publish", label: "Preview / Publish", note: "Сохранение, preview, publish и validation state." }
 ];
@@ -158,6 +158,17 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
+function normalizeDocumentDraft(documentState) {
+  const sourceDraft =
+    documentState?.draft ||
+    documentState?.payload ||
+    documentState?.document?.draft ||
+    documentState?.document?.payload ||
+    {};
+
+  return mergeDraft(sourceDraft);
+}
+
 function validateMasterTemplateDraft(draft) {
   const critical = [];
   const warnings = [];
@@ -235,9 +246,11 @@ function StatusPill({ tone = "neutral", children }) {
 
 function Panel({ title, note, children, id }) {
   return (
-    <PageSection id={id} title={title} description={note}>
-      <div style={{ display: "grid", gap: "16px" }}>{children}</div>
-    </PageSection>
+    <div id={id} style={{ scrollMarginTop: "24px" }}>
+      <PageSection title={title} description={note}>
+        <div style={{ display: "grid", gap: "16px" }}>{children}</div>
+      </PageSection>
+    </div>
   );
 }
 
@@ -328,11 +341,18 @@ export default function MasterTemplateEditorPage() {
   const [serverState, setServerState] = useState({ tone: "neutral", text: "Черновик не загружен." });
 
   const hasToken = hasInternalTemplateToken();
+  const canRunServerActions = hasToken && Boolean(slug);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadDocument() {
+      if (!slug) {
+        setServerState({ tone: "warning", text: "Не найден slug мастера. Route должен быть /master/:slug/template." });
+        setIsLoading(false);
+        return;
+      }
+
       if (!hasToken) {
         setServerState({ tone: "warning", text: "Нет TOTEM_INTERNAL_TOKEN. Редактор работает локально, но save/preview/publish на backend отключены." });
         setIsLoading(false);
@@ -350,8 +370,7 @@ export default function MasterTemplateEditorPage() {
         return;
       }
 
-      const sourceDraft = result.document?.draft || result.document?.payload || {};
-      setDraft(mergeDraft(sourceDraft));
+      setDraft(normalizeDocumentDraft(result.document));
       setDocumentState(result.document || null);
       setServerState({ tone: "success", text: "Master template document загружен." });
       setIsLoading(false);
@@ -532,45 +551,78 @@ export default function MasterTemplateEditorPage() {
     }));
   }
 
-  async function handleSaveDraft() {
-    if (!hasToken) {
-      setServerState({ tone: "warning", text: "Save пропущен: нет TOTEM_INTERNAL_TOKEN." });
-      return;
+  async function persistDraft(nextDraft, successText) {
+    if (!slug) {
+      setServerState({ tone: "warning", text: "Сохранение невозможно: отсутствует slug мастера." });
+      return { ok: false, error: "MASTER_SLUG_MISSING" };
     }
 
-    setIsSaving(true);
-    const result = await saveMasterTemplateDraft(draft, slug);
-    setIsSaving(false);
+    if (!hasToken) {
+      setServerState({ tone: "warning", text: "Сохранение пропущено: нет TOTEM_INTERNAL_TOKEN." });
+      return { ok: false, error: "MASTER_TEMPLATE_TOKEN_MISSING" };
+    }
+
+    const result = await saveMasterTemplateDraft(nextDraft, slug);
 
     if (!result.ok) {
       setServerState({ tone: "danger", text: `Не удалось сохранить draft: ${result.error}` });
-      return;
+      return result;
     }
 
     setDocumentState(result.document || null);
-    setServerState({ tone: "success", text: "Черновик мастера сохранён." });
+    setServerState({ tone: "success", text: successText });
+    return result;
+  }
+
+  async function handleSaveDraft() {
+    setIsSaving(true);
+    try {
+      await persistDraft(draft, "Черновик мастера сохранён.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function handlePreview() {
+    if (!slug) {
+      setServerState({ tone: "warning", text: "Preview невозможен: отсутствует slug мастера." });
+      return;
+    }
+
     if (!hasToken) {
       setServerState({ tone: "warning", text: "Preview пропущен: нет TOTEM_INTERNAL_TOKEN." });
       return;
     }
 
     setIsPreviewLoading(true);
-    const result = await getMasterTemplatePreview(slug);
-    setIsPreviewLoading(false);
+    try {
+      const saveResult = await persistDraft(draft, "Черновик сохранён перед preview.");
+      if (!saveResult.ok) return;
 
-    if (!result.ok) {
-      setServerState({ tone: "danger", text: `Не удалось собрать preview: ${result.error}` });
-      return;
+      const result = await getMasterTemplatePreview(slug);
+      if (!result.ok) {
+        setServerState({ tone: "danger", text: `Не удалось собрать preview: ${result.error}` });
+        return;
+      }
+
+      setPreviewState(result);
+      setServerState({
+        tone: result.is_ready_for_preview ? "success" : "warning",
+        text: result.is_ready_for_preview
+          ? "Preview payload собран."
+          : "Preview собран, но draft ещё не готов по backend validation."
+      });
+    } finally {
+      setIsPreviewLoading(false);
     }
-
-    setPreviewState(result);
-    setServerState({ tone: result.is_ready_for_preview ? "success" : "warning", text: result.is_ready_for_preview ? "Preview payload собран." : "Preview собран, но draft ещё не готов по backend validation." });
   }
 
   async function handlePublish() {
+    if (!slug) {
+      setServerState({ tone: "warning", text: "Publish невозможен: отсутствует slug мастера." });
+      return;
+    }
+
     if (!hasToken) {
       setServerState({ tone: "warning", text: "Publish пропущен: нет TOTEM_INTERNAL_TOKEN." });
       return;
@@ -582,16 +634,21 @@ export default function MasterTemplateEditorPage() {
     }
 
     setIsPublishing(true);
-    const result = await publishMasterTemplate(slug, "system:1");
-    setIsPublishing(false);
+    try {
+      const saveResult = await persistDraft(draft, "Черновик сохранён перед publish.");
+      if (!saveResult.ok) return;
 
-    if (!result.ok) {
-      setServerState({ tone: "danger", text: `Не удалось опубликовать master template: ${result.error}` });
-      return;
+      const result = await publishMasterTemplate(slug, "system:1");
+      if (!result.ok) {
+        setServerState({ tone: "danger", text: `Не удалось опубликовать master template: ${result.error}` });
+        return;
+      }
+
+      setDocumentState(result.document || null);
+      setServerState({ tone: "success", text: "Master template опубликован." });
+    } finally {
+      setIsPublishing(false);
     }
-
-    setDocumentState(result.document || null);
-    setServerState({ tone: "success", text: "Master template опубликован." });
   }
 
   const previewPath = `/preview/master/${slug}`;
@@ -607,6 +664,9 @@ export default function MasterTemplateEditorPage() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
         <StatusPill tone={hasToken ? "success" : "warning"}>
           {hasToken ? "TOKEN READY" : "TOKEN MISSING"}
+        </StatusPill>
+        <StatusPill tone={slug ? "success" : "warning"}>
+          {slug ? `SLUG: ${slug}` : "SLUG MISSING"}
         </StatusPill>
         <StatusPill tone={validation.is_ready_for_publish ? "success" : "warning"}>
           {validation.is_ready_for_publish ? "PUBLISH READY" : `CRITICAL: ${validation.critical.length}`}
@@ -637,9 +697,15 @@ export default function MasterTemplateEditorPage() {
 
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "10px" }}>
             <strong style={{ fontSize: "15px", color: "#111827" }}>Actions</strong>
-            <ActionButton onClick={handleSaveDraft} disabled={isLoading || isSaving}>{isSaving ? "Сохраняю..." : "Сохранить draft"}</ActionButton>
-            <ActionButton tone="secondary" onClick={handlePreview} disabled={isLoading || isPreviewLoading}>{isPreviewLoading ? "Собираю preview..." : "Собрать preview"}</ActionButton>
-            <ActionButton onClick={handlePublish} disabled={isLoading || isPublishing || !validation.is_ready_for_publish}>{isPublishing ? "Публикую..." : "Publish"}</ActionButton>
+            <ActionButton onClick={handleSaveDraft} disabled={isLoading || isSaving || !canRunServerActions}>
+              {isSaving ? "Сохраняю..." : "Сохранить draft"}
+            </ActionButton>
+            <ActionButton tone="secondary" onClick={handlePreview} disabled={isLoading || isPreviewLoading || !canRunServerActions}>
+              {isPreviewLoading ? "Собираю preview..." : "Собрать preview"}
+            </ActionButton>
+            <ActionButton onClick={handlePublish} disabled={isLoading || isPublishing || !validation.is_ready_for_publish || !canRunServerActions}>
+              {isPublishing ? "Публикую..." : "Publish"}
+            </ActionButton>
             <Link to={publicPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}>Открыть public master page</Link>
             <Link to={previewPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}>Открыть preview route</Link>
           </div>
