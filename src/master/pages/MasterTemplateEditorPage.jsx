@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import PageHeader from "../../cabinet/PageHeader";
@@ -9,6 +10,16 @@ import {
   publishMasterTemplate,
   saveMasterTemplateDraft
 } from "../../api/internal";
+
+const MASTER_OWNER_TYPE = "master";
+const MASTER_ASSET_KINDS = {
+  hero: "hero",
+  avatar: "avatar",
+  portfolio: "portfolio",
+  service_card: "service_card"
+};
+
+const MASTER_ASSET_KIND_VALUES = Object.freeze(Object.values(MASTER_ASSET_KINDS));
 
 const sectionItems = [
   { id: "identity", label: "Identity", note: "Имя мастера, профессия, город и верхняя identity strip." },
@@ -24,7 +35,7 @@ const sectionItems = [
   { id: "about", label: "About", note: "О мастере и параграфы описания." },
   { id: "stats", label: "Stats", note: "Годы, рейтинг, бронирования." },
   { id: "images", label: "Images", note: "Hero mandatory, avatar/portfolio/service-card reserved." },
-  { id: "cta", label: "CTA", note: "Booking CTA, services anchor и sticky CTA." },
+  { id: "cta", label: "CTA", note: "Booking CTA band и sticky CTA." },
   { id: "seo", label: "SEO", note: "Title, description и canonical URL." },
   { id: "preview-publish", label: "Preview / Publish", note: "Сохранение, preview, publish и validation state." }
 ];
@@ -86,11 +97,15 @@ const EMPTY_DRAFT = {
     hero: {
       image_asset_id: "",
       image_url: "",
+      secure_url: "",
+      public_id: "",
       alt: ""
     },
     avatar: {
       image_asset_id: "",
       image_url: "",
+      secure_url: "",
+      public_id: "",
       alt: ""
     },
     portfolio: [],
@@ -108,6 +123,97 @@ const EMPTY_DRAFT = {
     bookings: ""
   }
 };
+
+function resolveMasterAssetKind(assetKind) {
+  const normalized = String(assetKind || "").trim().toLowerCase();
+  if (!MASTER_ASSET_KIND_VALUES.includes(normalized)) {
+    throw new Error(`MASTER_ASSET_KIND_INVALID:${assetKind || "unknown"}`);
+  }
+  return normalized;
+}
+
+function getCloudinaryConfig() {
+  return {
+    cloudName: String(import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "").trim(),
+    uploadPreset: String(import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "").trim(),
+    rootFolder: String(import.meta.env.VITE_CLOUDINARY_ROOT_FOLDER || "totem_media").trim() || "totem_media"
+  };
+}
+
+function buildCloudinaryAssetFolder(ownerType, ownerSlug, assetKind, rootFolder) {
+  const normalizedOwnerType = String(ownerType || MASTER_OWNER_TYPE).trim().toLowerCase() || MASTER_OWNER_TYPE;
+  const normalizedAssetKind = resolveMasterAssetKind(assetKind);
+  return `${rootFolder}/${normalizedOwnerType}/${ownerSlug}/${normalizedAssetKind}`;
+}
+
+function buildCloudinaryContext(meta) {
+  const ownerType = String(meta.ownerType || MASTER_OWNER_TYPE).trim().toLowerCase() || MASTER_OWNER_TYPE;
+  const assetKind = resolveMasterAssetKind(meta.assetKind);
+  return `owner_type=${ownerType}|owner_slug=${meta.ownerSlug}|asset_kind=${assetKind}`;
+}
+
+function buildCloudinaryTags(meta) {
+  const ownerType = String(meta.ownerType || MASTER_OWNER_TYPE).trim().toLowerCase() || MASTER_OWNER_TYPE;
+  const assetKind = resolveMasterAssetKind(meta.assetKind);
+  return ["totem", ownerType, assetKind].filter(Boolean).join(",");
+}
+
+function normalizeCloudinaryAsset(payload, meta) {
+  const ownerType = String(meta.ownerType || MASTER_OWNER_TYPE).trim().toLowerCase() || MASTER_OWNER_TYPE;
+  const assetKind = resolveMasterAssetKind(meta.assetKind);
+
+  return {
+    asset_id: `cld:${payload?.public_id || ""}`,
+    public_id: payload?.public_id || "",
+    secure_url: payload?.secure_url || "",
+    asset_folder: payload?.asset_folder || meta.assetFolder,
+    width: payload?.width || null,
+    height: payload?.height || null,
+    format: payload?.format || "",
+    bytes: payload?.bytes || null,
+    resource_type: payload?.resource_type || "image",
+    owner_type: ownerType,
+    owner_slug: meta.ownerSlug,
+    asset_kind: assetKind,
+    alt: meta.alt || ""
+  };
+}
+
+async function uploadImageToCloudinary(file, meta) {
+  const config = getCloudinaryConfig();
+
+  if (!config.cloudName || !config.uploadPreset) {
+    throw new Error("CLOUDINARY_CONFIG_MISSING");
+  }
+
+  const assetFolder = buildCloudinaryAssetFolder(meta.ownerType, meta.ownerSlug, meta.assetKind, config.rootFolder);
+  const form = new FormData();
+  form.append("file", file);
+  form.append("upload_preset", config.uploadPreset);
+  form.append("asset_folder", assetFolder);
+  form.append("context", buildCloudinaryContext(meta));
+  form.append("tags", buildCloudinaryTags(meta));
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {
+    method: "POST",
+    body: form
+  });
+
+  const text = await response.text();
+  let json = null;
+
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+
+  if (!response.ok || !json) {
+    throw new Error(json?.error?.message || text || "CLOUDINARY_UPLOAD_FAILED");
+  }
+
+  return normalizeCloudinaryAsset(json, { ...meta, assetFolder });
+}
 
 function mergeDraft(source = {}) {
   return {
@@ -150,6 +256,16 @@ function mergeDraft(source = {}) {
   };
 }
 
+function extractMessage(result, fallback) {
+  return (
+    result?.detail?.json?.message ||
+    result?.detail?.json?.error ||
+    result?.detail?.text ||
+    result?.error ||
+    fallback
+  );
+}
+
 function getItemKey(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -158,15 +274,50 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
-function normalizeDocumentDraft(documentState) {
-  const sourceDraft =
-    documentState?.draft ||
-    documentState?.payload ||
-    documentState?.document?.draft ||
-    documentState?.document?.payload ||
-    {};
+function buildPreviewPayload(draft, slug) {
+  return {
+    ...draft,
+    slug: slug || ""
+  };
+}
 
-  return mergeDraft(sourceDraft);
+function buildLocalDocument(previous, draft, slug, mode, validationResult) {
+  const nowIso = new Date().toISOString();
+  const current = previous || {};
+  const validation = validationResult || validateMasterTemplateDraft(draft);
+
+  return {
+    ...current,
+    owner_type: MASTER_OWNER_TYPE,
+    owner_slug: slug,
+    template_version: current.template_version || "v1",
+    status: {
+      ...(current.status || {}),
+      is_dirty: mode === "save",
+      draft_exists: true,
+      publish_state: mode === "publish" ? "published" : (current.status?.publish_state || "draft"),
+      is_publishable: Boolean(validation.is_ready_for_publish),
+      published_exists: mode === "publish" ? true : Boolean(current.status?.published_exists)
+    },
+    draft,
+    published: mode === "publish" ? draft : (current.published || draft),
+    validation: {
+      ...validation,
+      validated_at: nowIso
+    },
+    meta: {
+      ...(current.meta || {}),
+      edited_by: "local-mock",
+      published_by: mode === "publish" ? "local-mock" : (current.meta?.published_by || null),
+      last_saved_at: mode === "save" ? nowIso : (current.meta?.last_saved_at || null),
+      last_published_at: mode === "publish" ? nowIso : (current.meta?.last_published_at || null),
+      updated_at: nowIso
+    },
+    publish_state: mode === "publish" ? "published" : (current.publish_state || "draft"),
+    last_saved_at: mode === "save" ? nowIso : (current.last_saved_at || null),
+    last_published_at: mode === "publish" ? nowIso : (current.last_published_at || null),
+    updated_at: nowIso
+  };
 }
 
 function validateMasterTemplateDraft(draft) {
@@ -177,7 +328,7 @@ function validateMasterTemplateDraft(draft) {
   if (!normalizeText(draft.identity.profession)) critical.push("identity.profession");
 
   const hasHeroAssetId = normalizeText(draft.images.hero.image_asset_id);
-  const hasHeroFallback = normalizeText(draft.images.hero.image_url);
+  const hasHeroFallback = normalizeText(draft.images.hero.image_url) || normalizeText(draft.images.hero.secure_url);
   if (!hasHeroAssetId && !hasHeroFallback) critical.push("images.hero");
 
   if (!normalizeText(draft.location.address) && !normalizeText(draft.location.map_url)) {
@@ -208,11 +359,27 @@ function validateMasterTemplateDraft(draft) {
   if (!normalizeText(draft.seo.title) && !normalizeText(draft.seo.description)) warnings.push("seo");
   if (!normalizeText(draft.trust.sticky_subline)) warnings.push("trust.sticky_subline");
 
+  const filledSections = [
+    draft.identity.master_name,
+    draft.identity.profession,
+    draft.location.address || draft.location.map_url,
+    draft.cta.booking_label,
+    hasFeaturedServices || hasServiceCatalog ? "services" : "",
+    Array.isArray(draft.sections.about_paragraphs) && draft.sections.about_paragraphs.length ? "about" : ""
+  ].filter(Boolean).length;
+
   return {
     critical,
     warnings,
-    is_ready_for_publish: critical.length === 0
+    hard_errors: critical,
+    is_ready_for_publish: critical.length === 0,
+    is_publishable: critical.length === 0,
+    completeness_score: Math.round((filledSections / 6) * 100)
   };
+}
+
+function getAssetPreviewUrl(entity = {}) {
+  return entity?.secure_url || entity?.image_secure_url || entity?.image_url || "";
 }
 
 function StatusPill({ tone = "neutral", children }) {
@@ -244,6 +411,31 @@ function StatusPill({ tone = "neutral", children }) {
   );
 }
 
+function StatusCard({ title, value, note, tone = "neutral" }) {
+  const palette = tone === "good"
+    ? { border: "#abefc6", bg: "#ecfdf3", value: "#027a48" }
+    : tone === "warn"
+      ? { border: "#fde68a", bg: "#fffbeb", value: "#b45309" }
+      : { border: "#e5e7eb", bg: "#ffffff", value: "#111827" };
+
+  return (
+    <div
+      style={{
+        border: `1px solid ${palette.border}`,
+        background: palette.bg,
+        borderRadius: "14px",
+        padding: "16px"
+      }}
+    >
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>{title}</div>
+      <div style={{ fontSize: "24px", fontWeight: 800, color: palette.value }}>{value}</div>
+      {note ? (
+        <div style={{ marginTop: "8px", fontSize: "13px", color: "#6b7280", lineHeight: 1.45 }}>{note}</div>
+      ) : null}
+    </div>
+  );
+}
+
 function Panel({ title, note, children, id }) {
   return (
     <div id={id} style={{ scrollMarginTop: "24px" }}>
@@ -261,6 +453,46 @@ function Field({ label, children, hint }) {
       {children}
       {hint ? <span style={{ fontSize: "12px", color: "#6b7280" }}>{hint}</span> : null}
     </label>
+  );
+}
+
+function UploadInput({ onSelect, disabled = false }) {
+  return (
+    <label style={uploadFieldStyle}>
+      <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Загрузка изображения</span>
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/webp"
+        disabled={disabled}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            onSelect(file);
+          }
+          event.target.value = "";
+        }}
+        style={{ fontSize: "13px" }}
+      />
+    </label>
+  );
+}
+
+function AssetPreview({ title = "Preview", entity = {}, emptyNote = "Изображение ещё не загружено." }) {
+  const previewUrl = getAssetPreviewUrl(entity);
+  const assetId = entity?.image_asset_id || entity?.asset_id || "";
+
+  return (
+    <div style={assetPreviewCardStyle}>
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>{title}</div>
+      {previewUrl ? (
+        <>
+          <img src={previewUrl} alt={entity?.alt || title} style={assetPreviewImageStyle} />
+          <div style={assetPreviewMetaStyle}>{assetId || "Asset attached"}</div>
+        </>
+      ) : (
+        <div style={assetPreviewEmptyStyle}>{emptyNote}</div>
+      )}
+    </div>
   );
 }
 
@@ -282,6 +514,19 @@ function textareaStyle(rows = 4) {
     ...inputStyle(),
     minHeight: `${rows * 24 + 24}px`,
     resize: "vertical"
+  };
+}
+
+function selectStyle() {
+  return {
+    width: "100%",
+    border: "1px solid #d0d5dd",
+    borderRadius: "12px",
+    padding: "11px 14px",
+    fontSize: "14px",
+    color: "#111827",
+    background: "#ffffff",
+    boxSizing: "border-box"
   };
 }
 
@@ -333,47 +578,56 @@ export default function MasterTemplateEditorPage() {
   const { slug = "" } = useParams();
   const [draft, setDraft] = useState(() => mergeDraft());
   const [documentState, setDocumentState] = useState(null);
-  const [previewState, setPreviewState] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [serverState, setServerState] = useState({ tone: "neutral", text: "Черновик не загружен." });
+  const [previewState, setPreviewState] = useState({ open: false, loading: false, payload: null, mode: "idle", message: "" });
+  const [uploadState, setUploadState] = useState({});
+  const [pageLoading, setPageLoading] = useState(true);
+  const [pageError, setPageError] = useState(null);
+  const [saveState, setSaveState] = useState({ kind: "idle", message: "" });
+  const [publishState, setPublishState] = useState({ kind: "idle", message: "" });
 
   const hasToken = hasInternalTemplateToken();
-  const canRunServerActions = hasToken && Boolean(slug);
+  const cloudinaryConfig = getCloudinaryConfig();
+  const cloudinaryReady = Boolean(cloudinaryConfig.cloudName && cloudinaryConfig.uploadPreset);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadDocument() {
       if (!slug) {
-        setServerState({ tone: "warning", text: "Не найден slug мастера. Route должен быть /master/:slug/template." });
-        setIsLoading(false);
+        setPageLoading(false);
+        setPageError("MASTER_SLUG_MISSING");
         return;
       }
 
       if (!hasToken) {
-        setServerState({ tone: "warning", text: "Нет TOTEM_INTERNAL_TOKEN. Редактор работает локально, но save/preview/publish на backend отключены." });
-        setIsLoading(false);
+        const fallbackDraft = mergeDraft();
+        const localValidation = validateMasterTemplateDraft(fallbackDraft);
+        const localDocument = buildLocalDocument(null, fallbackDraft, slug, "save", localValidation);
+        if (cancelled) return;
+        setDocumentState(localDocument);
+        setDraft(fallbackDraft);
+        setPageError(null);
+        setPageLoading(false);
         return;
       }
 
-      setIsLoading(true);
+      setPageLoading(true);
+      setPageError(null);
+
       const result = await getMasterTemplateDocument(slug);
       if (cancelled) return;
 
       if (!result.ok) {
-        setServerState({ tone: "danger", text: `Не удалось загрузить master draft: ${result.error}` });
-        setDraft(mergeDraft());
-        setIsLoading(false);
+        setPageError(extractMessage(result, "MASTER_TEMPLATE_DOCUMENT_FETCH_FAILED"));
+        setPageLoading(false);
         return;
       }
 
-      setDraft(normalizeDocumentDraft(result.document));
-      setDocumentState(result.document || null);
-      setServerState({ tone: "success", text: "Master template document загружен." });
-      setIsLoading(false);
+      const nextDocument = result.document || null;
+      const sourceDraft = nextDocument?.draft || nextDocument?.payload || {};
+      setDocumentState(nextDocument);
+      setDraft(mergeDraft(sourceDraft));
+      setPageLoading(false);
     }
 
     loadDocument();
@@ -384,6 +638,28 @@ export default function MasterTemplateEditorPage() {
   }, [hasToken, slug]);
 
   const validation = useMemo(() => validateMasterTemplateDraft(draft), [draft]);
+  const hardErrors = Array.isArray(validation.hard_errors) ? validation.hard_errors : [];
+  const warnings = Array.isArray(validation.warnings) ? validation.warnings : [];
+  const completionScore = Number(validation.completeness_score || 0);
+  const lastSavedAt = documentState?.meta?.last_saved_at || documentState?.last_saved_at || null;
+
+  const sectionHealthItems = [
+    { label: "Badges", value: draft.sections.badges.length },
+    { label: "Benefits", value: draft.sections.benefits.length },
+    { label: "Metrics", value: draft.metrics.metrics.length },
+    { label: "Featured", value: draft.sections.featured_services.length },
+    { label: "Catalog", value: draft.sections.service_catalog.length },
+    { label: "Reviews", value: draft.sections.reviews.length }
+  ];
+
+  function resetStateMessages() {
+    setSaveState({ kind: "idle", message: "" });
+    setPublishState({ kind: "idle", message: "" });
+  }
+
+  function setUploadFlag(key, value) {
+    setUploadState((current) => ({ ...current, [key]: value }));
+  }
 
   function setDraftField(section, field, value) {
     setDraft((prev) => ({
@@ -393,6 +669,7 @@ export default function MasterTemplateEditorPage() {
         [field]: value
       }
     }));
+    resetStateMessages();
   }
 
   function setNestedDraftField(section, nested, field, value) {
@@ -406,6 +683,60 @@ export default function MasterTemplateEditorPage() {
         }
       }
     }));
+    resetStateMessages();
+  }
+
+  function applyCloudinaryAssetToRootImage(slot, asset) {
+    setDraft((current) => ({
+      ...current,
+      images: {
+        ...(current.images || {}),
+        [slot]: {
+          ...(current.images?.[slot] || {}),
+          image_asset_id: asset.asset_id,
+          secure_url: asset.secure_url,
+          image_url: asset.secure_url,
+          public_id: asset.public_id,
+          asset_folder: asset.asset_folder,
+          width: asset.width,
+          height: asset.height,
+          format: asset.format,
+          bytes: asset.bytes,
+          resource_type: asset.resource_type,
+          owner_type: asset.owner_type,
+          owner_slug: asset.owner_slug,
+          asset_kind: asset.asset_kind
+        },
+        assets: {
+          ...(current.images?.assets || {}),
+          [slot]: {
+            ...(current.images?.assets?.[slot] || {}),
+            ...asset
+          }
+        }
+      }
+    }));
+    resetStateMessages();
+  }
+
+  async function handleRootImageUpload(slot, file) {
+    if (!slug) return;
+
+    const uploadKey = `root:${slot}`;
+    setUploadFlag(uploadKey, { loading: true, error: "" });
+
+    try {
+      const asset = await uploadImageToCloudinary(file, {
+        ownerType: MASTER_OWNER_TYPE,
+        ownerSlug: slug,
+        assetKind: resolveMasterAssetKind(slot),
+        alt: draft.images?.[slot]?.alt || ""
+      });
+      applyCloudinaryAssetToRootImage(slot, asset);
+      setUploadFlag(uploadKey, { loading: false, error: "" });
+    } catch (error) {
+      setUploadFlag(uploadKey, { loading: false, error: error?.message || "UPLOAD_FAILED" });
+    }
   }
 
   function setArrayItem(sectionKey, index, field, value) {
@@ -418,6 +749,7 @@ export default function MasterTemplateEditorPage() {
         ))
       }
     }));
+    resetStateMessages();
   }
 
   function setMetricItem(index, field, value) {
@@ -430,6 +762,7 @@ export default function MasterTemplateEditorPage() {
         ))
       }
     }));
+    resetStateMessages();
   }
 
   function setImageArrayItem(imageKey, index, field, value) {
@@ -442,6 +775,7 @@ export default function MasterTemplateEditorPage() {
         ))
       }
     }));
+    resetStateMessages();
   }
 
   function setReviewItem(index, field, value) {
@@ -459,6 +793,7 @@ export default function MasterTemplateEditorPage() {
         }
       }
     }));
+    resetStateMessages();
   }
 
   function addPrimitiveItem(sectionKey, emptyValue = "") {
@@ -469,6 +804,7 @@ export default function MasterTemplateEditorPage() {
         [sectionKey]: [...prev.sections[sectionKey], emptyValue]
       }
     }));
+    resetStateMessages();
   }
 
   function updatePrimitiveItem(sectionKey, index, value) {
@@ -479,6 +815,7 @@ export default function MasterTemplateEditorPage() {
         [sectionKey]: prev.sections[sectionKey].map((item, itemIndex) => itemIndex === index ? value : item)
       }
     }));
+    resetStateMessages();
   }
 
   function removePrimitiveItem(sectionKey, index) {
@@ -489,6 +826,7 @@ export default function MasterTemplateEditorPage() {
         [sectionKey]: prev.sections[sectionKey].filter((_, itemIndex) => itemIndex !== index)
       }
     }));
+    resetStateMessages();
   }
 
   function addObjectItem(sectionKey, factory) {
@@ -499,6 +837,7 @@ export default function MasterTemplateEditorPage() {
         [sectionKey]: [...prev.sections[sectionKey], factory()]
       }
     }));
+    resetStateMessages();
   }
 
   function removeObjectItem(sectionKey, index) {
@@ -509,6 +848,7 @@ export default function MasterTemplateEditorPage() {
         [sectionKey]: prev.sections[sectionKey].filter((_, itemIndex) => itemIndex !== index)
       }
     }));
+    resetStateMessages();
   }
 
   function addMetric() {
@@ -519,6 +859,7 @@ export default function MasterTemplateEditorPage() {
         metrics: [...prev.metrics.metrics, { id: getItemKey("metric"), value: "", label: "" }]
       }
     }));
+    resetStateMessages();
   }
 
   function removeMetric(index) {
@@ -529,6 +870,7 @@ export default function MasterTemplateEditorPage() {
         metrics: prev.metrics.metrics.filter((_, itemIndex) => itemIndex !== index)
       }
     }));
+    resetStateMessages();
   }
 
   function addImageItem(imageKey) {
@@ -536,9 +878,10 @@ export default function MasterTemplateEditorPage() {
       ...prev,
       images: {
         ...prev.images,
-        [imageKey]: [...prev.images[imageKey], { id: getItemKey(imageKey), image_asset_id: "", image_url: "", alt: "" }]
+        [imageKey]: [...prev.images[imageKey], { id: getItemKey(imageKey), image_asset_id: "", image_url: "", secure_url: "", public_id: "", alt: "" }]
       }
     }));
+    resetStateMessages();
   }
 
   function removeImageItem(imageKey, index) {
@@ -549,133 +892,314 @@ export default function MasterTemplateEditorPage() {
         [imageKey]: prev.images[imageKey].filter((_, itemIndex) => itemIndex !== index)
       }
     }));
+    resetStateMessages();
   }
 
-  async function persistDraft(nextDraft, successText) {
-    if (!slug) {
-      setServerState({ tone: "warning", text: "Сохранение невозможно: отсутствует slug мастера." });
-      return { ok: false, error: "MASTER_SLUG_MISSING" };
+  async function handleImageArrayUpload(imageKey, index, file) {
+    if (!slug) return;
+
+    const uploadKey = `${imageKey}:${index}`;
+    setUploadFlag(uploadKey, { loading: true, error: "" });
+
+    try {
+      const asset = await uploadImageToCloudinary(file, {
+        ownerType: MASTER_OWNER_TYPE,
+        ownerSlug: slug,
+        assetKind: resolveMasterAssetKind(imageKey),
+        alt: draft.images?.[imageKey]?.[index]?.alt || ""
+      });
+
+      setDraft((prev) => ({
+        ...prev,
+        images: {
+          ...prev.images,
+          [imageKey]: prev.images[imageKey].map((item, itemIndex) => (
+            itemIndex === index
+              ? {
+                  ...item,
+                  image_asset_id: asset.asset_id,
+                  image_url: asset.secure_url,
+                  secure_url: asset.secure_url,
+                  public_id: asset.public_id
+                }
+              : item
+          ))
+        }
+      }));
+      setUploadFlag(uploadKey, { loading: false, error: "" });
+      resetStateMessages();
+    } catch (error) {
+      setUploadFlag(uploadKey, { loading: false, error: error?.message || "UPLOAD_FAILED" });
     }
+  }
+
+  async function persistDraft(nextDraft) {
+    const validationResult = validateMasterTemplateDraft(nextDraft);
 
     if (!hasToken) {
-      setServerState({ tone: "warning", text: "Сохранение пропущено: нет TOTEM_INTERNAL_TOKEN." });
-      return { ok: false, error: "MASTER_TEMPLATE_TOKEN_MISSING" };
+      const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "save", validationResult);
+      setDocumentState(nextDocument);
+      setDraft(mergeDraft(nextDocument.draft || nextDraft));
+      setSaveState({
+        kind: "success",
+        message: validationResult.is_ready_for_publish
+          ? "Черновик сохранён локально. Это mock-режим до полной auth цепочки."
+          : "Черновик сохранён локально с validation blockers."
+      });
+      return { ok: true, document: nextDocument, validation: validationResult, mode: "mock" };
     }
 
     const result = await saveMasterTemplateDraft(nextDraft, slug);
 
     if (!result.ok) {
-      setServerState({ tone: "danger", text: `Не удалось сохранить draft: ${result.error}` });
-      return result;
+      const message = extractMessage(result, "MASTER_TEMPLATE_DRAFT_SAVE_FAILED");
+      setSaveState({ kind: "error", message });
+      return { ok: false, error: message };
     }
 
-    setDocumentState(result.document || null);
-    setServerState({ tone: "success", text: successText });
-    return result;
+    const nextDocument = result.document || null;
+    setDocumentState({
+      ...nextDocument,
+      validation: nextDocument?.validation || validationResult,
+      status: {
+        ...(nextDocument?.status || {}),
+        is_publishable: Boolean((nextDocument?.validation || validationResult)?.is_ready_for_publish)
+      }
+    });
+    setDraft(mergeDraft(nextDocument?.draft || nextDraft));
+    setSaveState({ kind: "success", message: "Черновик мастера сохранён." });
+    return { ok: true, document: nextDocument, validation: nextDocument?.validation || validationResult, mode: "backend" };
   }
 
   async function handleSaveDraft() {
-    setIsSaving(true);
-    try {
-      await persistDraft(draft, "Черновик мастера сохранён.");
-    } finally {
-      setIsSaving(false);
-    }
+    if (!slug) return;
+    setSaveState({ kind: "saving", message: "Сохраняем draft…" });
+    setPublishState({ kind: "idle", message: "" });
+    await persistDraft(draft);
   }
 
-  async function handlePreview() {
-    if (!slug) {
-      setServerState({ tone: "warning", text: "Preview невозможен: отсутствует slug мастера." });
+  async function handleOpenPreview() {
+    if (!slug) return;
+
+    setPreviewState({
+      open: true,
+      loading: true,
+      payload: null,
+      mode: "loading",
+      message: "Сохраняем draft и собираем preview…"
+    });
+
+    const saveResult = await persistDraft(draft);
+    if (!saveResult.ok) {
+      setPreviewState({
+        open: true,
+        loading: false,
+        payload: buildPreviewPayload(draft, slug),
+        mode: "fallback",
+        message: saveResult.error || "PREVIEW_SAVE_FAILED — открыт fallback preview."
+      });
       return;
     }
 
     if (!hasToken) {
-      setServerState({ tone: "warning", text: "Preview пропущен: нет TOTEM_INTERNAL_TOKEN." });
+      setPreviewState({
+        open: true,
+        loading: false,
+        payload: buildPreviewPayload(draft, slug),
+        mode: "mock",
+        message: "Локальный preview открыт без backend auth. Это mock по текущему draft."
+      });
       return;
     }
 
-    setIsPreviewLoading(true);
-    try {
-      const saveResult = await persistDraft(draft, "Черновик сохранён перед preview.");
-      if (!saveResult.ok) return;
+    const result = await getMasterTemplatePreview(slug);
 
-      const result = await getMasterTemplatePreview(slug);
-      if (!result.ok) {
-        setServerState({ tone: "danger", text: `Не удалось собрать preview: ${result.error}` });
-        return;
-      }
-
-      setPreviewState(result);
-      setServerState({
-        tone: result.is_ready_for_preview ? "success" : "warning",
-        text: result.is_ready_for_preview
-          ? "Preview payload собран."
-          : "Preview собран, но draft ещё не готов по backend validation."
+    if (!result.ok) {
+      setPreviewState({
+        open: true,
+        loading: false,
+        payload: buildPreviewPayload(draft, slug),
+        mode: "fallback",
+        message: extractMessage(result, "MASTER_TEMPLATE_PREVIEW_FAILED — открыт fallback preview.")
       });
-    } finally {
-      setIsPreviewLoading(false);
+      return;
     }
+
+    setPreviewState({
+      open: true,
+      loading: false,
+      payload: result.payload || buildPreviewPayload(draft, slug),
+      mode: "backend",
+      message: result.is_ready_for_preview ? "Preview получен из backend." : "Preview получен, но backend validation ещё не готов."
+    });
+  }
+
+  function handleClosePreview() {
+    setPreviewState({ open: false, loading: false, payload: null, mode: "idle", message: "" });
   }
 
   async function handlePublish() {
-    if (!slug) {
-      setServerState({ tone: "warning", text: "Publish невозможен: отсутствует slug мастера." });
+    if (!slug) return;
+
+    const liveValidation = validateMasterTemplateDraft(draft);
+    if (!liveValidation.is_ready_for_publish) {
+      const nextDocument = buildLocalDocument(documentState, draft, slug, "save", liveValidation);
+      setDocumentState(nextDocument);
+      setPublishState({
+        kind: "error",
+        message: "Публикация заблокирована: исправь обязательные поля master template."
+      });
+      return;
+    }
+
+    setPublishState({ kind: "publishing", message: "Публикуем страницу…" });
+    const saveResult = await persistDraft(draft);
+
+    if (!saveResult.ok) {
+      setPublishState({
+        kind: "error",
+        message: saveResult.error || "DRAFT_SAVE_BEFORE_PUBLISH_FAILED"
+      });
       return;
     }
 
     if (!hasToken) {
-      setServerState({ tone: "warning", text: "Publish пропущен: нет TOTEM_INTERNAL_TOKEN." });
+      const nextDocument = buildLocalDocument(documentState, draft, slug, "publish", liveValidation);
+      setDocumentState(nextDocument);
+      setDraft(mergeDraft(nextDocument.draft || draft));
+      setPublishState({
+        kind: "success",
+        message: "Публикация выполнена локально. Это mock-режим до полной auth цепочки."
+      });
       return;
     }
 
-    if (!validation.is_ready_for_publish) {
-      setServerState({ tone: "warning", text: "Publish заблокирован: есть critical validation errors." });
+    const result = await publishMasterTemplate(slug, "system:1");
+
+    if (!result.ok) {
+      setPublishState({
+        kind: "error",
+        message: extractMessage(result, "MASTER_TEMPLATE_PUBLISH_FAILED")
+      });
       return;
     }
 
-    setIsPublishing(true);
-    try {
-      const saveResult = await persistDraft(draft, "Черновик сохранён перед publish.");
-      if (!saveResult.ok) return;
-
-      const result = await publishMasterTemplate(slug, "system:1");
-      if (!result.ok) {
-        setServerState({ tone: "danger", text: `Не удалось опубликовать master template: ${result.error}` });
-        return;
+    const nextDocument = result.document || null;
+    setDocumentState({
+      ...nextDocument,
+      validation: nextDocument?.validation || liveValidation,
+      status: {
+        ...(nextDocument?.status || {}),
+        is_publishable: Boolean((nextDocument?.validation || liveValidation)?.is_ready_for_publish)
       }
-
-      setDocumentState(result.document || null);
-      setServerState({ tone: "success", text: "Master template опубликован." });
-    } finally {
-      setIsPublishing(false);
-    }
+    });
+    setDraft(mergeDraft(nextDocument?.draft || draft));
+    setPublishState({ kind: "success", message: "Master template опубликован." });
+    setSaveState({ kind: "idle", message: "" });
   }
 
   const previewPath = `/preview/master/${slug}`;
   const publicPath = `/master/${slug}`;
+  const blockTone = pageError ? "warn" : hasToken ? "good" : "neutral";
+  const blockValue = pageLoading ? "Загрузка" : pageError ? "Ошибка" : hasToken ? "Готово" : "Локальный режим";
+  const blockNote = pageError
+    ? pageError
+    : hasToken
+      ? "Страница читает document и работает с backend."
+      : "Полная auth цепочка ещё не внедрена, editor работает в local mock режиме без поломки кабинета.";
 
   return (
-    <div style={{ padding: "24px", display: "grid", gap: "20px" }}>
+    <div style={{ display: "grid", gap: "20px", padding: "24px" }}>
       <PageHeader
         title="Master Template Editor"
-        subtitle="Mirror editor для мастера: draft / preview / publish поверх реального PublicMasterPage shell."
+        subtitle={`Mirror editor для мастера${slug ? ` · ${slug}` : ""}. Логика сохранена как у салона, без трогания эталонного PublicMasterPage.`}
+        actions={(
+          <>
+            <ActionButton tone="secondary" onClick={handleSaveDraft} disabled={!slug || pageLoading || saveState.kind === "saving"}>
+              {saveState.kind === "saving" ? "Сохраняем…" : "Сохранить draft"}
+            </ActionButton>
+            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!slug || pageLoading}>
+              Открыть preview
+            </ActionButton>
+            <ActionButton onClick={handlePublish} disabled={!slug || pageLoading || publishState.kind === "publishing"}>
+              {publishState.kind === "publishing" ? "Публикуем…" : "Опубликовать"}
+            </ActionButton>
+          </>
+        )}
       />
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-        <StatusPill tone={hasToken ? "success" : "warning"}>
-          {hasToken ? "TOKEN READY" : "TOKEN MISSING"}
-        </StatusPill>
-        <StatusPill tone={slug ? "success" : "warning"}>
-          {slug ? `SLUG: ${slug}` : "SLUG MISSING"}
-        </StatusPill>
-        <StatusPill tone={validation.is_ready_for_publish ? "success" : "warning"}>
-          {validation.is_ready_for_publish ? "PUBLISH READY" : `CRITICAL: ${validation.critical.length}`}
-        </StatusPill>
-        <StatusPill tone={validation.warnings.length ? "warning" : "neutral"}>
-          WARNINGS: {validation.warnings.length}
-        </StatusPill>
-        <StatusPill tone={serverState.tone}>{serverState.text}</StatusPill>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: "12px"
+      }}>
+        <StatusCard title="Статус блока" value={blockValue} note={blockNote} tone={blockTone} />
+        <StatusCard title="Slug" value={slug || "—"} note="Master editor работает от текущего route slug." />
+        <StatusCard title="Готовность к публикации" value={validation.is_ready_for_publish ? "Готово" : "Не готово"} note={`Ошибок: ${hardErrors.length} · Warnings: ${warnings.length}`} tone={validation.is_ready_for_publish ? "good" : "warn"} />
+        <StatusCard title="Заполнение" value={`${completionScore}%`} note={lastSavedAt ? `Последнее сохранение: ${new Date(lastSavedAt).toLocaleString()}` : "Сохранения ещё не было."} />
       </div>
+
+      {!hasToken ? (
+        <PageSection title="Локальный режим" subtitle="Полная цепочка доступа ещё не внедрена, поэтому backend auth для browser не обязателен на этом этапе.">
+          <div style={infoBoxStyle}>
+            Страница работает в local mock режиме. Это не ломает контракт: сейчас мы фиксируем editor flow, preview и publish UI, не трогая эталонный public shell.
+          </div>
+        </PageSection>
+      ) : null}
+
+      <PageSection title="Cloudinary pipeline" subtitle="Upload layer подключён прямо в master editor. Ручной image_asset_id сохранён как резерв.">
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "12px"
+          }}>
+            <StatusCard title="Cloud name" value={cloudinaryConfig.cloudName || "MISSING"} tone={cloudinaryConfig.cloudName ? "good" : "warn"} />
+            <StatusCard title="Upload preset" value={cloudinaryConfig.uploadPreset || "MISSING"} tone={cloudinaryConfig.uploadPreset ? "good" : "warn"} />
+            <StatusCard title="Root folder" value={cloudinaryConfig.rootFolder} note={`Storage contract: ${cloudinaryConfig.rootFolder}/${MASTER_OWNER_TYPE}/<slug>/<asset_kind>`} tone="neutral" />
+            <StatusCard title="Upload state" value={cloudinaryReady ? "READY" : "BLOCKED"} note={cloudinaryReady ? "Можно загружать hero/avatar/portfolio/service-card прямо из editor." : "Нужно заполнить VITE_CLOUDINARY_* в SDK env."} tone={cloudinaryReady ? "good" : "warn"} />
+          </div>
+        </div>
+      </PageSection>
+
+      <PageSection title="Validation UX" subtitle="Живая проверка текущего draft без ожидания save. Это контроль перед publish.">
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "12px"
+          }}>
+            <StatusCard title="Live publish state" value={validation.is_ready_for_publish ? "READY" : "BLOCKED"} note="Статус считается по текущему draft." tone={validation.is_ready_for_publish ? "good" : "warn"} />
+            <StatusCard title="Hard errors" value={String(hardErrors.length)} note="Эти ошибки блокируют publish." tone={hardErrors.length ? "warn" : "good"} />
+            <StatusCard title="Warnings" value={String(warnings.length)} note="Не блокируют publish, но снижают готовность." tone={warnings.length ? "warn" : "good"} />
+            <StatusCard title="Section coverage" value={`${sectionHealthItems.filter((item) => item.value > 0).length}/6`} note="Покрытие ключевых editor-секций." tone="neutral" />
+          </div>
+
+          {hardErrors.length ? (
+            <div style={warningBoxStyle}>
+              <div style={{ fontSize: "14px", fontWeight: 800, marginBottom: "8px" }}>Блокеры публикации</div>
+              <div style={{ display: "grid", gap: "8px" }}>
+                {hardErrors.map((item, index) => (
+                  <div key={`${item}-${index}`} style={validationLineStyle}>• {item}</div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={successBoxStyle}>Блокеров публикации по текущему draft нет.</div>
+          )}
+
+          {warnings.length ? (
+            <div style={infoBoxStyle}>
+              <div style={{ fontSize: "14px", fontWeight: 800, marginBottom: "8px", color: "#111827" }}>Warnings</div>
+              <div style={{ display: "grid", gap: "8px" }}>
+                {warnings.map((item, index) => (
+                  <div key={`${item}-${index}`} style={validationLineStyle}>• {item}</div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </PageSection>
 
       <div style={{ display: "grid", gridTemplateColumns: "280px minmax(0, 1fr)", gap: "20px", alignItems: "start" }}>
         <aside style={{ position: "sticky", top: "24px", display: "grid", gap: "12px" }}>
@@ -697,14 +1221,14 @@ export default function MasterTemplateEditorPage() {
 
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "10px" }}>
             <strong style={{ fontSize: "15px", color: "#111827" }}>Actions</strong>
-            <ActionButton onClick={handleSaveDraft} disabled={isLoading || isSaving || !canRunServerActions}>
-              {isSaving ? "Сохраняю..." : "Сохранить draft"}
+            <ActionButton onClick={handleSaveDraft} disabled={!slug || pageLoading || saveState.kind === "saving"}>
+              {saveState.kind === "saving" ? "Сохраняю..." : "Сохранить draft"}
             </ActionButton>
-            <ActionButton tone="secondary" onClick={handlePreview} disabled={isLoading || isPreviewLoading || !canRunServerActions}>
-              {isPreviewLoading ? "Собираю preview..." : "Собрать preview"}
+            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!slug || pageLoading}>
+              Открыть preview
             </ActionButton>
-            <ActionButton onClick={handlePublish} disabled={isLoading || isPublishing || !validation.is_ready_for_publish || !canRunServerActions}>
-              {isPublishing ? "Публикую..." : "Publish"}
+            <ActionButton onClick={handlePublish} disabled={!slug || pageLoading || publishState.kind === "publishing" || !validation.is_ready_for_publish}>
+              {publishState.kind === "publishing" ? "Публикую..." : "Publish"}
             </ActionButton>
             <Link to={publicPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}>Открыть public master page</Link>
             <Link to={previewPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}>Открыть preview route</Link>
@@ -713,11 +1237,11 @@ export default function MasterTemplateEditorPage() {
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "8px" }}>
             <strong style={{ fontSize: "15px", color: "#111827" }}>Validation</strong>
             <div style={{ fontSize: "13px", color: "#111827" }}>Critical</div>
-            {validation.critical.length ? validation.critical.map((item) => (
+            {hardErrors.length ? hardErrors.map((item) => (
               <span key={item} style={{ fontSize: "12px", color: "#991b1b" }}>{item}</span>
             )) : <span style={{ fontSize: "12px", color: "#065f46" }}>Нет critical ошибок.</span>}
             <div style={{ marginTop: "6px", fontSize: "13px", color: "#111827" }}>Warnings</div>
-            {validation.warnings.length ? validation.warnings.map((item) => (
+            {warnings.length ? warnings.map((item) => (
               <span key={item} style={{ fontSize: "12px", color: "#92400e" }}>{item}</span>
             )) : <span style={{ fontSize: "12px", color: "#6b7280" }}>Нет warnings.</span>}
           </div>
@@ -736,10 +1260,15 @@ export default function MasterTemplateEditorPage() {
           <Panel id="hero" title="Hero" note="Main hero content and top CTA.">
             <Field label="Hero subtitle"><input value={draft.identity.hero_subtitle} onChange={(e) => setDraftField("identity", "hero_subtitle", e.target.value)} style={inputStyle()} /></Field>
             <Field label="Hero description"><textarea value={draft.identity.hero_description} onChange={(e) => setDraftField("identity", "hero_description", e.target.value)} style={textareaStyle(5)} /></Field>
-            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-              <Field label="Hero image asset id" hint="V1 primary pipeline field."><input value={draft.images.hero.image_asset_id} onChange={(e) => setNestedDraftField("images", "hero", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Hero image URL" hint="Fallback для dev/manual mode."><input value={draft.images.hero.image_url} onChange={(e) => setNestedDraftField("images", "hero", "image_url", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Hero alt"><input value={draft.images.hero.alt} onChange={(e) => setNestedDraftField("images", "hero", "alt", e.target.value)} style={inputStyle()} /></Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
+              <div style={{ display: "grid", gap: "14px" }}>
+                <Field label="Hero image asset id" hint="V1 primary pipeline field."><input value={draft.images.hero.image_asset_id} onChange={(e) => setNestedDraftField("images", "hero", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
+                <Field label="Hero image URL" hint="Fallback для dev/manual mode."><input value={draft.images.hero.image_url} onChange={(e) => setNestedDraftField("images", "hero", "image_url", e.target.value)} style={inputStyle()} /></Field>
+                <Field label="Hero alt"><input value={draft.images.hero.alt} onChange={(e) => setNestedDraftField("images", "hero", "alt", e.target.value)} style={inputStyle()} /></Field>
+                <UploadInput onSelect={(file) => handleRootImageUpload("hero", file)} disabled={!cloudinaryReady || !slug || uploadState["root:hero"]?.loading} />
+                {uploadState["root:hero"]?.error ? <div style={warningBoxStyle}>{uploadState["root:hero"].error}</div> : null}
+              </div>
+              <AssetPreview title="Hero preview" entity={draft.images.hero || {}} emptyNote="Hero пока не загружен." />
             </div>
           </Panel>
 
@@ -874,36 +1403,55 @@ export default function MasterTemplateEditorPage() {
             </div>
           </Panel>
 
-          <Panel id="images" title="Images" note="Hero now, avatar/portfolio/service-card reserved but already wired into draft model.">
-            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-              <Field label="Avatar asset id"><input value={draft.images.avatar.image_asset_id} onChange={(e) => setNestedDraftField("images", "avatar", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Avatar URL"><input value={draft.images.avatar.image_url} onChange={(e) => setNestedDraftField("images", "avatar", "image_url", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Avatar alt"><input value={draft.images.avatar.alt} onChange={(e) => setNestedDraftField("images", "avatar", "alt", e.target.value)} style={inputStyle()} /></Field>
+          <Panel id="images" title="Images" note="Hero now, avatar/portfolio/service-card reserved and already wired into upload pipeline.">
+            <div style={{ display: "grid", gap: "16px" }}>
+              <div style={nestedCardStyle}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
+                  <div style={{ display: "grid", gap: "14px" }}>
+                    <Field label="Avatar asset id"><input value={draft.images.avatar.image_asset_id} onChange={(e) => setNestedDraftField("images", "avatar", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
+                    <Field label="Avatar URL"><input value={draft.images.avatar.image_url} onChange={(e) => setNestedDraftField("images", "avatar", "image_url", e.target.value)} style={inputStyle()} /></Field>
+                    <Field label="Avatar alt"><input value={draft.images.avatar.alt} onChange={(e) => setNestedDraftField("images", "avatar", "alt", e.target.value)} style={inputStyle()} /></Field>
+                    <UploadInput onSelect={(file) => handleRootImageUpload("avatar", file)} disabled={!cloudinaryReady || !slug || uploadState["root:avatar"]?.loading} />
+                    {uploadState["root:avatar"]?.error ? <div style={warningBoxStyle}>{uploadState["root:avatar"].error}</div> : null}
+                  </div>
+                  <AssetPreview title="Avatar preview" entity={draft.images.avatar || {}} emptyNote="Avatar пока не загружен." />
+                </div>
+              </div>
+
+              <ArrayCard title="Portfolio reserved" note="Pipeline ready. Public block будет позже, но upload уже готов." onAdd={() => addImageItem("portfolio")} addLabel="Добавить portfolio image">
+                {draft.images.portfolio.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+                {draft.images.portfolio.map((item, index) => (
+                  <div key={item.id || `portfolio_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+                    <div style={{ display: "grid", gap: "10px" }}>
+                      <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("portfolio", index, "image_asset_id", e.target.value)} style={inputStyle()} />
+                      <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setImageArrayItem("portfolio", index, "image_url", e.target.value)} style={inputStyle()} />
+                      <input placeholder="alt" value={item.alt || ""} onChange={(e) => setImageArrayItem("portfolio", index, "alt", e.target.value)} style={inputStyle()} />
+                      <UploadInput onSelect={(file) => handleImageArrayUpload("portfolio", index, file)} disabled={!cloudinaryReady || !slug || uploadState[`portfolio:${index}`]?.loading} />
+                      {uploadState[`portfolio:${index}`]?.error ? <div style={warningBoxStyle}>{uploadState[`portfolio:${index}`].error}</div> : null}
+                      <div><ActionButton tone="secondary" onClick={() => removeImageItem("portfolio", index)}>Удалить</ActionButton></div>
+                    </div>
+                    <AssetPreview title="Portfolio preview" entity={item} emptyNote="Portfolio image пока не загружено." />
+                  </div>
+                ))}
+              </ArrayCard>
+
+              <ArrayCard title="Service-card reserved" note="Future service-card visuals." onAdd={() => addImageItem("service_card")} addLabel="Добавить service-card image">
+                {draft.images.service_card.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+                {draft.images.service_card.map((item, index) => (
+                  <div key={item.id || `service_card_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+                    <div style={{ display: "grid", gap: "10px" }}>
+                      <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_asset_id", e.target.value)} style={inputStyle()} />
+                      <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_url", e.target.value)} style={inputStyle()} />
+                      <input placeholder="alt" value={item.alt || ""} onChange={(e) => setImageArrayItem("service_card", index, "alt", e.target.value)} style={inputStyle()} />
+                      <UploadInput onSelect={(file) => handleImageArrayUpload("service_card", index, file)} disabled={!cloudinaryReady || !slug || uploadState[`service_card:${index}`]?.loading} />
+                      {uploadState[`service_card:${index}`]?.error ? <div style={warningBoxStyle}>{uploadState[`service_card:${index}`].error}</div> : null}
+                      <div><ActionButton tone="secondary" onClick={() => removeImageItem("service_card", index)}>Удалить</ActionButton></div>
+                    </div>
+                    <AssetPreview title="Service-card preview" entity={item} emptyNote="Service-card image пока не загружено." />
+                  </div>
+                ))}
+              </ArrayCard>
             </div>
-
-            <ArrayCard title="Portfolio reserved" note="Pipeline ready, public section will come later." onAdd={() => addImageItem("portfolio")} addLabel="Добавить portfolio image">
-              {draft.images.portfolio.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
-              {draft.images.portfolio.map((item, index) => (
-                <div key={item.id || `portfolio_${index}`} style={{ display: "grid", gap: "10px", gridTemplateColumns: "1fr 1fr 1fr auto" }}>
-                  <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("portfolio", index, "image_asset_id", e.target.value)} style={inputStyle()} />
-                  <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setImageArrayItem("portfolio", index, "image_url", e.target.value)} style={inputStyle()} />
-                  <input placeholder="alt" value={item.alt || ""} onChange={(e) => setImageArrayItem("portfolio", index, "alt", e.target.value)} style={inputStyle()} />
-                  <ActionButton tone="secondary" onClick={() => removeImageItem("portfolio", index)}>Удалить</ActionButton>
-                </div>
-              ))}
-            </ArrayCard>
-
-            <ArrayCard title="Service-card reserved" note="Future service-card visuals." onAdd={() => addImageItem("service_card")} addLabel="Добавить service-card image">
-              {draft.images.service_card.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
-              {draft.images.service_card.map((item, index) => (
-                <div key={item.id || `service_card_${index}`} style={{ display: "grid", gap: "10px", gridTemplateColumns: "1fr 1fr 1fr auto" }}>
-                  <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_asset_id", e.target.value)} style={inputStyle()} />
-                  <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_url", e.target.value)} style={inputStyle()} />
-                  <input placeholder="alt" value={item.alt || ""} onChange={(e) => setImageArrayItem("service_card", index, "alt", e.target.value)} style={inputStyle()} />
-                  <ActionButton tone="secondary" onClick={() => removeImageItem("service_card", index)}>Удалить</ActionButton>
-                </div>
-              ))}
-            </ArrayCard>
           </Panel>
 
           <Panel id="cta" title="CTA" note="Booking band + sticky bottom CTA preserved.">
@@ -939,29 +1487,382 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="preview-publish" title="Preview / Publish" note="Server preview state + local draft snapshot.">
-            <div style={{ display: "grid", gap: "16px" }}>
-              <div style={{ display: "grid", gap: "8px", padding: "16px", borderRadius: "12px", border: "1px solid #e5e7eb", background: "#ffffff" }}>
-                <strong style={{ fontSize: "15px", color: "#111827" }}>Server document</strong>
-                <pre style={{ margin: 0, fontSize: "12px", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word", color: "#111827" }}>
-                  {JSON.stringify(documentState, null, 2)}
-                </pre>
-              </div>
-              <div style={{ display: "grid", gap: "8px", padding: "16px", borderRadius: "12px", border: "1px solid #e5e7eb", background: "#ffffff" }}>
-                <strong style={{ fontSize: "15px", color: "#111827" }}>Preview state</strong>
-                <pre style={{ margin: 0, fontSize: "12px", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word", color: "#111827" }}>
-                  {JSON.stringify(previewState, null, 2)}
-                </pre>
-              </div>
-              <div style={{ display: "grid", gap: "8px", padding: "16px", borderRadius: "12px", border: "1px solid #e5e7eb", background: "#ffffff" }}>
-                <strong style={{ fontSize: "15px", color: "#111827" }}>Current draft JSON</strong>
-                <pre style={{ margin: 0, fontSize: "12px", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word", color: "#111827" }}>
-                  {JSON.stringify(draft, null, 2)}
-                </pre>
-              </div>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "12px"
+            }}>
+              <StatusCard title="Draft save" value={saveState.kind === "idle" ? "IDLE" : saveState.kind.toUpperCase()} note={saveState.message || "Готов к сохранению."} tone={saveState.kind === "error" ? "warn" : saveState.kind === "success" ? "good" : "neutral"} />
+              <StatusCard title="Publish" value={publishState.kind === "idle" ? "IDLE" : publishState.kind.toUpperCase()} note={publishState.message || "Готов к публикации."} tone={publishState.kind === "error" ? "warn" : publishState.kind === "success" ? "good" : "neutral"} />
+              <StatusCard title="Preview mode" value={(previewState.mode || "idle").toUpperCase()} note={previewState.message || "Preview ещё не открыт."} tone={previewState.mode === "backend" ? "good" : previewState.mode === "fallback" ? "warn" : "neutral"} />
+              <StatusCard title="Published path" value={publicPath} note="Эталонный public shell пока не трогаем." tone="neutral" />
             </div>
           </Panel>
         </div>
       </div>
+
+      <PageSection title="Секции шаблона" subtitle="Это жёсткая карта секций, на которые дальше вешаются данные без трогания PublicMasterPage.">
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "12px"
+        }}>
+          {sectionItems.map((item, index) => (
+            <div key={item.id} style={sectionCardStyle}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "8px" }}>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}>{item.label}</div>
+                <div style={badgeIndexStyle}>{index + 1}</div>
+              </div>
+              <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.5 }}>{item.note}</div>
+            </div>
+          ))}
+        </div>
+      </PageSection>
+
+      {previewState.open ? (
+        <div style={previewOverlayStyle}>
+          <div style={previewModalStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+              <div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>Preview · {slug || "master"}</div>
+                <div style={{ marginTop: "6px", fontSize: "13px", color: "#6b7280" }}>{previewState.message}</div>
+              </div>
+              <ActionButton tone="secondary" onClick={handleClosePreview}>Закрыть</ActionButton>
+            </div>
+
+            {previewState.loading ? (
+              <div style={infoBoxStyle}>Загружаем preview…</div>
+            ) : (
+              <div style={{ display: "grid", gap: "16px" }}>
+                <div style={previewHeroStyle}>
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    <div style={previewBadgeStyle}>{previewState.payload?.identity?.hero_badge || "Master preview"}</div>
+                    <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>
+                      {previewState.payload?.identity?.master_name || "Preview мастера"}
+                    </div>
+                    <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>
+                      {previewState.payload?.identity?.hero_description || previewState.payload?.identity?.profession || "Подзаголовок preview"}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "8px" }}>
+                      <a href={previewState.payload?.cta?.booking_url || "#"} style={previewPrimaryCtaStyle}>{previewState.payload?.cta?.booking_label || "Записаться"}</a>
+                      <span style={previewSecondaryCtaStyle}>{previewState.payload?.cta?.services_label || "Услуги"}</span>
+                    </div>
+                  </div>
+                  <div style={previewImageCardStyle}>
+                    {getAssetPreviewUrl(previewState.payload?.images?.hero || {}) ? (
+                      <img src={getAssetPreviewUrl(previewState.payload?.images?.hero || {})} alt={previewState.payload?.images?.hero?.alt || "Hero preview"} style={previewImageRealStyle} />
+                    ) : previewState.payload?.images?.hero?.image_asset_id ? (
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>Hero asset: {previewState.payload.images.hero.image_asset_id}</div>
+                    ) : (
+                      <div style={{ fontSize: "14px", color: "#6b7280" }}>Hero image не подключён</div>
+                    )}
+                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>{previewState.payload?.images?.hero?.alt || "Hero preview"}</div>
+                  </div>
+                </div>
+
+                <div style={previewGridStyle}>
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Identity</div>
+                    <div style={previewCardTextStyle}>Мастер: {previewState.payload?.identity?.master_name || "—"}</div>
+                    <div style={previewCardTextStyle}>Профессия: {previewState.payload?.identity?.profession || "—"}</div>
+                    <div style={previewCardTextStyle}>Город: {previewState.payload?.identity?.city || "—"}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Contacts</div>
+                    <div style={previewCardTextStyle}>{previewState.payload?.location?.address || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewState.payload?.location?.phone || previewState.payload?.location?.whatsapp || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewState.payload?.location?.schedule_text || "—"}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>CTA</div>
+                    <div style={previewCardTextStyle}>Кнопка: {previewState.payload?.cta?.booking_label || "—"}</div>
+                    <div style={previewCardTextStyle}>URL: {previewState.payload?.cta?.booking_url || "—"}</div>
+                    <div style={previewCardTextStyle}>Якорь: {previewState.payload?.cta?.services_anchor || "—"}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Sections coverage</div>
+                    <div style={previewCardTextStyle}>Badges: {previewState.payload?.sections?.badges?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Benefits: {previewState.payload?.sections?.benefits?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Featured services: {previewState.payload?.sections?.featured_services?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Catalog: {previewState.payload?.sections?.service_catalog?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Reviews: {previewState.payload?.sections?.reviews?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Portfolio: {previewState.payload?.images?.portfolio?.length || 0}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      <PageSection title="Быстрые переходы" subtitle="Рабочая навигация вокруг template entry point без смешивания с public template shell.">
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "12px"
+        }}>
+          <Link to={publicPath} style={linkCardStyle}>
+            <div style={linkTitleStyle}>Public page</div>
+            <div style={linkTextStyle}>Эталонная публичная страница мастера остаётся отдельной и не чистится на этом этапе.</div>
+          </Link>
+
+          <Link to={previewPath} style={linkCardStyle}>
+            <div style={linkTitleStyle}>Preview route</div>
+            <div style={linkTextStyle}>Маршрут preview для следующего шага parity.</div>
+          </Link>
+
+          <a href="#images" style={linkCardStyle}>
+            <div style={linkTitleStyle}>Image slots</div>
+            <div style={linkTextStyle}>Hero / avatar / portfolio / service-card pipeline уже подключён.</div>
+          </a>
+
+          <a href="#preview-publish" style={linkCardStyle}>
+            <div style={linkTitleStyle}>Publish state</div>
+            <div style={linkTextStyle}>Контроль draft / preview / publish без возврата к прошлым фиксам.</div>
+          </a>
+        </div>
+      </PageSection>
     </div>
   );
 }
+
+const infoBoxStyle = {
+  border: "1px solid #d0d5dd",
+  borderRadius: "14px",
+  background: "#ffffff",
+  padding: "14px",
+  fontSize: "13px",
+  color: "#475467",
+  lineHeight: 1.5
+};
+
+const successBoxStyle = {
+  ...infoBoxStyle,
+  border: "1px solid #abefc6",
+  background: "#ecfdf3",
+  color: "#027a48"
+};
+
+const warningBoxStyle = {
+  ...infoBoxStyle,
+  border: "1px solid #fde68a",
+  background: "#fffbeb",
+  color: "#b45309"
+};
+
+const nestedCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "14px",
+  background: "#f8fafc",
+  padding: "14px",
+  display: "grid",
+  gap: "12px"
+};
+
+const sectionCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "14px",
+  background: "#ffffff",
+  padding: "14px",
+  minHeight: "108px"
+};
+
+const validationLineStyle = {
+  fontSize: "13px",
+  lineHeight: 1.5
+};
+
+const uploadFieldStyle = {
+  display: "grid",
+  gap: "8px"
+};
+
+const assetPreviewCardStyle = {
+  border: "1px dashed #cbd5e1",
+  borderRadius: "16px",
+  minHeight: "180px",
+  padding: "14px",
+  background: "#ffffff",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center",
+  gap: "8px"
+};
+
+const assetPreviewImageStyle = {
+  maxWidth: "100%",
+  maxHeight: "180px",
+  objectFit: "cover",
+  borderRadius: "12px"
+};
+
+const assetPreviewMetaStyle = {
+  fontSize: "12px",
+  color: "#475467",
+  wordBreak: "break-word"
+};
+
+const assetPreviewEmptyStyle = {
+  fontSize: "13px",
+  color: "#6b7280"
+};
+
+const badgeIndexStyle = {
+  minWidth: "28px",
+  height: "28px",
+  borderRadius: "999px",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "12px",
+  fontWeight: 800
+};
+
+const previewOverlayStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(15, 23, 42, 0.45)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "24px",
+  zIndex: 50
+};
+
+const previewModalStyle = {
+  width: "min(1100px, 100%)",
+  maxHeight: "calc(100vh - 48px)",
+  overflow: "auto",
+  borderRadius: "20px",
+  background: "#ffffff",
+  padding: "20px",
+  display: "grid",
+  gap: "16px",
+  boxShadow: "0 20px 60px rgba(15, 23, 42, 0.18)"
+};
+
+const previewHeroStyle = {
+  display: "grid",
+  gridTemplateColumns: "1.4fr 1fr",
+  gap: "16px",
+  border: "1px solid #e5e7eb",
+  borderRadius: "20px",
+  padding: "20px",
+  background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)"
+};
+
+const previewImageCardStyle = {
+  border: "1px dashed #cbd5e1",
+  borderRadius: "16px",
+  minHeight: "180px",
+  padding: "16px",
+  background: "#ffffff",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center"
+};
+
+const previewImageRealStyle = {
+  maxWidth: "100%",
+  maxHeight: "180px",
+  objectFit: "cover",
+  borderRadius: "12px"
+};
+
+const previewBadgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "8px",
+  width: "fit-content",
+  padding: "6px 10px",
+  borderRadius: "999px",
+  background: "#eef2ff",
+  color: "#3730a3",
+  fontSize: "12px",
+  fontWeight: 700
+};
+
+const previewPrimaryCtaStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textDecoration: "none",
+  borderRadius: "12px",
+  padding: "10px 14px",
+  background: "#111827",
+  color: "#ffffff",
+  fontSize: "14px",
+  fontWeight: 800
+};
+
+const previewSecondaryCtaStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: "12px",
+  padding: "10px 14px",
+  border: "1px solid #d0d5dd",
+  background: "#ffffff",
+  color: "#111827",
+  fontSize: "14px",
+  fontWeight: 700
+};
+
+const previewGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: "12px"
+};
+
+const previewCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  background: "#ffffff",
+  padding: "16px",
+  display: "grid",
+  gap: "8px"
+};
+
+const previewCardTitleStyle = {
+  fontSize: "14px",
+  fontWeight: 800,
+  color: "#111827"
+};
+
+const previewCardTextStyle = {
+  fontSize: "13px",
+  color: "#475467",
+  lineHeight: 1.5
+};
+
+const linkCardStyle = {
+  display: "block",
+  textDecoration: "none",
+  color: "inherit",
+  border: "1px solid #e5e7eb",
+  borderRadius: "14px",
+  background: "#ffffff",
+  padding: "16px"
+};
+
+const linkTitleStyle = {
+  fontSize: "14px",
+  fontWeight: 700,
+  color: "#111827",
+  marginBottom: "6px"
+};
+
+const linkTextStyle = {
+  fontSize: "13px",
+  color: "#6b7280",
+  lineHeight: 1.45
+};
