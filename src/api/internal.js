@@ -2,6 +2,7 @@ import { safeJson } from "../utils/apiSafe";
 import { getSalonSlug, getMasterSlug } from "../utils/slug";
 
 const API_BASE = "https://api.totemv.com/internal";
+const TEMPLATE_VERSION = "v1";
 
 /* ===============================
    BILLING GUARDS
@@ -262,7 +263,7 @@ export async function createMasterWithdraw(amount, billingAccess, masterSlug = g
 }
 
 /* ===============================
-   TEMPLATE SYSTEM (SALON)
+   TEMPLATE SYSTEM SHARED
 ================================ */
 
 function getInternalTemplateToken(){
@@ -300,6 +301,28 @@ async function safeTemplateJson(path, opts = {}){
   return r;
 }
 
+function buildTemplatePublicPath(ownerType, ownerSlug){
+  return `${API_BASE}/templates-public/${ownerType}/${ownerSlug}/published?version=${TEMPLATE_VERSION}`;
+}
+
+function buildTemplateDraftBody(draft){
+  return JSON.stringify({
+    template_version: TEMPLATE_VERSION,
+    draft
+  });
+}
+
+function buildTemplatePublishBody(publishedBy){
+  return JSON.stringify({
+    template_version: TEMPLATE_VERSION,
+    published_by: publishedBy
+  });
+}
+
+/* ===============================
+   TEMPLATE SYSTEM (SALON)
+================================ */
+
 export async function getSalonTemplateDocument(salonSlug = getSalonSlug()){
   const r = await safeTemplateJson(`/templates/salon/${salonSlug}`);
   if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_DOCUMENT_FETCH_FAILED", detail:r };
@@ -311,10 +334,7 @@ export async function getSalonTemplateDocument(salonSlug = getSalonSlug()){
 export async function saveSalonTemplateDraft(draft, salonSlug = getSalonSlug()){
   const r = await safeTemplateJson(`/templates/salon/${salonSlug}/draft`, {
     method: "PUT",
-    body: JSON.stringify({
-      template_version: "v1",
-      draft
-    })
+    body: buildTemplateDraftBody(draft)
   });
   if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_DRAFT_SAVE_FAILED", detail:r };
   const j = r.json;
@@ -323,7 +343,7 @@ export async function saveSalonTemplateDraft(draft, salonSlug = getSalonSlug()){
 }
 
 export async function getSalonTemplatePublished(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/templates-public/salon/${salonSlug}/published?version=v1`);
+  const r = await safeJson(buildTemplatePublicPath("salon", salonSlug));
   if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_PUBLISHED_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"SALON_TEMPLATE_PUBLISHED_API_NOT_OK", detail:j };
@@ -336,7 +356,7 @@ export async function getSalonTemplatePublished(salonSlug = getSalonSlug()){
 }
 
 export async function getSalonTemplatePreview(salonSlug = getSalonSlug()){
-  const r = await safeTemplateJson(`/templates/salon/${salonSlug}/preview?version=v1`);
+  const r = await safeTemplateJson(`/templates/salon/${salonSlug}/preview?version=${TEMPLATE_VERSION}`);
   if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_PREVIEW_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"SALON_TEMPLATE_PREVIEW_API_NOT_OK", detail:j };
@@ -351,13 +371,70 @@ export async function getSalonTemplatePreview(salonSlug = getSalonSlug()){
 export async function publishSalonTemplate(salonSlug = getSalonSlug(), publishedBy = "system:1"){
   const r = await safeTemplateJson(`/templates/salon/${salonSlug}/publish`, {
     method: "POST",
-    body: JSON.stringify({
-      template_version: "v1",
-      published_by: publishedBy
-    })
+    body: buildTemplatePublishBody(publishedBy)
   });
   if(!r.ok) return { ok:false, error:"SALON_TEMPLATE_PUBLISH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"SALON_TEMPLATE_PUBLISH_API_NOT_OK", detail:j };
+  return { ok:true, published: Boolean(j.published), document: j.document || null };
+}
+
+/* ===============================
+   TEMPLATE SYSTEM (MASTER)
+================================ */
+
+export async function getMasterTemplateDocument(masterSlug = getMasterSlug()){
+  const r = await safeTemplateJson(`/templates/master/${masterSlug}`);
+  if(!r.ok) return { ok:false, error:"MASTER_TEMPLATE_DOCUMENT_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_TEMPLATE_DOCUMENT_API_NOT_OK", detail:j };
+  return { ok:true, document: j.document || null };
+}
+
+export async function saveMasterTemplateDraft(draft, masterSlug = getMasterSlug()){
+  const r = await safeTemplateJson(`/templates/master/${masterSlug}/draft`, {
+    method: "PUT",
+    body: buildTemplateDraftBody(draft)
+  });
+  if(!r.ok) return { ok:false, error:"MASTER_TEMPLATE_DRAFT_SAVE_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_TEMPLATE_DRAFT_SAVE_API_NOT_OK", detail:j };
+  return { ok:true, document: j.document || null };
+}
+
+export async function getMasterTemplatePublished(masterSlug = getMasterSlug()){
+  const r = await safeJson(buildTemplatePublicPath("master", masterSlug));
+  if(!r.ok) return { ok:false, error:"MASTER_TEMPLATE_PUBLISHED_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_TEMPLATE_PUBLISHED_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    payload: j.payload || null,
+    meta: j.meta || null,
+    published_exists: Boolean(j.published_exists)
+  };
+}
+
+export async function getMasterTemplatePreview(masterSlug = getMasterSlug()){
+  const r = await safeTemplateJson(`/templates/master/${masterSlug}/preview?version=${TEMPLATE_VERSION}`);
+  if(!r.ok) return { ok:false, error:"MASTER_TEMPLATE_PREVIEW_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_TEMPLATE_PREVIEW_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    payload: j.payload || null,
+    validation: j.validation || null,
+    is_ready_for_preview: Boolean(j.is_ready_for_preview)
+  };
+}
+
+export async function publishMasterTemplate(masterSlug = getMasterSlug(), publishedBy = "system:1"){
+  const r = await safeTemplateJson(`/templates/master/${masterSlug}/publish`, {
+    method: "POST",
+    body: buildTemplatePublishBody(publishedBy)
+  });
+  if(!r.ok) return { ok:false, error:"MASTER_TEMPLATE_PUBLISH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_TEMPLATE_PUBLISH_API_NOT_OK", detail:j };
   return { ok:true, published: Boolean(j.published), document: j.document || null };
 }
