@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 
 const PUBLIC_API_BASE =
@@ -22,6 +23,18 @@ function getActiveItems(items) {
     if (item.is_active === false) return false;
     return true;
   });
+}
+
+function hasText(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function joinText(parts, separator = ", ") {
+  return parts.map((part) => asString(part)).filter(Boolean).join(separator);
+}
+
+function hasAnyText(values) {
+  return values.some((value) => hasText(value));
 }
 
 function createEmptyPayload() {
@@ -54,9 +67,9 @@ function createEmptyPayload() {
     metrics: [],
     cta: {
       booking_label: "",
-      booking_url: "#booking",
+      booking_url: "",
       services_label: "",
-      services_anchor: "#services",
+      services_anchor: "",
       contact_map_label: "",
       sticky_label: "",
     },
@@ -72,9 +85,9 @@ function createEmptyPayload() {
         title: "",
         text: "",
         booking_cta_label: "",
-        booking_cta_url: "#booking",
+        booking_cta_url: "",
         services_cta_label: "",
-        services_anchor: "#services",
+        services_anchor: "",
       },
     },
     images: {
@@ -221,9 +234,9 @@ function mapPayloadToViewModel(payload) {
     .map((item) => ({
       name: asString(item.name),
       text: asString(item.text),
-      rating: asString(item.rating, "5"),
+      rating: asString(item.rating),
     }))
-    .filter((item) => item.name || item.text);
+    .filter((item) => item.name || item.text || item.rating);
   const aboutParagraphs = normalized.sections.about_paragraphs
     .map((item) => asString(item.text))
     .filter(Boolean);
@@ -239,7 +252,7 @@ function mapPayloadToViewModel(payload) {
     phone: normalized.location.phone || normalized.location.whatsapp,
     mapUrl: normalized.location.map_url,
     heroImage,
-    heroAlt: normalized.images.hero.alt || `${normalized.identity.master_name} — портрет мастера`,
+    heroAlt: normalized.images.hero.alt || normalized.identity.master_name,
     heroBadge: normalized.identity.hero_badge,
     subtitle: normalized.identity.subtitle,
     description: normalized.identity.description,
@@ -255,14 +268,26 @@ function mapPayloadToViewModel(payload) {
     aboutParagraphs,
     stats: normalized.stats,
     bookingBand: normalized.sections.booking_band,
-    bookingLabel: normalized.cta.booking_label || "Записаться",
-    bookingUrl: normalized.cta.booking_url || "#booking",
-    servicesLabel: normalized.cta.services_label || "Смотреть услуги",
-    servicesAnchor: normalized.cta.services_anchor || "#services",
-    mapLabel: normalized.cta.contact_map_label || "Открыть на карте",
-    stickyLabel: normalized.cta.sticky_label || "Записаться",
+    bookingLabel: normalized.cta.booking_label,
+    bookingUrl: normalized.cta.booking_url,
+    servicesLabel: normalized.cta.services_label,
+    servicesAnchor: normalized.cta.services_anchor,
+    mapLabel: normalized.cta.contact_map_label,
+    stickyLabel: normalized.cta.sticky_label,
     stickySubline: normalized.trust.sticky_subline,
   };
+}
+
+function ActionLink({ href, children, style, ...rest }) {
+  if (!hasText(href) || !children) {
+    return null;
+  }
+
+  return (
+    <a href={href} style={style} {...rest}>
+      {children}
+    </a>
+  );
 }
 
 export default function PublicMasterPage({ slug }) {
@@ -345,6 +370,44 @@ export default function PublicMasterPage({ slug }) {
   const reviewCount = view.reviewCount;
   const trustNote = view.trustNote;
 
+  const locationLine = joinText([address, district], ", ");
+  const cityLine = joinText([district, city], ", ");
+  const titleLine = joinText([masterName, profession], " — ");
+  const topMetaLine = joinText([city, hasText(city) ? "Персональная страница мастера" : ""], " • ");
+  const professionLine = joinText([profession, subtitle], ". ");
+  const hasTopIdentity = hasAnyText([masterName, profession, city, bookingLabel, bookingUrl]);
+  const hasHeroInfo = hasAnyText([heroBadge, masterName, profession, subtitle, description, heroImage]);
+  const hasLocationCard = hasAnyText([address, district, schedule]);
+  const hasTrustCard = hasAnyText([ratingValue, reviewCount, trustNote]);
+  const hasHeroActions = (hasText(bookingLabel) && hasText(bookingUrl)) || (hasText(servicesLabel) && hasText(servicesAnchor));
+  const hasBenefits = benefits.length > 0;
+  const hasMetrics = metrics.length > 0;
+  const hasFeaturedServices = featuredServices.length > 0;
+  const hasServiceCatalog = serviceCatalog.length > 0;
+  const hasReviews = reviews.length > 0;
+  const hasAbout = aboutParagraphs.length > 0;
+  const statsItems = [
+    { value: stats.years, label: "года практики" },
+    { value: stats.rating, label: "рейтинг клиентов" },
+    { value: stats.bookings, label: "записей" },
+  ].filter((item) => hasText(item.value));
+  const hasStats = statsItems.length > 0;
+  const hasAboutBlock = hasAbout || hasStats;
+  const hasContactsBlock =
+    hasAnyText([address, district, city, schedule, phone]) ||
+    (hasText(mapLabel) && hasText(mapUrl)) ||
+    (hasText(bookingLabel) && hasText(bookingUrl));
+  const hasBookingBand =
+    hasAnyText([
+      bookingBand.title,
+      bookingBand.text,
+      bookingBand.booking_cta_label,
+      bookingBand.booking_cta_url,
+      bookingBand.services_cta_label,
+      bookingBand.services_anchor,
+    ]);
+  const hasStickyBlock = hasAnyText([masterName, profession, stickySubline, stickyLabel, bookingUrl]);
+
   const palette = {
     bg: "#F8F5F1",
     card: "#FFFFFF",
@@ -366,7 +429,7 @@ export default function PublicMasterPage({ slug }) {
     color: palette.textMain,
     fontFamily:
       'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    paddingBottom: "110px",
+    paddingBottom: hasStickyBlock ? "110px" : "32px",
   };
 
   const containerStyle = {
@@ -448,641 +511,714 @@ export default function PublicMasterPage({ slug }) {
 
   return (
     <div style={shellStyle}>
-      <section style={{ padding: "18px 0 12px" }}>
-        <div style={containerStyle}>
-          <div
-            style={{
-              ...cardStyle,
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
-              padding: "18px",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "14px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-              <div
-                style={{
-                  width: "42px",
-                  height: "42px",
-                  borderRadius: "50%",
-                  background: palette.accentSoft,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 700,
-                  color: palette.textMain,
-                  flexShrink: 0,
-                }}
-              >
-                {(masterName || "•").slice(0, 1)}
-              </div>
-
-              <div>
-                <div style={{ fontSize: "15px", fontWeight: 700, color: palette.textMain }}>
-                  {masterName} — {profession}
-                </div>
-                <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "2px" }}>
-                  {city} • Персональная страница мастера
-                </div>
-              </div>
-            </div>
-
-            <a href={bookingUrl} style={primaryButtonStyle}>
-              Записаться онлайн
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ padding: "12px 0 12px" }}>
-        <div style={containerStyle}>
-          <div
-            style={{
-              ...cardStyle,
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
-              padding: "30px",
-            }}
-          >
+      {hasTopIdentity ? (
+        <section style={{ padding: "18px 0 12px" }}>
+          <div style={containerStyle}>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                gap: "22px",
-                alignItems: "stretch",
+                ...cardStyle,
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
+                padding: "18px",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "14px",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
                 <div
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "7px 11px",
-                    borderRadius: "999px",
-                    background: palette.accentSoft,
-                    color: palette.textMain,
-                    fontSize: "12px",
-                    fontWeight: 600,
-                  }}
-                >
-                  {heroBadge}
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <h1
-                    style={{
-                      margin: 0,
-                      fontSize: "clamp(34px, 5vw, 48px)",
-                      lineHeight: 1.04,
-                      fontWeight: 600,
-                      letterSpacing: "-0.25px",
-                      color: palette.textMain,
-                    }}
-                  >
-                    {masterName}
-                  </h1>
-
-                  <div
-                    style={{
-                      fontSize: "18px",
-                      lineHeight: 1.45,
-                      color: palette.textMain,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {profession}. {subtitle}
-                  </div>
-
-                  <p
-                    style={{
-                      margin: 0,
-                      maxWidth: "760px",
-                      fontSize: "14px",
-                      lineHeight: 1.6,
-                      color: palette.textSecondary,
-                    }}
-                  >
-                    {description}
-                  </p>
-                </div>
-
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {badges.map((badge) => (
-                    <span
-                      key={badge}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        padding: "8px 11px",
-                        borderRadius: "999px",
-                        background: palette.card,
-                        border: `1px solid ${palette.border}`,
-                        color: palette.textMain,
-                        fontSize: "12px",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {badge}
-                    </span>
-                  ))}
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                    gap: "12px",
-                    width: "100%",
-                  }}
-                >
-                  <div style={{ ...cardStyle, padding: "14px", background: palette.card }}>
-                    <div style={{ fontSize: "12px", color: palette.textSecondary }}>Локация</div>
-                    <div
-                      style={{
-                        marginTop: "4px",
-                        fontSize: "14px",
-                        lineHeight: 1.55,
-                        fontWeight: 600,
-                        color: palette.textMain,
-                      }}
-                    >
-                      {address}, {district}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: "6px",
-                        fontSize: "13px",
-                        lineHeight: 1.5,
-                        color: palette.textSecondary,
-                      }}
-                    >
-                      {schedule}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      ...cardStyle,
-                      padding: "14px",
-                      background: palette.review,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "4px",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <div style={{ fontSize: "12px", color: palette.textSecondary }}>Доверие и отзывы</div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div style={{ fontSize: "20px", fontWeight: 700, color: palette.textMain }}>{ratingValue}</div>
-                      <div style={{ fontSize: "15px", color: palette.star, letterSpacing: "1px" }}>★★★★★</div>
-                      <div style={{ fontSize: "13px", color: palette.textSecondary }}>{reviewCount}</div>
-                    </div>
-                    <div style={{ fontSize: "13px", color: palette.textSecondary, lineHeight: 1.5 }}>
-                      {trustNote}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", width: "100%" }}>
-                  <a href={bookingUrl} style={primaryButtonStyle}>
-                    {bookingLabel}
-                  </a>
-                  <a href={servicesAnchor} style={secondaryButtonStyle}>
-                    {servicesLabel}
-                  </a>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  position: "relative",
-                  minHeight: "560px",
-                  borderRadius: "20px",
-                  overflow: "hidden",
-                  background: "#ECE4DB",
-                }}
-              >
-                {heroVisual}
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: palette.heroOverlay,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ paddingBottom: "44px" }}>
-        <div style={containerStyle}>
-          <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-            <h2 style={sectionTitleStyle}>Почему выбирают этого мастера</h2>
-            <p style={sectionTextStyle}>
-              Здесь сочетаются личный подход, аккуратная техника и комфортный клиентский опыт. Не просто услуга, а понятный и качественный сервис вокруг вашего результата.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "10px",
-            }}
-          >
-            {benefits.map((item) => (
-              <div key={item.title} style={{ ...cardStyle, padding: "14px", background: palette.card }}>
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "12px",
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "50%",
                     background: palette.accentSoft,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "18px",
-                    marginBottom: "10px",
+                    fontWeight: 700,
+                    color: palette.textMain,
+                    flexShrink: 0,
                   }}
                 >
-                  ✦
+                  {(masterName || "•").slice(0, 1)}
                 </div>
-                <div style={{ fontSize: "15px", lineHeight: 1.35, fontWeight: 600, color: palette.textMain }}>
-                  {item.title}
-                </div>
-                <div style={{ marginTop: "6px", fontSize: "13px", lineHeight: 1.55, color: palette.textSecondary }}>
-                  {item.text}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      <section style={{ paddingBottom: "44px" }}>
-        <div style={containerStyle}>
-          <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-            <h2 style={sectionTitleStyle}>Быстрое доверие</h2>
-            <p style={sectionTextStyle}>
-              У мастера доверие строится не на обещаниях, а на понятных цифрах, повторных визитах и спокойной предсказуемости сервиса.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: "10px",
-            }}
-          >
-            {metrics.map((item) => (
-              <div key={item.label} style={{ ...cardStyle, padding: "16px", background: palette.card }}>
-                <div style={{ fontSize: "28px", fontWeight: 700, color: palette.textMain, letterSpacing: "-0.04em" }}>
-                  {item.value}
-                </div>
-                <div style={{ marginTop: "6px", fontSize: "13px", lineHeight: 1.55, color: palette.textSecondary }}>
-                  {item.label}
+                <div>
+                  {hasText(titleLine) ? (
+                    <div style={{ fontSize: "15px", fontWeight: 700, color: palette.textMain }}>
+                      {titleLine}
+                    </div>
+                  ) : null}
+                  {hasText(topMetaLine) ? (
+                    <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "2px" }}>
+                      {topMetaLine}
+                    </div>
+                  ) : null}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      <section style={{ paddingBottom: "44px" }}>
-        <div style={containerStyle}>
-          <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-            <h2 style={sectionTitleStyle}>Популярные услуги</h2>
-            <p style={sectionTextStyle}>
-              Услуги, с которых чаще всего начинается знакомство. Понятная ценность, удобный формат и хороший первый опыт для новых клиентов.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "10px",
-            }}
-          >
-            {featuredServices.map((service) => (
-              <div key={service.title} style={{ ...cardStyle, padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: "10px",
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <h3
-                      style={{
-                        margin: 0,
-                        fontSize: "18px",
-                        lineHeight: 1.3,
-                        fontWeight: 600,
-                        color: palette.textMain,
-                      }}
-                    >
-                      {service.title}
-                    </h3>
-                    <p style={{ margin: "6px 0 0", fontSize: "13px", lineHeight: 1.55, color: palette.textSecondary }}>
-                      {service.note}
-                    </p>
-                  </div>
-
-                  <div
-                    style={{
-                      flexShrink: 0,
-                      padding: "6px 9px",
-                      borderRadius: "10px",
-                      background: palette.accentSoft,
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: palette.textMain,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {service.time}
-                  </div>
-                </div>
-
-                <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>
-                  {service.price}
-                </div>
-
-                <a href={bookingUrl} style={secondaryButtonStyle}>
-                  Записаться
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="services" style={{ paddingBottom: "44px" }}>
-        <div style={containerStyle}>
-          <div style={{ ...cardStyle, padding: "16px" }}>
-            <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-              <h2 style={sectionTitleStyle}>Каталог услуг</h2>
-              <p style={sectionTextStyle}>
-                Прозрачный список услуг с ориентиром по стоимости и времени. Финальная рекомендация может уточняться под ваш запрос, длину, объём или желаемый образ.
-              </p>
-            </div>
-
-            <div style={{ display: "grid", gap: "10px" }}>
-              {serviceCatalog.map((service) => (
-                <div
-                  key={service.name}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr)",
-                    gap: "12px",
-                    alignItems: "center",
-                    padding: "12px 14px",
-                    borderRadius: "14px",
-                    background: "rgba(255,255,255,0.78)",
-                    border: `1px solid ${palette.border}`,
-                  }}
-                >
-                  <div style={{ fontSize: "14px", fontWeight: 600, color: palette.textMain }}>
-                    {service.name}
-                  </div>
-                  <div style={{ fontSize: "14px", fontWeight: 600, color: palette.textMain }}>
-                    {service.price}
-                  </div>
-                  <div style={{ fontSize: "13px", color: palette.textSecondary, textAlign: "right" }}>
-                    {service.duration}
-                  </div>
-                </div>
-              ))}
+              <ActionLink href={bookingUrl} style={primaryButtonStyle}>
+                {bookingLabel}
+              </ActionLink>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      <section style={{ paddingBottom: "44px" }}>
-        <div style={containerStyle}>
-          <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
-            <h2 style={sectionTitleStyle}>Отзывы клиентов</h2>
-            <p style={sectionTextStyle}>
-              Настоящее доверие строится не на обещаниях, а на повторных визитах и ощущении, что вас услышали. Именно это чаще всего отмечают клиенты.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "10px",
-            }}
-          >
-            {reviews.map((review) => (
-              <div key={review.name} style={{ ...cardStyle, padding: "14px", background: palette.card }}>
-                <div style={{ fontSize: "14px", color: palette.star, letterSpacing: "1px" }}>★★★★★</div>
-                <div style={{ marginTop: "8px", fontSize: "13px", lineHeight: 1.6, color: palette.textSecondary }}>
-                  {review.text}
-                </div>
-                <div style={{ marginTop: "10px", fontSize: "13px", lineHeight: 1.4, color: palette.textMain, fontWeight: 600 }}>
-                  {review.name}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section style={{ paddingBottom: "44px" }}>
-        <div style={containerStyle}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "10px",
-              alignItems: "stretch",
-            }}
-          >
-            <div style={{ ...cardStyle, padding: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-              <h2 style={sectionTitleStyle}>О мастере</h2>
-
-              {aboutParagraphs.map((paragraph, index) => (
-                <p key={`about_${index}`} style={sectionTextStyle}>
-                  {paragraph}
-                </p>
-              ))}
-
+      {hasHeroInfo ? (
+        <section style={{ padding: "12px 0 12px" }}>
+          <div style={containerStyle}>
+            <div
+              style={{
+                ...cardStyle,
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
+                padding: "30px",
+              }}
+            >
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                  gap: "10px",
-                  marginTop: "4px",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                  gap: "22px",
+                  alignItems: "stretch",
                 }}
               >
-                <div style={{ ...cardStyle, padding: "14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>{stats.years}</div>
-                  <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "4px" }}>года практики</div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  {hasText(heroBadge) ? (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        padding: "7px 11px",
+                        borderRadius: "999px",
+                        background: palette.accentSoft,
+                        color: palette.textMain,
+                        fontSize: "12px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {heroBadge}
+                    </div>
+                  ) : null}
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {hasText(masterName) ? (
+                      <h1
+                        style={{
+                          margin: 0,
+                          fontSize: "clamp(34px, 5vw, 48px)",
+                          lineHeight: 1.04,
+                          fontWeight: 600,
+                          letterSpacing: "-0.25px",
+                          color: palette.textMain,
+                        }}
+                      >
+                        {masterName}
+                      </h1>
+                    ) : null}
+
+                    {hasText(professionLine) ? (
+                      <div
+                        style={{
+                          fontSize: "18px",
+                          lineHeight: 1.45,
+                          color: palette.textMain,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {professionLine}
+                      </div>
+                    ) : null}
+
+                    {hasText(description) ? (
+                      <p
+                        style={{
+                          margin: 0,
+                          maxWidth: "760px",
+                          fontSize: "14px",
+                          lineHeight: 1.6,
+                          color: palette.textSecondary,
+                        }}
+                      >
+                        {description}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {badges.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {badges.map((badge) => (
+                        <span
+                          key={badge}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            padding: "8px 11px",
+                            borderRadius: "999px",
+                            background: palette.card,
+                            border: `1px solid ${palette.border}`,
+                            color: palette.textMain,
+                            fontSize: "12px",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {hasLocationCard || hasTrustCard ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: "12px",
+                        width: "100%",
+                      }}
+                    >
+                      {hasLocationCard ? (
+                        <div style={{ ...cardStyle, padding: "14px", background: palette.card }}>
+                          <div style={{ fontSize: "12px", color: palette.textSecondary }}>Локация</div>
+                          {hasText(locationLine) ? (
+                            <div
+                              style={{
+                                marginTop: "4px",
+                                fontSize: "14px",
+                                lineHeight: 1.55,
+                                fontWeight: 600,
+                                color: palette.textMain,
+                              }}
+                            >
+                              {locationLine}
+                            </div>
+                          ) : null}
+                          {hasText(schedule) ? (
+                            <div
+                              style={{
+                                marginTop: "6px",
+                                fontSize: "13px",
+                                lineHeight: 1.5,
+                                color: palette.textSecondary,
+                              }}
+                            >
+                              {schedule}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {hasTrustCard ? (
+                        <div
+                          style={{
+                            ...cardStyle,
+                            padding: "14px",
+                            background: palette.review,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "4px",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <div style={{ fontSize: "12px", color: palette.textSecondary }}>Доверие и отзывы</div>
+                          {hasAnyText([ratingValue, reviewCount]) ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {hasText(ratingValue) ? (
+                                <div style={{ fontSize: "20px", fontWeight: 700, color: palette.textMain }}>
+                                  {ratingValue}
+                                </div>
+                              ) : null}
+                              <div style={{ fontSize: "15px", color: palette.star, letterSpacing: "1px" }}>★★★★★</div>
+                              {hasText(reviewCount) ? (
+                                <div style={{ fontSize: "13px", color: palette.textSecondary }}>{reviewCount}</div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                          {hasText(trustNote) ? (
+                            <div style={{ fontSize: "13px", color: palette.textSecondary, lineHeight: 1.5 }}>
+                              {trustNote}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {hasHeroActions ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", width: "100%" }}>
+                      <ActionLink href={bookingUrl} style={primaryButtonStyle}>
+                        {bookingLabel}
+                      </ActionLink>
+                      <ActionLink href={servicesAnchor} style={secondaryButtonStyle}>
+                        {servicesLabel}
+                      </ActionLink>
+                    </div>
+                  ) : null}
                 </div>
 
-                <div style={{ ...cardStyle, padding: "14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>{stats.rating}</div>
-                  <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "4px" }}>рейтинг клиентов</div>
+                <div
+                  style={{
+                    position: "relative",
+                    minHeight: "560px",
+                    borderRadius: "20px",
+                    overflow: "hidden",
+                    background: "#ECE4DB",
+                  }}
+                >
+                  {heroVisual}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: palette.heroOverlay,
+                    }}
+                  />
                 </div>
-
-                <div style={{ ...cardStyle, padding: "14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>{stats.bookings}</div>
-                  <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "4px" }}>записей</div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ ...cardStyle, padding: "20px", display: "flex", flexDirection: "column", gap: "12px", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <h2 style={sectionTitleStyle}>Контакты и локация</h2>
-                <p style={sectionTextStyle}>
-                  Для master page карта в iframe не нужна: адрес должен быть понятным, но внимание должно оставаться на личности мастера и записи.
-                </p>
-              </div>
-
-              <div>
-                <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>Адрес</div>
-                <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
-                  {address}
-                </div>
-                <div style={{ marginTop: "2px", fontSize: "13px", lineHeight: 1.55, color: palette.textSecondary }}>
-                  {district}, {city}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>График</div>
-                <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
-                  {schedule}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>Телефон</div>
-                <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
-                  {phone}
-                </div>
-              </div>
-
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                <a href={mapUrl} target="_blank" rel="noreferrer" style={secondaryButtonStyle}>
-                  {mapLabel}
-                </a>
-                <a href={bookingUrl} style={primaryButtonStyle}>
-                  {bookingLabel}
-                </a>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      <section id="booking" style={{ paddingBottom: "110px" }}>
-        <div style={containerStyle}>
-          <div
-            style={{
-              ...cardStyle,
-              padding: "20px",
-              background:
-                "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(246,235,221,0.92))",
-            }}
-          >
+      {hasBenefits ? (
+        <section style={{ paddingBottom: "44px" }}>
+          <div style={containerStyle}>
+            <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
+              <h2 style={sectionTitleStyle}>Почему выбирают этого мастера</h2>
+            </div>
+
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: "20px",
-                alignItems: "center",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "10px",
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <h2 style={sectionTitleStyle}>{bookingBand.title}</h2>
-                <p style={sectionTextStyle}>
-                  {bookingBand.text}
-                </p>
+              {benefits.map((item) => (
+                <div key={`${item.title}_${item.text}`} style={{ ...cardStyle, padding: "14px", background: palette.card }}>
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "12px",
+                      background: palette.accentSoft,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "18px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    ✦
+                  </div>
+                  {hasText(item.title) ? (
+                    <div style={{ fontSize: "15px", lineHeight: 1.35, fontWeight: 600, color: palette.textMain }}>
+                      {item.title}
+                    </div>
+                  ) : null}
+                  {hasText(item.text) ? (
+                    <div style={{ marginTop: "6px", fontSize: "13px", lineHeight: 1.55, color: palette.textSecondary }}>
+                      {item.text}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {hasMetrics ? (
+        <section style={{ paddingBottom: "44px" }}>
+          <div style={containerStyle}>
+            <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
+              <h2 style={sectionTitleStyle}>Быстрое доверие</h2>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "10px",
+              }}
+            >
+              {metrics.map((item) => (
+                <div key={`${item.label}_${item.value}`} style={{ ...cardStyle, padding: "16px", background: palette.card }}>
+                  {hasText(item.value) ? (
+                    <div style={{ fontSize: "28px", fontWeight: 700, color: palette.textMain, letterSpacing: "-0.04em" }}>
+                      {item.value}
+                    </div>
+                  ) : null}
+                  {hasText(item.label) ? (
+                    <div style={{ marginTop: "6px", fontSize: "13px", lineHeight: 1.55, color: palette.textSecondary }}>
+                      {item.label}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {hasFeaturedServices ? (
+        <section style={{ paddingBottom: "44px" }}>
+          <div style={containerStyle}>
+            <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
+              <h2 style={sectionTitleStyle}>Популярные услуги</h2>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: "10px",
+              }}
+            >
+              {featuredServices.map((service) => (
+                <div key={`${service.title}_${service.price}_${service.time}`} style={{ ...cardStyle, padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "10px",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      {hasText(service.title) ? (
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: "18px",
+                            lineHeight: 1.3,
+                            fontWeight: 600,
+                            color: palette.textMain,
+                          }}
+                        >
+                          {service.title}
+                        </h3>
+                      ) : null}
+                      {hasText(service.note) ? (
+                        <p style={{ margin: "6px 0 0", fontSize: "13px", lineHeight: 1.55, color: palette.textSecondary }}>
+                          {service.note}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {hasText(service.time) ? (
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          padding: "6px 9px",
+                          borderRadius: "10px",
+                          background: palette.accentSoft,
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          color: palette.textMain,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {service.time}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {hasText(service.price) ? (
+                    <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>
+                      {service.price}
+                    </div>
+                  ) : null}
+
+                  <ActionLink href={bookingUrl} style={secondaryButtonStyle}>
+                    {bookingLabel}
+                  </ActionLink>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {hasServiceCatalog ? (
+        <section id="services" style={{ paddingBottom: "44px" }}>
+          <div style={containerStyle}>
+            <div style={{ ...cardStyle, padding: "16px" }}>
+              <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
+                <h2 style={sectionTitleStyle}>Каталог услуг</h2>
               </div>
 
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "flex-start" }}>
-                <a href={bookingBand.booking_cta_url || bookingUrl} style={primaryButtonStyle}>
-                  {bookingBand.booking_cta_label || bookingLabel}
-                </a>
-                <a href={bookingBand.services_anchor || servicesAnchor} style={secondaryButtonStyle}>
-                  {bookingBand.services_cta_label || servicesLabel}
-                </a>
+              <div style={{ display: "grid", gap: "10px" }}>
+                {serviceCatalog.map((service) => (
+                  <div
+                    key={`${service.name}_${service.price}_${service.duration}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr)",
+                      gap: "12px",
+                      alignItems: "center",
+                      padding: "12px 14px",
+                      borderRadius: "14px",
+                      background: "rgba(255,255,255,0.78)",
+                      border: `1px solid ${palette.border}`,
+                    }}
+                  >
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: palette.textMain }}>
+                      {service.name}
+                    </div>
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: palette.textMain }}>
+                      {service.price}
+                    </div>
+                    <div style={{ fontSize: "13px", color: palette.textSecondary, textAlign: "right" }}>
+                      {service.duration}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      <div
-        style={{
-          position: "fixed",
-          left: "16px",
-          right: "16px",
-          bottom: "16px",
-          zIndex: 30,
-          pointerEvents: "none",
-        }}
-      >
+      {hasReviews ? (
+        <section style={{ paddingBottom: "44px" }}>
+          <div style={containerStyle}>
+            <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
+              <h2 style={sectionTitleStyle}>Отзывы клиентов</h2>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: "10px",
+              }}
+            >
+              {reviews.map((review) => (
+                <div key={`${review.name}_${review.text}_${review.rating}`} style={{ ...cardStyle, padding: "14px", background: palette.card }}>
+                  <div style={{ fontSize: "14px", color: palette.star, letterSpacing: "1px" }}>
+                    {hasText(review.rating) ? review.rating : "★★★★★"}
+                  </div>
+                  {hasText(review.text) ? (
+                    <div style={{ marginTop: "8px", fontSize: "13px", lineHeight: 1.6, color: palette.textSecondary }}>
+                      {review.text}
+                    </div>
+                  ) : null}
+                  {hasText(review.name) ? (
+                    <div style={{ marginTop: "10px", fontSize: "13px", lineHeight: 1.4, color: palette.textMain, fontWeight: 600 }}>
+                      {review.name}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {hasAboutBlock || hasContactsBlock ? (
+        <section style={{ paddingBottom: "44px" }}>
+          <div style={containerStyle}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "10px",
+                alignItems: "stretch",
+              }}
+            >
+              {hasAboutBlock ? (
+                <div style={{ ...cardStyle, padding: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <h2 style={sectionTitleStyle}>О мастере</h2>
+
+                  {aboutParagraphs.map((paragraph, index) => (
+                    <p key={`about_${index}`} style={sectionTextStyle}>
+                      {paragraph}
+                    </p>
+                  ))}
+
+                  {hasStats ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                        gap: "10px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      {statsItems.map((item) => (
+                        <div key={item.label} style={{ ...cardStyle, padding: "14px", textAlign: "center" }}>
+                          <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>{item.value}</div>
+                          <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "4px" }}>{item.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {hasContactsBlock ? (
+                <div style={{ ...cardStyle, padding: "20px", display: "flex", flexDirection: "column", gap: "12px", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <h2 style={sectionTitleStyle}>Контакты и локация</h2>
+                  </div>
+
+                  {hasText(address) ? (
+                    <div>
+                      <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>Адрес</div>
+                      <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
+                        {address}
+                      </div>
+                      {hasText(cityLine) ? (
+                        <div style={{ marginTop: "2px", fontSize: "13px", lineHeight: 1.55, color: palette.textSecondary }}>
+                          {cityLine}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {hasText(schedule) ? (
+                    <div>
+                      <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>График</div>
+                      <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
+                        {schedule}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {hasText(phone) ? (
+                    <div>
+                      <div style={{ fontSize: "12px", lineHeight: 1.4, color: palette.textSecondary }}>Телефон</div>
+                      <div style={{ marginTop: "4px", fontSize: "14px", lineHeight: 1.6, fontWeight: 600, color: palette.textMain }}>
+                        {phone}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {(hasText(mapLabel) && hasText(mapUrl)) || (hasText(bookingLabel) && hasText(bookingUrl)) ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                      <ActionLink href={mapUrl} target="_blank" rel="noreferrer" style={secondaryButtonStyle}>
+                        {mapLabel}
+                      </ActionLink>
+                      <ActionLink href={bookingUrl} style={primaryButtonStyle}>
+                        {bookingLabel}
+                      </ActionLink>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {hasBookingBand ? (
+        <section id="booking" style={{ paddingBottom: hasStickyBlock ? "110px" : "44px" }}>
+          <div style={containerStyle}>
+            <div
+              style={{
+                ...cardStyle,
+                padding: "20px",
+                background:
+                  "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(246,235,221,0.92))",
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                  gap: "20px",
+                  alignItems: "center",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {hasText(bookingBand.title) ? <h2 style={sectionTitleStyle}>{bookingBand.title}</h2> : null}
+                  {hasText(bookingBand.text) ? <p style={sectionTextStyle}>{bookingBand.text}</p> : null}
+                </div>
+
+                {(hasText(bookingBand.booking_cta_label) && hasText(bookingBand.booking_cta_url)) ||
+                (hasText(bookingBand.services_cta_label) && hasText(bookingBand.services_anchor)) ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "flex-start" }}>
+                    <ActionLink href={bookingBand.booking_cta_url} style={primaryButtonStyle}>
+                      {bookingBand.booking_cta_label}
+                    </ActionLink>
+                    <ActionLink href={bookingBand.services_anchor} style={secondaryButtonStyle}>
+                      {bookingBand.services_cta_label}
+                    </ActionLink>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {hasStickyBlock ? (
         <div
           style={{
-            maxWidth: "860px",
-            margin: "0 auto",
-            pointerEvents: "auto",
-            background: "rgba(255,255,255,0.92)",
-            border: `1px solid ${palette.border}`,
-            boxShadow: "0 16px 38px rgba(53, 29, 45, 0.14)",
-            backdropFilter: "blur(12px)",
-            borderRadius: "24px",
-            padding: "12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-            flexWrap: "wrap",
+            position: "fixed",
+            left: "16px",
+            right: "16px",
+            bottom: "16px",
+            zIndex: 30,
+            pointerEvents: "none",
           }}
         >
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: "14px", fontWeight: 700, color: palette.textMain }}>
-              {masterName} • {profession}
+          <div
+            style={{
+              maxWidth: "860px",
+              margin: "0 auto",
+              pointerEvents: "auto",
+              background: "rgba(255,255,255,0.92)",
+              border: `1px solid ${palette.border}`,
+              boxShadow: "0 16px 38px rgba(53, 29, 45, 0.14)",
+              backdropFilter: "blur(12px)",
+              borderRadius: "24px",
+              padding: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              {hasText(titleLine) ? (
+                <div style={{ fontSize: "14px", fontWeight: 700, color: palette.textMain }}>
+                  {titleLine.replace(" — ", " • ")}
+                </div>
+              ) : null}
+              {hasText(stickySubline) ? (
+                <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "2px" }}>
+                  {stickySubline}
+                </div>
+              ) : null}
             </div>
-            <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "2px" }}>
-              {stickySubline}
-            </div>
-          </div>
 
-          <a href={bookingUrl} style={primaryButtonStyle}>
-            {stickyLabel}
-          </a>
+            <ActionLink href={bookingUrl} style={primaryButtonStyle}>
+              {stickyLabel}
+            </ActionLink>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

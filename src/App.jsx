@@ -64,7 +64,7 @@ const SALON_STATIC_SEGMENTS = new Set([
   "settlements",
   "payouts",
   "settings",
-  "template"
+  "template",
 ]);
 
 const MASTER_STATIC_SEGMENTS = new Set([
@@ -79,7 +79,7 @@ const MASTER_STATIC_SEGMENTS = new Set([
   "settlements",
   "payouts",
   "settings",
-  "template"
+  "template",
 ]);
 
 function getHashParts() {
@@ -149,15 +149,25 @@ function getSlugFromPath() {
   );
 }
 
-function getPublicPage() {
+function getPublicRouteFromPathname() {
   const pathParts = getPathParts();
 
   if (pathParts[0] === "master" && pathParts[1] && !MASTER_STATIC_SEGMENTS.has(pathParts[1])) {
-    return "master";
+    return { type: "master", slug: pathParts[1] };
   }
 
   if (pathParts[0] === "salon" && pathParts[1] && !SALON_STATIC_SEGMENTS.has(pathParts[1])) {
-    return "salon";
+    return { type: "salon", slug: pathParts[1] };
+  }
+
+  return null;
+}
+
+function getPublicPage() {
+  const pathnameRoute = getPublicRouteFromPathname();
+
+  if (pathnameRoute?.type) {
+    return pathnameRoute.type;
   }
 
   const hashParts = getHashParts();
@@ -194,92 +204,114 @@ function RedirectToMasterSlug({ tail = "" }) {
   return <Navigate to={`/master/${slug}${normalizedTail}`} replace />;
 }
 
-export default function App() {
+function PublicPathRouter() {
+  const publicRoute = getPublicRouteFromPathname();
+
+  if (!publicRoute) {
+    return null;
+  }
+
+  if (publicRoute.type === "master") {
+    return <PublicMasterPage slug={publicRoute.slug} />;
+  }
+
+  return <PublicSalonPage slug={publicRoute.slug} />;
+}
+
+function CabinetRouter() {
   const slug = getSlugFromPath();
   const publicType = getPublicPage();
 
   return (
+    <HashRouter>
+      <Routes>
+        <Route
+          index
+          element={
+            publicType === "master" ? (
+              <PublicMasterPage slug={slug} />
+            ) : (
+              <PublicSalonPage slug={slug} />
+            )
+          }
+        />
+
+        <Route path="booking" element={<BookingPage slug={slug} />} />
+        <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
+
+        <Route path="salon" element={<SalonLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="masters" element={<MastersPage />} />
+          <Route path="clients" element={<ClientsPage />} />
+          <Route path="bookings" element={<BookingsPage />} />
+          <Route path="services" element={<ServicesPage />} />
+          <Route path="money" element={<MoneyPage />} />
+          <Route path="finance" element={<SalonFinancePage />} />
+          <Route path="contracts" element={<SalonContractsPage />} />
+          <Route path="salon-money" element={<SalonMoneyPage />} />
+          <Route path="transactions" element={<SalonTransactionsPage />} />
+          <Route path="settlements" element={<SalonSettlementsPage />} />
+          <Route path="payouts" element={<SalonPayoutsPage />} />
+          <Route path="template" element={<SalonTemplateEditorPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+
+        <Route path="salon/:slug" element={<SalonLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="masters" element={<MastersPage />} />
+          <Route path="clients" element={<ClientsPage />} />
+          <Route path="bookings" element={<BookingsPage />} />
+          <Route path="services" element={<ServicesPage />} />
+          <Route path="money" element={<MoneyPage />} />
+          <Route path="finance" element={<SalonFinancePage />} />
+          <Route path="contracts" element={<SalonContractsPage />} />
+          <Route path="salon-money" element={<SalonMoneyPage />} />
+          <Route path="transactions" element={<SalonTransactionsPage />} />
+          <Route path="settlements" element={<SalonSettlementsPage />} />
+          <Route path="payouts" element={<SalonPayoutsPage />} />
+          <Route path="template" element={<SalonTemplateEditorPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+
+        <Route path="master" element={<RedirectToMasterSlug />}>
+          <Route index element={<RedirectToMasterSlug />} />
+        </Route>
+
+        <Route path="master/:slug" element={<MasterLayout />}>
+          <Route index element={<MasterDashboard />} />
+          <Route path="dashboard" element={<MasterDashboard />} />
+          <Route path="bookings" element={<MasterBookingsPage />} />
+          <Route path="bookings/:bookingId" element={<MasterBookingsPage />} />
+          <Route path="clients" element={<MasterClientsPage />} />
+          <Route path="schedule" element={<MasterSchedulePage />} />
+          <Route path="services" element={<MasterServicesPage />} />
+          <Route path="finance" element={<MasterFinancePage />} />
+          <Route path="finance/money" element={<MasterMoneyPage />} />
+          <Route path="finance/transactions" element={<MasterTransactionsPage />} />
+          <Route path="finance/settlements" element={<MasterSettlementsPage />} />
+          <Route path="finance/payouts" element={<MasterPayoutsPage />} />
+          <Route path="money" element={<MasterMoneyPage />} />
+          <Route path="transactions" element={<MasterTransactionsPage />} />
+          <Route path="settlements" element={<MasterSettlementsPage />} />
+          <Route path="payouts" element={<MasterPayoutsPage />} />
+          <Route path="template" element={<MasterTemplateEditorPage />} />
+          <Route path="settings" element={<MasterSettingsPage />} />
+        </Route>
+      </Routes>
+    </HashRouter>
+  );
+}
+
+export default function App() {
+  const publicRoute = getPublicRouteFromPathname();
+
+  return (
     <ErrorBoundary>
-      <HashRouter>
-        <Routes>
-          <Route
-            index
-            element={
-              publicType === "master" ? (
-                <PublicMasterPage slug={slug} />
-              ) : (
-                <PublicSalonPage slug={slug} />
-              )
-            }
-          />
-
-          <Route path="booking" element={<BookingPage slug={slug} />} />
-          <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
-
-          <Route path="salon" element={<SalonLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="masters" element={<MastersPage />} />
-            <Route path="clients" element={<ClientsPage />} />
-            <Route path="bookings" element={<BookingsPage />} />
-            <Route path="services" element={<ServicesPage />} />
-            <Route path="money" element={<MoneyPage />} />
-            <Route path="finance" element={<SalonFinancePage />} />
-            <Route path="contracts" element={<SalonContractsPage />} />
-            <Route path="salon-money" element={<SalonMoneyPage />} />
-            <Route path="transactions" element={<SalonTransactionsPage />} />
-            <Route path="settlements" element={<SalonSettlementsPage />} />
-            <Route path="payouts" element={<SalonPayoutsPage />} />
-            <Route path="template" element={<SalonTemplateEditorPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
-
-          <Route path="salon/:slug" element={<SalonLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="masters" element={<MastersPage />} />
-            <Route path="clients" element={<ClientsPage />} />
-            <Route path="bookings" element={<BookingsPage />} />
-            <Route path="services" element={<ServicesPage />} />
-            <Route path="money" element={<MoneyPage />} />
-            <Route path="finance" element={<SalonFinancePage />} />
-            <Route path="contracts" element={<SalonContractsPage />} />
-            <Route path="salon-money" element={<SalonMoneyPage />} />
-            <Route path="transactions" element={<SalonTransactionsPage />} />
-            <Route path="settlements" element={<SalonSettlementsPage />} />
-            <Route path="payouts" element={<SalonPayoutsPage />} />
-            <Route path="template" element={<SalonTemplateEditorPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
-
-          <Route path="master" element={<RedirectToMasterSlug />}>
-            <Route index element={<RedirectToMasterSlug />} />
-          </Route>
-
-          <Route path="master/:slug" element={<MasterLayout />}>
-            <Route index element={<MasterDashboard />} />
-            <Route path="dashboard" element={<MasterDashboard />} />
-            <Route path="bookings" element={<MasterBookingsPage />} />
-            <Route path="bookings/:bookingId" element={<MasterBookingsPage />} />
-            <Route path="clients" element={<MasterClientsPage />} />
-            <Route path="schedule" element={<MasterSchedulePage />} />
-            <Route path="services" element={<MasterServicesPage />} />
-            <Route path="finance" element={<MasterFinancePage />} />
-            <Route path="finance/money" element={<MasterMoneyPage />} />
-            <Route path="finance/transactions" element={<MasterTransactionsPage />} />
-            <Route path="finance/settlements" element={<MasterSettlementsPage />} />
-            <Route path="finance/payouts" element={<MasterPayoutsPage />} />
-            <Route path="money" element={<MasterMoneyPage />} />
-            <Route path="transactions" element={<MasterTransactionsPage />} />
-            <Route path="settlements" element={<MasterSettlementsPage />} />
-            <Route path="payouts" element={<MasterPayoutsPage />} />
-            <Route path="template" element={<MasterTemplateEditorPage />} />
-            <Route path="settings" element={<MasterSettingsPage />} />
-          </Route>
-        </Routes>
-      </HashRouter>
+      {publicRoute ? <PublicPathRouter /> : <CabinetRouter />}
     </ErrorBoundary>
   );
 }
