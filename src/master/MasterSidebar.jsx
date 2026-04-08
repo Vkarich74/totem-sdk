@@ -75,6 +75,7 @@ export default function MasterSidebar({ slug }) {
 
   const showcaseItems = [
     { to: buildMasterPath(slug, "template"), label: "Шаблон страницы" },
+    { to: `/master/${slug}`, label: "Публичная страница" },
   ]
 
   const financeItems = [
