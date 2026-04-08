@@ -120,13 +120,13 @@ export default function MasterSidebar({ slug }) {
   function openPublicPage() {
     const targetUrl = buildMasterPublicUrl(slug)
 
-    if (typeof window !== "undefined" && window.top && window.top.location) {
-      window.top.location.assign(targetUrl)
+    if (typeof window !== "undefined" && typeof window.open === "function") {
+      window.open(targetUrl, "_top")
       return
     }
 
     if (typeof window !== "undefined" && window.location) {
-      window.location.assign(targetUrl)
+      window.location.href = targetUrl
     }
   }
 
