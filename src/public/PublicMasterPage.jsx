@@ -24,172 +24,65 @@ function getActiveItems(items) {
   });
 }
 
-function buildFallbackPayload() {
+function createEmptyPayload() {
   return {
     identity: {
-      master_name: "Алина",
-      profession: "Мастер красоты",
-      city: "Бишкек",
-      hero_badge: "Премиальный мастер в TOTEM",
-      subtitle: "Персональный подход, аккуратная техника и понятный premium-сервис без хаоса и лишней переписки.",
-      description: "Персональная страница мастера в едином стиле TOTEM: сильный первый экран, понятные услуги, доверие через реальные метрики и удобная онлайн-запись.",
+      master_name: "",
+      profession: "",
+      city: "",
+      hero_badge: "",
+      subtitle: "",
+      description: "",
     },
     location: {
-      address: "Киевская улица, 148",
-      district: "Первомайский район",
-      city: "Бишкек",
-      schedule_text: "Ежедневно, 10:00–20:00",
-      phone: "+996 700 123 456",
-      whatsapp: "+996 700 123 456",
+      address: "",
+      district: "",
+      city: "",
+      schedule_text: "",
+      phone: "",
+      whatsapp: "",
       instagram: "",
       telegram: "",
-      map_url: "https://www.google.com/maps?q=" + encodeURIComponent("Киевская улица, 148, Первомайский район, Бишкек"),
+      map_url: "",
     },
     trust: {
-      rating_value: "4.9",
-      review_count: "120+ отзывов",
-      trust_note: "Здесь продаёт не место, а личность мастера, результат и ощущение качества уже с первого экрана.",
-      sticky_subline: "Онлайн-запись • Популярные услуги • Персональный premium-сервис",
+      rating_value: "",
+      review_count: "",
+      trust_note: "",
+      sticky_subline: "",
     },
-    metrics: [
-      { id: "metric-1", value: "4.9", label: "средняя оценка клиентов" },
-      { id: "metric-2", value: "500+", label: "записей через удобный онлайн-формат" },
-      { id: "metric-3", value: "3+", label: "года стабильной практики" },
-      { id: "metric-4", value: "120+", label: "повторных визитов и лояльных клиентов" },
-    ],
+    metrics: [],
     cta: {
-      booking_label: "Записаться к мастеру",
+      booking_label: "",
       booking_url: "#booking",
-      services_label: "Смотреть услуги",
+      services_label: "",
       services_anchor: "#services",
-      contact_map_label: "Открыть на карте",
-      sticky_label: "Записаться",
+      contact_map_label: "",
+      sticky_label: "",
     },
     sections: {
-      badges: [
-        { id: "badge-1", text: "Онлайн-запись 24/7", is_active: true },
-        { id: "badge-2", text: "Популярные услуги", is_active: true },
-        { id: "badge-3", text: "Проверенный мастер", is_active: true },
-        { id: "badge-4", text: "Комфортный premium-сервис", is_active: true },
-      ],
-      benefits: [
-        {
-          id: "benefit-1",
-          title: "Личный подход",
-          text: "Каждая услуга подбирается под ваш запрос, образ жизни и желаемый результат без шаблонных решений.",
-          is_active: true,
-        },
-        {
-          id: "benefit-2",
-          title: "Аккуратная работа",
-          text: "Внимание к деталям, чистая техника, спокойный процесс и понятный результат без лишнего стресса.",
-          is_active: true,
-        },
-        {
-          id: "benefit-3",
-          title: "Удобная запись",
-          text: "Понятная онлайн-запись, прозрачный выбор услуг и экономия времени без бесконечных переписок.",
-          is_active: true,
-        },
-        {
-          id: "benefit-4",
-          title: "Предсказуемый сервис",
-          text: "Ко мне возвращаются за стабильным качеством, комфортом и понятным уровнем сервиса.",
-          is_active: true,
-        },
-      ],
-      featured_services: [
-        {
-          id: "featured-1",
-          title: "Женская стрижка",
-          price: "от 1 500 KGS",
-          time: "60–90 мин",
-          note: "Форма, уход и аккуратная укладка в одном визите.",
-          is_active: true,
-        },
-        {
-          id: "featured-2",
-          title: "Окрашивание волос",
-          price: "от 3 500 KGS",
-          time: "2–4 часа",
-          note: "От мягкого обновления оттенка до полного изменения образа с понятной консультацией.",
-          is_active: true,
-        },
-        {
-          id: "featured-3",
-          title: "Укладка / образ",
-          price: "от 1 200 KGS",
-          time: "45–60 мин",
-          note: "На каждый день, съёмку, встречу или событие — без перегруза и с чистой формой.",
-          is_active: true,
-        },
-      ],
-      service_catalog: [
-        { id: "catalog-1", name: "Женская стрижка", price: "от 1 500 KGS", duration: "60–90 мин", is_active: true, description: "" },
-        { id: "catalog-2", name: "Мужская стрижка", price: "от 1 000 KGS", duration: "40–60 мин", is_active: true, description: "" },
-        { id: "catalog-3", name: "Укладка", price: "от 1 200 KGS", duration: "45–60 мин", is_active: true, description: "" },
-        { id: "catalog-4", name: "Окрашивание корней", price: "от 2 800 KGS", duration: "1.5–2 часа", is_active: true, description: "" },
-        { id: "catalog-5", name: "Полное окрашивание", price: "от 3 500 KGS", duration: "2–4 часа", is_active: true, description: "" },
-        { id: "catalog-6", name: "Уход / восстановление", price: "от 1 800 KGS", duration: "45–60 мин", is_active: true, description: "" },
-      ],
-      reviews: [
-        {
-          id: "review-1",
-          name: "Айпери",
-          text: "Очень понравился подход: спокойно, аккуратно и без навязывания. Результат получился именно таким, как я хотела.",
-          rating: "5",
-          is_active: true,
-        },
-        {
-          id: "review-2",
-          name: "Диана",
-          text: "Записалась онлайн без лишних сообщений, пришла в своё время и получила отличный сервис. Очень комфортный мастер.",
-          rating: "5",
-          is_active: true,
-        },
-        {
-          id: "review-3",
-          name: "Алина",
-          text: "Ценю стабильность. Уже не первый раз прихожу и каждый визит на хорошем уровне — и по качеству, и по атмосфере.",
-          rating: "5",
-          is_active: true,
-        },
-      ],
-      about_paragraphs: [
-        {
-          id: "about-1",
-          text: "Я работаю с клиентами, которым важны не только техника и визуальный результат, но и общее ощущение от сервиса. Для меня сильная работа — это когда человек чувствует себя спокойно, понимает, за что платит, и уходит с результатом, который ему действительно подходит.",
-          is_active: true,
-        },
-        {
-          id: "about-2",
-          text: "В основе подхода — внимание к деталям, честные рекомендации и удобный формат записи. Без перегруза, без лишних обещаний, с уважением к вашему времени и ожиданиям.",
-          is_active: true,
-        },
-      ],
-      portfolio: [
-        {
-          id: "portfolio-1",
-          alt: "Work 1",
-          secure_url: "",
-          is_active: true,
-        },
-      ],
+      badges: [],
+      benefits: [],
+      featured_services: [],
+      service_catalog: [],
+      reviews: [],
+      about_paragraphs: [],
+      portfolio: [],
       booking_band: {
-        title: "Готовы выбрать услугу и удобное время?",
-        text: "Онлайн-запись помогает быстро выбрать формат услуги и перейти к удобному времени без лишних сообщений и ожидания ответа.",
-        booking_cta_label: "Перейти к записи",
+        title: "",
+        text: "",
+        booking_cta_label: "",
         booking_cta_url: "#booking",
-        services_cta_label: "Сначала посмотреть услуги",
+        services_cta_label: "",
         services_anchor: "#services",
       },
     },
     images: {
       hero: {
-        image_asset_id: "cld:master-3_u6pois",
-        secure_url: "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1200/v1774516005/master-3_u6pois.png",
-        image_url: "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1200/v1774516005/master-3_u6pois.png",
-        alt: "Алина — портрет мастера",
+        image_asset_id: null,
+        secure_url: "",
+        image_url: "",
+        alt: "",
       },
       avatar: {
         image_asset_id: "",
@@ -200,125 +93,141 @@ function buildFallbackPayload() {
       assets: {},
     },
     seo: {
-      title: "Алина — Мастер красоты в Бишкеке",
-      description: "Персональная страница мастера красоты в Бишкеке: услуги, отзывы, онлайн-запись и premium-сервис.",
-      canonical_url: "https://www.totemv.com/master/totem-demo-master",
+      title: "",
+      description: "",
+      canonical_url: "",
     },
     stats: {
-      years: "3+",
-      rating: "4.9",
-      bookings: "500+",
+      years: "",
+      rating: "",
+      bookings: "",
     },
   };
 }
 
 function normalizePayload(payload) {
   const source = isObject(payload) ? payload : {};
-  const fallback = buildFallbackPayload();
+  const empty = createEmptyPayload();
 
   return {
     identity: {
-      master_name: asString(source.identity?.master_name, fallback.identity.master_name),
-      profession: asString(source.identity?.profession, fallback.identity.profession),
-      city: asString(source.identity?.city || source.location?.city, fallback.identity.city),
-      hero_badge: asString(source.identity?.hero_badge, fallback.identity.hero_badge),
-      subtitle: asString(source.identity?.subtitle, fallback.identity.subtitle),
-      description: asString(source.identity?.description, fallback.identity.description),
+      master_name: asString(source.identity?.master_name, empty.identity.master_name),
+      profession: asString(source.identity?.profession, empty.identity.profession),
+      city: asString(source.identity?.city || source.location?.city, empty.identity.city),
+      hero_badge: asString(source.identity?.hero_badge, empty.identity.hero_badge),
+      subtitle: asString(source.identity?.subtitle, empty.identity.subtitle),
+      description: asString(source.identity?.description, empty.identity.description),
     },
     location: {
-      address: asString(source.location?.address, fallback.location.address),
-      district: asString(source.location?.district, fallback.location.district),
-      city: asString(source.location?.city, fallback.location.city),
-      schedule_text: asString(source.location?.schedule_text, fallback.location.schedule_text),
-      phone: asString(source.location?.phone, fallback.location.phone),
-      whatsapp: asString(source.location?.whatsapp, fallback.location.whatsapp),
-      instagram: asString(source.location?.instagram, fallback.location.instagram),
-      telegram: asString(source.location?.telegram, fallback.location.telegram),
-      map_url: asString(source.location?.map_url, fallback.location.map_url),
+      address: asString(source.location?.address, empty.location.address),
+      district: asString(source.location?.district, empty.location.district),
+      city: asString(source.location?.city, empty.location.city),
+      schedule_text: asString(source.location?.schedule_text, empty.location.schedule_text),
+      phone: asString(source.location?.phone, empty.location.phone),
+      whatsapp: asString(source.location?.whatsapp, empty.location.whatsapp),
+      instagram: asString(source.location?.instagram, empty.location.instagram),
+      telegram: asString(source.location?.telegram, empty.location.telegram),
+      map_url: asString(source.location?.map_url, empty.location.map_url),
     },
     trust: {
-      rating_value: asString(source.trust?.rating_value, fallback.trust.rating_value),
-      review_count: asString(source.trust?.review_count, fallback.trust.review_count),
-      trust_note: asString(source.trust?.trust_note, fallback.trust.trust_note),
-      sticky_subline: asString(source.trust?.sticky_subline, fallback.trust.sticky_subline),
+      rating_value: asString(source.trust?.rating_value, empty.trust.rating_value),
+      review_count: asString(source.trust?.review_count, empty.trust.review_count),
+      trust_note: asString(source.trust?.trust_note, empty.trust.trust_note),
+      sticky_subline: asString(source.trust?.sticky_subline, empty.trust.sticky_subline),
     },
-    metrics: getActiveItems(source.metrics).length ? getActiveItems(source.metrics) : fallback.metrics,
+    metrics: getActiveItems(source.metrics),
     cta: {
-      booking_label: asString(source.cta?.booking_label, fallback.cta.booking_label),
-      booking_url: asString(source.cta?.booking_url, fallback.cta.booking_url),
-      services_label: asString(source.cta?.services_label, fallback.cta.services_label),
-      services_anchor: asString(source.cta?.services_anchor, fallback.cta.services_anchor),
-      sticky_label: asString(source.cta?.sticky_label, fallback.cta.sticky_label),
-      contact_map_label: asString(source.cta?.contact_map_label, fallback.cta.contact_map_label),
+      booking_label: asString(source.cta?.booking_label, empty.cta.booking_label),
+      booking_url: asString(source.cta?.booking_url, empty.cta.booking_url),
+      services_label: asString(source.cta?.services_label, empty.cta.services_label),
+      services_anchor: asString(source.cta?.services_anchor, empty.cta.services_anchor),
+      sticky_label: asString(source.cta?.sticky_label, empty.cta.sticky_label),
+      contact_map_label: asString(source.cta?.contact_map_label, empty.cta.contact_map_label),
     },
     sections: {
-      badges: getActiveItems(source.sections?.badges).length ? getActiveItems(source.sections?.badges) : fallback.sections.badges,
-      benefits: getActiveItems(source.sections?.benefits).length ? getActiveItems(source.sections?.benefits) : fallback.sections.benefits,
-      featured_services: getActiveItems(source.sections?.featured_services).length ? getActiveItems(source.sections?.featured_services) : fallback.sections.featured_services,
-      service_catalog: getActiveItems(source.sections?.service_catalog).length ? getActiveItems(source.sections?.service_catalog) : fallback.sections.service_catalog,
-      reviews: getActiveItems(source.sections?.reviews).length ? getActiveItems(source.sections?.reviews) : fallback.sections.reviews,
-      about_paragraphs: getActiveItems(source.sections?.about_paragraphs).length ? getActiveItems(source.sections?.about_paragraphs) : fallback.sections.about_paragraphs,
-      portfolio: getActiveItems(source.sections?.portfolio).length ? getActiveItems(source.sections?.portfolio) : fallback.sections.portfolio,
-      booking_band: isObject(source.sections?.booking_band) ? { ...fallback.sections.booking_band, ...source.sections.booking_band } : fallback.sections.booking_band,
+      badges: getActiveItems(source.sections?.badges),
+      benefits: getActiveItems(source.sections?.benefits),
+      featured_services: getActiveItems(source.sections?.featured_services),
+      service_catalog: getActiveItems(source.sections?.service_catalog),
+      reviews: getActiveItems(source.sections?.reviews),
+      about_paragraphs: getActiveItems(source.sections?.about_paragraphs),
+      portfolio: getActiveItems(source.sections?.portfolio),
+      booking_band: isObject(source.sections?.booking_band)
+        ? { ...empty.sections.booking_band, ...source.sections.booking_band }
+        : empty.sections.booking_band,
     },
     images: {
       hero: {
-        image_asset_id: source.images?.hero?.image_asset_id ?? fallback.images.hero.image_asset_id,
-        secure_url: asString(source.images?.hero?.secure_url, fallback.images.hero.secure_url),
-        image_url: asString(source.images?.hero?.image_url, fallback.images.hero.image_url),
-        alt: asString(source.images?.hero?.alt, fallback.images.hero.alt),
+        image_asset_id: source.images?.hero?.image_asset_id ?? empty.images.hero.image_asset_id,
+        secure_url: asString(source.images?.hero?.secure_url, empty.images.hero.secure_url),
+        image_url: asString(source.images?.hero?.image_url, empty.images.hero.image_url),
+        alt: asString(source.images?.hero?.alt, empty.images.hero.alt),
       },
       avatar: {
-        image_asset_id: source.images?.avatar?.image_asset_id ?? fallback.images.avatar.image_asset_id,
-        secure_url: asString(source.images?.avatar?.secure_url, fallback.images.avatar.secure_url),
-        image_url: asString(source.images?.avatar?.image_url, fallback.images.avatar.image_url),
-        alt: asString(source.images?.avatar?.alt, fallback.images.avatar.alt),
+        image_asset_id: source.images?.avatar?.image_asset_id ?? empty.images.avatar.image_asset_id,
+        secure_url: asString(source.images?.avatar?.secure_url, empty.images.avatar.secure_url),
+        image_url: asString(source.images?.avatar?.image_url, empty.images.avatar.image_url),
+        alt: asString(source.images?.avatar?.alt, empty.images.avatar.alt),
       },
-      assets: isObject(source.images?.assets) ? source.images.assets : fallback.images.assets,
+      assets: isObject(source.images?.assets) ? source.images.assets : empty.images.assets,
     },
     seo: {
-      title: asString(source.seo?.title, fallback.seo.title),
-      description: asString(source.seo?.description, fallback.seo.description),
-      canonical_url: asString(source.seo?.canonical_url, fallback.seo.canonical_url),
+      title: asString(source.seo?.title, empty.seo.title),
+      description: asString(source.seo?.description, empty.seo.description),
+      canonical_url: asString(source.seo?.canonical_url, empty.seo.canonical_url),
     },
     stats: {
-      years: asString(source.stats?.years, fallback.stats.years),
-      rating: asString(source.stats?.rating, fallback.stats.rating),
-      bookings: asString(source.stats?.bookings, fallback.stats.bookings),
+      years: asString(source.stats?.years, empty.stats.years),
+      rating: asString(source.stats?.rating, empty.stats.rating),
+      bookings: asString(source.stats?.bookings, empty.stats.bookings),
     },
   };
 }
 
 function mapPayloadToViewModel(payload) {
   const normalized = normalizePayload(payload);
-  const badges = normalized.sections.badges.map((item) => asString(item.text)).filter(Boolean);
-  const benefits = normalized.sections.benefits.map((item) => ({
-    title: asString(item.title),
-    text: asString(item.text),
-  })).filter((item) => item.title || item.text);
-  const metrics = normalized.metrics.map((item) => ({
-    value: asString(item.value),
-    label: asString(item.label),
-  })).filter((item) => item.value || item.label);
-  const featuredServices = normalized.sections.featured_services.map((item) => ({
-    title: asString(item.title),
-    price: asString(item.price),
-    time: asString(item.time),
-    note: asString(item.note),
-  })).filter((item) => item.title || item.price || item.time || item.note);
-  const serviceCatalog = normalized.sections.service_catalog.map((item) => ({
-    name: asString(item.name),
-    price: asString(item.price),
-    duration: asString(item.duration),
-    description: asString(item.description),
-  })).filter((item) => item.name || item.price || item.duration);
-  const reviews = normalized.sections.reviews.map((item) => ({
-    name: asString(item.name),
-    text: asString(item.text),
-    rating: asString(item.rating, "5"),
-  })).filter((item) => item.name || item.text);
-  const aboutParagraphs = normalized.sections.about_paragraphs.map((item) => asString(item.text)).filter(Boolean);
-  const heroImage = asString(normalized.images.hero.secure_url || normalized.images.hero.image_url, buildFallbackPayload().images.hero.secure_url);
+  const badges = normalized.sections.badges
+    .map((item) => asString(item.text))
+    .filter(Boolean);
+  const benefits = normalized.sections.benefits
+    .map((item) => ({
+      title: asString(item.title),
+      text: asString(item.text),
+    }))
+    .filter((item) => item.title || item.text);
+  const metrics = normalized.metrics
+    .map((item) => ({
+      value: asString(item.value),
+      label: asString(item.label),
+    }))
+    .filter((item) => item.value || item.label);
+  const featuredServices = normalized.sections.featured_services
+    .map((item) => ({
+      title: asString(item.title),
+      price: asString(item.price),
+      time: asString(item.time),
+      note: asString(item.note),
+    }))
+    .filter((item) => item.title || item.price || item.time || item.note);
+  const serviceCatalog = normalized.sections.service_catalog
+    .map((item) => ({
+      name: asString(item.name),
+      price: asString(item.price),
+      duration: asString(item.duration),
+      description: asString(item.description),
+    }))
+    .filter((item) => item.name || item.price || item.duration || item.description);
+  const reviews = normalized.sections.reviews
+    .map((item) => ({
+      name: asString(item.name),
+      text: asString(item.text),
+      rating: asString(item.rating, "5"),
+    }))
+    .filter((item) => item.name || item.text);
+  const aboutParagraphs = normalized.sections.about_paragraphs
+    .map((item) => asString(item.text))
+    .filter(Boolean);
+  const heroImage = asString(normalized.images.hero.secure_url || normalized.images.hero.image_url);
 
   return {
     masterName: normalized.identity.master_name,
@@ -346,12 +255,12 @@ function mapPayloadToViewModel(payload) {
     aboutParagraphs,
     stats: normalized.stats,
     bookingBand: normalized.sections.booking_band,
-    bookingLabel: normalized.cta.booking_label,
-    bookingUrl: normalized.cta.booking_url,
-    servicesLabel: normalized.cta.services_label,
-    servicesAnchor: normalized.cta.services_anchor,
-    mapLabel: normalized.cta.contact_map_label,
-    stickyLabel: normalized.cta.sticky_label,
+    bookingLabel: normalized.cta.booking_label || "Записаться",
+    bookingUrl: normalized.cta.booking_url || "#booking",
+    servicesLabel: normalized.cta.services_label || "Смотреть услуги",
+    servicesAnchor: normalized.cta.services_anchor || "#services",
+    mapLabel: normalized.cta.contact_map_label || "Открыть на карте",
+    stickyLabel: normalized.cta.sticky_label || "Записаться",
     stickySubline: normalized.trust.sticky_subline,
   };
 }
@@ -378,14 +287,14 @@ export default function PublicMasterPage({ slug }) {
 
         if (cancelled) return;
 
-        if (!response.ok || !json?.ok) {
+        if (!response.ok || !json?.ok || !json?.published_exists) {
           setRemoteState({ loading: false, ok: false, payload: null });
           return;
         }
 
         setRemoteState({
           loading: false,
-          ok: Boolean(json.published_exists),
+          ok: true,
           payload: json.payload || null,
         });
       } catch (error) {
@@ -523,6 +432,20 @@ export default function PublicMasterPage({ slug }) {
     border: `1px solid ${palette.border}`,
   };
 
+  const heroVisual = heroImage ? (
+    <img
+      src={heroImage}
+      alt={heroAlt}
+      loading="eager"
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "block",
+        objectFit: "cover",
+      }}
+    />
+  ) : null;
+
   return (
     <div style={shellStyle}>
       <section style={{ padding: "18px 0 12px" }}>
@@ -555,7 +478,7 @@ export default function PublicMasterPage({ slug }) {
                   flexShrink: 0,
                 }}
               >
-                {masterName.slice(0, 1)}
+                {(masterName || "•").slice(0, 1)}
               </div>
 
               <div>
@@ -758,17 +681,7 @@ export default function PublicMasterPage({ slug }) {
                   background: "#ECE4DB",
                 }}
               >
-                <img
-                  src={heroImage}
-                  alt={heroAlt}
-                  loading="eager"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "block",
-                    objectFit: "cover",
-                  }}
-                />
+                {heroVisual}
                 <div
                   style={{
                     position: "absolute",
