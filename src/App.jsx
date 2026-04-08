@@ -88,6 +88,11 @@ function getHashParts() {
   return clean.split("/").filter(Boolean);
 }
 
+function getPathParts() {
+  const path = window.location.pathname || "";
+  return path.split("/").filter(Boolean);
+}
+
 function getStoredSalonSlug() {
   return (
     window.SALON_SLUG ||
@@ -106,7 +111,7 @@ function getStoredMasterSlug() {
   );
 }
 
-function getSlugFromPath() {
+function getSlugFromHash() {
   const parts = getHashParts();
 
   if (parts[0] === "salon" && parts[1] && !SALON_STATIC_SEGMENTS.has(parts[1])) {
@@ -117,17 +122,61 @@ function getSlugFromPath() {
     return parts[1];
   }
 
-  return getStoredSalonSlug() || getStoredMasterSlug() || null;
+  return null;
+}
+
+function getSlugFromPathname() {
+  const parts = getPathParts();
+
+  if (parts[0] === "salon" && parts[1] && !SALON_STATIC_SEGMENTS.has(parts[1])) {
+    return parts[1];
+  }
+
+  if (parts[0] === "master" && parts[1] && !MASTER_STATIC_SEGMENTS.has(parts[1])) {
+    return parts[1];
+  }
+
+  return null;
+}
+
+function getSlugFromPath() {
+  return (
+    getSlugFromHash() ||
+    getSlugFromPathname() ||
+    getStoredSalonSlug() ||
+    getStoredMasterSlug() ||
+    null
+  );
 }
 
 function getPublicPage() {
-  const path = window.location.pathname || "";
+  const pathParts = getPathParts();
 
-  if (path.startsWith("/master")) {
+  if (pathParts[0] === "master" && pathParts[1] && !MASTER_STATIC_SEGMENTS.has(pathParts[1])) {
     return "master";
   }
 
-  if (path.startsWith("/salon")) {
+  if (pathParts[0] === "salon" && pathParts[1] && !SALON_STATIC_SEGMENTS.has(pathParts[1])) {
+    return "salon";
+  }
+
+  const hashParts = getHashParts();
+
+  if (hashParts[0] === "master" && hashParts[1] && !MASTER_STATIC_SEGMENTS.has(hashParts[1])) {
+    return "master";
+  }
+
+  if (hashParts[0] === "salon" && hashParts[1] && !SALON_STATIC_SEGMENTS.has(hashParts[1])) {
+    return "salon";
+  }
+
+  const pathname = window.location.pathname || "";
+
+  if (pathname.startsWith("/master")) {
+    return "master";
+  }
+
+  if (pathname.startsWith("/salon")) {
     return "salon";
   }
 
