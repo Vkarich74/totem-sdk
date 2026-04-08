@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import PageHeader from "../../cabinet/PageHeader";
@@ -23,7 +22,7 @@ const MASTER_ASSET_KIND_VALUES = Object.freeze(Object.values(MASTER_ASSET_KINDS)
 
 const sectionItems = [
   { id: "identity", label: "Identity", note: "Имя мастера, профессия, город и верхняя identity strip." },
-  { id: "hero", label: "Hero", note: "Главный hero блок, бейдж, описание, CTA и hero image." },
+  { id: "hero", label: "Hero", note: "Главный hero блок, subtitle, description, CTA и hero image." },
   { id: "contacts", label: "Contacts / Location", note: "Адрес, район, город, график, телефон, WhatsApp и карта." },
   { id: "trust", label: "Trust", note: "Рейтинг, количество отзывов и trust note." },
   { id: "badges", label: "Badges", note: "Короткие бейджи под hero." },
@@ -46,8 +45,8 @@ const EMPTY_DRAFT = {
     profession: "",
     city: "",
     hero_badge: "",
-    hero_subtitle: "",
-    hero_description: ""
+    subtitle: "",
+    description: ""
   },
   location: {
     address: "",
@@ -66,9 +65,7 @@ const EMPTY_DRAFT = {
     trust_note: "",
     sticky_subline: ""
   },
-  metrics: {
-    metrics: []
-  },
+  metrics: [],
   cta: {
     booking_label: "",
     booking_url: "",
@@ -84,6 +81,7 @@ const EMPTY_DRAFT = {
     service_catalog: [],
     reviews: [],
     about_paragraphs: [],
+    portfolio: [],
     booking_band: {
       title: "",
       text: "",
@@ -108,7 +106,6 @@ const EMPTY_DRAFT = {
       public_id: "",
       alt: ""
     },
-    portfolio: [],
     service_card: [],
     assets: {}
   },
@@ -215,18 +212,73 @@ async function uploadImageToCloudinary(file, meta) {
   return normalizeCloudinaryAsset(json, { ...meta, assetFolder });
 }
 
+function normalizeObjectItem(item) {
+  return item && typeof item === "object" && !Array.isArray(item) ? item : null;
+}
+
+function normalizeAboutParagraphs(items) {
+  return Array.isArray(items)
+    ? items
+        .map((item) => {
+          if (typeof item === "string") {
+            return { id: getItemKey("about"), text: item, is_active: true };
+          }
+          const normalized = normalizeObjectItem(item);
+          if (!normalized) return null;
+          return {
+            id: normalized.id || getItemKey("about"),
+            text: String(normalized.text || "").trim(),
+            is_active: normalized.is_active !== false
+          };
+        })
+        .filter(Boolean)
+    : [];
+}
+
+function normalizePortfolioItems(items) {
+  return Array.isArray(items)
+    ? items
+        .map((item) => {
+          const normalized = normalizeObjectItem(item);
+          if (!normalized) return null;
+          return {
+            id: normalized.id || getItemKey("portfolio"),
+            image_asset_id: String(normalized.image_asset_id || "").trim(),
+            image_url: String(normalized.image_url || normalized.secure_url || "").trim(),
+            secure_url: String(normalized.secure_url || normalized.image_url || "").trim(),
+            public_id: String(normalized.public_id || "").trim(),
+            alt: String(normalized.alt || "").trim(),
+            is_active: normalized.is_active !== false,
+            slot_index: Number.isFinite(Number(normalized.slot_index)) ? Number(normalized.slot_index) : 0
+          };
+        })
+        .filter(Boolean)
+    : [];
+}
+
 function mergeDraft(source = {}) {
+  const metricsSource = Array.isArray(source.metrics)
+    ? source.metrics
+    : Array.isArray(source.metrics?.metrics)
+      ? source.metrics.metrics
+      : [];
+
   return {
     ...EMPTY_DRAFT,
     ...source,
-    identity: { ...EMPTY_DRAFT.identity, ...(source.identity || {}) },
+    identity: {
+      ...EMPTY_DRAFT.identity,
+      ...(source.identity || {}),
+      subtitle: String(source.identity?.subtitle || source.identity?.hero_subtitle || "").trim(),
+      description: String(source.identity?.description || source.identity?.hero_description || "").trim()
+    },
     location: { ...EMPTY_DRAFT.location, ...(source.location || {}) },
     trust: { ...EMPTY_DRAFT.trust, ...(source.trust || {}) },
-    metrics: {
-      ...EMPTY_DRAFT.metrics,
-      ...(source.metrics || {}),
-      metrics: Array.isArray(source.metrics?.metrics) ? source.metrics.metrics : []
-    },
+    metrics: metricsSource.map((item) => ({
+      id: item?.id || getItemKey("metric"),
+      value: String(item?.value || "").trim(),
+      label: String(item?.label || "").trim()
+    })),
     cta: { ...EMPTY_DRAFT.cta, ...(source.cta || {}) },
     sections: {
       ...EMPTY_DRAFT.sections,
@@ -236,7 +288,8 @@ function mergeDraft(source = {}) {
       featured_services: Array.isArray(source.sections?.featured_services) ? source.sections.featured_services : [],
       service_catalog: Array.isArray(source.sections?.service_catalog) ? source.sections.service_catalog : [],
       reviews: Array.isArray(source.sections?.reviews) ? source.sections.reviews : [],
-      about_paragraphs: Array.isArray(source.sections?.about_paragraphs) ? source.sections.about_paragraphs : [],
+      about_paragraphs: normalizeAboutParagraphs(source.sections?.about_paragraphs),
+      portfolio: normalizePortfolioItems(source.sections?.portfolio || source.images?.portfolio),
       booking_band: {
         ...EMPTY_DRAFT.sections.booking_band,
         ...(source.sections?.booking_band || {})
@@ -247,7 +300,6 @@ function mergeDraft(source = {}) {
       ...(source.images || {}),
       hero: { ...EMPTY_DRAFT.images.hero, ...(source.images?.hero || {}) },
       avatar: { ...EMPTY_DRAFT.images.avatar, ...(source.images?.avatar || {}) },
-      portfolio: Array.isArray(source.images?.portfolio) ? source.images.portfolio : [],
       service_card: Array.isArray(source.images?.service_card) ? source.images.service_card : [],
       assets: { ...EMPTY_DRAFT.images.assets, ...(source.images?.assets || {}) }
     },
@@ -345,7 +397,9 @@ function validateMasterTemplateDraft(draft) {
     critical.push("sections.featured_services_or_service_catalog");
   }
 
-  if (!Array.isArray(draft.sections.about_paragraphs) || draft.sections.about_paragraphs.length < 1) {
+  const hasAboutParagraphs = Array.isArray(draft.sections.about_paragraphs)
+    && draft.sections.about_paragraphs.some((item) => normalizeText(item?.text));
+  if (!hasAboutParagraphs) {
     critical.push("sections.about_paragraphs");
   }
 
@@ -353,7 +407,7 @@ function validateMasterTemplateDraft(draft) {
   if (!normalizeText(draft.cta.booking_url)) critical.push("cta.booking_url");
 
   if (!Array.isArray(draft.sections.reviews) || draft.sections.reviews.length === 0) warnings.push("sections.reviews");
-  if (!Array.isArray(draft.metrics.metrics) || draft.metrics.metrics.length === 0) warnings.push("metrics.metrics");
+  if (!Array.isArray(draft.metrics) || draft.metrics.length === 0) warnings.push("metrics");
   if (!Array.isArray(draft.sections.badges) || draft.sections.badges.length === 0) warnings.push("sections.badges");
   if (!Array.isArray(draft.sections.benefits) || draft.sections.benefits.length === 0) warnings.push("sections.benefits");
   if (!normalizeText(draft.seo.title) && !normalizeText(draft.seo.description)) warnings.push("seo");
@@ -365,7 +419,7 @@ function validateMasterTemplateDraft(draft) {
     draft.location.address || draft.location.map_url,
     draft.cta.booking_label,
     hasFeaturedServices || hasServiceCatalog ? "services" : "",
-    Array.isArray(draft.sections.about_paragraphs) && draft.sections.about_paragraphs.length ? "about" : ""
+    hasAboutParagraphs ? "about" : ""
   ].filter(Boolean).length;
 
   return {
@@ -380,35 +434,6 @@ function validateMasterTemplateDraft(draft) {
 
 function getAssetPreviewUrl(entity = {}) {
   return entity?.secure_url || entity?.image_secure_url || entity?.image_url || "";
-}
-
-function StatusPill({ tone = "neutral", children }) {
-  const map = {
-    neutral: { background: "#f3f4f6", color: "#111827", border: "#e5e7eb" },
-    success: { background: "#ecfdf5", color: "#065f46", border: "#a7f3d0" },
-    warning: { background: "#fffbeb", color: "#92400e", border: "#fde68a" },
-    danger: { background: "#fef2f2", color: "#991b1b", border: "#fecaca" }
-  };
-  const palette = map[tone] || map.neutral;
-
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        minHeight: "32px",
-        padding: "0 12px",
-        borderRadius: "999px",
-        border: `1px solid ${palette.border}`,
-        background: palette.background,
-        color: palette.color,
-        fontSize: "13px",
-        fontWeight: 600
-      }}
-    >
-      {children}
-    </span>
-  );
 }
 
 function StatusCard({ title, value, note, tone = "neutral" }) {
@@ -514,19 +539,6 @@ function textareaStyle(rows = 4) {
     ...inputStyle(),
     minHeight: `${rows * 24 + 24}px`,
     resize: "vertical"
-  };
-}
-
-function selectStyle() {
-  return {
-    width: "100%",
-    border: "1px solid #d0d5dd",
-    borderRadius: "12px",
-    padding: "11px 14px",
-    fontSize: "14px",
-    color: "#111827",
-    background: "#ffffff",
-    boxSizing: "border-box"
   };
 }
 
@@ -646,7 +658,7 @@ export default function MasterTemplateEditorPage() {
   const sectionHealthItems = [
     { label: "Badges", value: draft.sections.badges.length },
     { label: "Benefits", value: draft.sections.benefits.length },
-    { label: "Metrics", value: draft.metrics.metrics.length },
+    { label: "Metrics", value: draft.metrics.length },
     { label: "Featured", value: draft.sections.featured_services.length },
     { label: "Catalog", value: draft.sections.service_catalog.length },
     { label: "Reviews", value: draft.sections.reviews.length }
@@ -755,9 +767,19 @@ export default function MasterTemplateEditorPage() {
   function setMetricItem(index, field, value) {
     setDraft((prev) => ({
       ...prev,
-      metrics: {
-        ...prev.metrics,
-        metrics: prev.metrics.metrics.map((item, itemIndex) => (
+      metrics: prev.metrics.map((item, itemIndex) => (
+        itemIndex === index ? { ...item, [field]: value } : item
+      ))
+    }));
+    resetStateMessages();
+  }
+
+  function setSectionImageArrayItem(sectionKey, index, field, value) {
+    setDraft((prev) => ({
+      ...prev,
+      sections: {
+        ...prev.sections,
+        [sectionKey]: prev.sections[sectionKey].map((item, itemIndex) => (
           itemIndex === index ? { ...item, [field]: value } : item
         ))
       }
@@ -854,10 +876,7 @@ export default function MasterTemplateEditorPage() {
   function addMetric() {
     setDraft((prev) => ({
       ...prev,
-      metrics: {
-        ...prev.metrics,
-        metrics: [...prev.metrics.metrics, { id: getItemKey("metric"), value: "", label: "" }]
-      }
+      metrics: [...prev.metrics, { id: getItemKey("metric"), value: "", label: "" }]
     }));
     resetStateMessages();
   }
@@ -865,10 +884,7 @@ export default function MasterTemplateEditorPage() {
   function removeMetric(index) {
     setDraft((prev) => ({
       ...prev,
-      metrics: {
-        ...prev.metrics,
-        metrics: prev.metrics.metrics.filter((_, itemIndex) => itemIndex !== index)
-      }
+      metrics: prev.metrics.filter((_, itemIndex) => itemIndex !== index)
     }));
     resetStateMessages();
   }
@@ -895,6 +911,82 @@ export default function MasterTemplateEditorPage() {
     resetStateMessages();
   }
 
+  function addPortfolioItem() {
+    setDraft((prev) => ({
+      ...prev,
+      sections: {
+        ...prev.sections,
+        portfolio: [
+          ...prev.sections.portfolio,
+          {
+            id: getItemKey("portfolio"),
+            image_asset_id: "",
+            image_url: "",
+            secure_url: "",
+            public_id: "",
+            alt: "",
+            is_active: true,
+            slot_index: prev.sections.portfolio.length
+          }
+        ]
+      }
+    }));
+    resetStateMessages();
+  }
+
+  function removePortfolioItem(index) {
+    setDraft((prev) => ({
+      ...prev,
+      sections: {
+        ...prev.sections,
+        portfolio: prev.sections.portfolio.filter((_, itemIndex) => itemIndex !== index)
+      }
+    }));
+    resetStateMessages();
+  }
+
+  function addAboutParagraph() {
+    setDraft((prev) => ({
+      ...prev,
+      sections: {
+        ...prev.sections,
+        about_paragraphs: [
+          ...prev.sections.about_paragraphs,
+          {
+            id: getItemKey("about"),
+            text: "",
+            is_active: true
+          }
+        ]
+      }
+    }));
+    resetStateMessages();
+  }
+
+  function updateAboutParagraph(index, field, value) {
+    setDraft((prev) => ({
+      ...prev,
+      sections: {
+        ...prev.sections,
+        about_paragraphs: prev.sections.about_paragraphs.map((item, itemIndex) => (
+          itemIndex === index ? { ...item, [field]: value } : item
+        ))
+      }
+    }));
+    resetStateMessages();
+  }
+
+  function removeAboutParagraph(index) {
+    setDraft((prev) => ({
+      ...prev,
+      sections: {
+        ...prev.sections,
+        about_paragraphs: prev.sections.about_paragraphs.filter((_, itemIndex) => itemIndex !== index)
+      }
+    }));
+    resetStateMessages();
+  }
+
   async function handleImageArrayUpload(imageKey, index, file) {
     if (!slug) return;
 
@@ -914,6 +1006,44 @@ export default function MasterTemplateEditorPage() {
         images: {
           ...prev.images,
           [imageKey]: prev.images[imageKey].map((item, itemIndex) => (
+            itemIndex === index
+              ? {
+                  ...item,
+                  image_asset_id: asset.asset_id,
+                  image_url: asset.secure_url,
+                  secure_url: asset.secure_url,
+                  public_id: asset.public_id
+                }
+              : item
+          ))
+        }
+      }));
+      setUploadFlag(uploadKey, { loading: false, error: "" });
+      resetStateMessages();
+    } catch (error) {
+      setUploadFlag(uploadKey, { loading: false, error: error?.message || "UPLOAD_FAILED" });
+    }
+  }
+
+  async function handlePortfolioUpload(index, file) {
+    if (!slug) return;
+
+    const uploadKey = `portfolio:${index}`;
+    setUploadFlag(uploadKey, { loading: true, error: "" });
+
+    try {
+      const asset = await uploadImageToCloudinary(file, {
+        ownerType: MASTER_OWNER_TYPE,
+        ownerSlug: slug,
+        assetKind: resolveMasterAssetKind("portfolio"),
+        alt: draft.sections.portfolio?.[index]?.alt || ""
+      });
+
+      setDraft((prev) => ({
+        ...prev,
+        sections: {
+          ...prev.sections,
+          portfolio: prev.sections.portfolio.map((item, itemIndex) => (
             itemIndex === index
               ? {
                   ...item,
@@ -1258,8 +1388,8 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="hero" title="Hero" note="Main hero content and top CTA.">
-            <Field label="Hero subtitle"><input value={draft.identity.hero_subtitle} onChange={(e) => setDraftField("identity", "hero_subtitle", e.target.value)} style={inputStyle()} /></Field>
-            <Field label="Hero description"><textarea value={draft.identity.hero_description} onChange={(e) => setDraftField("identity", "hero_description", e.target.value)} style={textareaStyle(5)} /></Field>
+            <Field label="Hero subtitle"><input value={draft.identity.subtitle} onChange={(e) => setDraftField("identity", "subtitle", e.target.value)} style={inputStyle()} /></Field>
+            <Field label="Hero description"><textarea value={draft.identity.description} onChange={(e) => setDraftField("identity", "description", e.target.value)} style={textareaStyle(5)} /></Field>
             <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
               <div style={{ display: "grid", gap: "14px" }}>
                 <Field label="Hero image asset id" hint="V1 primary pipeline field."><input value={draft.images.hero.image_asset_id} onChange={(e) => setNestedDraftField("images", "hero", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
@@ -1322,8 +1452,8 @@ export default function MasterTemplateEditorPage() {
 
           <Panel id="metrics" title="Metrics" note="Trust cards/value indicators.">
             <ArrayCard title="Metrics" note="value + label" onAdd={addMetric} addLabel="Добавить metric">
-              {draft.metrics.metrics.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
-              {draft.metrics.metrics.map((item, index) => (
+              {draft.metrics.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+              {draft.metrics.map((item, index) => (
                 <div key={item.id || `metric_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "10px" }}>
                   <input placeholder="Value" value={item.value || ""} onChange={(e) => setMetricItem(index, "value", e.target.value)} style={inputStyle()} />
                   <input placeholder="Label" value={item.label || ""} onChange={(e) => setMetricItem(index, "label", e.target.value)} style={inputStyle()} />
@@ -1384,12 +1514,12 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="about" title="About" note="About + stats composition stays together in public shell.">
-            <ArrayCard title="About paragraphs" note="Минимум 1 paragraph обязателен для publish." onAdd={() => addPrimitiveItem("about_paragraphs", "")} addLabel="Добавить paragraph">
+            <ArrayCard title="About paragraphs" note="Минимум 1 paragraph обязателен для publish." onAdd={addAboutParagraph} addLabel="Добавить paragraph">
               {draft.sections.about_paragraphs.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.about_paragraphs.map((item, index) => (
-                <div key={`about_${index}`} style={{ display: "grid", gap: "10px" }}>
-                  <textarea value={item} onChange={(e) => updatePrimitiveItem("about_paragraphs", index, e.target.value)} style={textareaStyle(4)} />
-                  <div><ActionButton tone="secondary" onClick={() => removePrimitiveItem("about_paragraphs", index)}>Удалить</ActionButton></div>
+                <div key={item.id || `about_${index}`} style={{ display: "grid", gap: "10px" }}>
+                  <textarea value={item.text || ""} onChange={(e) => updateAboutParagraph(index, "text", e.target.value)} style={textareaStyle(4)} />
+                  <div><ActionButton tone="secondary" onClick={() => removeAboutParagraph(index)}>Удалить</ActionButton></div>
                 </div>
               ))}
             </ArrayCard>
@@ -1418,17 +1548,17 @@ export default function MasterTemplateEditorPage() {
                 </div>
               </div>
 
-              <ArrayCard title="Portfolio reserved" note="Pipeline ready. Public block будет позже, но upload уже готов." onAdd={() => addImageItem("portfolio")} addLabel="Добавить portfolio image">
-                {draft.images.portfolio.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
-                {draft.images.portfolio.map((item, index) => (
+              <ArrayCard title="Portfolio reserved" note="Pipeline ready. Public block будет позже, но upload уже готов." onAdd={addPortfolioItem} addLabel="Добавить portfolio image">
+                {draft.sections.portfolio.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+                {draft.sections.portfolio.map((item, index) => (
                   <div key={item.id || `portfolio_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
                     <div style={{ display: "grid", gap: "10px" }}>
-                      <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("portfolio", index, "image_asset_id", e.target.value)} style={inputStyle()} />
-                      <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setImageArrayItem("portfolio", index, "image_url", e.target.value)} style={inputStyle()} />
-                      <input placeholder="alt" value={item.alt || ""} onChange={(e) => setImageArrayItem("portfolio", index, "alt", e.target.value)} style={inputStyle()} />
-                      <UploadInput onSelect={(file) => handleImageArrayUpload("portfolio", index, file)} disabled={!cloudinaryReady || !slug || uploadState[`portfolio:${index}`]?.loading} />
+                      <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_asset_id", e.target.value)} style={inputStyle()} />
+                      <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_url", e.target.value)} style={inputStyle()} />
+                      <input placeholder="alt" value={item.alt || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "alt", e.target.value)} style={inputStyle()} />
+                      <UploadInput onSelect={(file) => handlePortfolioUpload(index, file)} disabled={!cloudinaryReady || !slug || uploadState[`portfolio:${index}`]?.loading} />
                       {uploadState[`portfolio:${index}`]?.error ? <div style={warningBoxStyle}>{uploadState[`portfolio:${index}`].error}</div> : null}
-                      <div><ActionButton tone="secondary" onClick={() => removeImageItem("portfolio", index)}>Удалить</ActionButton></div>
+                      <div><ActionButton tone="secondary" onClick={() => removePortfolioItem(index)}>Удалить</ActionButton></div>
                     </div>
                     <AssetPreview title="Portfolio preview" entity={item} emptyNote="Portfolio image пока не загружено." />
                   </div>
@@ -1541,7 +1671,7 @@ export default function MasterTemplateEditorPage() {
                       {previewState.payload?.identity?.master_name || "Preview мастера"}
                     </div>
                     <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>
-                      {previewState.payload?.identity?.hero_description || previewState.payload?.identity?.profession || "Подзаголовок preview"}
+                      {previewState.payload?.identity?.description || previewState.payload?.identity?.profession || "Подзаголовок preview"}
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "8px" }}>
                       <a href={previewState.payload?.cta?.booking_url || "#"} style={previewPrimaryCtaStyle}>{previewState.payload?.cta?.booking_label || "Записаться"}</a>
@@ -1589,7 +1719,7 @@ export default function MasterTemplateEditorPage() {
                     <div style={previewCardTextStyle}>Featured services: {previewState.payload?.sections?.featured_services?.length || 0}</div>
                     <div style={previewCardTextStyle}>Catalog: {previewState.payload?.sections?.service_catalog?.length || 0}</div>
                     <div style={previewCardTextStyle}>Reviews: {previewState.payload?.sections?.reviews?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Portfolio: {previewState.payload?.images?.portfolio?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Portfolio: {previewState.payload?.sections?.portfolio?.length || 0}</div>
                   </div>
                 </div>
               </div>

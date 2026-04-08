@@ -1,91 +1,440 @@
+import { useEffect, useMemo, useState } from "react";
+
+const PUBLIC_API_BASE =
+  String(import.meta.env.VITE_PUBLIC_API_BASE || "https://api.totemv.com/public").trim() ||
+  "https://api.totemv.com/public";
+
+function isObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asString(value, fallback = "") {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function getActiveItems(items) {
+  return asArray(items).filter((item) => {
+    if (!isObject(item)) return false;
+    if (item.is_active === false) return false;
+    return true;
+  });
+}
+
+function buildFallbackPayload() {
+  return {
+    identity: {
+      master_name: "Алина",
+      profession: "Мастер красоты",
+      city: "Бишкек",
+      hero_badge: "Премиальный мастер в TOTEM",
+      subtitle: "Персональный подход, аккуратная техника и понятный premium-сервис без хаоса и лишней переписки.",
+      description: "Персональная страница мастера в едином стиле TOTEM: сильный первый экран, понятные услуги, доверие через реальные метрики и удобная онлайн-запись.",
+    },
+    location: {
+      address: "Киевская улица, 148",
+      district: "Первомайский район",
+      city: "Бишкек",
+      schedule_text: "Ежедневно, 10:00–20:00",
+      phone: "+996 700 123 456",
+      whatsapp: "+996 700 123 456",
+      instagram: "",
+      telegram: "",
+      map_url: "https://www.google.com/maps?q=" + encodeURIComponent("Киевская улица, 148, Первомайский район, Бишкек"),
+    },
+    trust: {
+      rating_value: "4.9",
+      review_count: "120+ отзывов",
+      trust_note: "Здесь продаёт не место, а личность мастера, результат и ощущение качества уже с первого экрана.",
+      sticky_subline: "Онлайн-запись • Популярные услуги • Персональный premium-сервис",
+    },
+    metrics: [
+      { id: "metric-1", value: "4.9", label: "средняя оценка клиентов" },
+      { id: "metric-2", value: "500+", label: "записей через удобный онлайн-формат" },
+      { id: "metric-3", value: "3+", label: "года стабильной практики" },
+      { id: "metric-4", value: "120+", label: "повторных визитов и лояльных клиентов" },
+    ],
+    cta: {
+      booking_label: "Записаться к мастеру",
+      booking_url: "#booking",
+      services_label: "Смотреть услуги",
+      services_anchor: "#services",
+      contact_map_label: "Открыть на карте",
+      sticky_label: "Записаться",
+    },
+    sections: {
+      badges: [
+        { id: "badge-1", text: "Онлайн-запись 24/7", is_active: true },
+        { id: "badge-2", text: "Популярные услуги", is_active: true },
+        { id: "badge-3", text: "Проверенный мастер", is_active: true },
+        { id: "badge-4", text: "Комфортный premium-сервис", is_active: true },
+      ],
+      benefits: [
+        {
+          id: "benefit-1",
+          title: "Личный подход",
+          text: "Каждая услуга подбирается под ваш запрос, образ жизни и желаемый результат без шаблонных решений.",
+          is_active: true,
+        },
+        {
+          id: "benefit-2",
+          title: "Аккуратная работа",
+          text: "Внимание к деталям, чистая техника, спокойный процесс и понятный результат без лишнего стресса.",
+          is_active: true,
+        },
+        {
+          id: "benefit-3",
+          title: "Удобная запись",
+          text: "Понятная онлайн-запись, прозрачный выбор услуг и экономия времени без бесконечных переписок.",
+          is_active: true,
+        },
+        {
+          id: "benefit-4",
+          title: "Предсказуемый сервис",
+          text: "Ко мне возвращаются за стабильным качеством, комфортом и понятным уровнем сервиса.",
+          is_active: true,
+        },
+      ],
+      featured_services: [
+        {
+          id: "featured-1",
+          title: "Женская стрижка",
+          price: "от 1 500 KGS",
+          time: "60–90 мин",
+          note: "Форма, уход и аккуратная укладка в одном визите.",
+          is_active: true,
+        },
+        {
+          id: "featured-2",
+          title: "Окрашивание волос",
+          price: "от 3 500 KGS",
+          time: "2–4 часа",
+          note: "От мягкого обновления оттенка до полного изменения образа с понятной консультацией.",
+          is_active: true,
+        },
+        {
+          id: "featured-3",
+          title: "Укладка / образ",
+          price: "от 1 200 KGS",
+          time: "45–60 мин",
+          note: "На каждый день, съёмку, встречу или событие — без перегруза и с чистой формой.",
+          is_active: true,
+        },
+      ],
+      service_catalog: [
+        { id: "catalog-1", name: "Женская стрижка", price: "от 1 500 KGS", duration: "60–90 мин", is_active: true, description: "" },
+        { id: "catalog-2", name: "Мужская стрижка", price: "от 1 000 KGS", duration: "40–60 мин", is_active: true, description: "" },
+        { id: "catalog-3", name: "Укладка", price: "от 1 200 KGS", duration: "45–60 мин", is_active: true, description: "" },
+        { id: "catalog-4", name: "Окрашивание корней", price: "от 2 800 KGS", duration: "1.5–2 часа", is_active: true, description: "" },
+        { id: "catalog-5", name: "Полное окрашивание", price: "от 3 500 KGS", duration: "2–4 часа", is_active: true, description: "" },
+        { id: "catalog-6", name: "Уход / восстановление", price: "от 1 800 KGS", duration: "45–60 мин", is_active: true, description: "" },
+      ],
+      reviews: [
+        {
+          id: "review-1",
+          name: "Айпери",
+          text: "Очень понравился подход: спокойно, аккуратно и без навязывания. Результат получился именно таким, как я хотела.",
+          rating: "5",
+          is_active: true,
+        },
+        {
+          id: "review-2",
+          name: "Диана",
+          text: "Записалась онлайн без лишних сообщений, пришла в своё время и получила отличный сервис. Очень комфортный мастер.",
+          rating: "5",
+          is_active: true,
+        },
+        {
+          id: "review-3",
+          name: "Алина",
+          text: "Ценю стабильность. Уже не первый раз прихожу и каждый визит на хорошем уровне — и по качеству, и по атмосфере.",
+          rating: "5",
+          is_active: true,
+        },
+      ],
+      about_paragraphs: [
+        {
+          id: "about-1",
+          text: "Я работаю с клиентами, которым важны не только техника и визуальный результат, но и общее ощущение от сервиса. Для меня сильная работа — это когда человек чувствует себя спокойно, понимает, за что платит, и уходит с результатом, который ему действительно подходит.",
+          is_active: true,
+        },
+        {
+          id: "about-2",
+          text: "В основе подхода — внимание к деталям, честные рекомендации и удобный формат записи. Без перегруза, без лишних обещаний, с уважением к вашему времени и ожиданиям.",
+          is_active: true,
+        },
+      ],
+      portfolio: [
+        {
+          id: "portfolio-1",
+          alt: "Work 1",
+          secure_url: "",
+          is_active: true,
+        },
+      ],
+      booking_band: {
+        title: "Готовы выбрать услугу и удобное время?",
+        text: "Онлайн-запись помогает быстро выбрать формат услуги и перейти к удобному времени без лишних сообщений и ожидания ответа.",
+        booking_cta_label: "Перейти к записи",
+        booking_cta_url: "#booking",
+        services_cta_label: "Сначала посмотреть услуги",
+        services_anchor: "#services",
+      },
+    },
+    images: {
+      hero: {
+        image_asset_id: "cld:master-3_u6pois",
+        secure_url: "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1200/v1774516005/master-3_u6pois.png",
+        image_url: "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1200/v1774516005/master-3_u6pois.png",
+        alt: "Алина — портрет мастера",
+      },
+      avatar: {
+        image_asset_id: "",
+        secure_url: "",
+        image_url: "",
+        alt: "",
+      },
+      assets: {},
+    },
+    seo: {
+      title: "Алина — Мастер красоты в Бишкеке",
+      description: "Персональная страница мастера красоты в Бишкеке: услуги, отзывы, онлайн-запись и premium-сервис.",
+      canonical_url: "https://www.totemv.com/master/totem-demo-master",
+    },
+    stats: {
+      years: "3+",
+      rating: "4.9",
+      bookings: "500+",
+    },
+  };
+}
+
+function normalizePayload(payload) {
+  const source = isObject(payload) ? payload : {};
+  const fallback = buildFallbackPayload();
+
+  return {
+    identity: {
+      master_name: asString(source.identity?.master_name, fallback.identity.master_name),
+      profession: asString(source.identity?.profession, fallback.identity.profession),
+      city: asString(source.identity?.city || source.location?.city, fallback.identity.city),
+      hero_badge: asString(source.identity?.hero_badge, fallback.identity.hero_badge),
+      subtitle: asString(source.identity?.subtitle, fallback.identity.subtitle),
+      description: asString(source.identity?.description, fallback.identity.description),
+    },
+    location: {
+      address: asString(source.location?.address, fallback.location.address),
+      district: asString(source.location?.district, fallback.location.district),
+      city: asString(source.location?.city, fallback.location.city),
+      schedule_text: asString(source.location?.schedule_text, fallback.location.schedule_text),
+      phone: asString(source.location?.phone, fallback.location.phone),
+      whatsapp: asString(source.location?.whatsapp, fallback.location.whatsapp),
+      instagram: asString(source.location?.instagram, fallback.location.instagram),
+      telegram: asString(source.location?.telegram, fallback.location.telegram),
+      map_url: asString(source.location?.map_url, fallback.location.map_url),
+    },
+    trust: {
+      rating_value: asString(source.trust?.rating_value, fallback.trust.rating_value),
+      review_count: asString(source.trust?.review_count, fallback.trust.review_count),
+      trust_note: asString(source.trust?.trust_note, fallback.trust.trust_note),
+      sticky_subline: asString(source.trust?.sticky_subline, fallback.trust.sticky_subline),
+    },
+    metrics: getActiveItems(source.metrics).length ? getActiveItems(source.metrics) : fallback.metrics,
+    cta: {
+      booking_label: asString(source.cta?.booking_label, fallback.cta.booking_label),
+      booking_url: asString(source.cta?.booking_url, fallback.cta.booking_url),
+      services_label: asString(source.cta?.services_label, fallback.cta.services_label),
+      services_anchor: asString(source.cta?.services_anchor, fallback.cta.services_anchor),
+      sticky_label: asString(source.cta?.sticky_label, fallback.cta.sticky_label),
+      contact_map_label: asString(source.cta?.contact_map_label, fallback.cta.contact_map_label),
+    },
+    sections: {
+      badges: getActiveItems(source.sections?.badges).length ? getActiveItems(source.sections?.badges) : fallback.sections.badges,
+      benefits: getActiveItems(source.sections?.benefits).length ? getActiveItems(source.sections?.benefits) : fallback.sections.benefits,
+      featured_services: getActiveItems(source.sections?.featured_services).length ? getActiveItems(source.sections?.featured_services) : fallback.sections.featured_services,
+      service_catalog: getActiveItems(source.sections?.service_catalog).length ? getActiveItems(source.sections?.service_catalog) : fallback.sections.service_catalog,
+      reviews: getActiveItems(source.sections?.reviews).length ? getActiveItems(source.sections?.reviews) : fallback.sections.reviews,
+      about_paragraphs: getActiveItems(source.sections?.about_paragraphs).length ? getActiveItems(source.sections?.about_paragraphs) : fallback.sections.about_paragraphs,
+      portfolio: getActiveItems(source.sections?.portfolio).length ? getActiveItems(source.sections?.portfolio) : fallback.sections.portfolio,
+      booking_band: isObject(source.sections?.booking_band) ? { ...fallback.sections.booking_band, ...source.sections.booking_band } : fallback.sections.booking_band,
+    },
+    images: {
+      hero: {
+        image_asset_id: source.images?.hero?.image_asset_id ?? fallback.images.hero.image_asset_id,
+        secure_url: asString(source.images?.hero?.secure_url, fallback.images.hero.secure_url),
+        image_url: asString(source.images?.hero?.image_url, fallback.images.hero.image_url),
+        alt: asString(source.images?.hero?.alt, fallback.images.hero.alt),
+      },
+      avatar: {
+        image_asset_id: source.images?.avatar?.image_asset_id ?? fallback.images.avatar.image_asset_id,
+        secure_url: asString(source.images?.avatar?.secure_url, fallback.images.avatar.secure_url),
+        image_url: asString(source.images?.avatar?.image_url, fallback.images.avatar.image_url),
+        alt: asString(source.images?.avatar?.alt, fallback.images.avatar.alt),
+      },
+      assets: isObject(source.images?.assets) ? source.images.assets : fallback.images.assets,
+    },
+    seo: {
+      title: asString(source.seo?.title, fallback.seo.title),
+      description: asString(source.seo?.description, fallback.seo.description),
+      canonical_url: asString(source.seo?.canonical_url, fallback.seo.canonical_url),
+    },
+    stats: {
+      years: asString(source.stats?.years, fallback.stats.years),
+      rating: asString(source.stats?.rating, fallback.stats.rating),
+      bookings: asString(source.stats?.bookings, fallback.stats.bookings),
+    },
+  };
+}
+
+function mapPayloadToViewModel(payload) {
+  const normalized = normalizePayload(payload);
+  const badges = normalized.sections.badges.map((item) => asString(item.text)).filter(Boolean);
+  const benefits = normalized.sections.benefits.map((item) => ({
+    title: asString(item.title),
+    text: asString(item.text),
+  })).filter((item) => item.title || item.text);
+  const metrics = normalized.metrics.map((item) => ({
+    value: asString(item.value),
+    label: asString(item.label),
+  })).filter((item) => item.value || item.label);
+  const featuredServices = normalized.sections.featured_services.map((item) => ({
+    title: asString(item.title),
+    price: asString(item.price),
+    time: asString(item.time),
+    note: asString(item.note),
+  })).filter((item) => item.title || item.price || item.time || item.note);
+  const serviceCatalog = normalized.sections.service_catalog.map((item) => ({
+    name: asString(item.name),
+    price: asString(item.price),
+    duration: asString(item.duration),
+    description: asString(item.description),
+  })).filter((item) => item.name || item.price || item.duration);
+  const reviews = normalized.sections.reviews.map((item) => ({
+    name: asString(item.name),
+    text: asString(item.text),
+    rating: asString(item.rating, "5"),
+  })).filter((item) => item.name || item.text);
+  const aboutParagraphs = normalized.sections.about_paragraphs.map((item) => asString(item.text)).filter(Boolean);
+  const heroImage = asString(normalized.images.hero.secure_url || normalized.images.hero.image_url, buildFallbackPayload().images.hero.secure_url);
+
+  return {
+    masterName: normalized.identity.master_name,
+    profession: normalized.identity.profession,
+    city: normalized.identity.city || normalized.location.city,
+    district: normalized.location.district,
+    address: normalized.location.address,
+    schedule: normalized.location.schedule_text,
+    phone: normalized.location.phone || normalized.location.whatsapp,
+    mapUrl: normalized.location.map_url,
+    heroImage,
+    heroAlt: normalized.images.hero.alt || `${normalized.identity.master_name} — портрет мастера`,
+    heroBadge: normalized.identity.hero_badge,
+    subtitle: normalized.identity.subtitle,
+    description: normalized.identity.description,
+    ratingValue: normalized.trust.rating_value,
+    reviewCount: normalized.trust.review_count,
+    trustNote: normalized.trust.trust_note,
+    badges,
+    benefits,
+    metrics,
+    featuredServices,
+    serviceCatalog,
+    reviews,
+    aboutParagraphs,
+    stats: normalized.stats,
+    bookingBand: normalized.sections.booking_band,
+    bookingLabel: normalized.cta.booking_label,
+    bookingUrl: normalized.cta.booking_url,
+    servicesLabel: normalized.cta.services_label,
+    servicesAnchor: normalized.cta.services_anchor,
+    mapLabel: normalized.cta.contact_map_label,
+    stickyLabel: normalized.cta.sticky_label,
+    stickySubline: normalized.trust.sticky_subline,
+  };
+}
+
 export default function PublicMasterPage({ slug }) {
-  const masterName = "Алина";
-  const profession = "Мастер красоты";
-  const city = "Бишкек";
-  const district = "Первомайский район";
-  const address = "Киевская улица, 148";
-  const schedule = "Ежедневно, 10:00–20:00";
-  const phone = "+996 700 123 456";
-  const mapUrl = "https://www.google.com/maps?q=" + encodeURIComponent(`${address}, ${district}, ${city}`);
-  const heroImage = "https://res.cloudinary.com/dgcec21nz/image/upload/f_auto,q_auto,w_1200/v1774516005/master-3_u6pois.png";
+  const [remoteState, setRemoteState] = useState({
+    loading: true,
+    ok: false,
+    payload: null,
+  });
 
-  const metrics = [
-    { value: "4.9", label: "средняя оценка клиентов" },
-    { value: "500+", label: "записей через удобный онлайн-формат" },
-    { value: "3+", label: "года стабильной практики" },
-    { value: "120+", label: "повторных визитов и лояльных клиентов" },
-  ];
+  useEffect(() => {
+    let cancelled = false;
 
-  const benefits = [
-    {
-      title: "Личный подход",
-      text: "Каждая услуга подбирается под ваш запрос, образ жизни и желаемый результат без шаблонных решений.",
-    },
-    {
-      title: "Аккуратная работа",
-      text: "Внимание к деталям, чистая техника, спокойный процесс и понятный результат без лишнего стресса.",
-    },
-    {
-      title: "Удобная запись",
-      text: "Понятная онлайн-запись, прозрачный выбор услуг и экономия времени без бесконечных переписок.",
-    },
-    {
-      title: "Предсказуемый сервис",
-      text: "Ко мне возвращаются за стабильным качеством, комфортом и понятным уровнем сервиса.",
-    },
-  ];
+    async function loadPublicPayload() {
+      if (!slug) {
+        setRemoteState({ loading: false, ok: false, payload: null });
+        return;
+      }
 
-  const featuredServices = [
-    {
-      title: "Женская стрижка",
-      price: "от 1 500 KGS",
-      time: "60–90 мин",
-      note: "Форма, уход и аккуратная укладка в одном визите.",
-    },
-    {
-      title: "Окрашивание волос",
-      price: "от 3 500 KGS",
-      time: "2–4 часа",
-      note: "От мягкого обновления оттенка до полного изменения образа с понятной консультацией.",
-    },
-    {
-      title: "Укладка / образ",
-      price: "от 1 200 KGS",
-      time: "45–60 мин",
-      note: "На каждый день, съёмку, встречу или событие — без перегруза и с чистой формой.",
-    },
-  ];
+      try {
+        const response = await fetch(`${PUBLIC_API_BASE}/masters/${slug}`);
+        const json = await response.json();
 
-  const serviceCatalog = [
-    { name: "Женская стрижка", price: "от 1 500 KGS", duration: "60–90 мин" },
-    { name: "Мужская стрижка", price: "от 1 000 KGS", duration: "40–60 мин" },
-    { name: "Укладка", price: "от 1 200 KGS", duration: "45–60 мин" },
-    { name: "Окрашивание корней", price: "от 2 800 KGS", duration: "1.5–2 часа" },
-    { name: "Полное окрашивание", price: "от 3 500 KGS", duration: "2–4 часа" },
-    { name: "Уход / восстановление", price: "от 1 800 KGS", duration: "45–60 мин" },
-  ];
+        if (cancelled) return;
 
-  const reviews = [
-    {
-      name: "Айпери",
-      text: "Очень понравился подход: спокойно, аккуратно и без навязывания. Результат получился именно таким, как я хотела.",
-    },
-    {
-      name: "Диана",
-      text: "Записалась онлайн без лишних сообщений, пришла в своё время и получила отличный сервис. Очень комфортный мастер.",
-    },
-    {
-      name: "Алина",
-      text: "Ценю стабильность. Уже не первый раз прихожу и каждый визит на хорошем уровне — и по качеству, и по атмосфере.",
-    },
-  ];
+        if (!response.ok || !json?.ok) {
+          setRemoteState({ loading: false, ok: false, payload: null });
+          return;
+        }
 
-  const badges = [
-    "Онлайн-запись 24/7",
-    "Популярные услуги",
-    "Проверенный мастер",
-    "Комфортный premium-сервис",
-  ];
+        setRemoteState({
+          loading: false,
+          ok: Boolean(json.published_exists),
+          payload: json.payload || null,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setRemoteState({ loading: false, ok: false, payload: null });
+      }
+    }
+
+    loadPublicPayload();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  const view = useMemo(() => mapPayloadToViewModel(remoteState.payload), [remoteState.payload]);
+
+  const masterName = view.masterName;
+  const profession = view.profession;
+  const city = view.city;
+  const district = view.district;
+  const address = view.address;
+  const schedule = view.schedule;
+  const phone = view.phone;
+  const mapUrl = view.mapUrl;
+  const heroImage = view.heroImage;
+  const heroAlt = view.heroAlt;
+  const heroBadge = view.heroBadge;
+  const subtitle = view.subtitle;
+  const description = view.description;
+  const metrics = view.metrics;
+  const benefits = view.benefits;
+  const featuredServices = view.featuredServices;
+  const serviceCatalog = view.serviceCatalog;
+  const reviews = view.reviews;
+  const badges = view.badges;
+  const aboutParagraphs = view.aboutParagraphs;
+  const stats = view.stats;
+  const bookingBand = view.bookingBand;
+  const bookingUrl = view.bookingUrl;
+  const bookingLabel = view.bookingLabel;
+  const servicesLabel = view.servicesLabel;
+  const servicesAnchor = view.servicesAnchor;
+  const mapLabel = view.mapLabel;
+  const stickyLabel = view.stickyLabel;
+  const stickySubline = view.stickySubline;
+  const ratingValue = view.ratingValue;
+  const reviewCount = view.reviewCount;
+  const trustNote = view.trustNote;
 
   const palette = {
     bg: "#F8F5F1",
@@ -219,7 +568,7 @@ export default function PublicMasterPage({ slug }) {
               </div>
             </div>
 
-            <a href="#booking" style={primaryButtonStyle}>
+            <a href={bookingUrl} style={primaryButtonStyle}>
               Записаться онлайн
             </a>
           </div>
@@ -265,7 +614,7 @@ export default function PublicMasterPage({ slug }) {
                     fontWeight: 600,
                   }}
                 >
-                  Премиальный мастер в TOTEM
+                  {heroBadge}
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -290,7 +639,7 @@ export default function PublicMasterPage({ slug }) {
                       fontWeight: 500,
                     }}
                   >
-                    {profession}. Персональный подход, аккуратная техника и понятный premium-сервис без хаоса и лишней переписки.
+                    {profession}. {subtitle}
                   </div>
 
                   <p
@@ -302,7 +651,7 @@ export default function PublicMasterPage({ slug }) {
                       color: palette.textSecondary,
                     }}
                   >
-                    Персональная страница мастера в едином стиле TOTEM: сильный первый экран, понятные услуги, доверие через реальные метрики и удобная онлайн-запись.
+                    {description}
                   </p>
                 </div>
 
@@ -380,22 +729,22 @@ export default function PublicMasterPage({ slug }) {
                         flexWrap: "wrap",
                       }}
                     >
-                      <div style={{ fontSize: "20px", fontWeight: 700, color: palette.textMain }}>4.9</div>
+                      <div style={{ fontSize: "20px", fontWeight: 700, color: palette.textMain }}>{ratingValue}</div>
                       <div style={{ fontSize: "15px", color: palette.star, letterSpacing: "1px" }}>★★★★★</div>
-                      <div style={{ fontSize: "13px", color: palette.textSecondary }}>120+ отзывов</div>
+                      <div style={{ fontSize: "13px", color: palette.textSecondary }}>{reviewCount}</div>
                     </div>
                     <div style={{ fontSize: "13px", color: palette.textSecondary, lineHeight: 1.5 }}>
-                      Здесь продаёт не место, а личность мастера, результат и ощущение качества уже с первого экрана.
+                      {trustNote}
                     </div>
                   </div>
                 </div>
 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", width: "100%" }}>
-                  <a href="#booking" style={primaryButtonStyle}>
-                    Записаться к мастеру
+                  <a href={bookingUrl} style={primaryButtonStyle}>
+                    {bookingLabel}
                   </a>
-                  <a href="#services" style={secondaryButtonStyle}>
-                    Смотреть услуги
+                  <a href={servicesAnchor} style={secondaryButtonStyle}>
+                    {servicesLabel}
                   </a>
                 </div>
               </div>
@@ -411,7 +760,7 @@ export default function PublicMasterPage({ slug }) {
               >
                 <img
                   src={heroImage}
-                  alt={`${masterName} — портрет мастера`}
+                  alt={heroAlt}
                   loading="eager"
                   style={{
                     width: "100%",
@@ -571,7 +920,7 @@ export default function PublicMasterPage({ slug }) {
                   {service.price}
                 </div>
 
-                <a href="#booking" style={secondaryButtonStyle}>
+                <a href={bookingUrl} style={secondaryButtonStyle}>
                   Записаться
                 </a>
               </div>
@@ -665,13 +1014,11 @@ export default function PublicMasterPage({ slug }) {
             <div style={{ ...cardStyle, padding: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
               <h2 style={sectionTitleStyle}>О мастере</h2>
 
-              <p style={sectionTextStyle}>
-                Я работаю с клиентами, которым важны не только техника и визуальный результат, но и общее ощущение от сервиса. Для меня сильная работа — это когда человек чувствует себя спокойно, понимает, за что платит, и уходит с результатом, который ему действительно подходит.
-              </p>
-
-              <p style={sectionTextStyle}>
-                В основе подхода — внимание к деталям, честные рекомендации и удобный формат записи. Без перегруза, без лишних обещаний, с уважением к вашему времени и ожиданиям.
-              </p>
+              {aboutParagraphs.map((paragraph, index) => (
+                <p key={`about_${index}`} style={sectionTextStyle}>
+                  {paragraph}
+                </p>
+              ))}
 
               <div
                 style={{
@@ -682,17 +1029,17 @@ export default function PublicMasterPage({ slug }) {
                 }}
               >
                 <div style={{ ...cardStyle, padding: "14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>3+</div>
+                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>{stats.years}</div>
                   <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "4px" }}>года практики</div>
                 </div>
 
                 <div style={{ ...cardStyle, padding: "14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>4.9</div>
+                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>{stats.rating}</div>
                   <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "4px" }}>рейтинг клиентов</div>
                 </div>
 
                 <div style={{ ...cardStyle, padding: "14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>500+</div>
+                  <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textMain }}>{stats.bookings}</div>
                   <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "4px" }}>записей</div>
                 </div>
               </div>
@@ -732,10 +1079,10 @@ export default function PublicMasterPage({ slug }) {
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                 <a href={mapUrl} target="_blank" rel="noreferrer" style={secondaryButtonStyle}>
-                  Открыть на карте
+                  {mapLabel}
                 </a>
-                <a href="#booking" style={primaryButtonStyle}>
-                  Записаться
+                <a href={bookingUrl} style={primaryButtonStyle}>
+                  {bookingLabel}
                 </a>
               </div>
             </div>
@@ -762,18 +1109,18 @@ export default function PublicMasterPage({ slug }) {
               }}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <h2 style={sectionTitleStyle}>Готовы выбрать услугу и удобное время?</h2>
+                <h2 style={sectionTitleStyle}>{bookingBand.title}</h2>
                 <p style={sectionTextStyle}>
-                  Онлайн-запись помогает быстро выбрать формат услуги и перейти к удобному времени без лишних сообщений и ожидания ответа.
+                  {bookingBand.text}
                 </p>
               </div>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "flex-start" }}>
-                <a href="#booking" style={primaryButtonStyle}>
-                  Перейти к записи
+                <a href={bookingBand.booking_cta_url || bookingUrl} style={primaryButtonStyle}>
+                  {bookingBand.booking_cta_label || bookingLabel}
                 </a>
-                <a href="#services" style={secondaryButtonStyle}>
-                  Сначала посмотреть услуги
+                <a href={bookingBand.services_anchor || servicesAnchor} style={secondaryButtonStyle}>
+                  {bookingBand.services_cta_label || servicesLabel}
                 </a>
               </div>
             </div>
@@ -814,12 +1161,12 @@ export default function PublicMasterPage({ slug }) {
               {masterName} • {profession}
             </div>
             <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "2px" }}>
-              Онлайн-запись • Популярные услуги • Персональный premium-сервис
+              {stickySubline}
             </div>
           </div>
 
-          <a href="#booking" style={primaryButtonStyle}>
-            Записаться
+          <a href={bookingUrl} style={primaryButtonStyle}>
+            {stickyLabel}
           </a>
         </div>
       </div>
