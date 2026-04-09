@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router-dom"
+import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { useEffect, useMemo } from "react"
 import { MasterProvider, useMaster } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
@@ -151,6 +151,7 @@ function BillingOverlay({ billingAccess, billingBlockReason }){
 
 function MasterLayoutInner(){
   const location = useLocation()
+  const navigate = useNavigate()
   const {
     slug,
     billingAccess,
@@ -178,7 +179,7 @@ function MasterLayoutInner(){
   }, [billingAccess, masterLoading, canWrite, canWithdraw, billingBlockReason])
 
   function logout(){
-    window.location.href = "/"
+    navigate("/", { replace: true })
   }
 
   return (
