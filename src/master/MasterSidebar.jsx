@@ -44,7 +44,7 @@ function buildMasterPath(slug, tail = "") {
   const safeTail = String(tail || "").trim().replace(/^\/+/, "")
 
   if (!safeSlug) {
-    return "/master"
+    return ""
   }
 
   return safeTail ? `/master/${safeSlug}/${safeTail}` : `/master/${safeSlug}`
@@ -63,6 +63,10 @@ function renderMenu(items, menuStyle) {
 }
 
 export default function MasterSidebar({ slug }) {
+  if (!String(slug || "").trim()) {
+    return null
+  }
+
   const menuStyle = ({ isActive }) => buildMenuStyle(isActive)
 
   const mainItems = [
