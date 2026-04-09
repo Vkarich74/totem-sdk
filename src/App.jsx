@@ -223,7 +223,6 @@ function CabinetRouter() {
   const publicType = getPublicPage();
 
   return (
-    <HashRouter>
       <Routes>
         <Route
           index
@@ -302,7 +301,6 @@ function CabinetRouter() {
           <Route path="settings" element={<MasterSettingsPage />} />
         </Route>
       </Routes>
-    </HashRouter>
   );
 }
 
@@ -311,7 +309,9 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      {publicRoute ? <PublicPathRouter /> : <CabinetRouter />}
+      <HashRouter>
+        {publicRoute ? <PublicPathRouter /> : <CabinetRouter />}
+      </HashRouter>
     </ErrorBoundary>
   );
 }

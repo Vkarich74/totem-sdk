@@ -178,7 +178,12 @@ function SalonLayoutInner(){
   }, [billingAccess, salonLoading, canWrite, canWithdraw, billingBlockReason])
 
   function logout(){
-    window.location.href = "/"
+    if(!slug){
+      window.location.href = "/"
+      return
+    }
+
+    window.location.href = `/salon/${slug}`
   }
 
   return (
