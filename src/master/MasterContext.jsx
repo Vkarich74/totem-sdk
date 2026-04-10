@@ -16,11 +16,11 @@ export function buildMasterPath(slug, section = "dashboard"){
   const targetSection = section || "dashboard"
 
   if(slug){
-    return `/master/${slug}/${targetSection}`
+    return `#/master/${slug}/${targetSection}`
   }
 
   console.error("MASTER PATH ERROR: SLUG_MISSING", { section: targetSection })
-  return "/master"
+  return "#/master"
 }
 
 function normalizeMasterRoot(payload){
