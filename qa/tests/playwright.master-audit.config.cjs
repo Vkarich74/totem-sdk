@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: '.',
-  testMatch: ['master-intermediate-audit.spec.cjs'],
+  testMatch: ['auth-flow.spec.cjs'],
   timeout: 60000,
   expect: {
     timeout: 10000,
