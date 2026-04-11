@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import ErrorBoundary from "./core/ErrorBoundary";
-import { clearAuthAccessToken, hasAuthAccessToken, resolveSession } from "./api/internal";
 
 import PublicSalonPage from "./public/PublicSalonPage";
 import PublicMasterPage from "./public/PublicMasterPage";
@@ -50,6 +49,20 @@ import MasterPayoutsPage from "./master/payments/MasterPayoutsPage";
 
 /* NEW MASTER FINANCE CONTROL PAGE */
 import MasterFinancePage from "./master/payments/MasterFinancePage";
+
+/* AUTH */
+import AuthLayout from "./auth/AuthLayout";
+import LoginPage from "./auth/LoginPage";
+import VerifyCodePage from "./auth/VerifyCodePage";
+import SetPasswordPage from "./auth/SetPasswordPage";
+import ForgotPasswordPage from "./auth/ForgotPasswordPage";
+import ResetPasswordPage from "./auth/ResetPasswordPage";
+
+import {
+  clearAuthAccessToken,
+  hasAuthAccessToken,
+  resolveSession
+} from "./api/internal";
 
 const SALON_STATIC_SEGMENTS = new Set([
   "dashboard",
@@ -220,6 +233,61 @@ function PublicPathRouter() {
   return <PublicSalonPage slug={publicRoute.slug} />;
 }
 
+function AuthBootstrapGate({ children }){
+  const [state, setState] = useState({
+    loading: true
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    async function run(){
+      if(!hasAuthAccessToken()){
+        if(active){
+          setState({ loading: false });
+        }
+        return;
+      }
+
+      const session = await resolveSession();
+
+      if(!active) return;
+
+      if(!session?.ok || !session?.authenticated){
+        clearAuthAccessToken();
+      }
+
+      setState({ loading: false });
+    }
+
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if(state.loading){
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f9fafb",
+          color: "#111827",
+          font: "16px/1.5 Arial, sans-serif"
+        }}
+      >
+        Проверка сессии…
+      </div>
+    );
+  }
+
+  return children;
+}
+
 function CabinetRouter() {
   const slug = getSlugFromPath();
   const publicType = getPublicPage();
@@ -236,6 +304,15 @@ function CabinetRouter() {
           )
         }
       />
+
+      <Route path="auth" element={<AuthLayout />}>
+        <Route index element={<Navigate to="/auth/login" replace />} />
+        <Route path="login" element={<LoginPage />} />
+        <Route path="verify" element={<VerifyCodePage />} />
+        <Route path="set-password" element={<SetPasswordPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset" element={<ResetPasswordPage />} />
+      </Route>
 
       <Route path="booking" element={<BookingPage slug={slug} />} />
       <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
@@ -304,73 +381,6 @@ function CabinetRouter() {
       </Route>
     </Routes>
   );
-}
-
-function AuthBootstrapGate({ children }) {
-  const [state, setState] = useState({
-    loading: hasAuthAccessToken(),
-    checked: false,
-    authenticated: false,
-    reason: null,
-    role: "public"
-  });
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function runResolve() {
-      if (!hasAuthAccessToken()) {
-        if (isMounted) {
-          setState({
-            loading: false,
-            checked: true,
-            authenticated: false,
-            reason: "NO_TOKEN",
-            role: "public"
-          });
-        }
-        return;
-      }
-
-      const result = await resolveSession();
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (!result.ok || !result.authenticated) {
-        clearAuthAccessToken();
-        setState({
-          loading: false,
-          checked: true,
-          authenticated: false,
-          reason: result.reason || result.error || "SESSION_INVALID",
-          role: "public"
-        });
-        return;
-      }
-
-      setState({
-        loading: false,
-        checked: true,
-        authenticated: true,
-        reason: null,
-        role: result.role || "public"
-      });
-    }
-
-    runResolve();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  if (state.loading) {
-    return <div style={{ padding: 16 }}>Загрузка сессии...</div>;
-  }
-
-  return children;
 }
 
 export default function App() {
