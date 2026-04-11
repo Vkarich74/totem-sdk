@@ -1,9 +1,15 @@
 import { Outlet, useLocation } from "react-router-dom"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { MasterProvider, useMaster } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
 import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
+import {
+  hasAuthAccessToken,
+  clearAuthAccessToken,
+  logoutCurrentSession,
+  resolveSession
+} from "../api/internal"
 
 const ODOO_BASE = "https://www.totemv.com/odoo"
 
@@ -149,6 +155,95 @@ function BillingOverlay({ billingAccess, billingBlockReason }){
   )
 }
 
+
+
+function SessionGate({ slug, children }){
+  const [state, setState] = useState({
+    loading: true,
+    allowed: false
+  })
+
+  useEffect(() => {
+    let active = true
+
+    async function run(){
+      if(!hasAuthAccessToken()){
+        if(active){
+          setState({ loading: false, allowed: false })
+        }
+        return
+      }
+
+      const session = await resolveSession()
+
+      if(!active) return
+
+      const authenticated = Boolean(session?.ok && session?.authenticated)
+      const role = String(session?.identity?.role || session?.auth?.role || "")
+      const masterSlug = String(
+        session?.identity?.master_slug ||
+        session?.auth?.master_slug ||
+        ""
+      )
+
+      const hasAccess =
+        authenticated &&
+        role === "master" &&
+        masterSlug === String(slug || "")
+
+      if(!hasAccess){
+        try{
+          await logoutCurrentSession()
+        }catch(e){
+          clearAuthAccessToken()
+        }
+
+        if(active){
+          setState({ loading: false, allowed: false })
+        }
+        return
+      }
+
+      setState({ loading: false, allowed: true })
+    }
+
+    run()
+
+    return () => {
+      active = false
+    }
+  }, [slug])
+
+  useEffect(() => {
+    if(state.loading || state.allowed) return
+
+    const target = slug ? `/master/${slug}` : "/"
+    window.location.href = target
+  }, [state, slug])
+
+  if(state.loading){
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#f9fafb",
+        color: "#111827",
+        font: "16px/1.5 Arial, sans-serif"
+      }}>
+        Проверка сессии кабинета…
+      </div>
+    )
+  }
+
+  if(!state.allowed){
+    return null
+  }
+
+  return children
+}
+
 function MasterLayoutInner(){
   const location = useLocation()
   const {
@@ -177,45 +272,54 @@ function MasterLayoutInner(){
     }
   }, [billingAccess, masterLoading, canWrite, canWithdraw, billingBlockReason])
 
-  function logout(){
+  async function logout(){
+    try{
+      await logoutCurrentSession()
+    }catch(e){
+      clearAuthAccessToken()
+    }
+
     if(!slug){
       window.location.href = "/"
       return
     }
+
     window.location.href = `/master/${slug}`
   }
 
   return (
-    <div style={{ position: "relative", height: "100%" }}>
-      <BillingBanner
-        billingAccess={billingAccess}
-        billingBlockReason={billingBlockReason}
-        canWrite={canWrite}
-        canWithdraw={canWithdraw}
-      />
+    <SessionGate slug={slug}>
+      <div style={{ position: "relative", height: "100%" }}>
+        <BillingBanner
+          billingAccess={billingAccess}
+          billingBlockReason={billingBlockReason}
+          canWrite={canWrite}
+          canWithdraw={canWithdraw}
+        />
 
-      <CabinetLayout
-        header={<CabinetHeader slug={slug} onLogout={logout} />}
-        sidebar={<MasterSidebar slug={slug} />}
-        page={<Outlet />}
-        odoo={
-          <div
-            id="odoo-content"
-            style={{
-              width: "30%",
-              overflow: "auto",
-              padding: "20px",
-              minHeight: 0
-            }}
-          />
-        }
-      />
+        <CabinetLayout
+          header={<CabinetHeader slug={slug} onLogout={logout} />}
+          sidebar={<MasterSidebar slug={slug} />}
+          page={<Outlet />}
+          odoo={
+            <div
+              id="odoo-content"
+              style={{
+                width: "30%",
+                overflow: "auto",
+                padding: "20px",
+                minHeight: 0
+              }}
+            />
+          }
+        />
 
-      <BillingOverlay
-        billingAccess={billingAccess}
-        billingBlockReason={billingBlockReason}
-      />
-    </div>
+        <BillingOverlay
+          billingAccess={billingAccess}
+          billingBlockReason={billingBlockReason}
+        />
+      </div>
+    </SessionGate>
   )
 }
 
