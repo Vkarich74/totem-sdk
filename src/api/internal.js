@@ -185,6 +185,48 @@ export async function loginWithPassword({ email = "", phone = "", password = "" 
   };
 }
 
+export async function authLogin({ login = "", password = "", role = "", slug = "" } = {}){
+  const normalizedLogin = String(login || "").trim();
+  const normalizedPassword = String(password || "");
+  const body = {
+    password: normalizedPassword
+  };
+
+  if(normalizedLogin.includes("@")){
+    body.email = normalizedLogin;
+  }else{
+    body.phone = normalizedLogin;
+  }
+
+  if(String(role || "").trim()){
+    body.role = String(role).trim();
+  }
+
+  if(String(slug || "").trim()){
+    body.slug = String(slug).trim();
+  }
+
+  const r = await safeInternalJson(`/auth/login`, {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+
+  if(!r.ok) return { ok:false, error:"AUTH_LOGIN_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_LOGIN_API_NOT_OK", detail:j };
+
+  if(j.access_token){
+    setAuthAccessToken(j.access_token);
+  }
+
+  return {
+    ok:true,
+    access_token:j.access_token || "",
+    token_type:j.token_type || "Bearer",
+    auth:j.auth || null
+  };
+}
+
 export async function logoutCurrentSession(){
   const r = await safeInternalJson(`/auth/logout`, { method: "POST" });
   if(!r.ok) return { ok:false, error:"AUTH_LOGOUT_FETCH_FAILED", detail:r };
@@ -212,6 +254,24 @@ export async function startAuth(payload){
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"AUTH_START_API_NOT_OK", detail:j };
   return { ok:true, result:j };
+}
+
+export async function authStart({ login = "", purpose = "", role = "", slug = "" } = {}){
+  const normalizedLogin = String(login || "").trim();
+  const payload = {
+    login: normalizedLogin,
+    purpose: String(purpose || "").trim() || "login"
+  };
+
+  if(String(role || "").trim()){
+    payload.role = String(role).trim();
+  }
+
+  if(String(slug || "").trim()){
+    payload.slug = String(slug).trim();
+  }
+
+  return startAuth(payload);
 }
 
 export async function verifyAuth(payload){
