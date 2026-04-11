@@ -1,38 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { setPassword, resolveSession } from "../api/internal";
-
-function resolveRedirectTarget(session){
-  const role = String(session?.identity?.role || session?.auth?.role || session?.role || "");
-
-  if(role === "master"){
-    const masterSlug =
-      session?.identity?.master_slug ||
-      window.MASTER_SLUG ||
-      window.localStorage.getItem("totem_master_slug") ||
-      window.sessionStorage.getItem("totem_master_slug") ||
-      "";
-
-    if(masterSlug){
-      return `/master/${masterSlug}`;
-    }
-
-    return "/";
-  }
-
-  const salonSlug =
-    session?.identity?.salon_slug ||
-    window.SALON_SLUG ||
-    window.localStorage.getItem("totem_salon_slug") ||
-    window.sessionStorage.getItem("totem_salon_slug") ||
-    "";
-
-  if(salonSlug){
-    return `/salon/${salonSlug}`;
-  }
-
-  return "/";
-}
+import { setPassword } from "../api/internal";
 
 export default function SetPasswordPage(){
   const navigate = useNavigate();
@@ -71,16 +39,8 @@ export default function SetPasswordPage(){
         return;
       }
 
-      setSuccess("Пароль сохранён. Проверяем сессию…");
-
-      const session = await resolveSession();
-
-      if(session?.ok && session?.authenticated){
-        navigate(resolveRedirectTarget(session), { replace: true });
-        return;
-      }
-
-      navigate("/", { replace: true });
+      setSuccess("Пароль сохранён. Выполните вход заново.");
+      navigate("/auth/login", { replace: true });
     }catch(e){
       setError("Ошибка сохранения пароля");
     }finally{
