@@ -1,9 +1,15 @@
 import { Outlet, useLocation } from "react-router-dom"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { SalonProvider, useSalonContext } from "./SalonContext"
 import SalonSidebar from "./SalonSidebar"
 import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
+import {
+  hasAuthAccessToken,
+  clearAuthAccessToken,
+  logoutCurrentSession,
+  resolveSession
+} from "../api/internal"
 
 const ODOO_BASE = "https://www.totemv.com/odoo"
 
@@ -149,6 +155,93 @@ function BillingOverlay({ billingAccess, billingBlockReason }){
   )
 }
 
+function SessionGate({ slug, children }){
+  const [state, setState] = useState({
+    loading: true,
+    allowed: false
+  })
+
+  useEffect(() => {
+    let active = true
+
+    async function run(){
+      if(!hasAuthAccessToken()){
+        if(active){
+          setState({ loading: false, allowed: false })
+        }
+        return
+      }
+
+      const session = await resolveSession()
+
+      if(!active) return
+
+      const authenticated = Boolean(session?.ok && session?.authenticated)
+      const role = String(session?.role || session?.auth?.role || session?.identity?.role || "")
+      const salons = Array.isArray(session?.identity?.salons) ? session.identity.salons : []
+      const ownership = Array.isArray(session?.identity?.ownership) ? session.identity.ownership : []
+      const salonSlug = String(session?.identity?.salon_slug || session?.auth?.salon_slug || "")
+      const hasSalonAccess =
+        role === "salon_admin" &&
+        (
+          salons.length > 0 ||
+          ownership.length > 0 ||
+          salonSlug === String(slug || "")
+        )
+
+      if(!authenticated || !hasSalonAccess){
+        try{
+          await logoutCurrentSession()
+        }catch(e){
+          clearAuthAccessToken()
+        }
+
+        if(active){
+          setState({ loading: false, allowed: false })
+        }
+        return
+      }
+
+      setState({ loading: false, allowed: true })
+    }
+
+    run()
+
+    return () => {
+      active = false
+    }
+  }, [slug])
+
+  useEffect(() => {
+    if(state.loading || state.allowed) return
+
+    const target = slug ? `/salon/${slug}` : "/"
+    window.location.href = target
+  }, [state, slug])
+
+  if(state.loading){
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#f9fafb",
+        color: "#111827",
+        font: "16px/1.5 Arial, sans-serif"
+      }}>
+        Проверка сессии кабинета…
+      </div>
+    )
+  }
+
+  if(!state.allowed){
+    return null
+  }
+
+  return children
+}
+
 function SalonLayoutInner(){
   const location = useLocation()
   const {
@@ -177,7 +270,13 @@ function SalonLayoutInner(){
     }
   }, [billingAccess, salonLoading, canWrite, canWithdraw, billingBlockReason])
 
-  function logout(){
+  async function logout(){
+    try{
+      await logoutCurrentSession()
+    }catch(e){
+      clearAuthAccessToken()
+    }
+
     if(!slug){
       window.location.href = "/"
       return
@@ -187,36 +286,38 @@ function SalonLayoutInner(){
   }
 
   return (
-    <div style={{ position: "relative", height: "100%" }}>
-      <BillingBanner
-        billingAccess={billingAccess}
-        billingBlockReason={billingBlockReason}
-        canWrite={canWrite}
-        canWithdraw={canWithdraw}
-      />
+    <SessionGate slug={slug}>
+      <div style={{ position: "relative", height: "100%" }}>
+        <BillingBanner
+          billingAccess={billingAccess}
+          billingBlockReason={billingBlockReason}
+          canWrite={canWrite}
+          canWithdraw={canWithdraw}
+        />
 
-      <CabinetLayout
-        header={<CabinetHeader slug={slug} onLogout={logout} />}
-        sidebar={<SalonSidebar slug={slug} />}
-        page={<Outlet />}
-        odoo={
-          <div
-            id="odoo-content"
-            style={{
-              width: "30%",
-              overflow: "auto",
-              padding: "20px",
-              minHeight: 0
-            }}
-          />
-        }
-      />
+        <CabinetLayout
+          header={<CabinetHeader slug={slug} onLogout={logout} />}
+          sidebar={<SalonSidebar slug={slug} />}
+          page={<Outlet />}
+          odoo={
+            <div
+              id="odoo-content"
+              style={{
+                width: "30%",
+                overflow: "auto",
+                padding: "20px",
+                minHeight: 0
+              }}
+            />
+          }
+        />
 
-      <BillingOverlay
-        billingAccess={billingAccess}
-        billingBlockReason={billingBlockReason}
-      />
-    </div>
+        <BillingOverlay
+          billingAccess={billingAccess}
+          billingBlockReason={billingBlockReason}
+        />
+      </div>
+    </SessionGate>
   )
 }
 
