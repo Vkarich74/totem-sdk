@@ -1,8 +1,105 @@
 import { safeJson } from "../utils/apiSafe";
 import { getSalonSlug, getMasterSlug } from "../utils/slug";
 
-const API_BASE = "https://api.totemv.com/internal";
+const API_BASE = (window.TOTEM_API_BASE || "https://api.totemv.com") + "/internal";
 const TEMPLATE_VERSION = "v1";
+const AUTH_TOKEN_STORAGE_KEYS = [
+  "TOTEM_AUTH_TOKEN",
+  "TOTEM_ACCESS_TOKEN",
+  "TOTEM_INTERNAL_TOKEN"
+];
+
+/* ===============================
+   AUTH TOKEN / TRANSPORT
+================================ */
+
+function getStoredWindowValue(key){
+  try{
+    return window[key] || "";
+  }catch(e){
+    return "";
+  }
+}
+
+function getStoredLocalValue(key){
+  try{
+    return window.localStorage.getItem(key) || "";
+  }catch(e){
+    return "";
+  }
+}
+
+export function getAuthAccessToken(){
+  for(const key of AUTH_TOKEN_STORAGE_KEYS){
+    const localValue = getStoredLocalValue(key);
+    if(localValue) return localValue;
+
+    const windowValue = getStoredWindowValue(key);
+    if(windowValue) return windowValue;
+  }
+
+  return "";
+}
+
+export function setAuthAccessToken(token){
+  const normalized = String(token || "").trim();
+
+  try{
+    if(normalized){
+      window.localStorage.setItem("TOTEM_AUTH_TOKEN", normalized);
+      window.localStorage.setItem("TOTEM_ACCESS_TOKEN", normalized);
+      window.TOTEM_AUTH_TOKEN = normalized;
+      window.TOTEM_ACCESS_TOKEN = normalized;
+    }else{
+      window.localStorage.removeItem("TOTEM_AUTH_TOKEN");
+      window.localStorage.removeItem("TOTEM_ACCESS_TOKEN");
+      window.TOTEM_AUTH_TOKEN = "";
+      window.TOTEM_ACCESS_TOKEN = "";
+    }
+  }catch(e){
+    try{
+      window.TOTEM_AUTH_TOKEN = normalized;
+      window.TOTEM_ACCESS_TOKEN = normalized;
+    }catch(innerError){
+      /* no-op */
+    }
+  }
+
+  return normalized;
+}
+
+export function clearAuthAccessToken(){
+  return setAuthAccessToken("");
+}
+
+export function hasAuthAccessToken(){
+  return Boolean(getAuthAccessToken());
+}
+
+function buildJsonHeaders(extraHeaders = {}, includeContentType = true){
+  const headers = {
+    ...(includeContentType ? { "Content-Type": "application/json" } : {}),
+    ...(extraHeaders || {})
+  };
+
+  const token = getAuthAccessToken();
+  if(token && !headers.Authorization){
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+async function safeInternalJson(path, opts = {}){
+  const method = String(opts.method || "GET").toUpperCase();
+  const headers = buildJsonHeaders(opts.headers || {}, method !== "GET");
+
+  return safeJson(`${API_BASE}${path}`, {
+    ...opts,
+    method,
+    headers
+  });
+}
 
 /* ===============================
    BILLING GUARDS
@@ -43,11 +140,140 @@ export function getBillingBlockReason(billingAccess){
 }
 
 /* ===============================
+   AUTH API
+================================ */
+
+export async function resolveSession(){
+  const r = await safeInternalJson(`/auth/session/resolve`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"AUTH_SESSION_RESOLVE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_SESSION_RESOLVE_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    authenticated:Boolean(j.authenticated),
+    role:j.role || "public",
+    reason:j.reason || null,
+    auth:j.auth || null,
+    identity:j.identity || null
+  };
+}
+
+export async function loginWithPassword({ email = "", phone = "", password = "" } = {}){
+  const body = {};
+  if(String(email || "").trim()) body.email = String(email).trim();
+  if(String(phone || "").trim()) body.phone = String(phone).trim();
+  body.password = String(password || "");
+
+  const r = await safeInternalJson(`/auth/login`, {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+
+  if(!r.ok) return { ok:false, error:"AUTH_LOGIN_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_LOGIN_API_NOT_OK", detail:j };
+
+  if(j.access_token){
+    setAuthAccessToken(j.access_token);
+  }
+
+  return {
+    ok:true,
+    access_token:j.access_token || "",
+    token_type:j.token_type || "Bearer",
+    auth:j.auth || null
+  };
+}
+
+export async function logoutCurrentSession(){
+  const r = await safeInternalJson(`/auth/logout`, { method: "POST" });
+  if(!r.ok) return { ok:false, error:"AUTH_LOGOUT_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_LOGOUT_API_NOT_OK", detail:j };
+  clearAuthAccessToken();
+  return { ok:true };
+}
+
+export async function logoutAllSessions(){
+  const r = await safeInternalJson(`/auth/logout-all`, { method: "POST" });
+  if(!r.ok) return { ok:false, error:"AUTH_LOGOUT_ALL_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_LOGOUT_ALL_API_NOT_OK", detail:j };
+  clearAuthAccessToken();
+  return { ok:true };
+}
+
+export async function startAuth(payload){
+  const r = await safeInternalJson(`/auth/start`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"AUTH_START_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_START_API_NOT_OK", detail:j };
+  return { ok:true, result:j };
+}
+
+export async function verifyAuth(payload){
+  const r = await safeInternalJson(`/auth/verify`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"AUTH_VERIFY_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_VERIFY_API_NOT_OK", detail:j };
+
+  if(j.access_token){
+    setAuthAccessToken(j.access_token);
+  }
+
+  return {
+    ok:true,
+    access_token:j.access_token || "",
+    token_type:j.token_type || "Bearer",
+    auth:j.auth || null
+  };
+}
+
+export async function setPassword(payload){
+  const r = await safeInternalJson(`/auth/set-password`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"AUTH_SET_PASSWORD_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_SET_PASSWORD_API_NOT_OK", detail:j };
+  return { ok:true, result:j };
+}
+
+export async function startPasswordReset(payload){
+  const r = await safeInternalJson(`/auth/password/reset/start`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"AUTH_PASSWORD_RESET_START_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_PASSWORD_RESET_START_API_NOT_OK", detail:j };
+  return { ok:true, result:j };
+}
+
+export async function finishPasswordReset(payload){
+  const r = await safeInternalJson(`/auth/password/reset/finish`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"AUTH_PASSWORD_RESET_FINISH_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"AUTH_PASSWORD_RESET_FINISH_API_NOT_OK", detail:j };
+  return { ok:true, result:j };
+}
+
+/* ===============================
    SALON (OWNER) API
 ================================ */
 
 export async function getSalon(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}`);
+  const r = await safeInternalJson(`/salons/${salonSlug}`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"SALON_FETCH_FAILED", detail:r };
 
   const j = r.json;
@@ -61,7 +287,7 @@ export async function getSalon(salonSlug = getSalonSlug()){
 }
 
 export async function getMetrics(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}/metrics`);
+  const r = await safeInternalJson(`/salons/${salonSlug}/metrics`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"METRICS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"METRICS_API_NOT_OK", detail:j };
@@ -69,7 +295,7 @@ export async function getMetrics(salonSlug = getSalonSlug()){
 }
 
 export async function getBookings(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}/bookings`);
+  const r = await safeInternalJson(`/salons/${salonSlug}/bookings`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"BOOKINGS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"BOOKINGS_API_NOT_OK", detail:j };
@@ -77,7 +303,7 @@ export async function getBookings(salonSlug = getSalonSlug()){
 }
 
 export async function getMasters(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}/masters`);
+  const r = await safeInternalJson(`/salons/${salonSlug}/masters`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTERS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTERS_API_NOT_OK", detail:j };
@@ -85,7 +311,7 @@ export async function getMasters(salonSlug = getSalonSlug()){
 }
 
 export async function getClients(salonSlug = getSalonSlug()){
-  const r = await safeJson(`${API_BASE}/salons/${salonSlug}/clients`);
+  const r = await safeInternalJson(`/salons/${salonSlug}/clients`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"CLIENTS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"CLIENTS_API_NOT_OK", detail:j };
@@ -97,7 +323,7 @@ export async function getClients(salonSlug = getSalonSlug()){
 ================================ */
 
 export async function getMaster(masterSlug = getMasterSlug()){
-  const r = await safeJson(`${API_BASE}/masters/${masterSlug}`);
+  const r = await safeInternalJson(`/masters/${masterSlug}`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTER_FETCH_FAILED", detail:r };
 
   const j = r.json;
@@ -111,7 +337,7 @@ export async function getMaster(masterSlug = getMasterSlug()){
 }
 
 export async function getMasterMetrics(masterSlug = getMasterSlug()){
-  const r = await safeJson(`${API_BASE}/masters/${masterSlug}/metrics`);
+  const r = await safeInternalJson(`/masters/${masterSlug}/metrics`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTER_METRICS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_METRICS_API_NOT_OK", detail:j };
@@ -119,7 +345,7 @@ export async function getMasterMetrics(masterSlug = getMasterSlug()){
 }
 
 export async function getMasterBookings(masterSlug = getMasterSlug()){
-  const r = await safeJson(`${API_BASE}/masters/${masterSlug}/bookings`);
+  const r = await safeInternalJson(`/masters/${masterSlug}/bookings`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTER_BOOKINGS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_BOOKINGS_API_NOT_OK", detail:j };
@@ -127,7 +353,7 @@ export async function getMasterBookings(masterSlug = getMasterSlug()){
 }
 
 export async function getMasterClients(masterSlug = getMasterSlug()){
-  const r = await safeJson(`${API_BASE}/masters/${masterSlug}/clients`);
+  const r = await safeInternalJson(`/masters/${masterSlug}/clients`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTER_CLIENTS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_CLIENTS_API_NOT_OK", detail:j };
@@ -139,7 +365,7 @@ export async function getMasterClients(masterSlug = getMasterSlug()){
 ================================ */
 
 export async function bookingAction(id, action){
-  const r = await safeJson(`${API_BASE}/bookings/${id}/${action}`, { method:"PATCH" });
+  const r = await safeInternalJson(`/bookings/${id}/${action}`, { method:"PATCH" });
   if(!r.ok) return { ok:false, error:"BOOKING_ACTION_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"BOOKING_ACTION_API_NOT_OK", detail:j };
@@ -151,12 +377,10 @@ export async function bookingAction(id, action){
 ================================ */
 
 export async function createBooking(payload){
-
-  const r = await safeJson(
-    `${API_BASE}/bookings/create`,
+  const r = await safeInternalJson(
+    `/bookings/create`,
     {
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
       body: JSON.stringify(payload)
     }
   );
@@ -168,7 +392,6 @@ export async function createBooking(payload){
   if(!j || !j.ok) return { ok:false, error:"CREATE_BOOKING_API_NOT_OK", detail:j };
 
   return { ok:true, booking:j.booking };
-
 }
 
 /* ===============================
@@ -176,12 +399,10 @@ export async function createBooking(payload){
 ================================ */
 
 export async function moveBooking(id,start_at){
-
-  const r = await safeJson(
-    `${API_BASE}/bookings/${id}/move`,
+  const r = await safeInternalJson(
+    `/bookings/${id}/move`,
     {
       method:"PATCH",
-      headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ start_at })
     }
   );
@@ -193,7 +414,6 @@ export async function moveBooking(id,start_at){
   if(!j || !j.ok) return { ok:false, error:"MOVE_BOOKING_API_NOT_OK", detail:j };
 
   return { ok:true, booking:j.booking };
-
 }
 
 /* ===============================
@@ -201,16 +421,14 @@ export async function moveBooking(id,start_at){
 ================================ */
 
 export async function createSalonWithdraw(amount, billingAccess, salonSlug = getSalonSlug()){
-
   if (!canWithdrawByBilling(billingAccess)) {
     return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
   }
 
-  const r = await safeJson(
-    `${API_BASE}/salons/${salonSlug}/withdraw`,
+  const r = await safeInternalJson(
+    `/salons/${salonSlug}/withdraw`,
     {
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ amount })
     }
   );
@@ -232,16 +450,14 @@ export async function createSalonWithdraw(amount, billingAccess, salonSlug = get
 }
 
 export async function createMasterWithdraw(amount, billingAccess, masterSlug = getMasterSlug()){
-
   if (!canWithdrawByBilling(billingAccess)) {
     return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
   }
 
-  const r = await safeJson(
-    `${API_BASE}/masters/${masterSlug}/withdraw`,
+  const r = await safeInternalJson(
+    `/masters/${masterSlug}/withdraw`,
     {
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ amount })
     }
   );
@@ -267,6 +483,11 @@ export async function createMasterWithdraw(amount, billingAccess, masterSlug = g
 ================================ */
 
 function getInternalTemplateToken(){
+  const authToken = getAuthAccessToken();
+  if(authToken){
+    return authToken;
+  }
+
   try{
     return (
       window.localStorage.getItem("TOTEM_INTERNAL_TOKEN") ||
