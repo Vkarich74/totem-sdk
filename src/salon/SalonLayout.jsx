@@ -186,6 +186,7 @@ function SessionGate({ slug, children }){
         (
           salons.length > 0 ||
           ownership.length > 0 ||
+          !salonSlug ||
           salonSlug === String(slug || "")
         )
 
