@@ -6,15 +6,26 @@ export default function LoginPage(){
   const navigate = useNavigate()
   const location = useLocation()
 
-  // ВАЖНО: получаем из URL state (роль + slug)
   const role = location.state?.role
   const slug = location.state?.slug
 
-  const [mode, setMode] = useState("password") // password | otp
+  const [mode, setMode] = useState("password")
   const [login, setLogin] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  function redirectToCabinet(){
+    if(role === "master"){
+      navigate(`/master/${slug}`, { replace: true })
+      return
+    }
+    if(role === "salon_admin"){
+      navigate(`/salon/${slug}`, { replace: true })
+      return
+    }
+    navigate("/", { replace: true })
+  }
 
   async function handlePasswordLogin(e){
     e.preventDefault()
@@ -36,7 +47,7 @@ export default function LoginPage(){
       })
 
       if(res?.ok){
-        navigate("/", { replace: true })
+        redirectToCabinet()
         return
       }
 
