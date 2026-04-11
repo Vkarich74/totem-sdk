@@ -1,9 +1,14 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { authLogin, authStart } from "../api/internal"
 
 export default function LoginPage(){
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // ВАЖНО: получаем из URL state (роль + slug)
+  const role = location.state?.role
+  const slug = location.state?.slug
 
   const [mode, setMode] = useState("password") // password | otp
   const [login, setLogin] = useState("")
@@ -13,17 +18,25 @@ export default function LoginPage(){
 
   async function handlePasswordLogin(e){
     e.preventDefault()
+
+    if(!role || !slug){
+      setError("Ошибка контекста входа")
+      return
+    }
+
     setLoading(true)
     setError("")
 
     try{
       const res = await authLogin({
         login,
-        password
+        password,
+        role,
+        slug
       })
 
       if(res?.ok){
-        navigate("/")
+        navigate("/", { replace: true })
         return
       }
 
@@ -37,18 +50,31 @@ export default function LoginPage(){
 
   async function handleOtpStart(e){
     e.preventDefault()
+
+    if(!role || !slug){
+      setError("Ошибка контекста входа")
+      return
+    }
+
     setLoading(true)
     setError("")
 
     try{
       const res = await authStart({
-        phone: login,
+        login,
         purpose: "login",
-        channel: "whatsapp"
+        role,
+        slug
       })
 
       if(res?.ok){
-        navigate("/auth/verify", { state: { phone: login } })
+        navigate("/auth/verify", {
+          state: {
+            login,
+            role,
+            slug
+          }
+        })
         return
       }
 
