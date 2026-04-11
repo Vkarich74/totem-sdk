@@ -155,8 +155,6 @@ function BillingOverlay({ billingAccess, billingBlockReason }){
   )
 }
 
-
-
 function SessionGate({ slug, children }){
   const [state, setState] = useState({
     loading: true,
@@ -189,7 +187,7 @@ function SessionGate({ slug, children }){
       const hasAccess =
         authenticated &&
         role === "master" &&
-        masterSlug === String(slug || "")
+        (!masterSlug || masterSlug === String(slug || ""))
 
       if(!hasAccess){
         try{
