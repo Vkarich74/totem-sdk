@@ -218,7 +218,7 @@ function SessionGate({ slug, children }){
     const params = new URLSearchParams()
     params.set("role","master")
     if(slug) params.set("slug",slug)
-    window.location.href = `/auth/login?${params.toString()}`
+    window.location.hash = `/auth/login?${params.toString()}`
   }, [state, slug])
 
   if(state.loading){
@@ -280,11 +280,11 @@ function MasterLayoutInner(){
     }
 
     if(!slug){
-      window.location.href = "/"
+      window.location.hash = "/"
       return
     }
 
-    window.location.href = `/master/${slug}`
+    window.location.hash = `/master/${slug}`
   }
 
   return (
