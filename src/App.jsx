@@ -306,7 +306,7 @@ function CabinetRouter() {
       />
 
       <Route path="auth" element={<AuthLayout />}>
-        <Route index element={<Navigate to="/auth/login" replace />} />
+        <Route index element={<Navigate to="login" replace />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="verify" element={<VerifyCodePage />} />
         <Route path="set-password" element={<SetPasswordPage />} />
