@@ -177,7 +177,7 @@ function SessionGate({ slug, children }){
       if(!active) return
 
       const authenticated = Boolean(session?.ok && session?.authenticated)
-      const role = String(session?.identity?.role || session?.auth?.role || "")
+      const role = String(session?.role || session?.identity?.role || session?.auth?.role || "")
       const masterSlug = String(
         session?.identity?.master_slug ||
         session?.auth?.master_slug ||
