@@ -216,8 +216,11 @@ function SessionGate({ slug, children }){
   useEffect(() => {
     if(state.loading || state.allowed) return
 
-    const target = slug ? `/salon/${slug}` : "/"
-    window.location.href = target
+    const params = new URLSearchParams()
+    params.set("role", "salon_admin")
+    if(slug) params.set("slug", slug)
+
+    window.location.href = `/auth/login?${params.toString()}`
   }, [state, slug])
 
   if(state.loading){

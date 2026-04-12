@@ -8,6 +8,9 @@ export default function LoginPage(){
 
   const role = location.state?.role
   const slug = location.state?.slug
+  const query = new URLSearchParams(location.search)
+  const effectiveRole = role || query.get("role") || ""
+  const effectiveSlug = slug || query.get("slug") || ""
 
   const [mode, setMode] = useState("password")
   const [login, setLogin] = useState("")
@@ -16,12 +19,12 @@ export default function LoginPage(){
   const [error, setError] = useState("")
 
   function redirectToCabinet(){
-    if(role === "master"){
-      navigate(`/master/${slug}`, { replace: true })
+    if(effectiveRole === "master"){
+      navigate(`/master/${effectiveSlug}`, { replace: true })
       return
     }
-    if(role === "salon_admin"){
-      navigate(`/salon/${slug}`, { replace: true })
+    if(effectiveRole === "salon_admin"){
+      navigate(`/salon/${effectiveSlug}`, { replace: true })
       return
     }
     navigate("/", { replace: true })
@@ -30,7 +33,7 @@ export default function LoginPage(){
   async function handlePasswordLogin(e){
     e.preventDefault()
 
-    if(!role || !slug){
+    if(!effectiveRole || !effectiveSlug){
       setError("Ошибка контекста входа")
       return
     }
@@ -42,8 +45,8 @@ export default function LoginPage(){
       const res = await authLogin({
         login,
         password,
-        role,
-        slug
+        role: effectiveRole,
+        slug: effectiveSlug
       })
 
       if(res?.ok){
@@ -62,7 +65,7 @@ export default function LoginPage(){
   async function handleOtpStart(e){
     e.preventDefault()
 
-    if(!role || !slug){
+    if(!effectiveRole || !effectiveSlug){
       setError("Ошибка контекста входа")
       return
     }
@@ -74,16 +77,16 @@ export default function LoginPage(){
       const res = await authStart({
         login,
         purpose: "login",
-        role,
-        slug
+        role: effectiveRole,
+        slug: effectiveSlug
       })
 
       if(res?.ok){
         navigate("/auth/verify", {
           state: {
             login,
-            role,
-            slug
+            role: effectiveRole,
+            slug: effectiveSlug
           }
         })
         return

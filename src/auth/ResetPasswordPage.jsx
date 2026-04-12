@@ -2,39 +2,19 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { finishPasswordReset } from "../api/internal";
 
-function normalizePhone(value){
-  const raw = String(value || "").trim();
-
-  if(!raw){
-    return "";
-  }
-
-  if(raw.startsWith("+996")){
-    return raw;
-  }
-
-  const digits = raw.replace(/\D/g, "");
-
-  if(digits.startsWith("996") && digits.length === 12){
-    return `+${digits}`;
-  }
-
-  if(digits.length === 9){
-    return `+996${digits}`;
-  }
-
-  return raw;
+function normalizeEmail(value){
+  return String(value || "").trim().toLowerCase();
 }
 
 export default function ResetPasswordPage(){
   const navigate = useNavigate();
   const location = useLocation();
 
-  const initialPhone = useMemo(() => {
-    return normalizePhone(location.state?.phone || "");
+  const initialEmail = useMemo(() => {
+    return normalizeEmail(location.state?.email || "");
   }, [location.state]);
 
-  const [phone, setPhone] = useState(initialPhone);
+  const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [password, setPasswordValue] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -47,13 +27,13 @@ export default function ResetPasswordPage(){
     setError("");
     setSuccess("");
 
-    const normalizedPhone = normalizePhone(phone);
+    const normalizedEmail = normalizeEmail(email);
     const normalizedCode = String(code || "").trim();
     const normalizedPassword = String(password || "");
     const normalizedConfirm = String(confirmPassword || "");
 
-    if(!normalizedPhone || !normalizedPhone.startsWith("+996")){
-      setError("Введите телефон в формате +996XXXXXXXXX");
+    if(!normalizedEmail || !normalizedEmail.includes("@")){
+      setError("Введите email");
       return;
     }
 
@@ -76,7 +56,7 @@ export default function ResetPasswordPage(){
 
     try{
       const result = await finishPasswordReset({
-        phone: normalizedPhone,
+        email: normalizedEmail,
         code: normalizedCode,
         password: normalizedPassword
       });
@@ -120,17 +100,17 @@ export default function ResetPasswordPage(){
       >
         <h2 style={{ margin: "0 0 12px 0", fontSize: "24px" }}>Сброс пароля</h2>
         <p style={{ margin: "0 0 16px 0", color: "#4b5563", fontSize: "14px" }}>
-          Введите код из WhatsApp и задайте новый пароль.
+          Введите код из email и задайте новый пароль.
         </p>
 
         <form onSubmit={handleSubmit}>
           <label style={{ display: "block", marginBottom: "12px" }}>
-            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Телефон</div>
+            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Email</div>
             <input
               type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+996556250974"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
               style={{
                 width: "100%",
                 height: "42px",

@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { verifyAuth } from "../api/internal";
 
-function resolveRedirectTarget(role, slug){
-  const safeRole = String(role || "").trim();
-  const safeSlug = String(slug || "").trim();
+function resolveRedirectTarget(effectiveRole, effectiveSlug){
+  const safeRole = String(effectiveRole || "").trim();
+  const safeSlug = String(effectiveSlug || "").trim();
 
   if(safeRole === "master" && safeSlug){
     return `/master/${safeSlug}`;
@@ -33,6 +33,10 @@ export default function VerifyCodePage(){
     return String(location.state?.slug || "").trim();
   }, [location.state]);
 
+  const query = new URLSearchParams(location.search);
+  const effectiveRole = initialRole || query.get("role") || "";
+  const effectiveSlug = initialSlug || query.get("slug") || "";
+
   const [login, setLogin] = useState(initialLogin);
   const [code, setCode] = useState("");
   const [role] = useState(initialRole);
@@ -43,7 +47,7 @@ export default function VerifyCodePage(){
   async function handleSubmit(e){
     e.preventDefault();
 
-    if(!login || !role || !slug){
+    if(!login || !effectiveRole || !effectiveSlug){
       setError("Ошибка контекста подтверждения");
       return;
     }
@@ -56,8 +60,8 @@ export default function VerifyCodePage(){
         login: String(login || "").trim(),
         code: String(code || "").trim(),
         purpose: "login",
-        role,
-        slug
+        role: effectiveRole,
+        slug: effectiveSlug
       };
 
       const res = await verifyAuth(payload);
@@ -68,7 +72,7 @@ export default function VerifyCodePage(){
         return;
       }
 
-      const target = resolveRedirectTarget(res?.auth?.role || role, res?.auth?.slug || slug);
+      const target = resolveRedirectTarget(res?.auth?.role || effectiveRole, res?.auth?.slug || effectiveSlug);
       navigate(target, { replace: true });
     }catch(e){
       setError("Ошибка подтверждения кода");

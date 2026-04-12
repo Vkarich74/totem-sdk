@@ -2,34 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { startPasswordReset } from "../api/internal";
 
-function normalizePhone(value){
-  const raw = String(value || "").trim();
-
-  if(!raw){
-    return "";
-  }
-
-  if(raw.startsWith("+996")){
-    return raw;
-  }
-
-  const digits = raw.replace(/\D/g, "");
-
-  if(digits.startsWith("996") && digits.length === 12){
-    return `+${digits}`;
-  }
-
-  if(digits.length === 9){
-    return `+996${digits}`;
-  }
-
-  return raw;
+function normalizeEmail(value){
+  return String(value || "").trim().toLowerCase();
 }
 
 export default function ForgotPasswordPage(){
   const navigate = useNavigate();
 
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -39,10 +19,10 @@ export default function ForgotPasswordPage(){
     setError("");
     setSuccess("");
 
-    const normalizedPhone = normalizePhone(phone);
+    const normalizedEmail = normalizeEmail(email);
 
-    if(!normalizedPhone || !normalizedPhone.startsWith("+996")){
-      setError("Введите телефон в формате +996XXXXXXXXX");
+    if(!normalizedEmail || !normalizedEmail.includes("@")){
+      setError("Введите email");
       return;
     }
 
@@ -50,8 +30,8 @@ export default function ForgotPasswordPage(){
 
     try{
       const result = await startPasswordReset({
-        phone: normalizedPhone,
-        channel: "whatsapp"
+        email: normalizedEmail,
+        channel: "email"
       });
 
       if(!result?.ok){
@@ -65,7 +45,7 @@ export default function ForgotPasswordPage(){
       navigate("/auth/reset", {
         replace: true,
         state: {
-          phone: normalizedPhone
+          email: normalizedEmail
         }
       });
     }catch(e){
@@ -98,17 +78,17 @@ export default function ForgotPasswordPage(){
       >
         <h2 style={{ margin: "0 0 12px 0", fontSize: "24px" }}>Восстановление пароля</h2>
         <p style={{ margin: "0 0 16px 0", color: "#4b5563", fontSize: "14px" }}>
-          Введите телефон, и мы отправим код для сброса пароля.
+          Введите email, и мы отправим код для сброса пароля.
         </p>
 
         <form onSubmit={handleSubmit}>
           <label style={{ display: "block", marginBottom: "12px" }}>
-            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Телефон</div>
+            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Email</div>
             <input
               type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+996556250974"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
               style={{
                 width: "100%",
                 height: "42px",
