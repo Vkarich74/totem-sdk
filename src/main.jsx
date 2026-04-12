@@ -53,7 +53,9 @@ function resolveContext() {
 
 const ctx = resolveContext();
 
-if (!ctx) {
+const isAuthRoute = window.location.hash.startsWith("#/auth");
+
+if (!ctx && !isAuthRoute) {
   console.error("TOTEM SDK: Unable to resolve platform context.");
 }
 
