@@ -220,7 +220,8 @@ function SessionGate({ slug, children }){
     params.set("role", "salon_admin")
     if(slug) params.set("slug", slug)
 
-    window.location.href = `/auth/login?${params.toString()}`
+    // FIX: redirect только через hash (SDK runtime)
+    window.location.hash = `/auth/login?${params.toString()}`
   }, [state, slug])
 
   if(state.loading){
@@ -282,11 +283,12 @@ function SalonLayoutInner(){
     }
 
     if(!slug){
-      window.location.href = "/"
+      window.location.hash = "/"
       return
     }
 
-    window.location.href = `/salon/${slug}`
+    // FIX: redirect через hash
+    window.location.hash = `/salon/${slug}`
   }
 
   return (
