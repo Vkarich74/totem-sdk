@@ -57,6 +57,9 @@ function hasAnyText(values) {
   return values.some((value) => hasText(value));
 }
 
+const __LEGACY_MASTER_MAPPER__ = false;
+
+if (__LEGACY_MASTER_MAPPER__) {
 function createEmptyPayload() {
   return {
     identity: {
@@ -296,6 +299,8 @@ function mapPayloadToViewModel(payload) {
     stickyLabel: normalized.cta.sticky_label,
     stickySubline: normalized.trust.sticky_subline,
   };
+}
+
 }
 
 function ActionLink({ href, children, style, ...rest }) {
