@@ -188,6 +188,11 @@ function normalizeMasterImages(images = {}) {
 ========================= */
 
 export function normalizeTemplatePayload(payload) {
+  // AUTO DETECT MASTER PAYLOAD
+  if (payload?.identity?.master_name || payload?.location) {
+    return normalizeMasterTemplatePayload(payload);
+  }
+
   if (!isObject(payload)) {
     return {
       identity: normalizeIdentity(),
