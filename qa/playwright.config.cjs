@@ -1,6 +1,4 @@
-const { defineConfig } = require('@playwright/test');
-
-module.exports = defineConfig({
+module.exports = {
   testDir: './tests',
   timeout: 60000,
   fullyParallel: false,
@@ -22,4 +20,4 @@ module.exports = defineConfig({
   },
 
   outputDir: './artifacts'
-});
+};

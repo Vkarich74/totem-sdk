@@ -47,10 +47,12 @@ async function openSalonCabinet(page) {
 }
 
 test.describe("SDK auth flow contract audit", () => {
-
   test("Auth routes are reachable and render expected screens", async ({ page }) => {
     await page.goto(buildHash("auth/login"), { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Вход" })).toBeVisible();
+
+    await page.goto(buildHash("auth/verify"), { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Подтверждение кода")).toBeVisible();
 
     await page.goto(buildHash("auth/set-password"), { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Создание пароля")).toBeVisible();
@@ -94,6 +96,19 @@ test.describe("SDK auth flow contract audit", () => {
     await page.getByRole("button", { name: "Войти" }).click();
 
     await expect(page.getByText("Ошибка контекста входа")).toBeVisible();
+  });
+
+  test("Verify screen accepts code input contract", async ({ page }) => {
+    await page.goto(buildHash("auth/verify"), { waitUntil: "domcontentloaded" });
+
+    const codeInput = page.getByPlaceholder("6 цифр");
+    await expect(codeInput).toBeVisible();
+
+    await codeInput.fill("12ab34");
+    await expect(codeInput).toHaveValue("1234");
+
+    await codeInput.fill("123456789");
+    await expect(codeInput).toHaveValue("123456");
   });
 
   test("Set password screen validates short password", async ({ page }) => {
@@ -163,5 +178,4 @@ test.describe("SDK auth flow contract audit", () => {
     await page.goto(buildHash(`salon/${SALON_SLUG}`), { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
   });
-
 });
