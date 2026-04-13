@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { normalizeMasterTemplatePayload } from "../utils/normalizeTemplate.js";
+import { buildMasterTemplateViewModel } from "../utils/buildViewModel.js";
 
 const PUBLIC_API_BASE =
   String(import.meta.env.VITE_PUBLIC_API_BASE || "https://api.totemv.com/public").trim() ||
@@ -353,7 +355,14 @@ export default function PublicMasterPage({ slug }) {
     };
   }, [slug]);
 
-  const view = useMemo(() => mapPayloadToViewModel(remoteState.payload), [remoteState.payload]);
+  const view = useMemo(() => {
+    const normalized = normalizeMasterTemplatePayload
+      ? normalizeMasterTemplatePayload(remoteState.payload)
+      : remoteState.payload;
+    return buildMasterTemplateViewModel
+      ? buildMasterTemplateViewModel(normalized)
+      : mapPayloadToViewModel(normalized);
+  }, [remoteState.payload]);
 
   const masterName = view.masterName;
   const profession = view.profession;
