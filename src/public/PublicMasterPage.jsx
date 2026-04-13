@@ -359,9 +359,7 @@ export default function PublicMasterPage({ slug }) {
     const normalized = normalizeMasterTemplatePayload
       ? normalizeMasterTemplatePayload(remoteState.payload)
       : remoteState.payload;
-    return buildMasterTemplateViewModel
-      ? buildMasterTemplateViewModel(normalized)
-      : mapPayloadToViewModel(normalized);
+    return buildMasterTemplateViewModel(normalized);
   }, [remoteState.payload]);
 
   const masterName = view.masterName;
