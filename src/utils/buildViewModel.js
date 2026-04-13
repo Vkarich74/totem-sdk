@@ -476,5 +476,45 @@ export function buildSalonTemplateViewModel({
 // FIX: minimal master builder to satisfy import
 export function buildMasterTemplateViewModel(payload){
   const normalized = normalizeTemplatePayload ? normalizeTemplatePayload(payload || {}) : (payload || {});
-  return normalized;
+  const identity = normalized.identity || {};
+  const location = normalized.location || {};
+  const sections = normalized.sections || {};
+  const trust = normalized.trust || {};
+  const stats = normalized.stats || {};
+  const cta = normalized.cta || {};
+
+  return {
+    masterName: identity.master_name || "",
+    profession: identity.profession || "",
+    city: identity.city || location.city || "",
+    district: location.district || "",
+    address: location.address || "",
+    schedule: location.schedule_text || "",
+    phone: location.phone || location.whatsapp || "",
+    mapUrl: location.map_url || "",
+    heroImage: normalized.images?.hero?.secure_url || normalized.images?.hero?.image_url || "",
+    heroAlt: normalized.images?.hero?.alt || identity.master_name || "",
+    heroBadge: identity.hero_badge || "",
+    subtitle: identity.subtitle || "",
+    description: identity.description || "",
+    metrics: normalized.metrics || [],
+    benefits: sections.benefits || [],
+    featuredServices: sections.featured_services || [],
+    serviceCatalog: sections.service_catalog || [],
+    reviews: sections.reviews || [],
+    badges: sections.badges || [],
+    aboutParagraphs: sections.about_paragraphs || [],
+    stats: stats,
+    bookingBand: sections.booking_band || {},
+    bookingUrl: cta.booking_url || "",
+    bookingLabel: cta.booking_label || "",
+    servicesLabel: cta.services_label || "",
+    servicesAnchor: cta.services_anchor || "",
+    mapLabel: cta.contact_map_label || "",
+    stickyLabel: cta.sticky_label || "",
+    stickySubline: trust.sticky_subline || "",
+    ratingValue: trust.rating_value || "",
+    reviewCount: trust.review_count || "",
+    trustNote: trust.trust_note || ""
+  };
 }
