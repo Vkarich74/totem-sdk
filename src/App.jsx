@@ -368,10 +368,6 @@ function CabinetRouter() {
         <Route path="schedule" element={<MasterSchedulePage />} />
         <Route path="services" element={<MasterServicesPage />} />
         <Route path="finance" element={<MasterFinancePage />} />
-        <Route path="finance/money" element={<MasterMoneyPage />} />
-        <Route path="finance/transactions" element={<MasterTransactionsPage />} />
-        <Route path="finance/settlements" element={<MasterSettlementsPage />} />
-        <Route path="finance/payouts" element={<MasterPayoutsPage />} />
         <Route path="money" element={<MasterMoneyPage />} />
         <Route path="transactions" element={<MasterTransactionsPage />} />
         <Route path="settlements" element={<MasterSettlementsPage />} />
