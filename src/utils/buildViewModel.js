@@ -475,5 +475,6 @@ export function buildSalonTemplateViewModel({
 
 // FIX: minimal master builder to satisfy import
 export function buildMasterTemplateViewModel(payload){
-  return payload || {};
+  const normalized = normalizeTemplatePayload ? normalizeTemplatePayload(payload || {}) : (payload || {});
+  return normalized;
 }
