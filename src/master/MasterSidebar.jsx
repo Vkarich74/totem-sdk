@@ -76,6 +76,7 @@ export default function MasterSidebar({ slug }) {
     { to: buildMasterPath(slug, "clients"), label: "Клиенты" },
     { to: buildMasterPath(slug, "services"), label: "Услуги" },
     { to: buildMasterPath(slug, "settings"), label: "Настройки" },
+    { to: buildMasterPath(slug, "template"), label: "Шаблон страницы" },
   ]
 
   const showcaseItems = [
@@ -114,8 +115,6 @@ export default function MasterSidebar({ slug }) {
       <SectionTitle note="Операционка и ежедневная работа">Основное</SectionTitle>
       {renderMenu(mainItems, menuStyle)}
 
-      <SectionTitle note="Публичная страница, контент и публикация">Витрина</SectionTitle>
-      {renderMenu(showcaseItems, menuStyle)}
 
       <SectionTitle note="Деньги, расчёты и выплаты">Финансы</SectionTitle>
       {renderMenu(financeItems, menuStyle)}
