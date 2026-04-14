@@ -1,4 +1,13 @@
-const role = location.state?.role;
-const slug = location.state?.slug;
-const effectiveRole = role || query.get("role") || "";
-const effectiveSlug = slug || query.get("slug") || "";
+import { useSearchParams } from "react-router-dom";
+
+function LoginPage() {
+  const [query] = useSearchParams();
+
+  const role = query.get("role") || "";
+  const slug = query.get("slug") || "";
+
+  const effectiveRole = role;
+  const effectiveSlug = slug;
+
+  // остальной код компонента
+}
