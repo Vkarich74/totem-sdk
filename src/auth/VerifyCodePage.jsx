@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 const initialLogin = useMemo(() => {
   return String(location.state?.login || "").trim();
 }, [location.state]);
@@ -9,3 +11,5 @@ const initialRole = useMemo(() => {
 const initialSlug = useMemo(() => {
   return String(location.state?.slug || "").trim();
 }, [location.state]);
+
+// rest of component code

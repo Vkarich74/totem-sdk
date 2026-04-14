@@ -9,5 +9,5 @@ function LoginPage() {
   const effectiveRole = role;
   const effectiveSlug = slug;
 
-  // остальной код компонента
+  // rest of component code
 }
