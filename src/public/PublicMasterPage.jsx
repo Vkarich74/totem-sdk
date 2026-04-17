@@ -388,7 +388,9 @@ export default function PublicMasterPage({ slug }) {
   const badges = asArray(view.badges)
     .map((badge) => (isObject(badge) ? asString(badge.text) : asString(badge)))
     .filter(Boolean);
-  const aboutParagraphs = view.aboutParagraphs;
+  const aboutParagraphs = asArray(view.aboutParagraphs)
+    .map((item) => (isObject(item) ? asString(item.text) : asString(item)))
+    .filter(Boolean);
   const stats = view.stats;
   const bookingBand = view.bookingBand;
   const bookingUrl = view.bookingUrl;
