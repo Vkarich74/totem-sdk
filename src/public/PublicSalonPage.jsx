@@ -552,7 +552,7 @@ export default function PublicSalonPage({ slug }) {
       4,
     );
     const modelMasters = Array.isArray(templateViewModel?.sections?.masters)
-      ? mergeItemsWithImageFallback(templateViewModel.sections.masters.slice(0, 4), sectionMasters)
+      ? templateViewModel.sections.masters.slice(0, 4)
       : [];
     if (modelMasters.length > 0) return modelMasters;
     if (sectionMasters.length > 0) return sectionMasters;
@@ -568,7 +568,7 @@ export default function PublicSalonPage({ slug }) {
       templateImages,
     );
     const modelServices = Array.isArray(templateViewModel?.sections?.popularServices)
-      ? mergeItemsWithImageFallback(templateViewModel.sections.popularServices, sectionServices)
+      ? templateViewModel.sections.popularServices
       : [];
     if (modelServices.length > 0) return modelServices;
     if (sectionServices.length > 0) return sectionServices;
@@ -582,7 +582,7 @@ export default function PublicSalonPage({ slug }) {
       templateImages,
     );
     const modelCatalog = Array.isArray(templateViewModel?.sections?.fullServiceList)
-      ? mergeItemsWithImageFallback(templateViewModel.sections.fullServiceList, sectionCatalog)
+      ? templateViewModel.sections.fullServiceList
       : [];
     if (modelCatalog.length > 0) return modelCatalog;
     if (sectionCatalog.length > 0) return sectionCatalog;
