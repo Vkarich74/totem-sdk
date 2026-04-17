@@ -366,7 +366,6 @@ export function buildSalonTemplateViewModel({
     const templateSeo = safeObject(normalizedTemplate.seo);
     const templateCta = safeObject(normalizedTemplate.cta);
 
-    const serviceCatalogFromApi = extractServices(salon);
     const popularServices = mapTemplateServices(templateSections.popular_services, templateImages);
     const fullServiceList = mapTemplateServices(templateSections.full_service_list, templateImages);
     const visibleMasters = mapTemplateMasters(templateSections.masters, templateImages);
@@ -379,24 +378,49 @@ export function buildSalonTemplateViewModel({
       isDemoSalon ? safeArray(demoVisuals.gallery) : [],
     );
 
-    const apiMasters = Array.isArray(masters) ? masters : [];
     const finalMasters =
       visibleMasters.length > 0
         ? visibleMasters
-        : apiMasters.length > 0
-          ? apiMasters
-              .filter((master) => !!pickFirstString(master?.name))
-              .slice(0, 4)
-              .map((master, index) => ({
-                ...master,
-                imageUrl: isDemoSalon ? demoVisuals.masters?.[index] || "" : "",
-              }))
-          : isDemoSalon
-            ? safeArray(demoMasterFallbacks).map((master, index) => ({
-                ...master,
-                imageUrl: demoVisuals.masters?.[index] || "",
-              }))
-            : [];
+        : isDemoSalon
+          ? safeArray(demoMasterFallbacks).map((master, index) => ({
+              ...master,
+              imageUrl: demoVisuals.masters?.[index] || "",
+            }))
+          : [];
+
+    const finalBenefits =
+      benefits.length > 0 ? benefits : (isDemoSalon ? safeArray(demoBenefits) : []);
+
+    const finalPromos =
+      promos.length > 0 ? promos : (isDemoSalon ? safeArray(demoPromos) : []);
+
+    const finalReviews =
+      reviews.length > 0 ? reviews : (isDemoSalon ? safeArray(demoReviews) : []);
+
+    const finalPopularServices =
+      popularServices.length > 0
+        ? popularServices
+        : (isDemoSalon ? safeArray(demoServiceCatalog) : []);
+
+    const finalFullServiceList =
+      fullServiceList.length > 0
+        ? fullServiceList
+        : (isDemoSalon ? safeArray(demoServiceCatalog) : []);
+
+    const finalAboutParagraphs =
+      aboutParagraphs.length > 0
+        ? aboutParagraphs
+        : isDemoSalon
+          ? splitParagraphs(
+              pickFirstString(
+                salon?.about,
+                salon?.description,
+                "TOTEM Демо Салон — это эталон современной витрины салона: премиальный визуальный образ, понятная подача услуг, команда, отзывы и быстрый переход к записи.",
+                "Такая страница работает не как обычная визитка, а как полноценная продуктовая витрина, которая помогает салону вызывать доверие и продавать услуги с мобильного телефона.",
+                "Клиент видит атмосферу, процесс, результат и понятную структуру услуг, а владелец получает красивую публичную страницу, которую не стыдно показывать и использовать как рабочий продукт.",
+              ),
+            )
+          : [];
 
     return {
       validation,
@@ -405,17 +429,21 @@ export function buildSalonTemplateViewModel({
       title: pickFirstString(
         templateSeo.title,
         templateIdentity.salon_name,
-        isDemoSalon ? "TOTEM Демо Салон" : pickFirstString(salon?.name, "Салон"),
+        salon?.name,
+        isDemoSalon ? "TOTEM Демо Салон" : "Салон",
       ),
       description: pickFirstString(
         templateSeo.description,
+        templateIdentity.subtitle,
+        salon?.description,
         isDemoSalon
           ? "TOTEM Демо Салон: премиальная витрина салона с услугами, командой, галереей, картой и удобной онлайн записью."
           : "Публичная страница салона в TOTEM: услуги, команда, контакты и удобная онлайн запись.",
       ),
       salonName: pickFirstString(
         templateIdentity.salon_name,
-        isDemoSalon ? "TOTEM Демо Салон" : pickFirstString(salon?.name, "Салон"),
+        salon?.name,
+        isDemoSalon ? "TOTEM Демо Салон" : "Салон",
       ),
       slogan: pickFirstString(
         templateIdentity.slogan,
@@ -425,6 +453,7 @@ export function buildSalonTemplateViewModel({
       ),
       subtitle: pickFirstString(
         templateIdentity.subtitle,
+        salon?.description,
         isDemoSalon
           ? "Современная публичная страница салона в TOTEM: услуги, команда, галерея, акции, отзывы и понятный путь от первого впечатления до записи."
           : "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.",
@@ -438,14 +467,14 @@ export function buildSalonTemplateViewModel({
         quality: "auto",
         format: "auto",
       }) || (isDemoSalon ? demoVisuals.hero || "" : ""),
-      district: pickFirstString(templateContact.district, "Первомайский район, Бишкек"),
-      address: pickFirstString(templateContact.address, "Киевская улица, 148"),
-      city: pickFirstString(templateContact.city),
-      phone: pickFirstString(templateContact.phone, templateContact.whatsapp, "+996 700 123 456"),
+      district: pickFirstString(templateContact.district, salon?.district),
+      address: pickFirstString(templateContact.address, salon?.address),
+      city: pickFirstString(templateContact.city, salon?.city),
+      phone: pickFirstString(templateContact.phone, templateContact.whatsapp, salon?.phone),
       whatsapp: pickFirstString(templateContact.whatsapp),
-      scheduleText: pickFirstString(templateContact.schedule_text, "Ежедневно, 10:00–20:00"),
-      ratingValue: pickFirstString(templateTrust.rating_value, "4.9"),
-      reviewCount: pickFirstString(templateTrust.review_count, "127+"),
+      scheduleText: pickFirstString(templateContact.schedule_text, salon?.schedule_text),
+      ratingValue: pickFirstString(templateTrust.rating_value),
+      reviewCount: pickFirstString(templateTrust.review_count),
       completedBookings: pickFirstNumber(
         templateTrust.completed_bookings,
         metrics?.completed,
@@ -459,9 +488,9 @@ export function buildSalonTemplateViewModel({
         salon?.map_url,
       ),
       defaultMapAddress: [
-        pickFirstString(templateContact.address, "Киевская улица, 148"),
-        pickFirstString(templateContact.district, "Первомайский район, Бишкек"),
-        pickFirstString(templateContact.city),
+        pickFirstString(templateContact.address, salon?.address),
+        pickFirstString(templateContact.district, salon?.district),
+        pickFirstString(templateContact.city, salon?.city),
       ]
         .filter(Boolean)
         .join(", "),
@@ -472,34 +501,13 @@ export function buildSalonTemplateViewModel({
         servicesAnchor: pickFirstString(templateCta.services_anchor, "popular-services"),
       },
       sections: {
-        benefits: benefits.length > 0 ? benefits : safeArray(demoBenefits),
-        popularServices:
-          popularServices.length > 0
-            ? popularServices
-            : safeArray(demoServiceCatalog).length > 0
-              ? safeArray(demoServiceCatalog)
-              : serviceCatalogFromApi.slice(0, 12),
-        fullServiceList:
-          fullServiceList.length > 0
-            ? fullServiceList
-            : safeArray(demoServiceCatalog).length > 0
-              ? safeArray(demoServiceCatalog)
-              : serviceCatalogFromApi.slice(0, 12),
-        promos: promos.length > 0 ? promos : safeArray(demoPromos),
-        reviews: reviews.length > 0 ? reviews : safeArray(demoReviews),
+        benefits: finalBenefits,
+        popularServices: finalPopularServices,
+        fullServiceList: finalFullServiceList,
+        promos: finalPromos,
+        reviews: finalReviews,
         masters: finalMasters,
-        aboutParagraphs:
-          aboutParagraphs.length > 0
-            ? aboutParagraphs
-            : splitParagraphs(
-                pickFirstString(
-                  salon?.about,
-                  salon?.description,
-                  "TOTEM Демо Салон — это эталон современной витрины салона: премиальный визуальный образ, понятная подача услуг, команда, отзывы и быстрый переход к записи.",
-                  "Такая страница работает не как обычная визитка, а как полноценная продуктовая витрина, которая помогает салону вызывать доверие и продавать услуги с мобильного телефона.",
-                  "Клиент видит атмосферу, процесс, результат и понятную структуру услуг, а владелец получает красивую публичную страницу, которую не стыдно показывать и использовать как рабочий продукт.",
-                ),
-              ),
+        aboutParagraphs: finalAboutParagraphs,
         galleryImages,
       },
       meta: {
