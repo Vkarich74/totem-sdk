@@ -58,7 +58,36 @@ function normalizeTrust(trust = {}) {
 }
 
 function normalizeSectionItems(items) {
-  return asArray(items).filter((item) => isObject(item));
+  return asArray(items)
+    .map((item, index) => {
+      if (isObject(item)) return item;
+
+      if (typeof item === "string" && item.trim()) {
+        return {
+          id: index + 1,
+          text: item.trim(),
+          title: item.trim(),
+          name: item.trim(),
+          alt: item.trim(),
+          image_url: item.trim(),
+          secure_url: item.trim(),
+          slot_index: index,
+          is_active: true,
+        };
+      }
+
+      if (typeof item === "number" && Number.isFinite(item)) {
+        return {
+          id: index + 1,
+          image_asset_id: String(item),
+          slot_index: index,
+          is_active: true,
+        };
+      }
+
+      return null;
+    })
+    .filter((item) => isObject(item));
 }
 
 function normalizeSections(sections = {}) {
@@ -80,31 +109,65 @@ function normalizeSalonSectionsFromPayload(payload = {}) {
 
   return normalizeSections({
     ...sections,
-    benefits: sections.benefits ?? payload.benefits,
+    benefits:
+      sections.benefits ??
+      payload.benefits,
     popular_services:
       sections.popular_services ??
       payload.popular_services ??
-      payload.featured_services,
+      payload.featured_services ??
+      payload.services ??
+      payload.service_items ??
+      payload.public_services ??
+      payload.items,
     full_service_list:
       sections.full_service_list ??
       payload.full_service_list ??
-      payload.service_catalog,
-    promos: sections.promos ?? payload.promos,
-    gallery: sections.gallery ?? payload.gallery,
-    portfolio: sections.portfolio ?? payload.portfolio,
-    reviews: sections.reviews ?? payload.reviews,
+      payload.service_catalog ??
+      payload.service_list ??
+      payload.services ??
+      payload.service_items ??
+      payload.public_services ??
+      payload.items,
+    promos:
+      sections.promos ??
+      payload.promos ??
+      payload.offers ??
+      payload.promotions,
+    gallery:
+      sections.gallery ??
+      payload.gallery ??
+      payload.works ??
+      payload.photos ??
+      asObject(payload.images).gallery,
+    portfolio:
+      sections.portfolio ??
+      payload.portfolio ??
+      payload.works,
+    reviews:
+      sections.reviews ??
+      payload.reviews ??
+      payload.testimonials ??
+      payload.feedback,
     about_paragraphs:
       sections.about_paragraphs ??
-      payload.about_paragraphs,
-    masters: sections.masters ?? payload.masters,
+      payload.about_paragraphs ??
+      payload.about,
+    masters:
+      sections.masters ??
+      payload.masters ??
+      payload.team ??
+      payload.staff,
   });
 }
 
 function normalizeImageSlot(slot = {}) {
   return {
-    image_asset_id: slot.image_asset_id ?? null,
+    image_asset_id: slot.image_asset_id ?? slot.asset_id ?? null,
     alt: asString(slot.alt),
     secure_url: asString(slot.secure_url),
+    image_secure_url: asString(slot.image_secure_url),
+    avatar_secure_url: asString(slot.avatar_secure_url),
     url: asString(slot.url),
     image_url: asString(slot.image_url),
     src: asString(slot.src),
