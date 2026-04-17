@@ -332,7 +332,7 @@ export default function PublicMasterPage({ slug }) {
       }
 
       try {
-        const response = await fetch(`${PUBLIC_API_BASE}/masters/${slug}`);
+        const response = await fetch(`${PUBLIC_API_BASE}/templates/masters/${slug}`);
         const json = await response.json();
 
         if (cancelled) return;
@@ -385,7 +385,9 @@ export default function PublicMasterPage({ slug }) {
   const featuredServices = view.featuredServices;
   const serviceCatalog = view.serviceCatalog;
   const reviews = view.reviews;
-  const badges = view.badges;
+  const badges = asArray(view.badges)
+    .map((badge) => (isObject(badge) ? asString(badge.text) : asString(badge)))
+    .filter(Boolean);
   const aboutParagraphs = view.aboutParagraphs;
   const stats = view.stats;
   const bookingBand = view.bookingBand;
