@@ -380,19 +380,71 @@ export default function PublicMasterPage({ slug }) {
   const heroBadge = view.heroBadge;
   const subtitle = view.subtitle;
   const description = view.description;
-  const metrics = view.metrics;
-  const benefits = view.benefits;
-  const featuredServices = view.featuredServices;
-  const serviceCatalog = view.serviceCatalog;
-  const reviews = view.reviews;
+  const metrics = asArray(view.metrics)
+    .map((item) => ({
+      value: isObject(item) ? asString(item.value) : asString(item),
+      label: isObject(item) ? asString(item.label) : "",
+    }))
+    .filter((item) => item.value || item.label);
+  const benefits = asArray(view.benefits)
+    .map((item) => ({
+      title: isObject(item) ? asString(item.title) : "",
+      text: isObject(item) ? asString(item.text) : asString(item),
+    }))
+    .filter((item) => item.title || item.text);
+  const featuredServices = asArray(view.featuredServices)
+    .map((item) => ({
+      title: isObject(item) ? asString(item.title) : "",
+      price: isObject(item) ? asString(item.price) : "",
+      time: isObject(item) ? asString(item.time) : "",
+      note: isObject(item) ? asString(item.note) : "",
+    }))
+    .filter((item) => item.title || item.price || item.time || item.note);
+  const serviceCatalog = asArray(view.serviceCatalog)
+    .map((item) => ({
+      name: isObject(item) ? asString(item.name) : asString(item),
+      price: isObject(item) ? asString(item.price) : "",
+      duration: isObject(item) ? asString(item.duration) : "",
+      description: isObject(item) ? asString(item.description) : "",
+    }))
+    .filter((item) => item.name || item.price || item.duration || item.description);
+  const reviews = asArray(view.reviews)
+    .map((item) => ({
+      name: isObject(item) ? asString(item.name) : "",
+      text: isObject(item) ? asString(item.text) : asString(item),
+      rating: isObject(item) ? asString(item.rating) : "",
+    }))
+    .filter((item) => item.name || item.text || item.rating);
   const badges = asArray(view.badges)
     .map((badge) => (isObject(badge) ? asString(badge.text) : asString(badge)))
     .filter(Boolean);
   const aboutParagraphs = asArray(view.aboutParagraphs)
     .map((item) => (isObject(item) ? asString(item.text) : asString(item)))
     .filter(Boolean);
-  const stats = view.stats;
-  const bookingBand = view.bookingBand;
+  const stats = isObject(view.stats)
+    ? {
+        years: asString(view.stats.years),
+        rating: asString(view.stats.rating),
+        bookings: asString(view.stats.bookings),
+      }
+    : { years: "", rating: "", bookings: "" };
+  const bookingBand = isObject(view.bookingBand)
+    ? {
+        title: asString(view.bookingBand.title),
+        text: asString(view.bookingBand.text),
+        booking_cta_label: asString(view.bookingBand.booking_cta_label),
+        booking_cta_url: asString(view.bookingBand.booking_cta_url),
+        services_cta_label: asString(view.bookingBand.services_cta_label),
+        services_anchor: asString(view.bookingBand.services_anchor),
+      }
+    : {
+        title: "",
+        text: "",
+        booking_cta_label: "",
+        booking_cta_url: "",
+        services_cta_label: "",
+        services_anchor: "",
+      };
   const bookingUrl = view.bookingUrl;
   const bookingLabel = view.bookingLabel;
   const servicesLabel = view.servicesLabel;
