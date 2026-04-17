@@ -75,6 +75,31 @@ function normalizeSections(sections = {}) {
   };
 }
 
+function normalizeSalonSectionsFromPayload(payload = {}) {
+  const sections = asObject(payload.sections);
+
+  return normalizeSections({
+    ...sections,
+    benefits: sections.benefits ?? payload.benefits,
+    popular_services:
+      sections.popular_services ??
+      payload.popular_services ??
+      payload.featured_services,
+    full_service_list:
+      sections.full_service_list ??
+      payload.full_service_list ??
+      payload.service_catalog,
+    promos: sections.promos ?? payload.promos,
+    gallery: sections.gallery ?? payload.gallery,
+    portfolio: sections.portfolio ?? payload.portfolio,
+    reviews: sections.reviews ?? payload.reviews,
+    about_paragraphs:
+      sections.about_paragraphs ??
+      payload.about_paragraphs,
+    masters: sections.masters ?? payload.masters,
+  });
+}
+
 function normalizeImageSlot(slot = {}) {
   return {
     image_asset_id: slot.image_asset_id ?? null,
@@ -93,6 +118,18 @@ function normalizeImages(images = {}) {
     promo: normalizeImageSlot(images.promo),
     assets: asObject(images.assets),
   };
+}
+
+function normalizeSalonImagesFromPayload(payload = {}) {
+  const images = asObject(payload.images);
+
+  return normalizeImages({
+    ...images,
+    hero: images.hero ?? payload.hero,
+    logo: images.logo ?? payload.logo,
+    promo: images.promo ?? payload.promo,
+    assets: images.assets ?? payload.assets,
+  });
 }
 
 function normalizeSeo(seo = {}) {
@@ -223,8 +260,8 @@ export function normalizeTemplatePayload(payload) {
     identity: normalizeIdentity(payload.identity),
     contact: normalizeContact(payload.contact),
     trust: normalizeTrust(payload.trust),
-    sections: normalizeSections(payload.sections),
-    images: normalizeImages(payload.images),
+    sections: normalizeSalonSectionsFromPayload(payload),
+    images: normalizeSalonImagesFromPayload(payload),
     seo: normalizeSeo(payload.seo),
     cta: normalizeCta(payload.cta),
   };
