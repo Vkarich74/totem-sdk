@@ -18,6 +18,14 @@ function pickFirstNumber(...values){
   return 0;
 }
 
+function pickFirstAssetId(...values){
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+}
+
 function normalizeText(text){
   if (typeof text !== "string") return "";
   return text.replace(/\s+/g, " ").trim();
@@ -99,7 +107,7 @@ function resolveTemplateAsset(imagesRoot, imageRef, transform = {}){
 
   if (directUrl) return transformImageUrl(directUrl, transform);
 
-  const assetId = pickFirstString(
+  const assetId = pickFirstAssetId(
     imageRef?.image_asset_id,
     imageRef?.asset_id,
     imageRef?.image?.image_asset_id,
@@ -109,7 +117,7 @@ function resolveTemplateAsset(imagesRoot, imageRef, transform = {}){
     imageRef?.avatar?.image_asset_id,
     imageRef?.media?.image_asset_id,
   );
-  const asset = assetId && imagesRoot?.assets ? imagesRoot.assets[assetId] : null;
+  const asset = assetId && imagesRoot?.assets ? imagesRoot.assets[String(assetId)] : null;
 
   return transformImageUrl(
     pickFirstString(
