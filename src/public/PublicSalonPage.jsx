@@ -6,7 +6,6 @@ import { getSalon, getMasters, getMetrics } from "../api/publicApi";
 import { getSalonTemplatePublished } from "../api/internal";
 import { setMeta, setCanonical, setJSONLD } from "../api/seo";
 import Skeleton from "../layout/Skeleton";
-import { normalizeTemplatePayload } from "../utils/normalizeTemplate";
 import { buildSalonTemplateViewModel } from "../utils/buildViewModel";
 
 function pickFirstString(...values) {
@@ -185,32 +184,32 @@ export default function PublicSalonPage({ slug }) {
           return;
         }
 
-        const mastersData = await getMasters(slug);
-        const metricsData = await getMetrics(slug);
-        const publishedData = await getSalonTemplatePublished(slug).catch(() => ({
-          ok: false,
-        }));
+        const [mastersData, metricsData, publishedData] = await Promise.all([
+          getMasters(slug),
+          getMetrics(slug),
+          getSalonTemplatePublished(slug).catch(() => ({ ok: false })),
+        ]);
 
         const nextMasters = Array.isArray(mastersData) ? mastersData : [];
         const nextMetrics = metricsData || null;
-        const normalizedPublishedTemplate =
+        const nextPublishedTemplate =
           publishedData?.ok && publishedData.published_exists && publishedData.payload
-            ? normalizeTemplatePayload(publishedData.payload)
+            ? publishedData.payload
             : null;
 
         setSalon(salonData);
         setMasters(nextMasters);
         setMetrics(nextMetrics);
-        setPublishedTemplate(normalizedPublishedTemplate);
+        setPublishedTemplate(nextPublishedTemplate);
 
         let metaView = null;
-        if (normalizedPublishedTemplate) {
+        if (nextPublishedTemplate) {
           try {
             metaView = buildSalonTemplateViewModel({
               salon: salonData,
               masters: nextMasters,
               metrics: nextMetrics,
-              publishedTemplate: normalizedPublishedTemplate,
+              publishedTemplate: nextPublishedTemplate,
             });
           } catch (error) {
             metaView = null;
@@ -263,8 +262,6 @@ export default function PublicSalonPage({ slug }) {
 
     load();
   }, [slug]);
-
-  const services = useMemo(() => extractServices(salon), [salon]);
 
   const templateViewModel = useMemo(() => {
     if (!publishedTemplate) return null;
@@ -386,49 +383,27 @@ export default function PublicSalonPage({ slug }) {
     "popular-services",
   );
 
-  const aboutParagraphs = (() => {
-    const modelParagraphs = Array.isArray(viewSections.aboutParagraphs)
-      ? viewSections.aboutParagraphs.filter(Boolean).slice(0, 4)
-      : [];
-    if (modelParagraphs.length > 0) return modelParagraphs;
+  const aboutParagraphs = Array.isArray(viewSections.aboutParagraphs)
+    ? viewSections.aboutParagraphs.filter(Boolean).slice(0, 4)
+    : [];
 
-    return splitParagraphs(pickFirstString(salon?.about, salon?.description));
-  })();
+  const visibleMasters = Array.isArray(viewSections.masters)
+    ? viewSections.masters
+        .filter((master) => !!pickFirstString(master?.name))
+        .slice(0, 4)
+    : [];
 
-  const visibleMasters = (() => {
-    const modelMasters = Array.isArray(viewSections.masters)
-      ? viewSections.masters
-          .filter((master) => !!pickFirstString(master?.name))
-          .slice(0, 4)
-      : [];
-    if (modelMasters.length > 0) return modelMasters;
+  const popularServices = Array.isArray(viewSections.popularServices)
+    ? viewSections.popularServices
+        .filter((service) => !!pickFirstString(service?.name, service?.title))
+        .slice(0, 12)
+    : [];
 
-    return Array.isArray(masters)
-      ? masters.filter((master) => !!pickFirstString(master?.name)).slice(0, 4)
-      : [];
-  })();
-
-  const popularServices = (() => {
-    const modelServices = Array.isArray(viewSections.popularServices)
-      ? viewSections.popularServices
-          .filter((service) => !!pickFirstString(service?.name, service?.title))
-          .slice(0, 12)
-      : [];
-    if (modelServices.length > 0) return modelServices;
-
-    return services.slice(0, 12);
-  })();
-
-  const fullServiceList = (() => {
-    const modelCatalog = Array.isArray(viewSections.fullServiceList)
-      ? viewSections.fullServiceList
-          .filter((service) => !!pickFirstString(service?.name, service?.title))
-          .slice(0, 12)
-      : [];
-    if (modelCatalog.length > 0) return modelCatalog;
-
-    return services.slice(0, 12);
-  })();
+  const fullServiceList = Array.isArray(viewSections.fullServiceList)
+    ? viewSections.fullServiceList
+        .filter((service) => !!pickFirstString(service?.name, service?.title))
+        .slice(0, 12)
+    : [];
 
   const reviews = Array.isArray(viewSections.reviews) ? viewSections.reviews : [];
   const promos = Array.isArray(viewSections.promos) ? viewSections.promos : [];
