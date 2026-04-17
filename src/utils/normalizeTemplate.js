@@ -288,16 +288,28 @@ function normalizeMasterImages(images = {}) {
    EXPORTS
 ========================= */
 
+function hasNonEmptyArray(value) {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function hasNonEmptyObject(value) {
+  return isObject(value) && Object.keys(value).length > 0;
+}
+
 function isMasterTemplatePayload(payload) {
   if (!isObject(payload)) return false;
 
+  const identity = asObject(payload.identity);
+  const sections = asObject(payload.sections);
+  const stats = asObject(payload.stats);
+
   return Boolean(
-    payload?.identity?.master_name ||
-    payload?.identity?.profession ||
-    payload?.sections?.featured_services ||
-    payload?.sections?.service_catalog ||
-    payload?.sections?.booking_band ||
-    payload?.stats
+    asString(identity.master_name) ||
+    asString(identity.profession) ||
+    hasNonEmptyArray(sections.featured_services) ||
+    hasNonEmptyArray(sections.service_catalog) ||
+    hasNonEmptyObject(sections.booking_band) ||
+    hasNonEmptyObject(stats)
   );
 }
 
