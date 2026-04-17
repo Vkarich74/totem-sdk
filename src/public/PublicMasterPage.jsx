@@ -332,7 +332,7 @@ export default function PublicMasterPage({ slug }) {
       }
 
       try {
-        const response = await fetch(`${PUBLIC_API_BASE}/templates/masters/${slug}`);
+        const response = await fetch(`${PUBLIC_API_BASE}/masters/${slug}`);
         const json = await response.json();
 
         if (cancelled) return;
