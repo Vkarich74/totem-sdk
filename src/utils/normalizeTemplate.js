@@ -68,6 +68,7 @@ function normalizeSections(sections = {}) {
     full_service_list: normalizeSectionItems(sections.full_service_list),
     promos: normalizeSectionItems(sections.promos),
     gallery: normalizeSectionItems(sections.gallery),
+    portfolio: normalizeSectionItems(sections.portfolio),
     reviews: normalizeSectionItems(sections.reviews),
     about_paragraphs: normalizeSectionItems(sections.about_paragraphs),
     masters: normalizeSectionItems(sections.masters),
