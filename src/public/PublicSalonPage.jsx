@@ -23,6 +23,14 @@ function pickFirstNumber(...values) {
   return 0;
 }
 
+function pickFirstAssetId(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+}
+
 function formatPrice(value) {
   const amount = Number(value || 0);
   if (!Number.isFinite(amount) || amount <= 0) return "По запросу";
@@ -158,12 +166,45 @@ function resolveTemplateAsset(imagesRoot, imageRef) {
     imageRef?.url,
     imageRef?.image_url,
     imageRef?.src,
+    imageRef?.image?.secure_url,
+    imageRef?.image?.url,
+    imageRef?.image?.image_url,
+    imageRef?.image?.src,
+    imageRef?.hero?.secure_url,
+    imageRef?.hero?.url,
+    imageRef?.hero?.image_url,
+    imageRef?.hero?.src,
+    imageRef?.cover?.secure_url,
+    imageRef?.cover?.url,
+    imageRef?.cover?.image_url,
+    imageRef?.cover?.src,
+    imageRef?.photo?.secure_url,
+    imageRef?.photo?.url,
+    imageRef?.photo?.image_url,
+    imageRef?.photo?.src,
+    imageRef?.avatar?.secure_url,
+    imageRef?.avatar?.url,
+    imageRef?.avatar?.image_url,
+    imageRef?.avatar?.src,
+    imageRef?.media?.secure_url,
+    imageRef?.media?.url,
+    imageRef?.media?.image_url,
+    imageRef?.media?.src,
   );
 
   if (directUrl) return directUrl;
 
-  const assetId = pickFirstString(imageRef?.image_asset_id);
-  const asset = assetId && imagesRoot?.assets ? imagesRoot.assets[assetId] : null;
+  const assetId = pickFirstAssetId(
+    imageRef?.image_asset_id,
+    imageRef?.asset_id,
+    imageRef?.image?.image_asset_id,
+    imageRef?.hero?.image_asset_id,
+    imageRef?.cover?.image_asset_id,
+    imageRef?.photo?.image_asset_id,
+    imageRef?.avatar?.image_asset_id,
+    imageRef?.media?.image_asset_id,
+  );
+  const asset = assetId && imagesRoot?.assets ? imagesRoot.assets[String(assetId)] : null;
 
   return pickFirstString(
     asset?.secure_url,
@@ -175,7 +216,8 @@ function resolveTemplateAsset(imagesRoot, imageRef) {
 
 function getTemplateGalleryImages(publishedPayload) {
   const galleryItems = filterActiveItems(publishedPayload?.sections?.gallery);
-  return galleryItems
+  const portfolioItems = filterActiveItems(publishedPayload?.sections?.portfolio);
+  return [...galleryItems, ...portfolioItems]
     .map((item) => resolveTemplateAsset(publishedPayload?.images, item))
     .filter(Boolean);
 }
