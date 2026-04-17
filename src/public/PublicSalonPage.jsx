@@ -507,9 +507,13 @@ export default function PublicSalonPage({ slug }) {
   const templateTrust = publishedTemplate?.trust || {};
   const templateSections = publishedTemplate?.sections || {};
   const templateImages = publishedTemplate?.images || {};
-  const templateHeroImage =
-    pickFirstString(templateViewModel?.heroImage) ||
-    resolveTemplateAsset(templateImages, templateImages?.hero);
+  const templateHeroImage = pickFirstString(
+    templateViewModel?.heroImage,
+    templateImages?.hero?.secure_url,
+    templateImages?.hero?.url,
+    templateImages?.hero?.image_url,
+    templateImages?.hero?.src,
+  );
 
   const salonName = pickFirstString(
     templateViewModel?.salonName,
@@ -589,15 +593,12 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const visibleMasters = (() => {
-    const sectionMasters = getTemplateMasters(templateSections?.masters, templateImages).slice(
-      0,
-      4,
-    );
     const modelMasters = Array.isArray(templateViewModel?.sections?.masters)
-      ? templateViewModel.sections.masters.slice(0, 4)
+      ? templateViewModel.sections.masters
+          .filter((master) => !!pickFirstString(master?.name))
+          .slice(0, 4)
       : [];
     if (modelMasters.length > 0) return modelMasters;
-    if (sectionMasters.length > 0) return sectionMasters;
 
     return Array.isArray(masters)
       ? masters.filter((master) => !!pickFirstString(master?.name)).slice(0, 4)
@@ -605,29 +606,23 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const popularServices = (() => {
-    const sectionServices = getTemplateServices(
-      templateSections?.popular_services,
-      templateImages,
-    );
     const modelServices = Array.isArray(templateViewModel?.sections?.popularServices)
       ? templateViewModel.sections.popularServices
+          .filter((service) => !!pickFirstString(service?.name, service?.title))
+          .slice(0, 12)
       : [];
     if (modelServices.length > 0) return modelServices;
-    if (sectionServices.length > 0) return sectionServices;
 
     return services.slice(0, 12);
   })();
 
   const fullServiceList = (() => {
-    const sectionCatalog = getTemplateServices(
-      templateSections?.full_service_list,
-      templateImages,
-    );
     const modelCatalog = Array.isArray(templateViewModel?.sections?.fullServiceList)
       ? templateViewModel.sections.fullServiceList
+          .filter((service) => !!pickFirstString(service?.name, service?.title))
+          .slice(0, 12)
       : [];
     if (modelCatalog.length > 0) return modelCatalog;
-    if (sectionCatalog.length > 0) return sectionCatalog;
 
     return services.slice(0, 12);
   })();
@@ -663,11 +658,9 @@ export default function PublicSalonPage({ slug }) {
     const modelGallery = Array.isArray(templateViewModel?.sections?.galleryImages)
       ? templateViewModel.sections.galleryImages.filter(Boolean)
       : [];
-    const sectionGallery = getTemplateGalleryImages(publishedTemplate);
-    const mergedGallery = [...modelGallery, ...sectionGallery].filter(Boolean);
 
-    if (mergedGallery.length > 0) {
-      return Array.from(new Set(mergedGallery));
+    if (modelGallery.length > 0) {
+      return Array.from(new Set(modelGallery));
     }
 
     return [];
