@@ -277,68 +277,6 @@ function safeObject(value){
   return value && typeof value === "object" ? value : {};
 }
 
-function buildSalonTemplateViewModelFallback({
-  demoSlug = "totem-demo-salon",
-  demoVisuals = { hero: "", gallery: [] },
-  demoMasterFallbacks = [],
-  demoBenefits = [],
-  demoPromos = [],
-  demoReviews = [],
-  demoServiceCatalog = [],
-  isDemoSalon = false,
-} = {}){
-  return {
-    validation: {
-      is_valid: false,
-      is_publishable: false,
-      errors: [{ code: "VIEW_MODEL_BUILD_FAILED", message: "View model fallback used" }],
-      warnings: [],
-    },
-    normalizedTemplate: {},
-    slug: demoSlug,
-    title: isDemoSalon ? "TOTEM Демо Салон" : "Салон",
-    description: isDemoSalon
-      ? "Публичная страница салона в TOTEM."
-      : "Публичная страница салона.",
-    salonName: isDemoSalon ? "TOTEM Демо Салон" : "Салон",
-    slogan: "",
-    subtitle: "",
-    heroBadge: "Витрина салона в TOTEM",
-    heroImage: pickFirstString(demoVisuals?.hero),
-    district: "",
-    address: "",
-    city: "",
-    phone: "",
-    whatsapp: "",
-    scheduleText: "",
-    ratingValue: "0",
-    reviewCount: "0",
-    completedBookings: 0,
-    mapEmbedUrl: "",
-    defaultMapAddress: "",
-    cta: {
-      bookingLabel: "Записаться онлайн",
-      bookingUrl: "/booking",
-      servicesLabel: "Смотреть услуги",
-      servicesAnchor: "popular-services",
-    },
-    sections: {
-      benefits: safeArray(demoBenefits),
-      popularServices: safeArray(demoServiceCatalog),
-      fullServiceList: safeArray(demoServiceCatalog),
-      promos: safeArray(demoPromos),
-      reviews: safeArray(demoReviews),
-      masters: safeArray(demoMasterFallbacks),
-      aboutParagraphs: [],
-      galleryImages: safeArray(demoVisuals?.gallery),
-    },
-    meta: {
-      fallback_used: true,
-      render_safe: true,
-    },
-  };
-}
-
 export function buildSalonTemplateViewModel({
   salon,
   masters,
@@ -353,180 +291,89 @@ export function buildSalonTemplateViewModel({
   demoReviews = [],
   demoServiceCatalog = [],
 }){
-  try {
-    const safePublishedTemplate = safeObject(publishedTemplate);
-    const normalizedTemplate = normalizeTemplatePayload(safePublishedTemplate);
-    const validation = validateTemplatePayload(safePublishedTemplate);
+  const safePublishedTemplate = safeObject(publishedTemplate);
+  const normalizedTemplate = normalizeTemplatePayload(safePublishedTemplate);
+  const validation = validateTemplatePayload(safePublishedTemplate);
 
-    const templateIdentity = safeObject(normalizedTemplate.identity);
-    const templateContact = safeObject(normalizedTemplate.contact);
-    const templateTrust = safeObject(normalizedTemplate.trust);
-    const templateSections = safeObject(normalizedTemplate.sections);
-    const templateImages = safeObject(normalizedTemplate.images);
-    const templateSeo = safeObject(normalizedTemplate.seo);
-    const templateCta = safeObject(normalizedTemplate.cta);
+  const templateIdentity = safeObject(normalizedTemplate.identity);
+  const templateContact = safeObject(normalizedTemplate.contact);
+  const templateTrust = safeObject(normalizedTemplate.trust);
+  const templateSections = safeObject(normalizedTemplate.sections);
+  const templateImages = safeObject(normalizedTemplate.images);
+  const templateSeo = safeObject(normalizedTemplate.seo);
+  const templateCta = safeObject(normalizedTemplate.cta);
 
-    const popularServices = mapTemplateServices(templateSections.popular_services, templateImages);
-    const fullServiceList = mapTemplateServices(templateSections.full_service_list, templateImages);
-    const visibleMasters = mapTemplateMasters(templateSections.masters, templateImages);
-    const reviews = mapTemplateReviews(templateSections.reviews);
-    const promos = mapTemplatePromos(templateSections.promos);
-    const benefits = mapTemplateBenefits(templateSections.benefits);
-    const aboutParagraphs = mapTemplateAbout(templateSections.about_paragraphs);
-    const galleryImages = mapTemplateGallery(
-      normalizedTemplate,
-      isDemoSalon ? safeArray(demoVisuals.gallery) : [],
-    );
+  const popularServices = mapTemplateServices(templateSections.popular_services, templateImages);
+  const fullServiceList = mapTemplateServices(templateSections.full_service_list, templateImages);
+  const visibleMasters = mapTemplateMasters(templateSections.masters, templateImages);
+  const reviews = mapTemplateReviews(templateSections.reviews);
+  const promos = mapTemplatePromos(templateSections.promos);
+  const benefits = mapTemplateBenefits(templateSections.benefits);
+  const aboutParagraphs = mapTemplateAbout(templateSections.about_paragraphs);
+  const galleryImages = mapTemplateGallery(normalizedTemplate, []);
 
-    const finalMasters =
-      visibleMasters.length > 0
-        ? visibleMasters
-        : isDemoSalon
-          ? safeArray(demoMasterFallbacks).map((master, index) => ({
-              ...master,
-              imageUrl: demoVisuals.masters?.[index] || "",
-            }))
-          : [];
-
-    const finalBenefits =
-      benefits.length > 0 ? benefits : (isDemoSalon ? safeArray(demoBenefits) : []);
-
-    const finalPromos =
-      promos.length > 0 ? promos : (isDemoSalon ? safeArray(demoPromos) : []);
-
-    const finalReviews =
-      reviews.length > 0 ? reviews : (isDemoSalon ? safeArray(demoReviews) : []);
-
-    const finalPopularServices =
-      popularServices.length > 0
-        ? popularServices
-        : (isDemoSalon ? safeArray(demoServiceCatalog) : []);
-
-    const finalFullServiceList =
-      fullServiceList.length > 0
-        ? fullServiceList
-        : (isDemoSalon ? safeArray(demoServiceCatalog) : []);
-
-    const finalAboutParagraphs =
-      aboutParagraphs.length > 0
-        ? aboutParagraphs
-        : isDemoSalon
-          ? splitParagraphs(
-              pickFirstString(
-                salon?.about,
-                salon?.description,
-                "TOTEM Демо Салон — это эталон современной витрины салона: премиальный визуальный образ, понятная подача услуг, команда, отзывы и быстрый переход к записи.",
-                "Такая страница работает не как обычная визитка, а как полноценная продуктовая витрина, которая помогает салону вызывать доверие и продавать услуги с мобильного телефона.",
-                "Клиент видит атмосферу, процесс, результат и понятную структуру услуг, а владелец получает красивую публичную страницу, которую не стыдно показывать и использовать как рабочий продукт.",
-              ),
-            )
-          : [];
-
-    return {
-      validation,
-      normalizedTemplate,
-      slug: pickFirstString(salon?.slug, demoSlug),
-      title: pickFirstString(
-        templateSeo.title,
-        templateIdentity.salon_name,
-        salon?.name,
-        isDemoSalon ? "TOTEM Демо Салон" : "Салон",
-      ),
-      description: pickFirstString(
-        templateSeo.description,
-        templateIdentity.subtitle,
-        salon?.description,
-        isDemoSalon
-          ? "TOTEM Демо Салон: премиальная витрина салона с услугами, командой, галереей, картой и удобной онлайн записью."
-          : "Публичная страница салона в TOTEM: услуги, команда, контакты и удобная онлайн запись.",
-      ),
-      salonName: pickFirstString(
-        templateIdentity.salon_name,
-        salon?.name,
-        isDemoSalon ? "TOTEM Демо Салон" : "Салон",
-      ),
-      slogan: pickFirstString(
-        templateIdentity.slogan,
-        isDemoSalon
-          ? "Премиальная витрина салона с живым визуалом и онлайн-записью"
-          : "Красота, сервис и онлайн-запись в одном месте",
-      ),
-      subtitle: pickFirstString(
-        templateIdentity.subtitle,
-        salon?.description,
-        isDemoSalon
-          ? "Современная публичная страница салона в TOTEM: услуги, команда, галерея, акции, отзывы и понятный путь от первого впечатления до записи."
-          : "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.",
-      ),
-      heroBadge: pickFirstString(templateIdentity.hero_badge, "Витрина салона в TOTEM"),
-      heroImage: resolveTemplateAsset(templateImages, templateImages?.hero, {
-        width: 1600,
-        height: 1200,
-        crop: "fill",
-        gravity: "auto",
-        quality: "auto",
-        format: "auto",
-      }) || (isDemoSalon ? demoVisuals.hero || "" : ""),
-      district: pickFirstString(templateContact.district, salon?.district),
-      address: pickFirstString(templateContact.address, salon?.address),
-      city: pickFirstString(templateContact.city, salon?.city),
-      phone: pickFirstString(templateContact.phone, templateContact.whatsapp, salon?.phone),
-      whatsapp: pickFirstString(templateContact.whatsapp),
-      scheduleText: pickFirstString(templateContact.schedule_text, salon?.schedule_text),
-      ratingValue: pickFirstString(templateTrust.rating_value),
-      reviewCount: pickFirstString(templateTrust.review_count),
-      completedBookings: pickFirstNumber(
-        templateTrust.completed_bookings,
-        metrics?.completed,
-        metrics?.completed_bookings,
-        metrics?.bookings_completed,
-      ),
-      mapEmbedUrl: pickFirstString(
-        templateContact.map_embed_url,
-        salon?.map_embed_url,
-        salon?.google_map_embed_url,
-        salon?.map_url,
-      ),
-      defaultMapAddress: [
-        pickFirstString(templateContact.address, salon?.address),
-        pickFirstString(templateContact.district, salon?.district),
-        pickFirstString(templateContact.city, salon?.city),
-      ]
-        .filter(Boolean)
-        .join(", "),
-      cta: {
-        bookingLabel: pickFirstString(templateCta.booking_label, "Записаться онлайн"),
-        bookingUrl: pickFirstString(templateCta.booking_url, "/booking"),
-        servicesLabel: pickFirstString(templateCta.services_label, "Смотреть услуги"),
-        servicesAnchor: pickFirstString(templateCta.services_anchor, "popular-services"),
-      },
-      sections: {
-        benefits: finalBenefits,
-        popularServices: finalPopularServices,
-        fullServiceList: finalFullServiceList,
-        promos: finalPromos,
-        reviews: finalReviews,
-        masters: finalMasters,
-        aboutParagraphs: finalAboutParagraphs,
-        galleryImages,
-      },
-      meta: {
-        fallback_used: false,
-        render_safe: true,
-      },
-    };
-  } catch (error) {
-    return buildSalonTemplateViewModelFallback({
-      demoSlug,
-      demoVisuals,
-      demoMasterFallbacks,
-      demoBenefits,
-      demoPromos,
-      demoReviews,
-      demoServiceCatalog,
-      isDemoSalon,
-    });
-  }
+  return {
+    validation,
+    normalizedTemplate,
+    slug: pickFirstString(salon?.slug),
+    title: pickFirstString(
+      templateSeo.title,
+      templateIdentity.salon_name,
+    ),
+    description: pickFirstString(
+      templateSeo.description,
+      templateIdentity.subtitle,
+    ),
+    salonName: pickFirstString(templateIdentity.salon_name),
+    slogan: pickFirstString(templateIdentity.slogan),
+    subtitle: pickFirstString(templateIdentity.subtitle),
+    heroBadge: pickFirstString(templateIdentity.hero_badge, "Витрина салона в TOTEM"),
+    heroImage: resolveTemplateAsset(templateImages, templateImages?.hero, {
+      width: 1600,
+      height: 1200,
+      crop: "fill",
+      gravity: "auto",
+      quality: "auto",
+      format: "auto",
+    }),
+    district: pickFirstString(templateContact.district),
+    address: pickFirstString(templateContact.address),
+    city: pickFirstString(templateContact.city),
+    phone: pickFirstString(templateContact.phone, templateContact.whatsapp),
+    whatsapp: pickFirstString(templateContact.whatsapp),
+    scheduleText: pickFirstString(templateContact.schedule_text),
+    ratingValue: pickFirstString(templateTrust.rating_value),
+    reviewCount: pickFirstString(templateTrust.review_count),
+    completedBookings: pickFirstNumber(templateTrust.completed_bookings),
+    mapEmbedUrl: pickFirstString(templateContact.map_embed_url),
+    defaultMapAddress: [
+      pickFirstString(templateContact.address),
+      pickFirstString(templateContact.district),
+      pickFirstString(templateContact.city),
+    ]
+      .filter(Boolean)
+      .join(", "),
+    cta: {
+      bookingLabel: pickFirstString(templateCta.booking_label, "Записаться онлайн"),
+      bookingUrl: pickFirstString(templateCta.booking_url, "/booking"),
+      servicesLabel: pickFirstString(templateCta.services_label, "Смотреть услуги"),
+      servicesAnchor: pickFirstString(templateCta.services_anchor, "popular-services"),
+    },
+    sections: {
+      benefits,
+      popularServices,
+      fullServiceList,
+      promos,
+      reviews,
+      masters: visibleMasters,
+      aboutParagraphs,
+      galleryImages,
+    },
+    meta: {
+      fallback_used: false,
+      render_safe: true,
+    },
+  };
 }
 
 // FIX: minimal master builder to satisfy import
