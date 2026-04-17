@@ -188,9 +188,22 @@ function normalizeMasterImages(images = {}) {
    EXPORTS
 ========================= */
 
+function isMasterTemplatePayload(payload) {
+  if (!isObject(payload)) return false;
+
+  return Boolean(
+    payload?.identity?.master_name ||
+    payload?.identity?.profession ||
+    payload?.sections?.featured_services ||
+    payload?.sections?.service_catalog ||
+    payload?.sections?.booking_band ||
+    payload?.stats
+  );
+}
+
 export function normalizeTemplatePayload(payload) {
-  // AUTO DETECT MASTER PAYLOAD
-  if (payload?.identity?.master_name || payload?.location) {
+  // AUTO DETECT MASTER PAYLOAD (strict markers only)
+  if (isMasterTemplatePayload(payload)) {
     return normalizeMasterTemplatePayload(payload);
   }
 
