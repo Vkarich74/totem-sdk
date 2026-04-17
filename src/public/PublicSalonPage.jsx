@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,14 +22,6 @@ function pickFirstNumber(...values) {
     if (Number.isFinite(num) && num > 0) return num;
   }
   return 0;
-}
-
-function pickFirstAssetId(...values) {
-  for (const value of values) {
-    if (typeof value === "string" && value.trim()) return value.trim();
-    if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  }
-  return "";
 }
 
 function formatPrice(value) {
@@ -153,207 +146,6 @@ function getInitials(name) {
     .join("");
 }
 
-function filterActiveItems(items) {
-  if (!Array.isArray(items)) return [];
-  return items.filter((item) => item && item.is_active !== false);
-}
-
-function resolveTemplateAsset(imagesRoot, imageRef) {
-  if (!imagesRoot || !imageRef) return "";
-
-  const directUrl = pickFirstString(
-    imageRef?.secure_url,
-    imageRef?.url,
-    imageRef?.image_url,
-    imageRef?.src,
-    imageRef?.image?.secure_url,
-    imageRef?.image?.url,
-    imageRef?.image?.image_url,
-    imageRef?.image?.src,
-    imageRef?.hero?.secure_url,
-    imageRef?.hero?.url,
-    imageRef?.hero?.image_url,
-    imageRef?.hero?.src,
-    imageRef?.cover?.secure_url,
-    imageRef?.cover?.url,
-    imageRef?.cover?.image_url,
-    imageRef?.cover?.src,
-    imageRef?.photo?.secure_url,
-    imageRef?.photo?.url,
-    imageRef?.photo?.image_url,
-    imageRef?.photo?.src,
-    imageRef?.avatar?.secure_url,
-    imageRef?.avatar?.url,
-    imageRef?.avatar?.image_url,
-    imageRef?.avatar?.src,
-    imageRef?.media?.secure_url,
-    imageRef?.media?.url,
-    imageRef?.media?.image_url,
-    imageRef?.media?.src,
-  );
-
-  if (directUrl) return directUrl;
-
-  const assetId = pickFirstAssetId(
-    imageRef?.image_asset_id,
-    imageRef?.asset_id,
-    imageRef?.image?.image_asset_id,
-    imageRef?.hero?.image_asset_id,
-    imageRef?.cover?.image_asset_id,
-    imageRef?.photo?.image_asset_id,
-    imageRef?.avatar?.image_asset_id,
-    imageRef?.media?.image_asset_id,
-  );
-  const asset = assetId && imagesRoot?.assets ? imagesRoot.assets[String(assetId)] : null;
-
-  return pickFirstString(
-    asset?.secure_url,
-    asset?.url,
-    asset?.image_url,
-    asset?.src,
-  );
-}
-
-function getTemplateGalleryImages(publishedPayload) {
-  const galleryItems = filterActiveItems(publishedPayload?.sections?.gallery);
-  const portfolioItems = filterActiveItems(publishedPayload?.sections?.portfolio);
-  return [...galleryItems, ...portfolioItems]
-    .map((item) => resolveTemplateAsset(publishedPayload?.images, item))
-    .filter(Boolean);
-}
-
-function getTemplateServices(items, imagesRoot) {
-  return filterActiveItems(items)
-    .map((service) => ({
-      id: service.id,
-      name: pickFirstString(service.name, service.title),
-      description: normalizeText(
-        pickFirstString(service.description, service.text, service.note),
-      ),
-      price: pickFirstNumber(service.price),
-      durationMin: pickFirstNumber(service.duration_min, service.duration),
-      imageUrl: resolveTemplateAsset(imagesRoot, service),
-    }))
-    .filter((service) => service.name);
-}
-
-function getTemplateMasters(items, imagesRoot) {
-  return filterActiveItems(items)
-    .map((master) => ({
-      id: master.id || master.slug || master.name,
-      slug: master.slug || "",
-      name: pickFirstString(master.name),
-      role: pickFirstString(master.role, master.profession),
-      bio: normalizeText(pickFirstString(master.bio, master.description)),
-      imageUrl: resolveTemplateAsset(imagesRoot, master),
-    }))
-    .filter((master) => master.name);
-}
-
-function getTemplateReviews(items) {
-  return filterActiveItems(items)
-    .map((review, index) => ({
-      id: review.id || index + 1,
-      name: pickFirstString(review.name, `Гость ${index + 1}`),
-      text: normalizeText(pickFirstString(review.text)),
-      rating: pickFirstNumber(review.rating) || 5,
-    }))
-    .filter((review) => review.text);
-}
-
-function getTemplatePromos(items) {
-  return filterActiveItems(items)
-    .map((promo, index) => ({
-      id: promo.id || index + 1,
-      title: pickFirstString(promo.title, promo.name),
-      text: normalizeText(pickFirstString(promo.text, promo.description)),
-      badge: pickFirstString(promo.badge, "Предложение"),
-    }))
-    .filter((promo) => promo.title);
-}
-
-function getTemplateBenefits(items) {
-  return filterActiveItems(items)
-    .map((item, index) => ({
-      id: item.id || index + 1,
-      title: pickFirstString(item.title),
-      text: normalizeText(pickFirstString(item.text, item.description)),
-    }))
-    .filter((item) => item.title);
-}
-
-function getTemplateAboutParagraphs(items) {
-  return filterActiveItems(items)
-    .sort((a, b) => Number(a?.slot_index || 0) - Number(b?.slot_index || 0))
-    .map((item) => normalizeText(pickFirstString(item.text)))
-    .filter(Boolean)
-    .slice(0, 4);
-}
-
-
-function itemHasImage(item) {
-  return Boolean(
-    pickFirstString(
-      item?.imageUrl,
-      item?.image_url,
-      item?.image?.secure_url,
-      item?.image?.image_url,
-      item?.image?.url,
-      item?.photo?.secure_url,
-      item?.photo?.image_url,
-      item?.photo?.url,
-      item?.hero?.secure_url,
-      item?.hero?.image_url,
-      item?.hero?.url,
-      item?.cover?.secure_url,
-      item?.cover?.image_url,
-      item?.cover?.url,
-      item?.avatar?.secure_url,
-      item?.avatar?.image_url,
-      item?.avatar?.url,
-      item?.secure_url,
-      item?.image_url,
-      item?.url,
-      item?.src,
-    ),
-  );
-}
-
-function buildItemKey(item) {
-  return pickFirstString(
-    item?.id != null ? String(item.id) : "",
-    item?.slug,
-    item?.name,
-    item?.title,
-  );
-}
-
-function mergeItemsWithImageFallback(primaryItems, fallbackItems) {
-  const fallbackMap = new Map();
-
-  fallbackItems.forEach((item, index) => {
-    const key = buildItemKey(item) || `__index__${index}`;
-    if (!fallbackMap.has(key)) {
-      fallbackMap.set(key, item);
-    }
-  });
-
-  return primaryItems.map((item, index) => {
-    if (itemHasImage(item)) return item;
-
-    const key = buildItemKey(item) || `__index__${index}`;
-    const fallback = fallbackMap.get(key) || fallbackItems[index];
-
-    if (!fallback) return item;
-
-    return {
-      ...fallback,
-      ...item,
-      imageUrl: pickFirstString(item?.imageUrl, item?.image_url, fallback?.imageUrl, fallback?.image_url),
-    };
-  });
-}
-
 export default function PublicSalonPage({ slug }) {
   const navigate = useNavigate();
 
@@ -395,45 +187,53 @@ export default function PublicSalonPage({ slug }) {
 
         const mastersData = await getMasters(slug);
         const metricsData = await getMetrics(slug);
-        const publishedData = await getSalonTemplatePublished(slug).catch(() => ({ ok: false }));
+        const publishedData = await getSalonTemplatePublished(slug).catch(() => ({
+          ok: false,
+        }));
 
+        const nextMasters = Array.isArray(mastersData) ? mastersData : [];
+        const nextMetrics = metricsData || null;
         const normalizedPublishedTemplate =
           publishedData?.ok && publishedData.published_exists && publishedData.payload
             ? normalizeTemplatePayload(publishedData.payload)
             : null;
 
         setSalon(salonData);
-        setMasters(Array.isArray(mastersData) ? mastersData : []);
-        setMetrics(metricsData || null);
+        setMasters(nextMasters);
+        setMetrics(nextMetrics);
         setPublishedTemplate(normalizedPublishedTemplate);
 
-        const templateIdentity = normalizedPublishedTemplate?.identity || {};
-        const templateSeo = normalizedPublishedTemplate?.seo || {};
-        const templateContact = normalizedPublishedTemplate?.contact || {};
-        const templateImages = normalizedPublishedTemplate?.images || {};
-        const templateHeroImage = resolveTemplateAsset(
-          templateImages,
-          templateImages?.hero,
-        );
-        const defaultMapAddress = [
-          pickFirstString(templateContact.address, salonData?.address),
-          pickFirstString(templateContact.district),
-          pickFirstString(templateContact.city, salonData?.city),
-        ]
-          .filter(Boolean)
-          .join(", ");
+        let metaView = null;
+        if (normalizedPublishedTemplate) {
+          try {
+            metaView = buildSalonTemplateViewModel({
+              salon: salonData,
+              masters: nextMasters,
+              metrics: nextMetrics,
+              publishedTemplate: normalizedPublishedTemplate,
+            });
+          } catch (error) {
+            metaView = null;
+          }
+        }
+
         const title = pickFirstString(
-          templateSeo?.title,
-          templateIdentity?.salon_name,
+          metaView?.title,
+          metaView?.salonName,
           salonData?.name,
           "Салон",
         );
         const description = pickFirstString(
-          templateSeo?.description,
-          templateIdentity?.subtitle,
+          metaView?.description,
           salonData?.description,
           "Публичная страница салона в TOTEM: услуги, команда, контакты и удобная онлайн запись.",
         );
+        const defaultMapAddress = pickFirstString(
+          metaView?.defaultMapAddress,
+          salonData?.address,
+        );
+        const telephone = pickFirstString(metaView?.phone, salonData?.phone);
+        const heroImage = pickFirstString(metaView?.heroImage);
 
         document.title = `${title} | Онлайн запись`;
 
@@ -449,16 +249,12 @@ export default function PublicSalonPage({ slug }) {
           name: title,
           description,
           url: window.location.href,
-          telephone: pickFirstString(
-            templateContact.phone,
-            templateContact.whatsapp,
-            salonData?.phone,
-          ),
-          address: defaultMapAddress || pickFirstString(salonData?.address),
-          image: templateHeroImage || undefined,
+          telephone: telephone || undefined,
+          address: defaultMapAddress || undefined,
+          image: heroImage || undefined,
         });
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error(error);
         setNotFound(true);
       } finally {
         setLoading(false);
@@ -502,99 +298,106 @@ export default function PublicSalonPage({ slug }) {
   const renderSafe = renderMeta.render_safe !== false;
   const renderFallbackUsed = renderMeta.fallback_used === true;
 
-  const templateIdentity = publishedTemplate?.identity || {};
-  const templateContact = publishedTemplate?.contact || {};
-  const templateTrust = publishedTemplate?.trust || {};
-  const templateSections = publishedTemplate?.sections || {};
-  const templateImages = publishedTemplate?.images || {};
-  const templateHeroImage = pickFirstString(
-    templateViewModel?.heroImage,
-    templateImages?.hero?.secure_url,
-    templateImages?.hero?.url,
-    templateImages?.hero?.image_url,
-    templateImages?.hero?.src,
-  );
+  const viewSections =
+    templateViewModel?.sections && typeof templateViewModel.sections === "object"
+      ? templateViewModel.sections
+      : {};
+  const viewCta =
+    templateViewModel?.cta && typeof templateViewModel.cta === "object"
+      ? templateViewModel.cta
+      : {};
 
   const salonName = pickFirstString(
     templateViewModel?.salonName,
-    templateIdentity?.salon_name,
     salon?.name,
     "Салон",
   );
+  const heroBadge = pickFirstString(
+    templateViewModel?.heroBadge,
+    "Витрина салона в TOTEM",
+  );
   const slogan = pickFirstString(
     templateViewModel?.slogan,
-    templateIdentity?.slogan,
     "Красота, сервис и онлайн-запись в одном месте",
   );
   const subtitle = pickFirstString(
     templateViewModel?.subtitle,
-    templateIdentity?.subtitle,
     salon?.description,
     "Современная витрина салона в TOTEM: услуги, акции, отзывы, абонементы и удобная запись с телефона.",
   );
   const district = pickFirstString(
     templateViewModel?.district,
-    templateContact?.district,
     salon?.district,
   );
   const address = pickFirstString(
     templateViewModel?.address,
-    templateContact?.address,
     salon?.address,
+  );
+  const city = pickFirstString(
+    templateViewModel?.city,
+    salon?.city,
   );
   const phone = pickFirstString(
     templateViewModel?.phone,
-    templateContact?.phone,
-    templateContact?.whatsapp,
     salon?.phone,
   );
   const scheduleText = pickFirstString(
     templateViewModel?.scheduleText,
-    templateContact?.schedule_text,
     salon?.schedule_text,
   );
-  const ratingValue = pickFirstString(
-    templateViewModel?.ratingValue,
-    templateTrust?.rating_value,
+  const ratingValue = pickFirstString(templateViewModel?.ratingValue);
+  const reviewCount = pickFirstString(templateViewModel?.reviewCount);
+  const completedBookings = pickFirstNumber(
+    templateViewModel?.completedBookings,
+    metrics?.completed,
+    metrics?.completed_bookings,
+    metrics?.bookings_completed,
   );
-  const reviewCount = pickFirstString(
-    templateViewModel?.reviewCount,
-    templateTrust?.review_count,
+  const templateHeroImage = pickFirstString(templateViewModel?.heroImage);
+  const defaultMapAddress = pickFirstString(
+    templateViewModel?.defaultMapAddress,
+    [address, district, city].filter(Boolean).join(", "),
+    "Бишкек",
   );
-
-  const defaultMapAddress = [
-    address,
-    district,
-    pickFirstString(templateContact?.city, salon?.city),
-  ]
-    .filter(Boolean)
-    .join(", ");
   const mapEmbedUrl = normalizeMapEmbedUrl(
     pickFirstString(
       templateViewModel?.mapEmbedUrl,
-      templateContact?.map_embed_url,
       salon?.map_embed_url,
       salon?.google_map_embed_url,
       salon?.map_url,
     ),
-    defaultMapAddress || "Бишкек",
+    defaultMapAddress,
+  );
+
+  const bookingLabel = pickFirstString(
+    viewCta.bookingLabel,
+    "Записаться онлайн",
+  );
+  const bookingUrl = pickFirstString(
+    viewCta.bookingUrl,
+    "/booking",
+  );
+  const servicesLabel = pickFirstString(
+    viewCta.servicesLabel,
+    "Смотреть услуги",
+  );
+  const servicesAnchor = pickFirstString(
+    viewCta.servicesAnchor,
+    "popular-services",
   );
 
   const aboutParagraphs = (() => {
-    const modelParagraphs = Array.isArray(templateViewModel?.sections?.aboutParagraphs)
-      ? templateViewModel.sections.aboutParagraphs.filter(Boolean).slice(0, 4)
+    const modelParagraphs = Array.isArray(viewSections.aboutParagraphs)
+      ? viewSections.aboutParagraphs.filter(Boolean).slice(0, 4)
       : [];
     if (modelParagraphs.length > 0) return modelParagraphs;
-
-    const templateParagraphs = getTemplateAboutParagraphs(templateSections?.about_paragraphs);
-    if (templateParagraphs.length > 0) return templateParagraphs;
 
     return splitParagraphs(pickFirstString(salon?.about, salon?.description));
   })();
 
   const visibleMasters = (() => {
-    const modelMasters = Array.isArray(templateViewModel?.sections?.masters)
-      ? templateViewModel.sections.masters
+    const modelMasters = Array.isArray(viewSections.masters)
+      ? viewSections.masters
           .filter((master) => !!pickFirstString(master?.name))
           .slice(0, 4)
       : [];
@@ -606,8 +409,8 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const popularServices = (() => {
-    const modelServices = Array.isArray(templateViewModel?.sections?.popularServices)
-      ? templateViewModel.sections.popularServices
+    const modelServices = Array.isArray(viewSections.popularServices)
+      ? viewSections.popularServices
           .filter((service) => !!pickFirstString(service?.name, service?.title))
           .slice(0, 12)
       : [];
@@ -617,8 +420,8 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const fullServiceList = (() => {
-    const modelCatalog = Array.isArray(templateViewModel?.sections?.fullServiceList)
-      ? templateViewModel.sections.fullServiceList
+    const modelCatalog = Array.isArray(viewSections.fullServiceList)
+      ? viewSections.fullServiceList
           .filter((service) => !!pickFirstString(service?.name, service?.title))
           .slice(0, 12)
       : [];
@@ -627,52 +430,12 @@ export default function PublicSalonPage({ slug }) {
     return services.slice(0, 12);
   })();
 
-  const reviews = (() => {
-    const modelReviews = Array.isArray(templateViewModel?.sections?.reviews)
-      ? templateViewModel.sections.reviews
-      : [];
-    if (modelReviews.length > 0) return modelReviews;
-
-    return getTemplateReviews(templateSections?.reviews);
-  })();
-
-  const promos = (() => {
-    const modelPromos = Array.isArray(templateViewModel?.sections?.promos)
-      ? templateViewModel.sections.promos
-      : [];
-    if (modelPromos.length > 0) return modelPromos;
-
-    return getTemplatePromos(templateSections?.promos);
-  })();
-
-  const benefits = (() => {
-    const modelBenefits = Array.isArray(templateViewModel?.sections?.benefits)
-      ? templateViewModel.sections.benefits
-      : [];
-    if (modelBenefits.length > 0) return modelBenefits;
-
-    return getTemplateBenefits(templateSections?.benefits);
-  })();
-
-  const galleryImages = (() => {
-    const modelGallery = Array.isArray(templateViewModel?.sections?.galleryImages)
-      ? templateViewModel.sections.galleryImages.filter(Boolean)
-      : [];
-
-    if (modelGallery.length > 0) {
-      return Array.from(new Set(modelGallery));
-    }
-
-    return [];
-  })();
-
-  const completedBookings = pickFirstNumber(
-    templateViewModel?.completedBookings,
-    templateTrust?.completed_bookings,
-    metrics?.completed,
-    metrics?.completed_bookings,
-    metrics?.bookings_completed,
-  );
+  const reviews = Array.isArray(viewSections.reviews) ? viewSections.reviews : [];
+  const promos = Array.isArray(viewSections.promos) ? viewSections.promos : [];
+  const benefits = Array.isArray(viewSections.benefits) ? viewSections.benefits : [];
+  const galleryImages = Array.isArray(viewSections.galleryImages)
+    ? Array.from(new Set(viewSections.galleryImages.filter(Boolean)))
+    : [];
 
   const palette = {
     bg: "#F8F5F1",
@@ -753,6 +516,16 @@ export default function PublicSalonPage({ slug }) {
   };
 
   function goToBooking() {
+    if (/^https?:\/\//i.test(bookingUrl)) {
+      window.location.href = bookingUrl;
+      return;
+    }
+
+    if (bookingUrl && bookingUrl !== "/booking") {
+      navigate(bookingUrl);
+      return;
+    }
+
     navigate("/booking");
   }
 
@@ -879,7 +652,7 @@ export default function PublicSalonPage({ slug }) {
                     fontWeight: 600,
                   }}
                 >
-                  Витрина салона в TOTEM
+                  {heroBadge}
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1069,14 +842,14 @@ export default function PublicSalonPage({ slug }) {
                   }}
                 >
                   <button onClick={goToBooking} style={primaryButton}>
-                    Записаться онлайн
+                    {bookingLabel}
                   </button>
 
                   <button
-                    onClick={() => scrollToSection("popular-services")}
+                    onClick={() => scrollToSection(servicesAnchor)}
                     style={secondaryButton}
                   >
-                    Смотреть услуги
+                    {servicesLabel}
                   </button>
                 </div>
               </div>
@@ -1180,7 +953,7 @@ export default function PublicSalonPage({ slug }) {
 
       {popularServices.length > 0 && (
         <section
-          id="popular-services"
+          id={servicesAnchor || "popular-services"}
           style={{ padding: isMobile ? "12px 0 8px" : "18px 0 12px" }}
         >
           <div style={container}>
@@ -1757,7 +1530,7 @@ export default function PublicSalonPage({ slug }) {
 
               <div style={{ marginTop: 14 }}>
                 <button onClick={goToBooking} style={primaryButton}>
-                  Записаться онлайн
+                  {bookingLabel}
                 </button>
               </div>
             </div>
@@ -2057,7 +1830,7 @@ export default function PublicSalonPage({ slug }) {
 
               <div>
                 <button onClick={goToBooking} style={primaryButton}>
-                  Записаться
+                  {bookingLabel}
                 </button>
               </div>
             </div>
@@ -2110,7 +1883,7 @@ export default function PublicSalonPage({ slug }) {
                 boxShadow: "0 -2px 10px rgba(35,32,28,0.06)",
               }}
             >
-              Записаться онлайн
+              {bookingLabel}
             </button>
           </div>
         </div>
