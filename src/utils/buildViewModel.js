@@ -76,6 +76,8 @@ function resolveTemplateAsset(imagesRoot, imageRef, transform = {}){
 
   const directUrl = pickFirstString(
     imageRef?.secure_url,
+    imageRef?.image_secure_url,
+    imageRef?.avatar_secure_url,
     imageRef?.url,
     imageRef?.image_url,
     imageRef?.src,
@@ -109,6 +111,7 @@ function resolveTemplateAsset(imagesRoot, imageRef, transform = {}){
 
   const assetId = pickFirstAssetId(
     imageRef?.image_asset_id,
+    imageRef?.avatar_asset_id,
     imageRef?.asset_id,
     imageRef?.image?.image_asset_id,
     imageRef?.hero?.image_asset_id,
