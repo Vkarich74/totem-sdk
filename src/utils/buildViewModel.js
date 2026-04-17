@@ -311,12 +311,13 @@ export function buildSalonTemplateViewModel({
     const normalizedTemplate = normalizeTemplatePayload(safePublishedTemplate);
     const validation = validateTemplatePayload(safePublishedTemplate);
 
-    const templateIdentity = safeObject(safePublishedTemplate.identity);
-    const templateContact = safeObject(safePublishedTemplate.contact);
-    const templateTrust = safeObject(safePublishedTemplate.trust);
-    const templateSections = safeObject(safePublishedTemplate.sections);
-    const templateImages = safeObject(safePublishedTemplate.images);
-    const templateSeo = safeObject(safePublishedTemplate.seo);
+    const templateIdentity = safeObject(normalizedTemplate.identity);
+    const templateContact = safeObject(normalizedTemplate.contact);
+    const templateTrust = safeObject(normalizedTemplate.trust);
+    const templateSections = safeObject(normalizedTemplate.sections);
+    const templateImages = safeObject(normalizedTemplate.images);
+    const templateSeo = safeObject(normalizedTemplate.seo);
+    const templateCta = safeObject(normalizedTemplate.cta);
 
     const serviceCatalogFromApi = extractServices(salon);
     const popularServices = mapTemplateServices(templateSections.popular_services, templateImages);
@@ -418,10 +419,10 @@ export function buildSalonTemplateViewModel({
         .filter(Boolean)
         .join(", "),
       cta: {
-        bookingLabel: pickFirstString(safePublishedTemplate?.cta?.booking_label, "Записаться онлайн"),
-        bookingUrl: pickFirstString(safePublishedTemplate?.cta?.booking_url, "/booking"),
-        servicesLabel: pickFirstString(safePublishedTemplate?.cta?.services_label, "Смотреть услуги"),
-        servicesAnchor: pickFirstString(safePublishedTemplate?.cta?.services_anchor, "popular-services"),
+        bookingLabel: pickFirstString(templateCta.booking_label, "Записаться онлайн"),
+        bookingUrl: pickFirstString(templateCta.booking_url, "/booking"),
+        servicesLabel: pickFirstString(templateCta.services_label, "Смотреть услуги"),
+        servicesAnchor: pickFirstString(templateCta.services_anchor, "popular-services"),
       },
       sections: {
         benefits: benefits.length > 0 ? benefits : safeArray(demoBenefits),
