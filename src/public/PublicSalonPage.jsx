@@ -158,44 +158,11 @@ function resolveTemplateAsset(imagesRoot, imageRef) {
     imageRef?.url,
     imageRef?.image_url,
     imageRef?.src,
-    imageRef?.image?.secure_url,
-    imageRef?.image?.url,
-    imageRef?.image?.image_url,
-    imageRef?.image?.src,
-    imageRef?.hero?.secure_url,
-    imageRef?.hero?.url,
-    imageRef?.hero?.image_url,
-    imageRef?.hero?.src,
-    imageRef?.cover?.secure_url,
-    imageRef?.cover?.url,
-    imageRef?.cover?.image_url,
-    imageRef?.cover?.src,
-    imageRef?.photo?.secure_url,
-    imageRef?.photo?.url,
-    imageRef?.photo?.image_url,
-    imageRef?.photo?.src,
-    imageRef?.avatar?.secure_url,
-    imageRef?.avatar?.url,
-    imageRef?.avatar?.image_url,
-    imageRef?.avatar?.src,
-    imageRef?.media?.secure_url,
-    imageRef?.media?.url,
-    imageRef?.media?.image_url,
-    imageRef?.media?.src,
   );
 
   if (directUrl) return directUrl;
 
-  const assetId = pickFirstString(
-    imageRef?.image_asset_id,
-    imageRef?.asset_id,
-    imageRef?.image?.image_asset_id,
-    imageRef?.hero?.image_asset_id,
-    imageRef?.cover?.image_asset_id,
-    imageRef?.photo?.image_asset_id,
-    imageRef?.avatar?.image_asset_id,
-    imageRef?.media?.image_asset_id,
-  );
+  const assetId = pickFirstString(imageRef?.image_asset_id);
   const asset = assetId && imagesRoot?.assets ? imagesRoot.assets[assetId] : null;
 
   return pickFirstString(
@@ -208,8 +175,7 @@ function resolveTemplateAsset(imagesRoot, imageRef) {
 
 function getTemplateGalleryImages(publishedPayload) {
   const galleryItems = filterActiveItems(publishedPayload?.sections?.gallery);
-  const portfolioItems = filterActiveItems(publishedPayload?.sections?.portfolio);
-  return [...galleryItems, ...portfolioItems]
+  return galleryItems
     .map((item) => resolveTemplateAsset(publishedPayload?.images, item))
     .filter(Boolean);
 }
@@ -280,6 +246,70 @@ function getTemplateAboutParagraphs(items) {
     .map((item) => normalizeText(pickFirstString(item.text)))
     .filter(Boolean)
     .slice(0, 4);
+}
+
+
+function itemHasImage(item) {
+  return Boolean(
+    pickFirstString(
+      item?.imageUrl,
+      item?.image_url,
+      item?.image?.secure_url,
+      item?.image?.image_url,
+      item?.image?.url,
+      item?.photo?.secure_url,
+      item?.photo?.image_url,
+      item?.photo?.url,
+      item?.hero?.secure_url,
+      item?.hero?.image_url,
+      item?.hero?.url,
+      item?.cover?.secure_url,
+      item?.cover?.image_url,
+      item?.cover?.url,
+      item?.avatar?.secure_url,
+      item?.avatar?.image_url,
+      item?.avatar?.url,
+      item?.secure_url,
+      item?.image_url,
+      item?.url,
+      item?.src,
+    ),
+  );
+}
+
+function buildItemKey(item) {
+  return pickFirstString(
+    item?.id != null ? String(item.id) : "",
+    item?.slug,
+    item?.name,
+    item?.title,
+  );
+}
+
+function mergeItemsWithImageFallback(primaryItems, fallbackItems) {
+  const fallbackMap = new Map();
+
+  fallbackItems.forEach((item, index) => {
+    const key = buildItemKey(item) || `__index__${index}`;
+    if (!fallbackMap.has(key)) {
+      fallbackMap.set(key, item);
+    }
+  });
+
+  return primaryItems.map((item, index) => {
+    if (itemHasImage(item)) return item;
+
+    const key = buildItemKey(item) || `__index__${index}`;
+    const fallback = fallbackMap.get(key) || fallbackItems[index];
+
+    if (!fallback) return item;
+
+    return {
+      ...fallback,
+      ...item,
+      imageUrl: pickFirstString(item?.imageUrl, item?.image_url, fallback?.imageUrl, fallback?.image_url),
+    };
+  });
 }
 
 export default function PublicSalonPage({ slug }) {
@@ -517,15 +547,14 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const visibleMasters = (() => {
-    const modelMasters = Array.isArray(templateViewModel?.sections?.masters)
-      ? templateViewModel.sections.masters.slice(0, 4)
-      : [];
-    if (modelMasters.length > 0) return modelMasters;
-
     const sectionMasters = getTemplateMasters(templateSections?.masters, templateImages).slice(
       0,
       4,
     );
+    const modelMasters = Array.isArray(templateViewModel?.sections?.masters)
+      ? mergeItemsWithImageFallback(templateViewModel.sections.masters.slice(0, 4), sectionMasters)
+      : [];
+    if (modelMasters.length > 0) return modelMasters;
     if (sectionMasters.length > 0) return sectionMasters;
 
     return Array.isArray(masters)
@@ -534,30 +563,28 @@ export default function PublicSalonPage({ slug }) {
   })();
 
   const popularServices = (() => {
-    const modelServices = Array.isArray(templateViewModel?.sections?.popularServices)
-      ? templateViewModel.sections.popularServices
-      : [];
-    if (modelServices.length > 0) return modelServices;
-
     const sectionServices = getTemplateServices(
       templateSections?.popular_services,
       templateImages,
     );
+    const modelServices = Array.isArray(templateViewModel?.sections?.popularServices)
+      ? mergeItemsWithImageFallback(templateViewModel.sections.popularServices, sectionServices)
+      : [];
+    if (modelServices.length > 0) return modelServices;
     if (sectionServices.length > 0) return sectionServices;
 
     return services.slice(0, 12);
   })();
 
   const fullServiceList = (() => {
-    const modelCatalog = Array.isArray(templateViewModel?.sections?.fullServiceList)
-      ? templateViewModel.sections.fullServiceList
-      : [];
-    if (modelCatalog.length > 0) return modelCatalog;
-
     const sectionCatalog = getTemplateServices(
       templateSections?.full_service_list,
       templateImages,
     );
+    const modelCatalog = Array.isArray(templateViewModel?.sections?.fullServiceList)
+      ? mergeItemsWithImageFallback(templateViewModel.sections.fullServiceList, sectionCatalog)
+      : [];
+    if (modelCatalog.length > 0) return modelCatalog;
     if (sectionCatalog.length > 0) return sectionCatalog;
 
     return services.slice(0, 12);
@@ -594,9 +621,14 @@ export default function PublicSalonPage({ slug }) {
     const modelGallery = Array.isArray(templateViewModel?.sections?.galleryImages)
       ? templateViewModel.sections.galleryImages.filter(Boolean)
       : [];
-    if (modelGallery.length > 0) return modelGallery;
+    const sectionGallery = getTemplateGalleryImages(publishedTemplate);
+    const mergedGallery = [...modelGallery, ...sectionGallery].filter(Boolean);
 
-    return getTemplateGalleryImages(publishedTemplate);
+    if (mergedGallery.length > 0) {
+      return Array.from(new Set(mergedGallery));
+    }
+
+    return [];
   })();
 
   const completedBookings = pickFirstNumber(
