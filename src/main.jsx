@@ -4,13 +4,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 
-/*
-Resolve platform mode
-
-MASTER MODE priority
-SALON MODE fallback
-*/
-
 function resolveContext() {
 
   // MASTER MODE (priority)
@@ -29,8 +22,27 @@ function resolveContext() {
     };
   }
 
-  // Detect from URL
+  // 🔥 ДОБАВЛЕНО: HASH ROUTER SUPPORT
+  const hash = window.location.hash || "";
+  const hashPath = hash.replace(/^#/, "");
+  const hashParts = hashPath.split("/").filter(Boolean);
 
+  if (hashParts.length >= 2 && hashParts[0] === "master") {
+    return {
+      mode: "master",
+      slug: hashParts[1]
+    };
+  }
+
+  if (hashParts.length >= 2 && hashParts[0] === "salon") {
+    return {
+      mode: "salon",
+      slug: hashParts[1]
+    };
+  }
+  // 🔥 КОНЕЦ ДОБАВЛЕНИЯ
+
+  // Detect from URL (fallback)
   const path = window.location.pathname;
   const parts = path.split("/").filter(Boolean);
 
