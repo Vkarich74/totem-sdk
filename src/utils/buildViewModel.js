@@ -67,16 +67,49 @@ function resolveTemplateAsset(imagesRoot, imageRef, transform = {}){
   if (!imagesRoot || !imageRef) return "";
 
   const directUrl = pickFirstString(
-    imageRef.secure_url,
-    imageRef.url,
-    imageRef.image_url,
-    imageRef.src,
+    imageRef?.secure_url,
+    imageRef?.url,
+    imageRef?.image_url,
+    imageRef?.src,
+    imageRef?.image?.secure_url,
+    imageRef?.image?.url,
+    imageRef?.image?.image_url,
+    imageRef?.image?.src,
+    imageRef?.hero?.secure_url,
+    imageRef?.hero?.url,
+    imageRef?.hero?.image_url,
+    imageRef?.hero?.src,
+    imageRef?.cover?.secure_url,
+    imageRef?.cover?.url,
+    imageRef?.cover?.image_url,
+    imageRef?.cover?.src,
+    imageRef?.photo?.secure_url,
+    imageRef?.photo?.url,
+    imageRef?.photo?.image_url,
+    imageRef?.photo?.src,
+    imageRef?.avatar?.secure_url,
+    imageRef?.avatar?.url,
+    imageRef?.avatar?.image_url,
+    imageRef?.avatar?.src,
+    imageRef?.media?.secure_url,
+    imageRef?.media?.url,
+    imageRef?.media?.image_url,
+    imageRef?.media?.src,
   );
 
   if (directUrl) return transformImageUrl(directUrl, transform);
 
-  const assetId = pickFirstString(imageRef.image_asset_id);
-  const asset = assetId && imagesRoot.assets ? imagesRoot.assets[assetId] : null;
+  const assetId = pickFirstString(
+    imageRef?.image_asset_id,
+    imageRef?.asset_id,
+    imageRef?.image?.image_asset_id,
+    imageRef?.hero?.image_asset_id,
+    imageRef?.cover?.image_asset_id,
+    imageRef?.photo?.image_asset_id,
+    imageRef?.avatar?.image_asset_id,
+    imageRef?.media?.image_asset_id,
+  );
+  const asset = assetId && imagesRoot?.assets ? imagesRoot.assets[assetId] : null;
 
   return transformImageUrl(
     pickFirstString(
@@ -208,7 +241,8 @@ function mapTemplateAbout(items){
 
 function mapTemplateGallery(payload, fallbackImages){
   const galleryItems = filterActiveItems(payload?.sections?.gallery);
-  const urls = galleryItems
+  const portfolioItems = filterActiveItems(payload?.sections?.portfolio);
+  const urls = [...galleryItems, ...portfolioItems]
     .map((item) => resolveTemplateAsset(payload?.images, item, {
       width: 1400,
       height: 1050,
@@ -219,7 +253,9 @@ function mapTemplateGallery(payload, fallbackImages){
     }))
     .filter(Boolean);
 
-  return urls.length > 0 ? urls : fallbackImages;
+  if (urls.length === 0) return fallbackImages;
+
+  return Array.from(new Set(urls));
 }
 
 function safeArray(value){
@@ -328,7 +364,7 @@ export function buildSalonTemplateViewModel({
     const benefits = mapTemplateBenefits(templateSections.benefits);
     const aboutParagraphs = mapTemplateAbout(templateSections.about_paragraphs);
     const galleryImages = mapTemplateGallery(
-      safePublishedTemplate,
+      normalizedTemplate,
       isDemoSalon ? safeArray(demoVisuals.gallery) : [],
     );
 
