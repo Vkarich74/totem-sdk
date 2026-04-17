@@ -74,6 +74,7 @@ function transformImageUrl(url, transform = {}){
 function resolveTemplateAsset(imagesRoot, imageRef, transform = {}){
   if (!imagesRoot || !imageRef) return "";
 
+  const safeImagesRoot = safeObject(imagesRoot);
   const directUrl = pickFirstString(
     imageRef?.secure_url,
     imageRef?.image_secure_url,
@@ -120,14 +121,46 @@ function resolveTemplateAsset(imagesRoot, imageRef, transform = {}){
     imageRef?.avatar?.image_asset_id,
     imageRef?.media?.image_asset_id,
   );
-  const asset = assetId && imagesRoot?.assets ? imagesRoot.assets[String(assetId)] : null;
+  const asset = assetId && safeImagesRoot?.assets ? safeImagesRoot.assets[String(assetId)] : null;
 
   return transformImageUrl(
     pickFirstString(
       asset?.secure_url,
+      asset?.image_secure_url,
+      asset?.avatar_secure_url,
       asset?.url,
       asset?.image_url,
       asset?.src,
+      asset?.image?.secure_url,
+      asset?.image?.image_secure_url,
+      asset?.image?.url,
+      asset?.image?.image_url,
+      asset?.image?.src,
+      asset?.hero?.secure_url,
+      asset?.hero?.image_secure_url,
+      asset?.hero?.url,
+      asset?.hero?.image_url,
+      asset?.hero?.src,
+      asset?.cover?.secure_url,
+      asset?.cover?.image_secure_url,
+      asset?.cover?.url,
+      asset?.cover?.image_url,
+      asset?.cover?.src,
+      asset?.photo?.secure_url,
+      asset?.photo?.image_secure_url,
+      asset?.photo?.url,
+      asset?.photo?.image_url,
+      asset?.photo?.src,
+      asset?.avatar?.secure_url,
+      asset?.avatar?.image_secure_url,
+      asset?.avatar?.url,
+      asset?.avatar?.image_url,
+      asset?.avatar?.src,
+      asset?.media?.secure_url,
+      asset?.media?.image_secure_url,
+      asset?.media?.url,
+      asset?.media?.image_url,
+      asset?.media?.src,
     ),
     transform,
   );
@@ -300,17 +333,53 @@ export function buildSalonTemplateViewModel({
   const templateTrust = safeObject(normalizedTemplate.trust);
   const templateSections = safeObject(normalizedTemplate.sections);
   const templateImages = safeObject(normalizedTemplate.images);
+  const rawTemplateImages = safeObject(safePublishedTemplate.images);
+  const resolvedTemplateImages = {
+    ...rawTemplateImages,
+    ...templateImages,
+    hero: safeObject(templateImages.hero).image_asset_id || pickFirstString(
+      templateImages.hero?.secure_url,
+      templateImages.hero?.image_secure_url,
+      templateImages.hero?.url,
+      templateImages.hero?.image_url,
+      templateImages.hero?.src,
+    )
+      ? templateImages.hero
+      : safeObject(rawTemplateImages.hero),
+    logo: safeObject(templateImages.logo).image_asset_id || pickFirstString(
+      templateImages.logo?.secure_url,
+      templateImages.logo?.image_secure_url,
+      templateImages.logo?.url,
+      templateImages.logo?.image_url,
+      templateImages.logo?.src,
+    )
+      ? templateImages.logo
+      : safeObject(rawTemplateImages.logo),
+    promo: safeObject(templateImages.promo).image_asset_id || pickFirstString(
+      templateImages.promo?.secure_url,
+      templateImages.promo?.image_secure_url,
+      templateImages.promo?.url,
+      templateImages.promo?.image_url,
+      templateImages.promo?.src,
+    )
+      ? templateImages.promo
+      : safeObject(rawTemplateImages.promo),
+    assets: {
+      ...safeObject(rawTemplateImages.assets),
+      ...safeObject(templateImages.assets),
+    },
+  };
   const templateSeo = safeObject(normalizedTemplate.seo);
   const templateCta = safeObject(normalizedTemplate.cta);
 
-  const popularServices = mapTemplateServices(templateSections.popular_services, templateImages);
-  const fullServiceList = mapTemplateServices(templateSections.full_service_list, templateImages);
-  const visibleMasters = mapTemplateMasters(templateSections.masters, templateImages);
+  const popularServices = mapTemplateServices(templateSections.popular_services, resolvedTemplateImages);
+  const fullServiceList = mapTemplateServices(templateSections.full_service_list, resolvedTemplateImages);
+  const visibleMasters = mapTemplateMasters(templateSections.masters, resolvedTemplateImages);
   const reviews = mapTemplateReviews(templateSections.reviews);
   const promos = mapTemplatePromos(templateSections.promos);
   const benefits = mapTemplateBenefits(templateSections.benefits);
   const aboutParagraphs = mapTemplateAbout(templateSections.about_paragraphs);
-  const galleryImages = mapTemplateGallery(normalizedTemplate, []);
+    const galleryImages = mapTemplateGallery({ ...normalizedTemplate, images: resolvedTemplateImages }, []);
 
   return {
     validation,
@@ -328,7 +397,7 @@ export function buildSalonTemplateViewModel({
     slogan: pickFirstString(templateIdentity.slogan),
     subtitle: pickFirstString(templateIdentity.subtitle),
     heroBadge: pickFirstString(templateIdentity.hero_badge, "Витрина салона в TOTEM"),
-    heroImage: resolveTemplateAsset(templateImages, templateImages?.hero, {
+        heroImage: resolveTemplateAsset(resolvedTemplateImages, resolvedTemplateImages?.hero, {
       width: 1600,
       height: 1200,
       crop: "fill",
