@@ -31,15 +31,6 @@ function normalizeText(text){
   return text.replace(/\s+/g, " ").trim();
 }
 
-function splitParagraphs(text){
-  if (typeof text !== "string" || !text.trim()) return [];
-  return text
-    .split(/\n{2,}/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-}
-
 function filterActiveItems(items){
   if (!Array.isArray(items)) return [];
   return items.filter((item) => item && item.is_active !== false);
@@ -166,43 +157,6 @@ function resolveTemplateAsset(imagesRoot, imageRef, transform = {}){
   );
 }
 
-function extractServices(salon){
-  const raw =
-    salon?.services ||
-    salon?.service_list ||
-    salon?.service_items ||
-    salon?.public_services ||
-    salon?.items ||
-    [];
-
-  if (!Array.isArray(raw)) return [];
-
-  return raw
-    .map((service, index) => ({
-      id: service?.id ?? service?.sms_id ?? service?.service_id ?? index,
-      name: pickFirstString(service?.name, service?.title),
-      description: normalizeText(
-        pickFirstString(service?.description, service?.short_description, service?.details),
-      ),
-      price: pickFirstNumber(
-        service?.price,
-        service?.service_price,
-        service?.price_kgs,
-        service?.price_amount,
-      ),
-      durationMin: pickFirstNumber(
-        service?.duration_min,
-        service?.duration,
-        service?.duration_minutes,
-      ),
-      active:
-        service?.is_active !== false &&
-        service?.active !== false &&
-        service?.status !== "inactive",
-    }))
-    .filter((service) => service.name && service.active);
-}
-
 function mapTemplateServices(items, imagesRoot){
   return filterActiveItems(items)
     .map((service) => ({
@@ -300,10 +254,6 @@ function mapTemplateGallery(payload, fallbackImages){
   if (urls.length === 0) return fallbackImages;
 
   return Array.from(new Set(urls));
-}
-
-function safeArray(value){
-  return Array.isArray(value) ? value : [];
 }
 
 function safeObject(value){
