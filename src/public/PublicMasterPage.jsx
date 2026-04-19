@@ -74,6 +74,8 @@ export default function PublicMasterPage({ slug }) {
     loading: true,
     ok: false,
     payload: null,
+    errorCode: "",
+    statusCode: 0,
   });
 
   useEffect(() => {
@@ -81,7 +83,13 @@ export default function PublicMasterPage({ slug }) {
 
     async function loadPublicPayload() {
       if (!slug) {
-        setRemoteState({ loading: false, ok: false, payload: null });
+        setRemoteState({
+          loading: false,
+          ok: false,
+          payload: null,
+          errorCode: "MASTER_PUBLIC_SLUG_MISSING",
+          statusCode: 0,
+        });
         return;
       }
 
@@ -91,8 +99,45 @@ export default function PublicMasterPage({ slug }) {
 
         if (cancelled) return;
 
-        if (!response.ok || !json?.ok || !json?.published_exists) {
-          setRemoteState({ loading: false, ok: false, payload: null });
+        if (!response.ok) {
+          console.error("PublicMasterPage: public master fetch failed", {
+            slug,
+            status: response.status,
+          });
+          setRemoteState({
+            loading: false,
+            ok: false,
+            payload: null,
+            errorCode: "MASTER_PUBLIC_FETCH_NOT_OK",
+            statusCode: response.status || 0,
+          });
+          return;
+        }
+
+        if (!json?.ok) {
+          console.error("PublicMasterPage: public master payload api not ok", {
+            slug,
+            status: response.status,
+            json,
+          });
+          setRemoteState({
+            loading: false,
+            ok: false,
+            payload: null,
+            errorCode: "MASTER_PUBLIC_API_NOT_OK",
+            statusCode: response.status || 0,
+          });
+          return;
+        }
+
+        if (!json?.published_exists) {
+          setRemoteState({
+            loading: false,
+            ok: false,
+            payload: null,
+            errorCode: "MASTER_PUBLIC_NOT_PUBLISHED",
+            statusCode: response.status || 0,
+          });
           return;
         }
 
@@ -100,10 +145,22 @@ export default function PublicMasterPage({ slug }) {
           loading: false,
           ok: true,
           payload: json.payload || null,
+          errorCode: "",
+          statusCode: response.status || 200,
         });
       } catch (error) {
         if (cancelled) return;
-        setRemoteState({ loading: false, ok: false, payload: null });
+        console.error("PublicMasterPage: public master fetch crashed", {
+          slug,
+          error,
+        });
+        setRemoteState({
+          loading: false,
+          ok: false,
+          payload: null,
+          errorCode: "MASTER_PUBLIC_FETCH_FAILED",
+          statusCode: 0,
+        });
       }
     }
 
