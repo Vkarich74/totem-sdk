@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 
@@ -38,68 +37,6 @@ function formatDuration(value) {
 function normalizeText(text) {
   if (typeof text !== "string") return "";
   return text.replace(/\s+/g, " ").trim();
-}
-
-function splitParagraphs(text) {
-  if (typeof text !== "string" || !text.trim()) return [];
-  return text
-    .split(/\n{2,}/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-}
-
-function extractServices(salon) {
-  const raw =
-    salon?.services ||
-    salon?.service_list ||
-    salon?.service_items ||
-    salon?.public_services ||
-    salon?.items ||
-    [];
-
-  if (!Array.isArray(raw)) return [];
-
-  return raw
-    .map((service, index) => {
-      const id = service?.id ?? service?.sms_id ?? service?.service_id ?? index;
-      const name = pickFirstString(service?.name, service?.title);
-      const description = normalizeText(
-        pickFirstString(
-          service?.description,
-          service?.short_description,
-          service?.details,
-        ),
-      );
-
-      const price = pickFirstNumber(
-        service?.price,
-        service?.service_price,
-        service?.price_kgs,
-        service?.price_amount,
-      );
-
-      const durationMin = pickFirstNumber(
-        service?.duration_min,
-        service?.duration,
-        service?.duration_minutes,
-      );
-
-      const active =
-        service?.is_active !== false &&
-        service?.active !== false &&
-        service?.status !== "inactive";
-
-      return {
-        id,
-        name,
-        description,
-        price,
-        durationMin,
-        active,
-      };
-    })
-    .filter((service) => service.name && service.active);
 }
 
 function createMapEmbedUrl(addressValue) {
@@ -158,6 +95,10 @@ export default function PublicSalonPage({ slug }) {
   );
   const [teamOpen, setTeamOpen] = useState(false);
   const [publishedTemplate, setPublishedTemplate] = useState(null);
+  const [templateDiagnostics, setTemplateDiagnostics] = useState({
+    metaBuildFailed: false,
+    viewBuildFailed: false,
+  });
 
   useEffect(() => {
     function handleResize() {
@@ -175,6 +116,10 @@ export default function PublicSalonPage({ slug }) {
     async function load() {
       setLoading(true);
       setNotFound(false);
+      setTemplateDiagnostics({
+        metaBuildFailed: false,
+        viewBuildFailed: false,
+      });
 
       try {
         const salonData = await getSalon(slug);
@@ -203,6 +148,8 @@ export default function PublicSalonPage({ slug }) {
         setPublishedTemplate(nextPublishedTemplate);
 
         let metaView = null;
+        let metaBuildFailed = false;
+
         if (nextPublishedTemplate) {
           try {
             metaView = buildSalonTemplateViewModel({
@@ -212,8 +159,16 @@ export default function PublicSalonPage({ slug }) {
               publishedTemplate: nextPublishedTemplate,
             });
           } catch (error) {
-            metaView = null;
+            metaBuildFailed = true;
+            console.error("buildSalonTemplateViewModel meta build failed", error);
           }
+        }
+
+        if (metaBuildFailed) {
+          setTemplateDiagnostics((current) => ({
+            ...current,
+            metaBuildFailed: true,
+          }));
         }
 
         const title = pickFirstString(
@@ -263,21 +218,64 @@ export default function PublicSalonPage({ slug }) {
     load();
   }, [slug]);
 
-  const templateViewModel = useMemo(() => {
-    if (!publishedTemplate) return null;
+  const templateBuild = useMemo(() => {
+    if (!publishedTemplate) {
+      return {
+        viewModel: null,
+        diagnostics: {
+          viewBuildFailed: false,
+        },
+      };
+    }
 
     try {
-      return buildSalonTemplateViewModel({
-        salon,
-        masters,
-        metrics,
-        publishedTemplate,
-      });
+      return {
+        viewModel: buildSalonTemplateViewModel({
+          salon,
+          masters,
+          metrics,
+          publishedTemplate,
+        }),
+        diagnostics: {
+          viewBuildFailed: false,
+        },
+      };
     } catch (error) {
       console.error("buildSalonTemplateViewModel failed", error);
-      return null;
+      return {
+        viewModel: null,
+        diagnostics: {
+          viewBuildFailed: true,
+        },
+      };
     }
   }, [publishedTemplate, salon, masters, metrics]);
+
+  useEffect(() => {
+    if (!publishedTemplate) {
+      setTemplateDiagnostics((current) => {
+        if (!current.viewBuildFailed) return current;
+        return {
+          ...current,
+          viewBuildFailed: false,
+        };
+      });
+      return;
+    }
+
+    setTemplateDiagnostics((current) => {
+      if (current.viewBuildFailed === templateBuild.diagnostics.viewBuildFailed) {
+        return current;
+      }
+
+      return {
+        ...current,
+        viewBuildFailed: templateBuild.diagnostics.viewBuildFailed,
+      };
+    });
+  }, [publishedTemplate, templateBuild.diagnostics.viewBuildFailed]);
+
+  const templateViewModel = templateBuild.viewModel;
 
   if (loading) return <Skeleton />;
 
@@ -294,6 +292,8 @@ export default function PublicSalonPage({ slug }) {
   const renderValidation = templateViewModel?.validation || {};
   const renderSafe = renderMeta.render_safe !== false;
   const renderFallbackUsed = renderMeta.fallback_used === true;
+  const diagnosticsFallbackActive =
+    templateDiagnostics.metaBuildFailed || templateDiagnostics.viewBuildFailed;
 
   const viewSections =
     templateViewModel?.sections && typeof templateViewModel.sections === "object"
@@ -550,7 +550,7 @@ export default function PublicSalonPage({ slug }) {
       }}
     >
       {publishedTemplate &&
-        (!renderSafe || renderFallbackUsed || renderValidation?.is_valid === false) && (
+        (!renderSafe || renderFallbackUsed || renderValidation?.is_valid === false || diagnosticsFallbackActive) && (
           <section style={{ padding: isMobile ? "12px 0 4px" : "16px 0 8px" }}>
             <div style={container}>
               <div
@@ -579,8 +579,9 @@ export default function PublicSalonPage({ slug }) {
                     color: "#73510D",
                   }}
                 >
-                  Публичная страница отрисована через безопасный fallback, чтобы не
-                  допустить падение layout.
+                  {diagnosticsFallbackActive
+                    ? "Публичная страница отрисована через контролируемый безопасный режим после ошибки сборки template view model."
+                    : "Публичная страница отрисована через безопасный fallback, чтобы не допустить падение layout."}
                 </div>
               </div>
             </div>
