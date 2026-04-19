@@ -265,14 +265,6 @@ export function buildSalonTemplateViewModel({
   masters,
   metrics,
   publishedTemplate,
-  isDemoSalon = false,
-  demoSlug = "totem-demo-salon",
-  demoVisuals = { hero: "", gallery: [] },
-  demoMasterFallbacks = [],
-  demoBenefits = [],
-  demoPromos = [],
-  demoReviews = [],
-  demoServiceCatalog = [],
 }){
   const safePublishedTemplate = safeObject(publishedTemplate);
   const normalizedTemplate = normalizeTemplatePayload(safePublishedTemplate);
