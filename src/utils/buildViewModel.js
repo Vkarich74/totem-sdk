@@ -407,6 +407,75 @@ export function buildMasterTemplateViewModel(payload){
     format: "auto",
   });
 
+  const metrics = filterActiveItems(normalized.metrics)
+    .map((item) => ({
+      value: pickFirstString(item?.value),
+      label: pickFirstString(item?.label),
+    }))
+    .filter((item) => item.value || item.label);
+
+  const benefits = filterActiveItems(sections.benefits)
+    .map((item, index) => ({
+      id: item?.id || index + 1,
+      title: pickFirstString(item?.title),
+      text: normalizeText(pickFirstString(item?.text, item?.description)),
+    }))
+    .filter((item) => item.title || item.text);
+
+  const featuredServices = filterActiveItems(sections.featured_services)
+    .map((item, index) => ({
+      id: item?.id || index + 1,
+      title: pickFirstString(item?.title, item?.name),
+      price: pickFirstString(item?.price),
+      time: pickFirstString(item?.time, item?.duration),
+      note: normalizeText(pickFirstString(item?.note, item?.description, item?.text)),
+    }))
+    .filter((item) => item.title || item.price || item.time || item.note);
+
+  const serviceCatalog = filterActiveItems(sections.service_catalog)
+    .map((item, index) => ({
+      id: item?.id || index + 1,
+      name: pickFirstString(item?.name, item?.title),
+      price: pickFirstString(item?.price),
+      duration: pickFirstString(item?.duration, item?.time),
+      description: normalizeText(pickFirstString(item?.description, item?.text, item?.note)),
+    }))
+    .filter((item) => item.name || item.price || item.duration || item.description);
+
+  const reviews = filterActiveItems(sections.reviews)
+    .map((item, index) => ({
+      id: item?.id || index + 1,
+      name: pickFirstString(item?.name),
+      text: normalizeText(pickFirstString(item?.text)),
+      rating: pickFirstString(item?.rating) || String(pickFirstNumber(item?.rating) || ""),
+    }))
+    .filter((item) => item.name || item.text || item.rating);
+
+  const badges = filterActiveItems(sections.badges)
+    .map((item) => pickFirstString(item?.text, item?.title, item?.name))
+    .filter(Boolean);
+
+  const aboutParagraphs = filterActiveItems(sections.about_paragraphs)
+    .sort((a, b) => Number(a?.slot_index || 0) - Number(b?.slot_index || 0))
+    .map((item) => normalizeText(pickFirstString(item?.text)))
+    .filter(Boolean)
+    .slice(0, 4);
+
+  const safeStats = {
+    years: pickFirstString(stats.years),
+    rating: pickFirstString(stats.rating),
+    bookings: pickFirstString(stats.bookings),
+  };
+
+  const bookingBand = {
+    title: pickFirstString(sections?.booking_band?.title),
+    text: normalizeText(pickFirstString(sections?.booking_band?.text)),
+    booking_cta_label: pickFirstString(sections?.booking_band?.booking_cta_label),
+    booking_cta_url: pickFirstString(sections?.booking_band?.booking_cta_url),
+    services_cta_label: pickFirstString(sections?.booking_band?.services_cta_label),
+    services_anchor: pickFirstString(sections?.booking_band?.services_anchor),
+  };
+
   return {
     masterName: pickFirstString(identity.master_name),
     profession: pickFirstString(identity.profession),
@@ -421,15 +490,15 @@ export function buildMasterTemplateViewModel(payload){
     heroBadge: pickFirstString(identity.hero_badge),
     subtitle: pickFirstString(identity.subtitle),
     description: pickFirstString(identity.description),
-    metrics: filterActiveItems(normalized.metrics),
-    benefits: filterActiveItems(sections.benefits),
-    featuredServices: filterActiveItems(sections.featured_services),
-    serviceCatalog: filterActiveItems(sections.service_catalog),
-    reviews: filterActiveItems(sections.reviews),
-    badges: filterActiveItems(sections.badges),
-    aboutParagraphs: filterActiveItems(sections.about_paragraphs),
-    stats: stats,
-    bookingBand: safeObject(sections.booking_band),
+    metrics,
+    benefits,
+    featuredServices,
+    serviceCatalog,
+    reviews,
+    badges,
+    aboutParagraphs,
+    stats: safeStats,
+    bookingBand,
     bookingUrl: pickFirstString(cta.booking_url),
     bookingLabel: pickFirstString(cta.booking_label),
     servicesLabel: pickFirstString(cta.services_label),
