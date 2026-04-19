@@ -387,48 +387,58 @@ export function buildSalonTemplateViewModel({
   };
 }
 
-// FIX: minimal master builder to satisfy import
+
 export function buildMasterTemplateViewModel(payload){
-  const normalized = normalizeTemplatePayload ? normalizeTemplatePayload(payload || {}) : (payload || {});
-  const identity = normalized.identity || {};
-  const location = normalized.location || {};
-  const sections = normalized.sections || {};
-  const trust = normalized.trust || {};
-  const stats = normalized.stats || {};
-  const cta = normalized.cta || {};
+  const safePayload = safeObject(payload);
+  const normalized = normalizeTemplatePayload ? normalizeTemplatePayload(safePayload) : safePayload;
+  const identity = safeObject(normalized.identity);
+  const location = safeObject(normalized.location);
+  const sections = safeObject(normalized.sections);
+  const trust = safeObject(normalized.trust);
+  const stats = safeObject(normalized.stats);
+  const cta = safeObject(normalized.cta);
+  const images = safeObject(normalized.images);
+  const resolvedHeroImage = resolveTemplateAsset(images, images.hero, {
+    width: 1400,
+    height: 1400,
+    crop: "fill",
+    gravity: "face",
+    quality: "auto",
+    format: "auto",
+  });
 
   return {
-    masterName: identity.master_name || "",
-    profession: identity.profession || "",
-    city: identity.city || location.city || "",
-    district: location.district || "",
-    address: location.address || "",
-    schedule: location.schedule_text || "",
-    phone: location.phone || location.whatsapp || "",
-    mapUrl: location.map_url || "",
-    heroImage: normalized.images?.hero?.secure_url || normalized.images?.hero?.image_url || "",
-    heroAlt: normalized.images?.hero?.alt || identity.master_name || "",
-    heroBadge: identity.hero_badge || "",
-    subtitle: identity.subtitle || "",
-    description: identity.description || "",
-    metrics: normalized.metrics || [],
-    benefits: sections.benefits || [],
-    featuredServices: sections.featured_services || [],
-    serviceCatalog: sections.service_catalog || [],
-    reviews: sections.reviews || [],
-    badges: sections.badges || [],
-    aboutParagraphs: sections.about_paragraphs || [],
+    masterName: pickFirstString(identity.master_name),
+    profession: pickFirstString(identity.profession),
+    city: pickFirstString(identity.city, location.city),
+    district: pickFirstString(location.district),
+    address: pickFirstString(location.address),
+    schedule: pickFirstString(location.schedule_text),
+    phone: pickFirstString(location.phone, location.whatsapp),
+    mapUrl: pickFirstString(location.map_url),
+    heroImage: resolvedHeroImage,
+    heroAlt: pickFirstString(images?.hero?.alt, identity.master_name),
+    heroBadge: pickFirstString(identity.hero_badge),
+    subtitle: pickFirstString(identity.subtitle),
+    description: pickFirstString(identity.description),
+    metrics: filterActiveItems(normalized.metrics),
+    benefits: filterActiveItems(sections.benefits),
+    featuredServices: filterActiveItems(sections.featured_services),
+    serviceCatalog: filterActiveItems(sections.service_catalog),
+    reviews: filterActiveItems(sections.reviews),
+    badges: filterActiveItems(sections.badges),
+    aboutParagraphs: filterActiveItems(sections.about_paragraphs),
     stats: stats,
-    bookingBand: sections.booking_band || {},
-    bookingUrl: cta.booking_url || "",
-    bookingLabel: cta.booking_label || "",
-    servicesLabel: cta.services_label || "",
-    servicesAnchor: cta.services_anchor || "",
-    mapLabel: cta.contact_map_label || "",
-    stickyLabel: cta.sticky_label || "",
-    stickySubline: trust.sticky_subline || "",
-    ratingValue: trust.rating_value || "",
-    reviewCount: trust.review_count || "",
-    trustNote: trust.trust_note || ""
+    bookingBand: safeObject(sections.booking_band),
+    bookingUrl: pickFirstString(cta.booking_url),
+    bookingLabel: pickFirstString(cta.booking_label),
+    servicesLabel: pickFirstString(cta.services_label),
+    servicesAnchor: pickFirstString(cta.services_anchor),
+    mapLabel: pickFirstString(cta.contact_map_label),
+    stickyLabel: pickFirstString(cta.sticky_label),
+    stickySubline: pickFirstString(trust.sticky_subline),
+    ratingValue: pickFirstString(trust.rating_value),
+    reviewCount: pickFirstString(trust.review_count),
+    trustNote: pickFirstString(trust.trust_note),
   };
 }
