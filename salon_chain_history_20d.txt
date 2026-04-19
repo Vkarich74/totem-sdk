@@ -1,0 +1,41 @@
+0748e5d (HEAD -> main, origin/main, origin/HEAD) fix: support salon template image_secure_url and avatar_asset_id chain
+8f6a177 fix: prevent salon template payload from being normalized as master
+01920bb fix: align salon public image resolver with working master chain
+882a45d fix: resolve salon template assets by numeric image_asset_id
+8051a4e fix: remove salon public image merge corruption
+b84d57d fix: preserve salon portfolio section in normalized template
+17e893f fix: restore salon public images from normalized template assets
+923d60e fix: use normalized salon template in view model
+63d0186 fix: merge salon public model sections with template images
+d320c34 fix: expand salon public image resolution
+eda51cc fix: auto-detect master payload in normalize layer
+7aeae33 fix: implement real master template view model builder
+fb17463 fix: normalize master template payload in shared builder
+35ef9b4 fix: add missing master view model export
+0d69867 fix auth api exports for login flow
+fa965ff sdk: add auth-aware internal api transport
+f582b2e feat(master-template): finalize db-driven public binding and editor alignment
+652b4d8 refactor(master): move pages into pages dir and add master template API layer
+61c7b81 clean public salon page demo fallbacks
+310d23a public salon page: fix map embed url
+d2e1353 public salon template source switch
+1aea9c3 fix: stabilize salon template editor cloudinary contract
+451f7d9 SALON CLOUDINARY FIX: constants + contract aligned
+7e3d517 template editor: add cloudinary upload layer and finalize storage bootstrap
+3d4396b template editor: add validation ux and preview parity polish
+895b48c template editor: add promos section (non-breaking)
+c33a240 template editor: add team section (non-breaking)
+bd987c1 template editor: add reviews section (non-breaking)
+57fb3a2 template editor: add benefits and gallery sections (non-breaking)
+8bff513 template editor: add popular services section (non-breaking)
+e3ba5ae template: benefits section + public page sync (non-breaking)
+720d639 template: preserve full buildViewModel and add safe fallback
+80fd195 template: add getSalonTemplatePublished export
+c28e73e template: sync public page editor normalize and validate layers
+78d184e template: add cloudinary image pipeline in buildViewModel
+6d95212 fix salon template editor route api sync
+8d1c483 sdk: fix internal token bridge from current zip
+a468aeb bind salon template editor draft v1
+db7c798 add salon template editor entry page v1
+13b55fd billing control UI completed (salon + master sync)
+fa10a56 Add salon billing access UI enforcement
