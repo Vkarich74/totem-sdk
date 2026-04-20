@@ -216,9 +216,10 @@ function SessionGate({ slug, children }){
   useEffect(() => {
     if(state.loading || state.allowed) return
 
+    const safeSlug = String(slug || "").trim()
     const params = new URLSearchParams()
     params.set("role", "salon_admin")
-    if(slug) params.set("slug", slug)
+    if(safeSlug) params.set("slug", safeSlug)
 
     // FIX: redirect только через hash (SDK runtime)
     window.location.hash = `/auth/login?${params.toString()}`

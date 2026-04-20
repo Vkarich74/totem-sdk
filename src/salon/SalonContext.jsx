@@ -75,6 +75,9 @@ function deriveBillingBlockReason(billingAccess){
 
 export function resolveSalonSlug(routeSlug){
   if(routeSlug) return routeSlug
+
+  if(window.SALON_SLUG) return window.SALON_SLUG
+
   return null
 }
 

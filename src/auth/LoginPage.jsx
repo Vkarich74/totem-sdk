@@ -2,12 +2,38 @@ import { useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { authLogin, authStart } from "../api/internal"
 
+function normalizeLoginRole(role, ownerType){
+  const safeRole = String(role || "").trim().toLowerCase()
+  const safeOwnerType = String(ownerType || "").trim().toLowerCase()
+
+  if(safeRole === "master"){
+    return "master"
+  }
+
+  if(safeRole === "salon_admin" || safeRole === "salon"){
+    return "salon_admin"
+  }
+
+  if(safeOwnerType === "master"){
+    return "master"
+  }
+
+  if(safeOwnerType === "salon"){
+    return "salon_admin"
+  }
+
+  return ""
+}
+
 export default function LoginPage(){
   const navigate = useNavigate()
   const location = useLocation()
 
   const query = new URLSearchParams(location.search)
-  const effectiveRole = query.get("role") || ""
+  const effectiveRole = normalizeLoginRole(
+    query.get("role"),
+    query.get("owner_type")
+  )
   const effectiveSlug = query.get("slug") || ""
 
   const [mode, setMode] = useState("password")

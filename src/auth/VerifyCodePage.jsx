@@ -2,6 +2,29 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { verifyAuth } from "../api/internal";
 
+function normalizeVerifyRole(role, ownerType){
+  const safeRole = String(role || "").trim().toLowerCase();
+  const safeOwnerType = String(ownerType || "").trim().toLowerCase();
+
+  if(safeRole === "master"){
+    return "master";
+  }
+
+  if(safeRole === "salon_admin" || safeRole === "salon"){
+    return "salon_admin";
+  }
+
+  if(safeOwnerType === "master"){
+    return "master";
+  }
+
+  if(safeOwnerType === "salon"){
+    return "salon_admin";
+  }
+
+  return "";
+}
+
 function resolveRedirectTarget(effectiveRole, effectiveSlug){
   const safeRole = String(effectiveRole || "").trim();
   const safeSlug = String(effectiveSlug || "").trim();
@@ -26,7 +49,10 @@ export default function VerifyCodePage(){
   }, [location.state]);
 
   const query = new URLSearchParams(location.search);
-  const effectiveRole = String(query.get("role") || "").trim();
+  const effectiveRole = normalizeVerifyRole(
+    query.get("role"),
+    query.get("owner_type")
+  );
   const effectiveSlug = String(query.get("slug") || "").trim();
 
   const [login, setLogin] = useState(initialLogin);
