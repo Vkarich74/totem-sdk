@@ -425,6 +425,31 @@ export async function getMasterClients(masterSlug = getMasterSlug()){
 ================================ */
 
 export async function bookingAction(id, action){
+  const normalizedAction = String(action || "").trim().toLowerCase();
+
+  if(normalizedAction === "complete" || normalizedAction === "cancel"){
+    const salonSlug = getSalonSlug();
+
+    if(!salonSlug){
+      return { ok:false, error:"SALON_SLUG_MISSING" };
+    }
+
+    const publicApiBase = window.TOTEM_API_BASE || "https://api.totemv.com";
+    const r = await safeJson(
+      `${publicApiBase}/public/salons/${encodeURIComponent(salonSlug)}/bookings/${id}/lifecycle`,
+      {
+        method: "POST",
+        headers: buildJsonHeaders(),
+        body: JSON.stringify({ action: normalizedAction })
+      }
+    );
+
+    if(!r.ok) return { ok:false, error:"BOOKING_ACTION_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"BOOKING_ACTION_API_NOT_OK", detail:j };
+    return { ok:true, result: j };
+  }
+
   const r = await safeInternalJson(`/bookings/${id}/${action}`, { method:"PATCH" });
   if(!r.ok) return { ok:false, error:"BOOKING_ACTION_FETCH_FAILED", detail:r };
   const j = r.json;

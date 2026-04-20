@@ -405,6 +405,11 @@ action==="done" ? "completed" :
 action==="cancel" ? "cancelled" :
 "reserved"
 
+const lifecycleAction=
+action==="done" ? "complete" :
+action==="cancel" ? "cancel" :
+""
+
 setActionLoading((prev)=>( {
 ...prev,
 [booking.id]:action
@@ -416,13 +421,19 @@ throw new Error("SALON_SLUG_NOT_FOUND")
 }
 
 const response=await fetch(
-`${API_BASE}/public/salons/`+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
+lifecycleAction
+? `${API_BASE}/public/salons/`+encodeURIComponent(salonSlug)+"/bookings/"+booking.id+"/lifecycle"
+: `${API_BASE}/public/salons/`+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
 {
-method:"PATCH",
+method:lifecycleAction ? "POST" : "PATCH",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({status:nextStatus})
+body:JSON.stringify(
+lifecycleAction
+? {action:lifecycleAction}
+: {status:nextStatus}
+)
 }
 )
 
