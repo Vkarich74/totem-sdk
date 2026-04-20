@@ -285,6 +285,31 @@ function buildLocalDocument(previous, draft, slug, mode, validationResult) {
   }
 }
 
+function normalizeTemplateDocumentState(nextDocument, fallbackValidation) {
+  return {
+    ...nextDocument,
+    validation: nextDocument?.validation || fallbackValidation,
+    status: {
+      ...(nextDocument?.status || {}),
+      is_publishable: Boolean((nextDocument?.validation || fallbackValidation)?.is_publishable)
+    }
+  }
+}
+
+function createStatusState(kind = "idle", message = "") {
+  return { kind, message }
+}
+
+function createPreviewState({
+  open = false,
+  loading = false,
+  payload = null,
+  mode = "idle",
+  message = ""
+} = {}) {
+  return { open, loading, payload, mode, message }
+}
+
 function getValidationList(values) {
   if (!Array.isArray(values)) return []
   return values.map((item) => {
@@ -516,9 +541,9 @@ export default function SalonTemplateEditorPage() {
   const [draft, setDraft] = useState(mergeDraft())
   const [pageLoading, setPageLoading] = useState(true)
   const [pageError, setPageError] = useState(null)
-  const [saveState, setSaveState] = useState({ kind: "idle", message: "" })
-  const [publishState, setPublishState] = useState({ kind: "idle", message: "" })
-  const [previewState, setPreviewState] = useState({ open: false, loading: false, payload: null, mode: "idle", message: "" })
+  const [saveState, setSaveState] = useState(() => createStatusState())
+  const [publishState, setPublishState] = useState(() => createStatusState())
+  const [previewState, setPreviewState] = useState(() => createPreviewState())
   const [uploadState, setUploadState] = useState({})
 
   const accessState = String(
@@ -614,8 +639,8 @@ export default function SalonTemplateEditorPage() {
   const masters = Array.isArray(draft.sections?.masters) ? draft.sections.masters : []
 
   function resetStateMessages() {
-    setSaveState({ kind: "idle", message: "" })
-    setPublishState({ kind: "idle", message: "" })
+    setSaveState(createStatusState())
+    setPublishState(createStatusState())
   }
 
   function setUploadFlag(key, value) {
@@ -1063,76 +1088,69 @@ export default function SalonTemplateEditorPage() {
     const nextDraft = previewDraft
 
     if (!hasToken) {
-      setPreviewState({
+      setPreviewState(createPreviewState({
         open: true,
         loading: false,
         payload: buildPreviewPayload(nextDraft, slug),
         mode: "mock",
         message: "Локальный preview открыт без backend auth. Это mock по текущему draft."
-      })
+      }))
       return
     }
 
-    setPreviewState({
+    setPreviewState(createPreviewState({
       open: true,
       loading: true,
       payload: null,
       mode: "loading",
       message: "Сохраняем draft и загружаем preview…"
-    })
+    }))
 
     const saveResult = await saveSalonTemplateDraft(nextDraft, slug)
 
     if (!saveResult.ok) {
-      setPreviewState({
+      setPreviewState(createPreviewState({
         open: true,
         loading: false,
         payload: buildPreviewPayload(nextDraft, slug),
         mode: "fallback",
         message: extractMessage(saveResult, "DRAFT_SAVE_BEFORE_PREVIEW_FAILED — открыт fallback preview.")
-      })
+      }))
       return
     }
 
     const savedDocument = saveResult.document || null
     const savedValidation = savedDocument?.validation || validateTemplatePayload(nextDraft)
 
-    setDocumentState(savedDocument ? {
-      ...savedDocument,
-      validation: savedValidation,
-      status: {
-        ...(savedDocument?.status || {}),
-        is_publishable: Boolean(savedValidation?.is_publishable)
-      }
-    } : null)
+    setDocumentState(savedDocument ? normalizeTemplateDocumentState(savedDocument, savedValidation) : null)
     setDraft(mergeDraft(savedDocument?.draft || nextDraft))
-    setSaveState({ kind: "success", message: "Черновик сохранён перед preview." })
-    setPublishState({ kind: "idle", message: "" })
+    setSaveState(createStatusState("success", "Черновик сохранён перед preview."))
+    setPublishState(createStatusState())
 
     const result = await getSalonTemplatePreview(slug)
 
     if (!result.ok) {
-      setPreviewState({
+      setPreviewState(createPreviewState({
         open: true,
         loading: false,
         payload: buildPreviewPayload(nextDraft, slug),
         mode: "fallback",
         message: extractMessage(result, "PREVIEW_FETCH_FAILED — открыт fallback preview.")
-      })
+      }))
       return
     }
 
-    setPreviewState({
+    setPreviewState(createPreviewState({
       open: true,
       loading: false,
       payload: result.payload || buildPreviewPayload(nextDraft, slug),
       mode: "backend",
       message: result.is_ready_for_preview ? "Preview получен из backend." : "Preview получен, но страница ещё not ready."
-    })
+    }))
   }
 
   function handleClosePreview() {
-    setPreviewState({ open: false, loading: false, payload: null, mode: "idle", message: "" })
+    setPreviewState(createPreviewState())
   }
 
   async function handleSaveDraft() {
@@ -1145,41 +1163,31 @@ export default function SalonTemplateEditorPage() {
       const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "save", validationResult)
       setDocumentState(nextDocument)
       setDraft(mergeDraft(nextDocument.draft || nextDraft))
-      setSaveState({
-        kind: "success",
-        message: !hasHardErrors(validationResult)
+      setSaveState(createStatusState(
+        "success",
+        !hasHardErrors(validationResult)
           ? "Черновик сохранён локально. Это mock-режим до подключения полной цепочки доступа."
           : "Черновик сохранён локально с validation errors. Проверь обязательные поля перед публикацией."
-      })
-      setPublishState({ kind: "idle", message: "" })
+      ))
+      setPublishState(createStatusState())
       return
     }
 
-    setSaveState({ kind: "saving", message: "Сохраняем draft…" })
+    setSaveState(createStatusState("saving", "Сохраняем draft…"))
 
     const result = await saveSalonTemplateDraft(nextDraft, slug)
 
     if (!result.ok) {
-      setSaveState({
-        kind: "error",
-        message: extractMessage(result, "DRAFT_SAVE_FAILED")
-      })
+      setSaveState(createStatusState("error", extractMessage(result, "DRAFT_SAVE_FAILED")))
       return
     }
 
     const nextDocument = result.document || null
     const mergedValidation = nextDocument?.validation || validationResult
-    setDocumentState({
-      ...nextDocument,
-      validation: mergedValidation,
-      status: {
-        ...(nextDocument?.status || {}),
-        is_publishable: Boolean(mergedValidation?.is_publishable)
-      }
-    })
+    setDocumentState(normalizeTemplateDocumentState(nextDocument, mergedValidation))
     setDraft(mergeDraft(nextDocument?.draft || nextDraft))
-    setSaveState({ kind: "success", message: "Черновик сохранён." })
-    setPublishState({ kind: "idle", message: "" })
+    setSaveState(createStatusState("success", "Черновик сохранён."))
+    setPublishState(createStatusState())
   }
 
   async function handlePublish() {
@@ -1192,11 +1200,8 @@ export default function SalonTemplateEditorPage() {
       const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "save", validationResult)
       setDocumentState(nextDocument)
       setDraft(mergeDraft(nextDraft))
-      setPublishState({
-        kind: "error",
-        message: "Публикация заблокирована: исправь обязательные поля template."
-      })
-      setSaveState({ kind: "idle", message: "" })
+      setPublishState(createStatusState("error", "Публикация заблокирована: исправь обязательные поля template."))
+      setSaveState(createStatusState())
       return
     }
 
@@ -1204,48 +1209,32 @@ export default function SalonTemplateEditorPage() {
       const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "publish", validationResult)
       setDocumentState(nextDocument)
       setDraft(mergeDraft(nextDocument.draft || nextDraft))
-      setPublishState({
-        kind: "success",
-        message: "Публикация выполнена локально. Это mock-режим до подключения полной цепочки доступа."
-      })
-      setSaveState({ kind: "idle", message: "" })
+      setPublishState(createStatusState("success", "Публикация выполнена локально. Это mock-режим до подключения полной цепочки доступа."))
+      setSaveState(createStatusState())
       return
     }
 
-    setPublishState({ kind: "publishing", message: "Публикуем страницу…" })
+    setPublishState(createStatusState("publishing", "Публикуем страницу…"))
 
     const saveResult = await saveSalonTemplateDraft(nextDraft, slug)
     if (!saveResult.ok) {
-      setPublishState({
-        kind: "error",
-        message: extractMessage(saveResult, "DRAFT_SAVE_BEFORE_PUBLISH_FAILED")
-      })
+      setPublishState(createStatusState("error", extractMessage(saveResult, "DRAFT_SAVE_BEFORE_PUBLISH_FAILED")))
       return
     }
 
     const result = await publishSalonTemplate(slug, "system:1")
 
     if (!result.ok) {
-      setPublishState({
-        kind: "error",
-        message: extractMessage(result, "PUBLISH_FAILED")
-      })
+      setPublishState(createStatusState("error", extractMessage(result, "PUBLISH_FAILED")))
       return
     }
 
     const nextDocument = result.document || null
     const mergedValidation = nextDocument?.validation || validationResult
-    setDocumentState({
-      ...nextDocument,
-      validation: mergedValidation,
-      status: {
-        ...(nextDocument?.status || {}),
-        is_publishable: Boolean(mergedValidation?.is_publishable)
-      }
-    })
+    setDocumentState(normalizeTemplateDocumentState(nextDocument, mergedValidation))
     setDraft(mergeDraft(nextDocument?.draft || nextDraft))
-    setPublishState({ kind: "success", message: "Страница опубликована." })
-    setSaveState({ kind: "idle", message: "" })
+    setPublishState(createStatusState("success", "Страница опубликована."))
+    setSaveState(createStatusState())
   }
 
   const blockTone = pageError ? "warn" : hasToken ? "good" : "neutral"
