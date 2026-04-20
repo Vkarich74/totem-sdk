@@ -256,103 +256,6 @@ function normalizePortfolioItems(items) {
     : [];
 }
 
-function createMetricItem(item = {}) {
-  return {
-    id: item?.id || getItemKey("metric"),
-    value: normalizeText(item?.value),
-    label: normalizeText(item?.label)
-  };
-}
-
-function createBenefitItem(item = {}) {
-  return {
-    id: item?.id || getItemKey("benefit"),
-    title: normalizeText(item?.title),
-    text: normalizeText(item?.text)
-  };
-}
-
-function createFeaturedServiceItem(item = {}) {
-  return {
-    id: item?.id || getItemKey("featured_service"),
-    title: normalizeText(item?.title),
-    price: normalizeText(item?.price),
-    time: normalizeText(item?.time),
-    note: normalizeText(item?.note)
-  };
-}
-
-function createServiceCatalogItem(item = {}) {
-  return {
-    id: item?.id || getItemKey("service_catalog"),
-    name: normalizeText(item?.name),
-    price: normalizeText(item?.price),
-    duration: normalizeText(item?.duration),
-    description: normalizeText(item?.description)
-  };
-}
-
-function createReviewItem(item = {}) {
-  return {
-    id: item?.id || getItemKey("review"),
-    name: normalizeText(item?.name),
-    text: normalizeText(item?.text),
-    rating: normalizeText(item?.rating)
-  };
-}
-
-function createAboutParagraphItem(item = {}) {
-  return {
-    id: item?.id || getItemKey("about"),
-    text: normalizeText(item?.text),
-    is_active: item?.is_active !== false
-  };
-}
-
-function createPortfolioItem(item = {}) {
-  return {
-    id: item?.id || getItemKey("portfolio"),
-    image_asset_id: normalizeText(item?.image_asset_id),
-    image_url: normalizeText(item?.image_url || item?.secure_url),
-    secure_url: normalizeText(item?.secure_url || item?.image_url),
-    public_id: normalizeText(item?.public_id),
-    alt: normalizeText(item?.alt),
-    is_active: item?.is_active !== false,
-    slot_index: Number.isFinite(Number(item?.slot_index)) ? Number(item.slot_index) : 0
-  };
-}
-
-function createImageArrayItem(prefix, item = {}) {
-  return {
-    id: item?.id || getItemKey(prefix),
-    image_asset_id: normalizeText(item?.image_asset_id),
-    image_url: normalizeText(item?.image_url || item?.secure_url),
-    secure_url: normalizeText(item?.secure_url || item?.image_url),
-    public_id: normalizeText(item?.public_id),
-    alt: normalizeText(item?.alt)
-  };
-}
-
-function normalizePrimitiveStringList(items) {
-  return Array.isArray(items)
-    ? items
-        .map((item) => normalizeText(item))
-        .filter(Boolean)
-    : [];
-}
-
-function normalizeObjectList(items, factory) {
-  return Array.isArray(items)
-    ? items
-        .map((item) => {
-          const normalized = normalizeObjectItem(item);
-          if (!normalized) return null;
-          return factory(normalized);
-        })
-        .filter(Boolean)
-    : [];
-}
-
 function mergeDraft(source = {}) {
   const metricsSource = Array.isArray(source.metrics)
     ? source.metrics
@@ -371,16 +274,20 @@ function mergeDraft(source = {}) {
     },
     location: { ...EMPTY_DRAFT.location, ...(source.location || {}) },
     trust: { ...EMPTY_DRAFT.trust, ...(source.trust || {}) },
-    metrics: metricsSource.map((item) => createMetricItem(item)),
+    metrics: metricsSource.map((item) => ({
+      id: item?.id || getItemKey("metric"),
+      value: String(item?.value || "").trim(),
+      label: String(item?.label || "").trim()
+    })),
     cta: { ...EMPTY_DRAFT.cta, ...(source.cta || {}) },
     sections: {
       ...EMPTY_DRAFT.sections,
       ...(source.sections || {}),
-      badges: normalizePrimitiveStringList(source.sections?.badges),
-      benefits: normalizeObjectList(source.sections?.benefits, createBenefitItem),
-      featured_services: normalizeObjectList(source.sections?.featured_services, createFeaturedServiceItem),
-      service_catalog: normalizeObjectList(source.sections?.service_catalog, createServiceCatalogItem),
-      reviews: normalizeObjectList(source.sections?.reviews, createReviewItem),
+      badges: Array.isArray(source.sections?.badges) ? source.sections.badges : [],
+      benefits: Array.isArray(source.sections?.benefits) ? source.sections.benefits : [],
+      featured_services: Array.isArray(source.sections?.featured_services) ? source.sections.featured_services : [],
+      service_catalog: Array.isArray(source.sections?.service_catalog) ? source.sections.service_catalog : [],
+      reviews: Array.isArray(source.sections?.reviews) ? source.sections.reviews : [],
       about_paragraphs: normalizeAboutParagraphs(source.sections?.about_paragraphs),
       portfolio: normalizePortfolioItems(source.sections?.portfolio || source.images?.portfolio),
       booking_band: {
@@ -393,7 +300,7 @@ function mergeDraft(source = {}) {
       ...(source.images || {}),
       hero: { ...EMPTY_DRAFT.images.hero, ...(source.images?.hero || {}) },
       avatar: { ...EMPTY_DRAFT.images.avatar, ...(source.images?.avatar || {}) },
-      service_card: normalizeObjectList(source.images?.service_card, (item) => createImageArrayItem("service_card", item)),
+      service_card: Array.isArray(source.images?.service_card) ? source.images.service_card : [],
       assets: { ...EMPTY_DRAFT.images.assets, ...(source.images?.assets || {}) }
     },
     seo: { ...EMPTY_DRAFT.seo, ...(source.seo || {}) },
@@ -463,6 +370,31 @@ function buildLocalDocument(previous, draft, slug, mode, validationResult) {
     last_published_at: mode === "publish" ? nowIso : (current.last_published_at || null),
     updated_at: nowIso
   };
+}
+
+function normalizeTemplateDocumentState(nextDocument, fallbackValidation) {
+  return {
+    ...nextDocument,
+    validation: nextDocument?.validation || fallbackValidation,
+    status: {
+      ...(nextDocument?.status || {}),
+      is_publishable: Boolean((nextDocument?.validation || fallbackValidation)?.is_ready_for_publish)
+    }
+  };
+}
+
+function createStatusState(kind = "idle", message = "") {
+  return { kind, message };
+}
+
+function createPreviewState({
+  open = false,
+  loading = false,
+  payload = null,
+  mode = "idle",
+  message = ""
+} = {}) {
+  return { open, loading, payload, mode, message };
 }
 
 function validateMasterTemplateDraft(draft) {
@@ -683,7 +615,7 @@ export default function MasterTemplateEditorPage() {
   const { slug = "" } = useParams();
   const [draft, setDraft] = useState(() => mergeDraft());
   const [documentState, setDocumentState] = useState(null);
-  const [previewState, setPreviewState] = useState({ open: false, loading: false, payload: null, mode: "idle", message: "" });
+  const [previewState, setPreviewState] = useState(() => createPreviewState());
   const [uploadState, setUploadState] = useState({});
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -969,7 +901,7 @@ export default function MasterTemplateEditorPage() {
   function addMetric() {
     setDraft((prev) => ({
       ...prev,
-      metrics: [...prev.metrics, createMetricItem()]
+      metrics: [...prev.metrics, { id: getItemKey("metric"), value: "", label: "" }]
     }));
     resetStateMessages();
   }
@@ -987,7 +919,7 @@ export default function MasterTemplateEditorPage() {
       ...prev,
       images: {
         ...prev.images,
-        [imageKey]: [...prev.images[imageKey], createImageArrayItem(imageKey)]
+        [imageKey]: [...prev.images[imageKey], { id: getItemKey(imageKey), image_asset_id: "", image_url: "", secure_url: "", public_id: "", alt: "" }]
       }
     }));
     resetStateMessages();
@@ -1011,7 +943,16 @@ export default function MasterTemplateEditorPage() {
         ...prev.sections,
         portfolio: [
           ...prev.sections.portfolio,
-          createPortfolioItem({ slot_index: prev.sections.portfolio.length })
+          {
+            id: getItemKey("portfolio"),
+            image_asset_id: "",
+            image_url: "",
+            secure_url: "",
+            public_id: "",
+            alt: "",
+            is_active: true,
+            slot_index: prev.sections.portfolio.length
+          }
         ]
       }
     }));
@@ -1036,7 +977,11 @@ export default function MasterTemplateEditorPage() {
         ...prev.sections,
         about_paragraphs: [
           ...prev.sections.about_paragraphs,
-          createAboutParagraphItem()
+          {
+            id: getItemKey("about"),
+            text: "",
+            is_active: true
+          }
         ]
       }
     }));
@@ -1163,7 +1108,7 @@ export default function MasterTemplateEditorPage() {
 
     if (!result.ok) {
       const message = extractMessage(result, "MASTER_TEMPLATE_DRAFT_SAVE_FAILED");
-      setSaveState({ kind: "error", message });
+      setSaveState(createStatusState("error", message));
       return { ok: false, error: message };
     }
 
@@ -1177,7 +1122,7 @@ export default function MasterTemplateEditorPage() {
       }
     });
     setDraft(mergeDraft(nextDocument?.draft || nextDraft));
-    setSaveState({ kind: "success", message: "Черновик мастера сохранён." });
+    setSaveState(createStatusState("success", "Черновик мастера сохранён."));
     return { ok: true, document: nextDocument, validation: nextDocument?.validation || validationResult, mode: "backend" };
   }
 
@@ -1245,7 +1190,7 @@ export default function MasterTemplateEditorPage() {
   }
 
   function handleClosePreview() {
-    setPreviewState({ open: false, loading: false, payload: null, mode: "idle", message: "" });
+    setPreviewState(createPreviewState());
   }
 
   async function handlePublish() {
@@ -1262,7 +1207,7 @@ export default function MasterTemplateEditorPage() {
       return;
     }
 
-    setPublishState({ kind: "publishing", message: "Публикуем страницу…" });
+    setPublishState(createStatusState("publishing", "Публикуем страницу…"));
     const saveResult = await persistDraft(draft);
 
     if (!saveResult.ok) {
@@ -1518,7 +1463,7 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="benefits" title="Benefits" note="Карточки преимуществ мастера.">
-            <ArrayCard title="Benefits" note="title + text" onAdd={() => addObjectItem("benefits", () => createBenefitItem())} addLabel="Добавить benefit">
+            <ArrayCard title="Benefits" note="title + text" onAdd={() => addObjectItem("benefits", () => ({ id: getItemKey("benefit"), title: "", text: "" }))} addLabel="Добавить benefit">
               {draft.sections.benefits.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.benefits.map((item, index) => (
                 <div key={item.id || `benefit_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
@@ -1544,7 +1489,7 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="featured-services" title="Featured Services" note="Карточки основных услуг мастера.">
-            <ArrayCard title="Featured services" note="title / price / time / note" onAdd={() => addObjectItem("featured_services", () => createFeaturedServiceItem())} addLabel="Добавить услугу">
+            <ArrayCard title="Featured services" note="title / price / time / note" onAdd={() => addObjectItem("featured_services", () => ({ id: getItemKey("featured_service"), title: "", price: "", time: "", note: "" }))} addLabel="Добавить услугу">
               {draft.sections.featured_services.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.featured_services.map((item, index) => (
                 <div key={item.id || `featured_service_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
@@ -1561,7 +1506,7 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="catalog" title="Full Catalog" note="Полный service catalog мастера.">
-            <ArrayCard title="Service catalog" note="name / price / duration / description" onAdd={() => addObjectItem("service_catalog", () => createServiceCatalogItem())} addLabel="Добавить в каталог">
+            <ArrayCard title="Service catalog" note="name / price / duration / description" onAdd={() => addObjectItem("service_catalog", () => ({ id: getItemKey("service_catalog"), name: "", price: "", duration: "", description: "" }))} addLabel="Добавить в каталог">
               {draft.sections.service_catalog.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.service_catalog.map((item, index) => (
                 <div key={item.id || `service_catalog_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
@@ -1578,7 +1523,7 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="reviews" title="Reviews" note="Отзывы клиентов.">
-            <ArrayCard title="Reviews" note="name / text / rating" onAdd={() => addObjectItem("reviews", () => createReviewItem())} addLabel="Добавить отзыв">
+            <ArrayCard title="Reviews" note="name / text / rating" onAdd={() => addObjectItem("reviews", () => ({ id: getItemKey("review"), name: "", text: "", rating: "" }))} addLabel="Добавить отзыв">
               {draft.sections.reviews.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.reviews.map((item, index) => (
                 <div key={item.id || `review_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
