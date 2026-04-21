@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { authLogin, authStart } from "../api/internal"
 
+
 export default function LoginPage(){
   const navigate = useNavigate()
   const location = useLocation()

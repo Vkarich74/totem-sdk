@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { verifyAuth } from "../api/internal";
 
-
 function normalizeVerifyRole(role, ownerType){
   const safeRole = String(role || "").trim().toLowerCase();
   const safeOwnerType = String(ownerType || "").trim().toLowerCase();
