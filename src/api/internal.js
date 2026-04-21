@@ -175,6 +175,8 @@ export async function loginWithPassword({ email = "", phone = "", password = "" 
 
   if(j.access_token){
     setAuthAccessToken(j.access_token);
+  }else{
+    clearAuthAccessToken();
   }
 
   return {
@@ -217,6 +219,8 @@ export async function authLogin({ login = "", password = "", role = "", slug = "
 
   if(j.access_token){
     setAuthAccessToken(j.access_token);
+  }else{
+    clearAuthAccessToken();
   }
 
   return {
@@ -285,6 +289,8 @@ export async function verifyAuth(payload){
 
   if(j.access_token){
     setAuthAccessToken(j.access_token);
+  }else{
+    clearAuthAccessToken();
   }
 
   return {
