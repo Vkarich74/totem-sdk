@@ -48,12 +48,12 @@ export default function LoginPage(){
         slug: effectiveSlug
       })
 
-      if(res?.ok){
+      if(res?.ok && res?.access_token){
         redirectToCabinet()
         return
       }
 
-      setError("Неверный логин или пароль")
+      setError("Вход не завершён: токен авторизации не получен")
     }catch(e){
       setError("Ошибка входа")
     }finally{
