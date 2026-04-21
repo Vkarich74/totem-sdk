@@ -2,38 +2,13 @@ import { useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { authLogin, authStart } from "../api/internal"
 
-function normalizeLoginRole(role, ownerType){
-  const safeRole = String(role || "").trim().toLowerCase()
-  const safeOwnerType = String(ownerType || "").trim().toLowerCase()
-
-  if(safeRole === "master"){
-    return "master"
-  }
-
-  if(safeRole === "salon_admin" || safeRole === "salon"){
-    return "salon_admin"
-  }
-
-  if(safeOwnerType === "master"){
-    return "master"
-  }
-
-  if(safeOwnerType === "salon"){
-    return "salon_admin"
-  }
-
-  return ""
-}
-
 export default function LoginPage(){
   const navigate = useNavigate()
   const location = useLocation()
 
   const query = new URLSearchParams(location.search)
-  const effectiveRole = normalizeLoginRole(
-    query.get("role"),
-    query.get("owner_type")
-  )
+  const originRole = String(query.get("role") || "").trim().toLowerCase()
+  const effectiveRole = query.get("role") || ""
   const effectiveSlug = query.get("slug") || ""
 
   const [mode, setMode] = useState("password")
@@ -43,11 +18,11 @@ export default function LoginPage(){
   const [error, setError] = useState("")
 
   function redirectToCabinet(){
-    if(effectiveRole === "master"){
+    if(originRole === "master"){
       navigate(`/master/${effectiveSlug}`, { replace: true })
       return
     }
-    if(effectiveRole === "salon_admin"){
+    if(originRole === "salon_admin"){
       navigate(`/salon/${effectiveSlug}`, { replace: true })
       return
     }
