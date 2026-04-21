@@ -84,7 +84,7 @@ export default function VerifyCodePage(){
 
       const res = await verifyAuth(payload);
 
-      if(!res?.ok){
+      if(!res?.ok || !res?.access_token){
         setError("Неверный или просроченный код");
         setLoading(false);
         return;
