@@ -266,7 +266,11 @@ export default function ServicesPage() {
       setError("");
       setSuccess("");
 
-      const response = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
+      if (!service?.master_slug) {
+        throw new Error("MASTER_SLUG_MISSING");
+      }
+
+      const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(service.master_slug)}/services/${service.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ active: !service.active })
@@ -300,7 +304,11 @@ export default function ServicesPage() {
       setError("");
       setSuccess("");
 
-      const response = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
+      if (!service?.master_slug) {
+        throw new Error("MASTER_SLUG_MISSING");
+      }
+
+      const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(service.master_slug)}/services/${service.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ price })
@@ -334,7 +342,11 @@ export default function ServicesPage() {
       setError("");
       setSuccess("");
 
-      const response = await fetch(`${API_BASE}/internal/salon-services/${service.id}`, {
+      if (!service?.master_slug) {
+        throw new Error("MASTER_SLUG_MISSING");
+      }
+
+      const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(service.master_slug)}/services/${service.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ duration_min: durationMin })

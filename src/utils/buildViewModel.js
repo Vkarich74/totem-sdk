@@ -1,6 +1,6 @@
 // src/utils/buildViewModel.js
 
-import { normalizeTemplatePayload } from "./normalizeTemplate";
+import { normalizeMasterTemplatePayload, normalizeTemplatePayload } from "./normalizeTemplate";
 import { validateTemplatePayload } from "./validateTemplate";
 
 function pickFirstString(...values){
@@ -390,7 +390,7 @@ export function buildSalonTemplateViewModel({
 
 export function buildMasterTemplateViewModel(payload){
   const safePayload = safeObject(payload);
-  const normalized = normalizeTemplatePayload ? normalizeTemplatePayload(safePayload) : safePayload;
+  const normalized = normalizeMasterTemplatePayload ? normalizeMasterTemplatePayload(safePayload) : safePayload;
   const identity = safeObject(normalized.identity);
   const location = safeObject(normalized.location);
   const sections = safeObject(normalized.sections);

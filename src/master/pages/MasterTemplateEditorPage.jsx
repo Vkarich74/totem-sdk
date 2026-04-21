@@ -688,6 +688,17 @@ export default function MasterTemplateEditorPage() {
     { label: "Catalog", value: draft.sections.service_catalog.length },
     { label: "Reviews", value: draft.sections.reviews.length }
   ];
+  const previewPayload = previewState.payload || {};
+  const previewIdentity = previewPayload.identity || {};
+  const previewLocation = previewPayload.location || {};
+  const previewTrust = previewPayload.trust || {};
+  const previewStats = previewPayload.stats || {};
+  const previewCta = previewPayload.cta || {};
+  const previewSections = previewPayload.sections || {};
+  const previewImages = previewPayload.images || {};
+  const previewFeaturedServices = Array.isArray(previewSections.featured_services) ? previewSections.featured_services.slice(0, 2) : [];
+  const previewServiceCatalog = Array.isArray(previewSections.service_catalog) ? previewSections.service_catalog.slice(0, 2) : [];
+  const previewBookingBand = previewSections.booking_band || {};
 
   function resetStateMessages() {
     setSaveState({ kind: "idle", message: "" });
@@ -1691,60 +1702,116 @@ export default function MasterTemplateEditorPage() {
               <div style={{ display: "grid", gap: "16px" }}>
                 <div style={previewHeroStyle}>
                   <div style={{ display: "grid", gap: "10px" }}>
-                    <div style={previewBadgeStyle}>{previewState.payload?.identity?.hero_badge || "Master preview"}</div>
+                    <div style={previewBadgeStyle}>{previewIdentity.hero_badge || "Master preview"}</div>
                     <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>
-                      {previewState.payload?.identity?.master_name || "Preview мастера"}
+                      {previewIdentity.master_name || "Preview мастера"}
+                    </div>
+                    <div style={{ fontSize: "16px", color: "#111827", fontWeight: 600, lineHeight: 1.5 }}>
+                      {[previewIdentity.profession, previewIdentity.subtitle].filter(Boolean).join(". ") || "Профессия и subtitle preview"}
                     </div>
                     <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>
-                      {previewState.payload?.identity?.description || previewState.payload?.identity?.profession || "Подзаголовок preview"}
+                      {previewIdentity.description || "Описание hero preview"}
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "8px" }}>
-                      <a href={previewState.payload?.cta?.booking_url || "#"} style={previewPrimaryCtaStyle}>{previewState.payload?.cta?.booking_label || "Записаться"}</a>
-                      <span style={previewSecondaryCtaStyle}>{previewState.payload?.cta?.services_label || "Услуги"}</span>
+                      <a href={previewCta.booking_url || "#"} style={previewPrimaryCtaStyle}>{previewCta.booking_label || "Записаться"}</a>
+                      <span style={previewSecondaryCtaStyle}>{previewCta.services_label || "Услуги"}</span>
                     </div>
                   </div>
                   <div style={previewImageCardStyle}>
-                    {getAssetPreviewUrl(previewState.payload?.images?.hero || {}) ? (
-                      <img src={getAssetPreviewUrl(previewState.payload?.images?.hero || {})} alt={previewState.payload?.images?.hero?.alt || "Hero preview"} style={previewImageRealStyle} />
-                    ) : previewState.payload?.images?.hero?.image_asset_id ? (
-                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>Hero asset: {previewState.payload.images.hero.image_asset_id}</div>
+                    {getAssetPreviewUrl(previewImages.hero || {}) ? (
+                      <img src={getAssetPreviewUrl(previewImages.hero || {})} alt={previewImages.hero?.alt || "Hero preview"} style={previewImageRealStyle} />
+                    ) : previewImages.hero?.image_asset_id ? (
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>Hero asset: {previewImages.hero.image_asset_id}</div>
                     ) : (
                       <div style={{ fontSize: "14px", color: "#6b7280" }}>Hero image не подключён</div>
                     )}
-                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>{previewState.payload?.images?.hero?.alt || "Hero preview"}</div>
+                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>{previewImages.hero?.alt || "Hero preview"}</div>
                   </div>
                 </div>
 
                 <div style={previewGridStyle}>
                   <div style={previewCardStyle}>
                     <div style={previewCardTitleStyle}>Identity</div>
-                    <div style={previewCardTextStyle}>Мастер: {previewState.payload?.identity?.master_name || "—"}</div>
-                    <div style={previewCardTextStyle}>Профессия: {previewState.payload?.identity?.profession || "—"}</div>
-                    <div style={previewCardTextStyle}>Город: {previewState.payload?.identity?.city || "—"}</div>
+                    <div style={previewCardTextStyle}>Мастер: {previewIdentity.master_name || "—"}</div>
+                    <div style={previewCardTextStyle}>Профессия: {previewIdentity.profession || "—"}</div>
+                    <div style={previewCardTextStyle}>Subtitle: {previewIdentity.subtitle || "—"}</div>
+                    <div style={previewCardTextStyle}>Описание: {previewIdentity.description || "—"}</div>
+                    <div style={previewCardTextStyle}>Город: {previewIdentity.city || "—"}</div>
                   </div>
 
                   <div style={previewCardStyle}>
                     <div style={previewCardTitleStyle}>Contacts</div>
-                    <div style={previewCardTextStyle}>{previewState.payload?.location?.address || "—"}</div>
-                    <div style={previewCardTextStyle}>{previewState.payload?.location?.phone || previewState.payload?.location?.whatsapp || "—"}</div>
-                    <div style={previewCardTextStyle}>{previewState.payload?.location?.schedule_text || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewLocation.address || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewLocation.phone || previewLocation.whatsapp || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewLocation.schedule_text || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewLocation.map_url || "—"}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Trust</div>
+                    <div style={previewCardTextStyle}>Rating: {previewTrust.rating_value || "—"}</div>
+                    <div style={previewCardTextStyle}>Reviews: {previewTrust.review_count || "—"}</div>
+                    <div style={previewCardTextStyle}>Note: {previewTrust.trust_note || "—"}</div>
+                    <div style={previewCardTextStyle}>Sticky: {previewTrust.sticky_subline || "—"}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Stats</div>
+                    <div style={previewCardTextStyle}>Years: {previewStats.years || "—"}</div>
+                    <div style={previewCardTextStyle}>Rating: {previewStats.rating || "—"}</div>
+                    <div style={previewCardTextStyle}>Bookings: {previewStats.bookings || "—"}</div>
                   </div>
 
                   <div style={previewCardStyle}>
                     <div style={previewCardTitleStyle}>CTA</div>
-                    <div style={previewCardTextStyle}>Кнопка: {previewState.payload?.cta?.booking_label || "—"}</div>
-                    <div style={previewCardTextStyle}>URL: {previewState.payload?.cta?.booking_url || "—"}</div>
-                    <div style={previewCardTextStyle}>Якорь: {previewState.payload?.cta?.services_anchor || "—"}</div>
+                    <div style={previewCardTextStyle}>Кнопка: {previewCta.booking_label || "—"}</div>
+                    <div style={previewCardTextStyle}>URL: {previewCta.booking_url || "—"}</div>
+                    <div style={previewCardTextStyle}>Services: {previewCta.services_label || "—"}</div>
+                    <div style={previewCardTextStyle}>Якорь: {previewCta.services_anchor || "—"}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Featured services</div>
+                    {previewFeaturedServices.length === 0 ? (
+                      <div style={previewCardTextStyle}>Пока пусто.</div>
+                    ) : previewFeaturedServices.map((item, index) => (
+                      <div key={item.id || `preview_featured_${index}`} style={previewCardTextStyle}>
+                        {(item.title || "Без названия")}
+                        {[item.price, item.time].filter(Boolean).length ? ` · ${[item.price, item.time].filter(Boolean).join(" · ")}` : ""}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Service catalog</div>
+                    {previewServiceCatalog.length === 0 ? (
+                      <div style={previewCardTextStyle}>Пока пусто.</div>
+                    ) : previewServiceCatalog.map((item, index) => (
+                      <div key={item.id || `preview_catalog_${index}`} style={previewCardTextStyle}>
+                        {(item.name || "Без названия")}
+                        {[item.price, item.duration].filter(Boolean).length ? ` · ${[item.price, item.duration].filter(Boolean).join(" · ")}` : ""}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Booking band</div>
+                    <div style={previewCardTextStyle}>Title: {previewBookingBand.title || "—"}</div>
+                    <div style={previewCardTextStyle}>Text: {previewBookingBand.text || "—"}</div>
+                    <div style={previewCardTextStyle}>Booking CTA: {previewBookingBand.booking_cta_label || "—"}</div>
+                    <div style={previewCardTextStyle}>Booking URL: {previewBookingBand.booking_cta_url || "—"}</div>
+                    <div style={previewCardTextStyle}>Services CTA: {previewBookingBand.services_cta_label || "—"}</div>
+                    <div style={previewCardTextStyle}>Services anchor: {previewBookingBand.services_anchor || "—"}</div>
                   </div>
 
                   <div style={previewCardStyle}>
                     <div style={previewCardTitleStyle}>Sections coverage</div>
-                    <div style={previewCardTextStyle}>Badges: {previewState.payload?.sections?.badges?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Benefits: {previewState.payload?.sections?.benefits?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Featured services: {previewState.payload?.sections?.featured_services?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Catalog: {previewState.payload?.sections?.service_catalog?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Reviews: {previewState.payload?.sections?.reviews?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Portfolio: {previewState.payload?.sections?.portfolio?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Badges: {previewSections.badges?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Benefits: {previewSections.benefits?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Featured services: {previewSections.featured_services?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Catalog: {previewSections.service_catalog?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Reviews: {previewSections.reviews?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Portfolio: {previewSections.portfolio?.length || 0}</div>
                   </div>
                 </div>
               </div>

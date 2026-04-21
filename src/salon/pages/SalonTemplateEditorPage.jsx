@@ -630,6 +630,20 @@ export default function SalonTemplateEditorPage() {
   const errorCount = hardErrors.length
   const completionScore = Number(liveValidation?.completeness_score || validation?.completeness_score || 0)
   const lastSavedAt = documentState?.meta?.last_saved_at || documentState?.last_saved_at || null
+  const previewPayload = previewState.payload || {}
+  const previewIdentity = previewPayload?.identity || {}
+  const previewContact = previewPayload?.contact || {}
+  const previewTrust = previewPayload?.trust || {}
+  const previewCta = previewPayload?.cta || {}
+  const previewImages = previewPayload?.images || {}
+  const previewSections = previewPayload?.sections || {}
+  const previewPopularServices = Array.isArray(previewSections?.popular_services) ? previewSections.popular_services.slice(0, 2) : []
+  const previewFullServiceList = Array.isArray(previewSections?.full_service_list) ? previewSections.full_service_list.slice(0, 3) : []
+  const previewPromos = Array.isArray(previewSections?.promos) ? previewSections.promos.slice(0, 2) : []
+  const previewGallery = Array.isArray(previewSections?.gallery) ? previewSections.gallery.slice(0, 3) : []
+  const previewAboutParagraphs = Array.isArray(previewSections?.about_paragraphs) ? previewSections.about_paragraphs.slice(0, 2) : []
+  const previewMasters = Array.isArray(previewSections?.masters) ? previewSections.masters.slice(0, 2) : []
+  const previewMapUrl = previewContact?.map_embed_url || buildMapUrl(previewContact)
 
   const benefits = Array.isArray(draft.sections?.benefits) ? draft.sections.benefits : []
   const popularServices = Array.isArray(draft.sections?.popular_services) ? draft.sections.popular_services : []
@@ -1709,55 +1723,155 @@ export default function SalonTemplateEditorPage() {
               <div style={{ display: "grid", gap: "16px" }}>
                 <div style={previewHeroStyle}>
                   <div style={{ display: "grid", gap: "10px" }}>
-                    <div style={previewBadgeStyle}>{previewState.payload?.identity?.hero_badge || "Премиальный салон"}</div>
-                    <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>{previewState.payload?.identity?.slogan || previewState.payload?.identity?.salon_name || "Preview салона"}</div>
-                    <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>{previewState.payload?.identity?.subtitle || "Подзаголовок preview"}</div>
+                    <div style={previewBadgeStyle}>{previewIdentity.hero_badge || "Премиальный салон"}</div>
+                    <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>{previewIdentity.slogan || previewIdentity.salon_name || "Preview салона"}</div>
+                    <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>{previewIdentity.subtitle || "Подзаголовок preview"}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "8px" }}>
-                      <a href={previewState.payload?.cta?.booking_url || "#"} style={previewPrimaryCtaStyle}>{previewState.payload?.cta?.booking_label || "Записаться"}</a>
-                      <span style={previewSecondaryCtaStyle}>{previewState.payload?.cta?.services_label || "Услуги"}</span>
+                      <a href={previewCta.booking_url || "#"} style={previewPrimaryCtaStyle}>{previewCta.booking_label || "Записаться"}</a>
+                      <span style={previewSecondaryCtaStyle}>{previewCta.services_label || "Услуги"}</span>
                     </div>
                   </div>
                   <div style={previewImageCardStyle}>
-                    {previewState.payload?.images?.hero?.secure_url ? (
-                      <img src={previewState.payload.images.hero.secure_url} alt={previewState.payload?.images?.hero?.alt || "Hero preview"} style={previewImageRealStyle} />
-                    ) : previewState.payload?.images?.hero?.image_asset_id ? (
-                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>Hero asset: {previewState.payload.images.hero.image_asset_id}</div>
+                    {previewImages?.hero?.secure_url ? (
+                      <img src={previewImages.hero.secure_url} alt={previewImages?.hero?.alt || "Hero preview"} style={previewImageRealStyle} />
+                    ) : previewImages?.hero?.image_asset_id ? (
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>Hero asset: {previewImages.hero.image_asset_id}</div>
                     ) : (
                       <div style={{ fontSize: "14px", color: "#6b7280" }}>Hero image не подключён</div>
                     )}
-                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>{previewState.payload?.images?.hero?.alt || "Hero preview"}</div>
+                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>{previewImages?.hero?.alt || "Hero preview"}</div>
                   </div>
                 </div>
 
                 <div style={previewGridStyle}>
                   <div style={previewCardStyle}>
                     <div style={previewCardTitleStyle}>Identity</div>
-                    <div style={previewCardTextStyle}>Салон: {previewState.payload?.identity?.salon_name || "—"}</div>
-                    <div style={previewCardTextStyle}>Бейдж: {previewState.payload?.identity?.hero_badge || "—"}</div>
+                    <div style={previewCardTextStyle}>Салон: {previewIdentity.salon_name || "—"}</div>
+                    <div style={previewCardTextStyle}>Бейдж: {previewIdentity.hero_badge || "—"}</div>
+                    <div style={previewCardTextStyle}>Оффер: {previewIdentity.slogan || "—"}</div>
+                    <div style={previewCardTextStyle}>Подзаголовок: {previewIdentity.subtitle || "—"}</div>
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Contacts</div>
-                    <div style={previewCardTextStyle}>{previewState.payload?.contact?.address || "—"}</div>
-                    <div style={previewCardTextStyle}>{previewState.payload?.contact?.phone || previewState.payload?.contact?.whatsapp || "—"}</div>
-                    <div style={previewCardTextStyle}>{previewState.payload?.contact?.schedule_text || "—"}</div>
+                    <div style={previewCardTitleStyle}>Trust</div>
+                    <div style={previewCardTextStyle}>Рейтинг: {previewTrust.rating_value || "—"}</div>
+                    <div style={previewCardTextStyle}>Отзывы: {previewTrust.review_count || "—"}</div>
+                    <div style={previewCardTextStyle}>Completed bookings: {String(previewTrust.completed_bookings || 0)}</div>
+                    <div style={previewCardTextStyle}>{previewTrust.trust_note || "Trust note пока не заполнен."}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Contact / Map</div>
+                    <div style={previewCardTextStyle}>{previewContact.address || "—"}</div>
+                    <div style={previewCardTextStyle}>{[previewContact.district, previewContact.city].filter(Boolean).join(", ") || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewContact.phone || previewContact.whatsapp || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewContact.schedule_text || "—"}</div>
+                    <div style={previewCardTextStyle}>{previewMapUrl || "Map URL ещё не собран."}</div>
                   </div>
 
                   <div style={previewCardStyle}>
                     <div style={previewCardTitleStyle}>CTA</div>
-                    <div style={previewCardTextStyle}>Кнопка: {previewState.payload?.cta?.booking_label || "—"}</div>
-                    <div style={previewCardTextStyle}>URL: {previewState.payload?.cta?.booking_url || "—"}</div>
-                    <div style={previewCardTextStyle}>Якорь: {previewState.payload?.cta?.services_anchor || "—"}</div>
+                    <div style={previewCardTextStyle}>Кнопка: {previewCta.booking_label || "—"}</div>
+                    <div style={previewCardTextStyle}>URL: {previewCta.booking_url || "—"}</div>
+                    <div style={previewCardTextStyle}>Якорь: {previewCta.services_anchor || "—"}</div>
                   </div>
 
                   <div style={previewCardStyle}>
                     <div style={previewCardTitleStyle}>Sections coverage</div>
-                    <div style={previewCardTextStyle}>Benefits: {previewState.payload?.sections?.benefits?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Popular services: {previewState.payload?.sections?.popular_services?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Promos: {previewState.payload?.sections?.promos?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Gallery: {previewState.payload?.sections?.gallery?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Reviews: {previewState.payload?.sections?.reviews?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Team: {previewState.payload?.sections?.masters?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Benefits: {previewSections?.benefits?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Popular services: {previewSections?.popular_services?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Full catalog: {previewSections?.full_service_list?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Promos: {previewSections?.promos?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Gallery: {previewSections?.gallery?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Reviews: {previewSections?.reviews?.length || 0}</div>
+                    <div style={previewCardTextStyle}>About: {previewSections?.about_paragraphs?.length || 0}</div>
+                    <div style={previewCardTextStyle}>Team: {previewSections?.masters?.length || 0}</div>
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Popular services preview</div>
+                    {previewPopularServices.length ? previewPopularServices.map((item, index) => (
+                      <div key={item?.id || `preview-popular-${index}`} style={previewCardTextStyle}>
+                        {(item?.name || item?.title || `Услуга ${index + 1}`)} · {item?.price || "цена не указана"} · {item?.duration_min || item?.duration || "длительность не указана"}
+                      </div>
+                    )) : <div style={previewCardTextStyle}>Популярные услуги пока не заполнены.</div>}
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Full service list preview</div>
+                    {previewFullServiceList.length ? previewFullServiceList.map((item, index) => (
+                      <div key={item?.id || `preview-catalog-${index}`} style={previewCardTextStyle}>
+                        {(item?.name || item?.title || `Каталог ${index + 1}`)} · {item?.price || "цена не указана"} · {item?.duration_min || item?.duration || "длительность не указана"}
+                      </div>
+                    )) : <div style={previewCardTextStyle}>Полный каталог пока не заполнен.</div>}
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Promos preview</div>
+                    {previewPromos.length ? previewPromos.map((item, index) => (
+                      <div key={item?.id || `preview-promo-${index}`} style={previewCardTextStyle}>
+                        {(item?.title || `Акция ${index + 1}`)}{item?.subtitle ? ` · ${item.subtitle}` : ""}{item?.promo_code ? ` · ${item.promo_code}` : ""}
+                      </div>
+                    )) : <div style={previewCardTextStyle}>Акции пока не заполнены.</div>}
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>About preview</div>
+                    {previewAboutParagraphs.length ? previewAboutParagraphs.map((item, index) => (
+                      <div key={item?.id || `preview-about-${index}`} style={previewCardTextStyle}>
+                        {item?.text || "Параграф без текста"}
+                      </div>
+                    )) : <div style={previewCardTextStyle}>Блок about пока не заполнен.</div>}
+                  </div>
+
+                  <div style={previewCardStyle}>
+                    <div style={previewCardTitleStyle}>Team preview</div>
+                    {previewMasters.length ? previewMasters.map((item, index) => (
+                      <div key={item?.id || `preview-master-${index}`} style={previewCardTextStyle}>
+                        {(item?.name || `Мастер ${index + 1}`)}{item?.role ? ` · ${item.role}` : ""}{item?.bio ? ` · ${item.bio}` : ""}
+                      </div>
+                    )) : <div style={previewCardTextStyle}>Команда пока не заполнена.</div>}
+                  </div>
+                </div>
+
+                <div style={previewWideGridStyle}>
+                  <div style={previewWideCardStyle}>
+                    <div style={previewCardTitleStyle}>Gallery preview</div>
+                    {previewGallery.length ? (
+                      <div style={previewGalleryGridStyle}>
+                        {previewGallery.map((item, index) => {
+                          const previewUrl = item?.image_secure_url || item?.secure_url || ""
+
+                          return (
+                            <div key={item?.id || `preview-gallery-${index}`} style={previewGalleryItemStyle}>
+                              {previewUrl ? (
+                                <img src={previewUrl} alt={item?.alt || `Gallery ${index + 1}`} style={previewGalleryImageStyle} />
+                              ) : (
+                                <div style={previewGalleryEmptyStyle}>{item?.image_asset_id || "Gallery asset pending"}</div>
+                              )}
+                              <div style={previewCardTextStyle}>{item?.alt || `Gallery item ${index + 1}`}</div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : <div style={previewCardTextStyle}>Галерея пока не заполнена.</div>}
+                  </div>
+
+                  <div style={previewWideCardStyle}>
+                    <div style={previewCardTitleStyle}>Map preview</div>
+                    {previewMapUrl ? (
+                      <iframe
+                        title={`salon-template-preview-map-${slug || "salon"}`}
+                        src={previewMapUrl}
+                        width="100%"
+                        height="220"
+                        style={{ border: "none", borderRadius: "12px", display: "block" }}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                    ) : (
+                      <div style={previewCardTextStyle}>Карта появится после заполнения address / district / city.</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2048,6 +2162,55 @@ const previewCardTextStyle = {
   fontSize: "13px",
   color: "#475467",
   lineHeight: 1.5
+}
+
+const previewWideGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gap: "12px"
+}
+
+const previewWideCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  background: "#ffffff",
+  padding: "16px",
+  display: "grid",
+  gap: "12px"
+}
+
+const previewGalleryGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+  gap: "12px"
+}
+
+const previewGalleryItemStyle = {
+  display: "grid",
+  gap: "8px"
+}
+
+const previewGalleryImageStyle = {
+  width: "100%",
+  height: "140px",
+  objectFit: "cover",
+  borderRadius: "12px",
+  display: "block",
+  background: "#f8fafc"
+}
+
+const previewGalleryEmptyStyle = {
+  minHeight: "140px",
+  borderRadius: "12px",
+  border: "1px dashed #cbd5e1",
+  background: "#f8fafc",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "12px",
+  textAlign: "center",
+  fontSize: "13px",
+  color: "#6b7280"
 }
 
 const linkCardStyle = {

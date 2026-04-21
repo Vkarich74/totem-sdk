@@ -377,14 +377,10 @@ export default function MastersPage() {
     try {
       setProcessingId(id);
 
-      const response = await fetch(`${API_BASE}/internal/masters/activate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          master_id: id,
-          salon_slug: slug
-        })
-      });
+      const response = await fetch(
+        `${API_BASE}/internal/salons/${encodeURIComponent(slug)}/masters/${id}/activate`,
+        { method: "POST" }
+      );
 
       const data = await response.json().catch(() => ({}));
 
@@ -406,13 +402,16 @@ export default function MastersPage() {
     const name = window.prompt("Имя мастера");
     if (!name) return;
 
+    const email = window.prompt("Email мастера");
+    if (!email) return;
+
     try {
-      const response = await fetch(`${API_BASE}/internal/masters/create`, {
+      const response = await fetch(`${API_BASE}/internal/provision/masters`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          salon_slug: slug
+          email,
+          name
         })
       });
 

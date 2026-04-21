@@ -222,6 +222,8 @@ function normalizeMasterIdentity(identity = {}) {
     profession: asString(identity.profession),
     city: asString(identity.city),
     hero_badge: asString(identity.hero_badge),
+    subtitle: asString(identity.subtitle),
+    description: asString(identity.description || identity.hero_description),
     hero_description: asString(identity.hero_description),
   };
 }
