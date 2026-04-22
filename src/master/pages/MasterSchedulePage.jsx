@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
+import { getMasterBookings } from "../../api/internal"
 
 const API_BASE = import.meta.env.VITE_API_BASE || window.API_BASE || "https://api.totemv.com"
 
@@ -328,25 +329,15 @@ try{
 setBookingsLoading(true)
 setBookingsError("")
 
-const response=await fetch(
-`${API_BASE}/internal/masters/`+encodeURIComponent(routeSlug)+"/bookings"
-)
+const result = await getMasterBookings(routeSlug)
 
-const text=await response.text()
-let raw=null
-
-try{
-raw=JSON.parse(text)
-}catch{
-raw=null
-}
-
-if(!response.ok){
-throw new Error("MASTER_BOOKINGS_HTTP_"+response.status)
+if(!result?.ok){
+const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
+throw new Error(status ? "MASTER_BOOKINGS_HTTP_" + status : (result?.error || "MASTER_BOOKINGS_LOAD_FAILED"))
 }
 
 if(!cancelled){
-setBookings(normalizeBookingsResponse(raw))
+setBookings(normalizeBookingsResponse(result))
 }
 }catch(error){
 console.error("MASTER_SCHEDULE_BOOKINGS_LOAD_FAILED",error)
