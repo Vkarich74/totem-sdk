@@ -144,6 +144,15 @@ function getAttachOptionLabel(service) {
   return [parts.join(" — "), tail.join(" — ")].filter(Boolean).join(" — ");
 }
 
+function resolveMasterSlug(master) {
+  return String(
+    master?.slug ||
+    master?.master_slug ||
+    master?.masterSlug ||
+    ""
+  ).trim();
+}
+
 export default function ServicesPage() {
   const { slug: routeSlug } = useParams();
   const slug = resolveSalonSlug(routeSlug);
@@ -224,12 +233,17 @@ export default function ServicesPage() {
         return;
       }
 
-      const responses = await Promise.all(
+      const responses = await Promise.allSettled(
         activeMasters.map(async (currentMaster) => {
-          const result = await getMasterServices(currentMaster.slug);
+          const masterSlug = resolveMasterSlug(currentMaster);
+          if (!masterSlug) {
+            return [];
+          }
+
+          const result = await getMasterServices(masterSlug);
           if (!result?.ok) {
             const status = Number(result?.detail?.status || result?.detail?.response?.status || 0);
-            throw new Error(`MASTER_SERVICES_LOAD_FAILED_${currentMaster.slug}_${status || "ERROR"}`);
+            throw new Error(`MASTER_SERVICES_LOAD_FAILED_${masterSlug}_${status || "ERROR"}`);
           }
 
           const list = normalizeServicesResponse(result);
@@ -237,13 +251,27 @@ export default function ServicesPage() {
           return list.map((item) => ({
             ...item,
             master_id: currentMaster.id,
-            master_slug: currentMaster.slug,
+            master_slug: masterSlug,
             master_name: currentMaster.name
           }));
         })
       );
 
-      setMasterServices(responses.flat());
+      const fulfilled = responses
+        .filter((item) => item.status === "fulfilled")
+        .flatMap((item) => item.value);
+
+      const rejected = responses.filter((item) => item.status === "rejected");
+
+      if (rejected.length > 0) {
+        console.error("LOAD_MASTER_SERVICES_PARTIAL_FAILED", rejected);
+      }
+
+      if (fulfilled.length === 0 && activeMasters.length > 0 && rejected.length > 0) {
+        throw new Error("MASTER_SERVICES_LOAD_FAILED");
+      }
+
+      setMasterServices(fulfilled);
     } catch (e) {
       console.error("LOAD_MASTER_SERVICES_ERROR", e);
       setMasterServices([]);
