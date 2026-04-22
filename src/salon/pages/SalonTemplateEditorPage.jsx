@@ -1243,7 +1243,10 @@ export default function SalonTemplateEditorPage() {
       return
     }
 
-    const nextDocument = result.document || null
+    const rereadResult = await getSalonTemplateDocument(slug)
+    const nextDocument = rereadResult.ok
+      ? (rereadResult.document || result.document || null)
+      : (result.document || null)
     const mergedValidation = nextDocument?.validation || validationResult
     setDocumentState(normalizeTemplateDocumentState(nextDocument, mergedValidation))
     setDraft(mergeDraft(nextDocument?.draft || nextDraft))
