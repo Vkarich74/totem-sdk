@@ -1326,7 +1326,11 @@ export default function MasterTemplateEditorPage() {
       return;
     }
 
-    const nextDocument = result.document || null;
+    const rereadResult = await getMasterTemplateDocument(resolvedSlug);
+    const nextDocument = rereadResult.ok
+      ? (rereadResult.document || result.document || null)
+      : (result.document || null);
+    const nextDraft = nextDocument?.draft || nextDocument?.payload || draft;
     setDocumentState({
       ...nextDocument,
       validation: nextDocument?.validation || liveValidation,
@@ -1335,7 +1339,7 @@ export default function MasterTemplateEditorPage() {
         is_publishable: Boolean((nextDocument?.validation || liveValidation)?.is_ready_for_publish)
       }
     });
-    setDraft(mergeDraft(nextDocument?.draft || draft));
+    setDraft(mergeDraft(nextDraft));
     setPublishState({ kind: "success", message: "Master template опубликован." });
     setSaveState({ kind: "idle", message: "" });
   }
