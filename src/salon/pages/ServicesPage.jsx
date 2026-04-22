@@ -270,15 +270,10 @@ export default function ServicesPage() {
         console.error("LOAD_MASTER_SERVICES_PARTIAL_FAILED", rejected);
       }
 
-      if (fulfilled.length === 0 && requestableMasters.length > 0 && rejected.length === requestableMasters.length) {
-        throw new Error("MASTER_SERVICES_LOAD_FAILED");
-      }
-
       setMasterServices(fulfilled);
     } catch (e) {
       console.error("LOAD_MASTER_SERVICES_ERROR", e);
       setMasterServices([]);
-      setError("Не удалось загрузить услуги мастеров");
     } finally {
       if (showLoader) setLoading(false);
     }
