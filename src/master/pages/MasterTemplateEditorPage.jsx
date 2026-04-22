@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import PageHeader from "../../cabinet/PageHeader";
 import PageSection from "../../cabinet/PageSection";
+import { useMaster } from "../MasterContext";
 import {
   getMasterTemplateDocument,
   getMasterTemplatePreview,
@@ -333,6 +334,79 @@ function buildPreviewPayload(draft, slug) {
   };
 }
 
+function pickPreviewValue(...values) {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+
+    const normalized = String(value || "").trim();
+    if (normalized) return value;
+  }
+
+  return "";
+}
+
+function buildContextPreviewIdentity(previewPayload, draft, master) {
+  const previewIdentity = previewPayload?.identity || {};
+  const draftIdentity = draft?.identity || {};
+
+  return {
+    ...draftIdentity,
+    ...previewIdentity,
+    master_name: pickPreviewValue(previewIdentity.master_name, master?.name, master?.master_name, draftIdentity.master_name),
+    profession: pickPreviewValue(previewIdentity.profession, master?.profession, master?.specialty, draftIdentity.profession),
+    city: pickPreviewValue(previewIdentity.city, master?.city, draftIdentity.city),
+    hero_badge: pickPreviewValue(previewIdentity.hero_badge, master?.hero_badge, draftIdentity.hero_badge),
+    subtitle: pickPreviewValue(previewIdentity.subtitle, master?.subtitle, master?.tagline, draftIdentity.subtitle),
+    description: pickPreviewValue(previewIdentity.description, master?.bio, master?.about, master?.description, draftIdentity.description)
+  };
+}
+
+function buildContextPreviewLocation(previewPayload, draft, master) {
+  const previewLocation = previewPayload?.location || {};
+  const draftLocation = draft?.location || {};
+
+  return {
+    ...draftLocation,
+    ...previewLocation,
+    address: pickPreviewValue(previewLocation.address, master?.address, draftLocation.address),
+    district: pickPreviewValue(previewLocation.district, master?.district, draftLocation.district),
+    city: pickPreviewValue(previewLocation.city, master?.city, draftLocation.city),
+    schedule_text: pickPreviewValue(previewLocation.schedule_text, master?.schedule_text, master?.schedule, draftLocation.schedule_text),
+    phone: pickPreviewValue(previewLocation.phone, master?.phone, draftLocation.phone),
+    whatsapp: pickPreviewValue(previewLocation.whatsapp, master?.whatsapp, master?.phone, draftLocation.whatsapp),
+    instagram: pickPreviewValue(previewLocation.instagram, master?.instagram, draftLocation.instagram),
+    telegram: pickPreviewValue(previewLocation.telegram, master?.telegram, draftLocation.telegram),
+    map_url: pickPreviewValue(previewLocation.map_url, master?.map_url, master?.mapUrl, draftLocation.map_url)
+  };
+}
+
+function buildContextPreviewTrust(previewPayload, draft, master) {
+  const previewTrust = previewPayload?.trust || {};
+  const draftTrust = draft?.trust || {};
+
+  return {
+    ...draftTrust,
+    ...previewTrust,
+    rating_value: pickPreviewValue(previewTrust.rating_value, master?.rating_value, master?.rating, draftTrust.rating_value),
+    review_count: pickPreviewValue(previewTrust.review_count, master?.review_count, master?.reviews_count, master?.reviewCount, draftTrust.review_count),
+    trust_note: pickPreviewValue(previewTrust.trust_note, master?.trust_note, draftTrust.trust_note),
+    sticky_subline: pickPreviewValue(previewTrust.sticky_subline, master?.sticky_subline, draftTrust.sticky_subline)
+  };
+}
+
+function buildContextPreviewStats(previewPayload, draft, master) {
+  const previewStats = previewPayload?.stats || {};
+  const draftStats = draft?.stats || {};
+
+  return {
+    ...draftStats,
+    ...previewStats,
+    years: pickPreviewValue(previewStats.years, master?.years, master?.experience_years, draftStats.years),
+    rating: pickPreviewValue(previewStats.rating, master?.rating, previewPayload?.trust?.rating_value, draftStats.rating),
+    bookings: pickPreviewValue(previewStats.bookings, master?.bookings, master?.bookings_count, draftStats.bookings)
+  };
+}
+
 function buildLocalDocument(previous, draft, slug, mode, validationResult) {
   const nowIso = new Date().toISOString();
   const current = previous || {};
@@ -613,6 +687,8 @@ function ArrayCard({ title, note, children, onAdd, addLabel }) {
 
 export default function MasterTemplateEditorPage() {
   const { slug = "" } = useParams();
+  const { master } = useMaster();
+  const resolvedSlug = master?.slug || slug;
   const [draft, setDraft] = useState(() => mergeDraft());
   const [documentState, setDocumentState] = useState(null);
   const [previewState, setPreviewState] = useState(() => createPreviewState());
@@ -630,7 +706,7 @@ export default function MasterTemplateEditorPage() {
     let cancelled = false;
 
     async function loadDocument() {
-      if (!slug) {
+      if (!resolvedSlug) {
         setPageLoading(false);
         setPageError("MASTER_SLUG_MISSING");
         return;
@@ -639,7 +715,7 @@ export default function MasterTemplateEditorPage() {
       if (!hasToken) {
         const fallbackDraft = mergeDraft();
         const localValidation = validateMasterTemplateDraft(fallbackDraft);
-        const localDocument = buildLocalDocument(null, fallbackDraft, slug, "save", localValidation);
+        const localDocument = buildLocalDocument(null, fallbackDraft, resolvedSlug, "save", localValidation);
         if (cancelled) return;
         setDocumentState(localDocument);
         setDraft(fallbackDraft);
@@ -651,7 +727,7 @@ export default function MasterTemplateEditorPage() {
       setPageLoading(true);
       setPageError(null);
 
-      const result = await getMasterTemplateDocument(slug);
+      const result = await getMasterTemplateDocument(resolvedSlug);
       if (cancelled) return;
 
       if (!result.ok) {
@@ -672,7 +748,7 @@ export default function MasterTemplateEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [hasToken, slug]);
+  }, [hasToken, resolvedSlug]);
 
   const validation = useMemo(() => validateMasterTemplateDraft(draft), [draft]);
   const hardErrors = Array.isArray(validation.hard_errors) ? validation.hard_errors : [];
@@ -689,10 +765,10 @@ export default function MasterTemplateEditorPage() {
     { label: "Reviews", value: draft.sections.reviews.length }
   ];
   const previewPayload = previewState.payload || {};
-  const previewIdentity = previewPayload.identity || {};
-  const previewLocation = previewPayload.location || {};
-  const previewTrust = previewPayload.trust || {};
-  const previewStats = previewPayload.stats || {};
+  const previewIdentity = useMemo(() => buildContextPreviewIdentity(previewPayload, draft, master), [previewPayload, draft, master]);
+  const previewLocation = useMemo(() => buildContextPreviewLocation(previewPayload, draft, master), [previewPayload, draft, master]);
+  const previewTrust = useMemo(() => buildContextPreviewTrust(previewPayload, draft, master), [previewPayload, draft, master]);
+  const previewStats = useMemo(() => buildContextPreviewStats(previewPayload, draft, master), [previewPayload, draft, master]);
   const previewCta = previewPayload.cta || {};
   const previewSections = previewPayload.sections || {};
   const previewImages = previewPayload.images || {};
@@ -768,7 +844,7 @@ export default function MasterTemplateEditorPage() {
   }
 
   async function handleRootImageUpload(slot, file) {
-    if (!slug) return;
+    if (!resolvedSlug) return;
 
     const uploadKey = `root:${slot}`;
     setUploadFlag(uploadKey, { loading: true, error: "" });
@@ -776,7 +852,7 @@ export default function MasterTemplateEditorPage() {
     try {
       const asset = await uploadImageToCloudinary(file, {
         ownerType: MASTER_OWNER_TYPE,
-        ownerSlug: slug,
+        ownerSlug: resolvedSlug,
         assetKind: resolveMasterAssetKind(slot),
         alt: draft.images?.[slot]?.alt || ""
       });
@@ -1024,7 +1100,7 @@ export default function MasterTemplateEditorPage() {
   }
 
   async function handleImageArrayUpload(imageKey, index, file) {
-    if (!slug) return;
+    if (!resolvedSlug) return;
 
     const uploadKey = `${imageKey}:${index}`;
     setUploadFlag(uploadKey, { loading: true, error: "" });
@@ -1032,7 +1108,7 @@ export default function MasterTemplateEditorPage() {
     try {
       const asset = await uploadImageToCloudinary(file, {
         ownerType: MASTER_OWNER_TYPE,
-        ownerSlug: slug,
+        ownerSlug: resolvedSlug,
         assetKind: resolveMasterAssetKind(imageKey),
         alt: draft.images?.[imageKey]?.[index]?.alt || ""
       });
@@ -1062,7 +1138,7 @@ export default function MasterTemplateEditorPage() {
   }
 
   async function handlePortfolioUpload(index, file) {
-    if (!slug) return;
+    if (!resolvedSlug) return;
 
     const uploadKey = `portfolio:${index}`;
     setUploadFlag(uploadKey, { loading: true, error: "" });
@@ -1070,7 +1146,7 @@ export default function MasterTemplateEditorPage() {
     try {
       const asset = await uploadImageToCloudinary(file, {
         ownerType: MASTER_OWNER_TYPE,
-        ownerSlug: slug,
+        ownerSlug: resolvedSlug,
         assetKind: resolveMasterAssetKind("portfolio"),
         alt: draft.sections.portfolio?.[index]?.alt || ""
       });
@@ -1103,7 +1179,7 @@ export default function MasterTemplateEditorPage() {
     const validationResult = validateMasterTemplateDraft(nextDraft);
 
     if (!hasToken) {
-      const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "save", validationResult);
+      const nextDocument = buildLocalDocument(documentState, nextDraft, resolvedSlug, "save", validationResult);
       setDocumentState(nextDocument);
       setDraft(mergeDraft(nextDocument.draft || nextDraft));
       setSaveState({
@@ -1115,7 +1191,7 @@ export default function MasterTemplateEditorPage() {
       return { ok: true, document: nextDocument, validation: validationResult, mode: "mock" };
     }
 
-    const result = await saveMasterTemplateDraft(nextDraft, slug);
+    const result = await saveMasterTemplateDraft(nextDraft, resolvedSlug);
 
     if (!result.ok) {
       const message = extractMessage(result, "MASTER_TEMPLATE_DRAFT_SAVE_FAILED");
@@ -1138,14 +1214,14 @@ export default function MasterTemplateEditorPage() {
   }
 
   async function handleSaveDraft() {
-    if (!slug) return;
+    if (!resolvedSlug) return;
     setSaveState({ kind: "saving", message: "Сохраняем draft…" });
     setPublishState({ kind: "idle", message: "" });
     await persistDraft(draft);
   }
 
   async function handleOpenPreview() {
-    if (!slug) return;
+    if (!resolvedSlug) return;
 
     setPreviewState({
       open: true,
@@ -1160,7 +1236,7 @@ export default function MasterTemplateEditorPage() {
       setPreviewState({
         open: true,
         loading: false,
-        payload: buildPreviewPayload(draft, slug),
+        payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "fallback",
         message: saveResult.error || "PREVIEW_SAVE_FAILED — открыт fallback preview."
       });
@@ -1171,20 +1247,20 @@ export default function MasterTemplateEditorPage() {
       setPreviewState({
         open: true,
         loading: false,
-        payload: buildPreviewPayload(draft, slug),
+        payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "mock",
         message: "Локальный preview открыт без backend auth. Это mock по текущему draft."
       });
       return;
     }
 
-    const result = await getMasterTemplatePreview(slug);
+    const result = await getMasterTemplatePreview(resolvedSlug);
 
     if (!result.ok) {
       setPreviewState({
         open: true,
         loading: false,
-        payload: buildPreviewPayload(draft, slug),
+        payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "fallback",
         message: extractMessage(result, "MASTER_TEMPLATE_PREVIEW_FAILED — открыт fallback preview.")
       });
@@ -1194,7 +1270,7 @@ export default function MasterTemplateEditorPage() {
     setPreviewState({
       open: true,
       loading: false,
-      payload: result.payload || buildPreviewPayload(draft, slug),
+      payload: result.payload || buildPreviewPayload(draft, resolvedSlug),
       mode: "backend",
       message: result.is_ready_for_preview ? "Preview получен из backend." : "Preview получен, но backend validation ещё не готов."
     });
@@ -1205,11 +1281,11 @@ export default function MasterTemplateEditorPage() {
   }
 
   async function handlePublish() {
-    if (!slug) return;
+    if (!resolvedSlug) return;
 
     const liveValidation = validateMasterTemplateDraft(draft);
     if (!liveValidation.is_ready_for_publish) {
-      const nextDocument = buildLocalDocument(documentState, draft, slug, "save", liveValidation);
+      const nextDocument = buildLocalDocument(documentState, draft, resolvedSlug, "save", liveValidation);
       setDocumentState(nextDocument);
       setPublishState({
         kind: "error",
@@ -1230,7 +1306,7 @@ export default function MasterTemplateEditorPage() {
     }
 
     if (!hasToken) {
-      const nextDocument = buildLocalDocument(documentState, draft, slug, "publish", liveValidation);
+      const nextDocument = buildLocalDocument(documentState, draft, resolvedSlug, "publish", liveValidation);
       setDocumentState(nextDocument);
       setDraft(mergeDraft(nextDocument.draft || draft));
       setPublishState({
@@ -1240,7 +1316,7 @@ export default function MasterTemplateEditorPage() {
       return;
     }
 
-    const result = await publishMasterTemplate(slug, "system:1");
+    const result = await publishMasterTemplate(resolvedSlug, "system:1");
 
     if (!result.ok) {
       setPublishState({
@@ -1264,8 +1340,8 @@ export default function MasterTemplateEditorPage() {
     setSaveState({ kind: "idle", message: "" });
   }
 
-  const previewPath = `/preview/master/${slug}`;
-  const publicPath = `/master/${slug}`;
+  const previewPath = `/preview/master/${resolvedSlug}`;
+  const publicPath = `/master/${resolvedSlug}`;
   const blockTone = pageError ? "warn" : hasToken ? "good" : "neutral";
   const blockValue = pageLoading ? "Загрузка" : pageError ? "Ошибка" : hasToken ? "Готово" : "Локальный режим";
   const blockNote = pageError
@@ -1278,16 +1354,16 @@ export default function MasterTemplateEditorPage() {
     <div style={{ display: "grid", gap: "20px", padding: "24px" }}>
       <PageHeader
         title="Master Template Editor"
-        subtitle={`Mirror editor для мастера${slug ? ` · ${slug}` : ""}. Логика сохранена как у салона, без трогания эталонного PublicMasterPage.`}
+        subtitle={`Mirror editor для мастера${resolvedSlug ? ` · ${resolvedSlug}` : ""}. Логика сохранена как у салона, без трогания эталонного PublicMasterPage.`}
         actions={(
           <>
-            <ActionButton tone="secondary" onClick={handleSaveDraft} disabled={!slug || pageLoading || saveState.kind === "saving"}>
+            <ActionButton tone="secondary" onClick={handleSaveDraft} disabled={!resolvedSlug || pageLoading || saveState.kind === "saving"}>
               {saveState.kind === "saving" ? "Сохраняем…" : "Сохранить draft"}
             </ActionButton>
-            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!slug || pageLoading}>
+            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!resolvedSlug || pageLoading}>
               Открыть preview
             </ActionButton>
-            <ActionButton onClick={handlePublish} disabled={!slug || pageLoading || publishState.kind === "publishing"}>
+            <ActionButton onClick={handlePublish} disabled={!resolvedSlug || pageLoading || publishState.kind === "publishing"}>
               {publishState.kind === "publishing" ? "Публикуем…" : "Опубликовать"}
             </ActionButton>
           </>
@@ -1300,7 +1376,7 @@ export default function MasterTemplateEditorPage() {
         gap: "12px"
       }}>
         <StatusCard title="Статус блока" value={blockValue} note={blockNote} tone={blockTone} />
-        <StatusCard title="Slug" value={slug || "—"} note="Master editor работает от текущего route slug." />
+        <StatusCard title="Slug" value={resolvedSlug || "—"} note="Master editor работает от route slug и master context." />
         <StatusCard title="Готовность к публикации" value={validation.is_ready_for_publish ? "Готово" : "Не готово"} note={`Ошибок: ${hardErrors.length} · Warnings: ${warnings.length}`} tone={validation.is_ready_for_publish ? "good" : "warn"} />
         <StatusCard title="Заполнение" value={`${completionScore}%`} note={lastSavedAt ? `Последнее сохранение: ${new Date(lastSavedAt).toLocaleString()}` : "Сохранения ещё не было."} />
       </div>
@@ -1387,13 +1463,13 @@ export default function MasterTemplateEditorPage() {
 
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "10px" }}>
             <strong style={{ fontSize: "15px", color: "#111827" }}>Actions</strong>
-            <ActionButton onClick={handleSaveDraft} disabled={!slug || pageLoading || saveState.kind === "saving"}>
+            <ActionButton onClick={handleSaveDraft} disabled={!resolvedSlug || pageLoading || saveState.kind === "saving"}>
               {saveState.kind === "saving" ? "Сохраняю..." : "Сохранить draft"}
             </ActionButton>
-            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!slug || pageLoading}>
+            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!resolvedSlug || pageLoading}>
               Открыть preview
             </ActionButton>
-            <ActionButton onClick={handlePublish} disabled={!slug || pageLoading || publishState.kind === "publishing" || !validation.is_ready_for_publish}>
+            <ActionButton onClick={handlePublish} disabled={!resolvedSlug || pageLoading || publishState.kind === "publishing" || !validation.is_ready_for_publish}>
               {publishState.kind === "publishing" ? "Публикую..." : "Publish"}
             </ActionButton>
             <Link to={publicPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}>Открыть public master page</Link>
@@ -1431,7 +1507,7 @@ export default function MasterTemplateEditorPage() {
                 <Field label="Hero image asset id" hint="V1 primary pipeline field."><input value={draft.images.hero.image_asset_id} onChange={(e) => setNestedDraftField("images", "hero", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
                 <Field label="Hero image URL" hint="Fallback для dev/manual mode."><input value={draft.images.hero.image_url} onChange={(e) => setNestedDraftField("images", "hero", "image_url", e.target.value)} style={inputStyle()} /></Field>
                 <Field label="Hero alt"><input value={draft.images.hero.alt} onChange={(e) => setNestedDraftField("images", "hero", "alt", e.target.value)} style={inputStyle()} /></Field>
-                <UploadInput onSelect={(file) => handleRootImageUpload("hero", file)} disabled={!cloudinaryReady || !slug || uploadState["root:hero"]?.loading} />
+                <UploadInput onSelect={(file) => handleRootImageUpload("hero", file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState["root:hero"]?.loading} />
                 {uploadState["root:hero"]?.error ? <div style={warningBoxStyle}>{uploadState["root:hero"].error}</div> : null}
               </div>
               <AssetPreview title="Hero preview" entity={draft.images.hero || {}} emptyNote="Hero пока не загружен." />
@@ -1577,7 +1653,7 @@ export default function MasterTemplateEditorPage() {
                     <Field label="Avatar asset id"><input value={draft.images.avatar.image_asset_id} onChange={(e) => setNestedDraftField("images", "avatar", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
                     <Field label="Avatar URL"><input value={draft.images.avatar.image_url} onChange={(e) => setNestedDraftField("images", "avatar", "image_url", e.target.value)} style={inputStyle()} /></Field>
                     <Field label="Avatar alt"><input value={draft.images.avatar.alt} onChange={(e) => setNestedDraftField("images", "avatar", "alt", e.target.value)} style={inputStyle()} /></Field>
-                    <UploadInput onSelect={(file) => handleRootImageUpload("avatar", file)} disabled={!cloudinaryReady || !slug || uploadState["root:avatar"]?.loading} />
+                    <UploadInput onSelect={(file) => handleRootImageUpload("avatar", file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState["root:avatar"]?.loading} />
                     {uploadState["root:avatar"]?.error ? <div style={warningBoxStyle}>{uploadState["root:avatar"].error}</div> : null}
                   </div>
                   <AssetPreview title="Avatar preview" entity={draft.images.avatar || {}} emptyNote="Avatar пока не загружен." />
@@ -1592,7 +1668,7 @@ export default function MasterTemplateEditorPage() {
                       <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_asset_id", e.target.value)} style={inputStyle()} />
                       <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_url", e.target.value)} style={inputStyle()} />
                       <input placeholder="alt" value={item.alt || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "alt", e.target.value)} style={inputStyle()} />
-                      <UploadInput onSelect={(file) => handlePortfolioUpload(index, file)} disabled={!cloudinaryReady || !slug || uploadState[`portfolio:${index}`]?.loading} />
+                      <UploadInput onSelect={(file) => handlePortfolioUpload(index, file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState[`portfolio:${index}`]?.loading} />
                       {uploadState[`portfolio:${index}`]?.error ? <div style={warningBoxStyle}>{uploadState[`portfolio:${index}`].error}</div> : null}
                       <div><ActionButton tone="secondary" onClick={() => removePortfolioItem(index)}>Удалить</ActionButton></div>
                     </div>
@@ -1609,7 +1685,7 @@ export default function MasterTemplateEditorPage() {
                       <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_asset_id", e.target.value)} style={inputStyle()} />
                       <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_url", e.target.value)} style={inputStyle()} />
                       <input placeholder="alt" value={item.alt || ""} onChange={(e) => setImageArrayItem("service_card", index, "alt", e.target.value)} style={inputStyle()} />
-                      <UploadInput onSelect={(file) => handleImageArrayUpload("service_card", index, file)} disabled={!cloudinaryReady || !slug || uploadState[`service_card:${index}`]?.loading} />
+                      <UploadInput onSelect={(file) => handleImageArrayUpload("service_card", index, file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState[`service_card:${index}`]?.loading} />
                       {uploadState[`service_card:${index}`]?.error ? <div style={warningBoxStyle}>{uploadState[`service_card:${index}`].error}</div> : null}
                       <div><ActionButton tone="secondary" onClick={() => removeImageItem("service_card", index)}>Удалить</ActionButton></div>
                     </div>
@@ -1690,7 +1766,7 @@ export default function MasterTemplateEditorPage() {
           <div style={previewModalStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
               <div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>Preview · {slug || "master"}</div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>Preview · {resolvedSlug || "master"}</div>
                 <div style={{ marginTop: "6px", fontSize: "13px", color: "#6b7280" }}>{previewState.message}</div>
               </div>
               <ActionButton tone="secondary" onClick={handleClosePreview}>Закрыть</ActionButton>
