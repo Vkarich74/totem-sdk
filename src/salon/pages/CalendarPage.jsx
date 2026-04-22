@@ -64,10 +64,51 @@ function statusColor(status){
   return "#9ca3af"
 }
 
+function pad(value){
+  return String(value).padStart(2, "0")
+}
+
+function toLocalDateKey(date){
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function parseLocalDateKey(value){
+  if(typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)){
+    return null
+  }
+
+  const [year, month, day] = value.split("-").map(Number)
+  const date = new Date(year, month - 1, day)
+
+  if(Number.isNaN(date.getTime())){
+    return null
+  }
+
+  return date
+}
+
+function buildLocalDateTime(dayKey, time){
+  const date = parseLocalDateKey(dayKey)
+  if(!date || typeof time !== "string" || !/^\d{2}:\d{2}$/.test(time)){
+    return null
+  }
+
+  const [hours, minutes] = time.split(":").map(Number)
+  const next = new Date(date)
+  next.setHours(hours, minutes, 0, 0)
+  return next
+}
+
+function isPastSlot(dayKey, time){
+  const slotDate = buildLocalDateTime(dayKey, time)
+  if(!slotDate) return false
+  return slotDate.getTime() < Date.now()
+}
+
 function formatDateLabel(value){
   if(!value) return "—"
 
-  const date = new Date(value)
+  const date = parseLocalDateKey(value) || new Date(value)
   if(Number.isNaN(date.getTime())) return "—"
 
   return date.toLocaleDateString("ru-RU", {
@@ -112,12 +153,12 @@ function buildDayOptions(bookings){
     const date = new Date(value)
     if(Number.isNaN(date.getTime())) return
 
-    const key = date.toISOString().slice(0, 10)
+    const key = toLocalDateKey(date)
     keys.add(key)
   })
 
   if(keys.size === 0){
-    keys.add(new Date().toISOString().slice(0, 10))
+    keys.add(toLocalDateKey(new Date()))
   }
 
   return [...keys].sort()
@@ -202,7 +243,7 @@ export default function CalendarPage(){
       const date = new Date(startAt)
       if(Number.isNaN(date.getTime())) return
 
-      const dayKey = date.toISOString().slice(0, 10)
+      const dayKey = toLocalDateKey(date)
       if(selectedDay && dayKey !== selectedDay) return
 
       const timeKey = formatTimeLabel(startAt)
@@ -222,12 +263,16 @@ export default function CalendarPage(){
         const date = new Date(startAt)
         if(Number.isNaN(date.getTime())) return false
 
-        return date.toISOString().slice(0, 10) === selectedDay
+        return toLocalDateKey(date) === selectedDay
       })
       .sort((left, right) => new Date(getBookingStartAt(left)) - new Date(getBookingStartAt(right)))
   }, [bookings, selectedDay])
 
   async function createBooking(master, time){
+    if(isPastSlot(selectedDay, time)){
+      return
+    }
+
     const client = prompt("Имя клиента")
     if(!client) return
 
@@ -383,21 +428,24 @@ export default function CalendarPage(){
                   const booking = bookingsByMasterAndTime.get(`${String(master.name)}__${time}`)
                   const color = booking ? statusColor(booking.status) : "#e5e7eb"
                   const loadingKey = booking ? String(booking.id) : `${master?.id || master?.name}-${time}`
+                  const pastSlot = !booking && isPastSlot(selectedDay, time)
 
                   return (
                     <button
                       key={`${master.id || master.name}-${time}`}
                       type="button"
-                      disabled={actionLoading === loadingKey}
+                      disabled={actionLoading === loadingKey || pastSlot}
                       style={{
                         ...styles.slotCell,
                         background: booking ? `${color}14` : "#ffffff",
-                        borderLeft: "1px solid #e5e7eb"
+                        borderLeft: "1px solid #e5e7eb",
+                        opacity: pastSlot ? 0.5 : 1,
+                        cursor: pastSlot ? "not-allowed" : "pointer"
                       }}
                       onClick={() => {
                         if(booking){
                           moveBooking(booking)
-                        }else{
+                        }else if(!pastSlot){
                           createBooking(master, time)
                         }
                       }}
