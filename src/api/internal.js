@@ -426,6 +426,69 @@ export async function getMasterClients(masterSlug = getMasterSlug()){
   return { ok:true, clients: j.clients || [] };
 }
 
+export async function getMasterWalletBalance(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/masters/${masterSlug}/wallet-balance`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_WALLET_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_WALLET_API_NOT_OK", detail:j };
+  return { ok:true, wallet: j.wallet || j.data?.wallet || j.data || j };
+}
+
+export async function getMasterSettlements(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/masters/${masterSlug}/settlements`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_SETTLEMENTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_SETTLEMENTS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    settlements: j.settlements || j.periods || j.items || j.data?.settlements || []
+  };
+}
+
+export async function getMasterPayouts(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/masters/${masterSlug}/payouts`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_PAYOUTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_PAYOUTS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    payouts: j.payouts || j.items || j.data?.payouts || []
+  };
+}
+
+export async function getMasterLedger(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/masters/${masterSlug}/ledger`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_LEDGER_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_LEDGER_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    ledger: j.ledger || j.entries || j.items || j.data?.ledger || []
+  };
+}
+
+export async function getMasterActiveContract(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/contracts/master/${masterSlug}/active`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_ACTIVE_CONTRACT_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_ACTIVE_CONTRACT_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    contract: j.contract || j.active_contract || j.data || null
+  };
+}
+
+export async function getMasterContractHistory(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/contracts/master/${masterSlug}/history`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_CONTRACT_HISTORY_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_CONTRACT_HISTORY_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    history: j.history || j.contracts || j.items || []
+  };
+}
+
 /* ===============================
    BOOKING ACTIONS
 ================================ */

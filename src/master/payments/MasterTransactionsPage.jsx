@@ -4,11 +4,7 @@ import { useMaster } from "../MasterContext";
 
 import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com";
+import { getMasterLedger } from "../../api/internal";
 
 function money(value) {
   const n = Number(value) || 0;
@@ -120,15 +116,13 @@ export default function MasterTransactionsPage() {
           return;
         }
 
-        const res = await fetch(`${API_BASE}/internal/masters/${masterSlug}/ledger`);
-        if (!res.ok) {
-          throw new Error("LEDGER_FETCH_FAILED");
+        const result = await getMasterLedger(masterSlug);
+        if (!result?.ok) {
+          throw new Error(result?.error || "LEDGER_FETCH_FAILED");
         }
-
-        const data = await res.json();
         if (cancelled) return;
 
-        setTransactions(normalizeLedger(data));
+        setTransactions(normalizeLedger(result));
       } catch (e) {
         console.error("MASTER_TRANSACTIONS_LOAD_FAILED", e);
 

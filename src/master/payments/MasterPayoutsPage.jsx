@@ -4,11 +4,7 @@ import { useMaster } from "../MasterContext";
 
 import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com";
+import { getMasterPayouts } from "../../api/internal";
 
 function money(value) {
   const n = Number(value) || 0;
@@ -113,15 +109,13 @@ export default function MasterPayoutsPage() {
           return;
         }
 
-        const res = await fetch(`${API_BASE}/internal/masters/${masterSlug}/payouts`);
-        if (!res.ok) {
-          throw new Error("PAYOUTS_FETCH_FAILED");
+        const result = await getMasterPayouts(masterSlug);
+        if (!result?.ok) {
+          throw new Error(result?.error || "PAYOUTS_FETCH_FAILED");
         }
-
-        const data = await res.json();
         if (cancelled) return;
 
-        setPayouts(normalizePayouts(data));
+        setPayouts(normalizePayouts(result));
       } catch (e) {
         console.error("MASTER_PAYOUTS_LOAD_FAILED", e);
 

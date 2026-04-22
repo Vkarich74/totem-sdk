@@ -3,18 +3,16 @@ import { Link } from "react-router-dom";
 import { useMaster } from "../MasterContext";
 
 import {
-  fetchActiveContract,
-  fetchContractHistory
-} from "../../core/contracts/contractApi";
+  getMasterActiveContract,
+  getMasterContractHistory,
+  getMasterPayouts,
+  getMasterSettlements,
+  getMasterWalletBalance
+} from "../../api/internal";
 
 import {
   isContractActive
 } from "../../core/contracts/contractEngine";
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com";
 
 function money(value) {
   const n = Number(value) || 0;
@@ -35,16 +33,6 @@ function formatDateTime(iso) {
       minute: "2-digit"
     })
   );
-}
-
-function fetchJson(url, errorCode) {
-  return fetch(url).then(async (response) => {
-    if (!response.ok) {
-      throw new Error(errorCode);
-    }
-
-    return response.json();
-  });
 }
 
 function normalizeContractResponse(payload) {
@@ -229,51 +217,51 @@ export default function MasterFinancePage() {
           settlementsResult,
           payoutsResult
         ] = await Promise.allSettled([
-          fetchActiveContract(masterSlug),
-          fetchContractHistory(masterSlug),
-          fetchJson(`${API_BASE}/internal/masters/${masterSlug}/wallet-balance`, "WALLET_FETCH_FAILED"),
-          fetchJson(`${API_BASE}/internal/masters/${masterSlug}/settlements`, "SETTLEMENTS_FETCH_FAILED"),
-          fetchJson(`${API_BASE}/internal/masters/${masterSlug}/payouts`, "PAYOUTS_FETCH_FAILED")
+          getMasterActiveContract(masterSlug),
+          getMasterContractHistory(masterSlug),
+          getMasterWalletBalance(masterSlug),
+          getMasterSettlements(masterSlug),
+          getMasterPayouts(masterSlug)
         ]);
 
         if (cancelled) return;
 
         setActiveContract(
-          activeResult.status === "fulfilled"
+          activeResult.status === "fulfilled" && activeResult.value?.ok
             ? normalizeContractResponse(activeResult.value)
             : null
         );
 
         setHistory(
-          historyResult.status === "fulfilled"
+          historyResult.status === "fulfilled" && historyResult.value?.ok
             ? normalizeHistoryResponse(historyResult.value)
             : []
         );
 
         setWallet(
-          walletResult.status === "fulfilled"
+          walletResult.status === "fulfilled" && walletResult.value?.ok
             ? normalizeWalletResponse(walletResult.value)
             : null
         );
 
         setSettlements(
-          settlementsResult.status === "fulfilled"
+          settlementsResult.status === "fulfilled" && settlementsResult.value?.ok
             ? normalizeSettlementsResponse(settlementsResult.value)
             : []
         );
 
         setPayouts(
-          payoutsResult.status === "fulfilled"
+          payoutsResult.status === "fulfilled" && payoutsResult.value?.ok
             ? normalizePayoutsResponse(payoutsResult.value)
             : []
         );
 
         if (
-          activeResult.status === "rejected" &&
-          historyResult.status === "rejected" &&
-          walletResult.status === "rejected" &&
-          settlementsResult.status === "rejected" &&
-          payoutsResult.status === "rejected"
+          (activeResult.status === "rejected" || !activeResult.value?.ok) &&
+          (historyResult.status === "rejected" || !historyResult.value?.ok) &&
+          (walletResult.status === "rejected" || !walletResult.value?.ok) &&
+          (settlementsResult.status === "rejected" || !settlementsResult.value?.ok) &&
+          (payoutsResult.status === "rejected" || !payoutsResult.value?.ok)
         ) {
           setError("Не удалось загрузить finance overview");
         }

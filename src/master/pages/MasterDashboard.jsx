@@ -4,11 +4,7 @@ import PageSection from "../../cabinet/PageSection"
 import StatCard from "../../cabinet/StatCard"
 import StatGrid from "../../cabinet/StatGrid"
 import { useMaster } from "../MasterContext"
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com"
+import { getMasterMetrics } from "../../api/internal"
 
 function money(n){
   return new Intl.NumberFormat("ru-RU").format(Number(n) || 0) + " сом"
@@ -173,21 +169,12 @@ export default function MasterDashboard() {
         setMetricsError("")
         setEmpty(false)
 
-        const response = await fetch(
-          API_BASE + "/internal/masters/" + encodeURIComponent(slug) + "/metrics"
-        )
+        const result = await getMasterMetrics(slug)
 
-        const text = await response.text()
-        let raw = null
+        if(!result?.ok){
+          const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
 
-        try{
-          raw = JSON.parse(text)
-        }catch{
-          raw = null
-        }
-
-        if(!response.ok){
-          if(response.status === 403){
+          if(status === 403){
             if(!cancelled){
               setMetrics({})
               setMetricsError("")
@@ -196,10 +183,10 @@ export default function MasterDashboard() {
             return
           }
 
-          throw new Error("MASTER_METRICS_HTTP_" + response.status)
+          throw new Error(status ? "MASTER_METRICS_HTTP_" + status : (result?.error || "MASTER_METRICS_LOAD_FAILED"))
         }
 
-        const data = normalizeMetricsResponse(raw)
+        const data = normalizeMetricsResponse(result)
 
         if(!cancelled){
           setMetrics(data)

@@ -3,11 +3,7 @@ import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
 import EmptyState from "../../cabinet/EmptyState"
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com"
+import { getMasterClients } from "../../api/internal"
 
 function normalizeClientsResponse(payload){
   if(Array.isArray(payload)) return payload
@@ -80,24 +76,14 @@ export default function MasterClientsPage() {
         setClientsError("")
         setEmpty(false)
 
-        const response = await fetch(
-          API_BASE + "/internal/masters/" + encodeURIComponent(slug) + "/clients"
-        )
+        const result = await getMasterClients(slug)
 
-        const text = await response.text()
-        let raw = null
-
-        try{
-          raw = JSON.parse(text)
-        }catch{
-          raw = null
+        if(!result?.ok){
+          const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
+          throw new Error(status ? "MASTER_CLIENTS_HTTP_" + status : (result?.error || "MASTER_CLIENTS_LOAD_FAILED"))
         }
 
-        if(!response.ok){
-          throw new Error("MASTER_CLIENTS_HTTP_" + response.status)
-        }
-
-        const data = normalizeClientsResponse(raw)
+        const data = normalizeClientsResponse(result)
 
         if(!cancelled){
           setClients(data)

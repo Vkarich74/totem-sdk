@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMaster } from "../MasterContext";
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com";
+import {
+  getMaster,
+  getMasterSettlements,
+  getMasterWalletBalance
+} from "../../api/internal";
 
 function money(value) {
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`;
@@ -25,14 +25,6 @@ function formatDate(iso) {
       minute: "2-digit"
     })
   );
-}
-
-function safeJsonParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
 }
 
 function normalizeWallet(payload) {
@@ -166,17 +158,15 @@ export default function MasterMoneyPage() {
         setWalletLoading(true);
         setWalletError("");
 
-        const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(slug)}/wallet-balance`);
-        const text = await response.text();
+        const result = await getMasterWalletBalance(slug);
 
         if (cancelled) return;
 
-        const data = safeJsonParse(text);
-        if (!data || !response.ok) {
-          throw new Error("WALLET_FETCH_FAILED");
+        if (!result?.ok) {
+          throw new Error(result?.error || "WALLET_FETCH_FAILED");
         }
 
-        setWallet(normalizeWallet(data));
+        setWallet(normalizeWallet(result));
       } catch (e) {
         console.error("MASTER_MONEY_WALLET_LOAD_FAILED", e);
 
@@ -215,17 +205,15 @@ export default function MasterMoneyPage() {
         setRootLoading(true);
         setRootError("");
 
-        const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(slug)}`);
-        const text = await response.text();
+        const result = await getMaster(slug);
 
         if (cancelled) return;
 
-        const data = safeJsonParse(text);
-        if (!data || !response.ok) {
-          throw new Error("MASTER_ROOT_FETCH_FAILED");
+        if (!result?.ok) {
+          throw new Error(result?.error || "MASTER_ROOT_FETCH_FAILED");
         }
 
-        setMasterRoot(normalizeMasterRoot(data));
+        setMasterRoot(normalizeMasterRoot(result));
       } catch (e) {
         console.error("MASTER_MONEY_ROOT_LOAD_FAILED", e);
 
@@ -264,17 +252,15 @@ export default function MasterMoneyPage() {
         setSettlementsLoading(true);
         setSettlementsError("");
 
-        const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(slug)}/settlements`);
-        const text = await response.text();
+        const result = await getMasterSettlements(slug);
 
         if (cancelled) return;
 
-        const data = safeJsonParse(text);
-        if (!data || !response.ok) {
-          throw new Error("SETTLEMENTS_FETCH_FAILED");
+        if (!result?.ok) {
+          throw new Error(result?.error || "SETTLEMENTS_FETCH_FAILED");
         }
 
-        setSettlements(normalizeSettlements(data));
+        setSettlements(normalizeSettlements(result));
       } catch (e) {
         console.error("MASTER_MONEY_SETTLEMENTS_LOAD_FAILED", e);
 

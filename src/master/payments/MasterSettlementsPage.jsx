@@ -4,11 +4,7 @@ import { useMaster } from "../MasterContext";
 
 import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com";
+import { getMasterSettlements } from "../../api/internal";
 
 function money(value) {
   const n = Number(value) || 0;
@@ -112,15 +108,13 @@ export default function MasterSettlementsPage() {
           return;
         }
 
-        const res = await fetch(`${API_BASE}/internal/masters/${masterSlug}/settlements`);
-        if (!res.ok) {
-          throw new Error("SETTLEMENTS_FETCH_FAILED");
+        const result = await getMasterSettlements(masterSlug);
+        if (!result?.ok) {
+          throw new Error(result?.error || "SETTLEMENTS_FETCH_FAILED");
         }
-
-        const data = await res.json();
         if (cancelled) return;
 
-        setPeriods(normalizeSettlements(data));
+        setPeriods(normalizeSettlements(result));
       } catch (e) {
         console.error("MASTER_SETTLEMENTS_LOAD_FAILED", e);
 
