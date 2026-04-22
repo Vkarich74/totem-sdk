@@ -451,19 +451,12 @@ if(!response.ok){
 throw new Error("STATUS_UPDATE_FAILED")
 }
 
-if(action==="confirm"){
 await refreshBookingsFromBackend()
 setStatusOverrides((prev)=>{
 const next={...prev}
 delete next[booking.id]
 return next
 })
-}else{
-setStatusOverrides((prev)=>( {
-...prev,
-[booking.id]:nextStatus
-}))
-}
 
 }catch(error){
 if(error && error.message==="SALON_SLUG_NOT_FOUND"){
