@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import { useParams, useNavigate } from "react-router-dom"
+import { getMasterBookings } from "../../api/internal"
 
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
@@ -123,24 +124,14 @@ export default function MasterBookingsPage() {
         setBookingsError("")
         setEmpty(false)
 
-        const response = await fetch(
-          API_BASE + "/internal/masters/" + encodeURIComponent(masterSlug) + "/bookings"
-        )
+        const result = await getMasterBookings(masterSlug)
 
-        const text = await response.text()
-        let raw = null
-
-        try{
-          raw = JSON.parse(text)
-        }catch{
-          raw = null
+        if(!result?.ok){
+          const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
+          throw new Error(status ? "MASTER_BOOKINGS_HTTP_" + status : (result?.error || "MASTER_BOOKINGS_LOAD_FAILED"))
         }
 
-        if(!response.ok){
-          throw new Error("MASTER_BOOKINGS_HTTP_" + response.status)
-        }
-
-        const data = normalizeBookingsResponse(raw)
+        const data = normalizeBookingsResponse(result)
 
         if(!cancelled){
           setBookings(data)
