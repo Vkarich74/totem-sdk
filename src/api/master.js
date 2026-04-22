@@ -1,3 +1,5 @@
+import { getAuthAccessToken } from "./internal"
+
 const API = "https://api.totemv.com"
 
 function normalize(res) {
@@ -17,6 +19,19 @@ async function handleResponse(r) {
   }
 
   return j
+}
+
+function buildAuthHeaders(extraHeaders = {}) {
+  const headers = {
+    ...(extraHeaders || {})
+  }
+
+  const token = getAuthAccessToken()
+  if (token && !headers.Authorization) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  return headers
 }
 
 // ======================
@@ -59,7 +74,10 @@ export async function getMasterClients(slug) {
 
 export async function getMasterServices(slug) {
   const r = await fetch(
-    API + "/internal/masters/" + slug + "/services"
+    API + "/internal/masters/" + slug + "/services",
+    {
+      headers: buildAuthHeaders()
+    }
   )
   return handleResponse(r)
 }
@@ -69,7 +87,7 @@ export async function createMasterService(slug, payload) {
     API + "/internal/masters/" + slug + "/services",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     }
   )
@@ -81,7 +99,7 @@ export async function updateMasterService(slug, id, payload) {
     API + "/internal/masters/" + slug + "/services/" + id,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     }
   )
@@ -93,6 +111,7 @@ export async function deleteMasterService(slug, id) {
     API + "/internal/masters/" + slug + "/services/" + id,
     {
       method: "DELETE",
+      headers: buildAuthHeaders()
     }
   )
   return handleResponse(r)
