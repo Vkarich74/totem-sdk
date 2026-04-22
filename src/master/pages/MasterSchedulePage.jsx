@@ -292,6 +292,17 @@ if(dateKey!==todayKey())return dateKey<todayKey()
 return slot<currentSlot()
 }
 
+async function fetchMasterBookingsSnapshot(routeSlug){
+const result = await getMasterBookings(routeSlug)
+
+if(!result?.ok){
+const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
+throw new Error(status ? "MASTER_BOOKINGS_HTTP_" + status : (result?.error || "MASTER_BOOKINGS_LOAD_FAILED"))
+}
+
+return normalizeBookingsResponse(result)
+}
+
 export default function MasterSchedulePage(){
 
 const {
@@ -310,10 +321,24 @@ const [dateKey,setDateKey]=useState(todayKey())
 const [statusOverrides,setStatusOverrides]=useState({})
 const [actionLoading,setActionLoading]=useState({})
 const [clockTick,setClockTick]=useState(0)
+const routeSlug=master?.slug || slug
+
+async function refreshBookingsFromBackend(){
+if(!routeSlug){
+setBookings([])
+setBookingsLoading(false)
+setBookingsError("SLUG_MISSING")
+return []
+}
+
+setBookingsError("")
+const nextBookings = await fetchMasterBookingsSnapshot(routeSlug)
+setBookings(nextBookings)
+return nextBookings
+}
 
 useEffect(()=>{
 let cancelled=false
-const routeSlug=master?.slug || slug
 
 async function loadBookings(){
 if(!routeSlug){
@@ -328,16 +353,10 @@ return
 try{
 setBookingsLoading(true)
 setBookingsError("")
-
-const result = await getMasterBookings(routeSlug)
-
-if(!result?.ok){
-const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
-throw new Error(status ? "MASTER_BOOKINGS_HTTP_" + status : (result?.error || "MASTER_BOOKINGS_LOAD_FAILED"))
-}
+const nextBookings = await fetchMasterBookingsSnapshot(routeSlug)
 
 if(!cancelled){
-setBookings(normalizeBookingsResponse(result))
+setBookings(nextBookings)
 }
 }catch(error){
 console.error("MASTER_SCHEDULE_BOOKINGS_LOAD_FAILED",error)
@@ -432,10 +451,19 @@ if(!response.ok){
 throw new Error("STATUS_UPDATE_FAILED")
 }
 
+if(action==="confirm"){
+await refreshBookingsFromBackend()
+setStatusOverrides((prev)=>{
+const next={...prev}
+delete next[booking.id]
+return next
+})
+}else{
 setStatusOverrides((prev)=>( {
 ...prev,
 [booking.id]:nextStatus
 }))
+}
 
 }catch(error){
 if(error && error.message==="SALON_SLUG_NOT_FOUND"){
