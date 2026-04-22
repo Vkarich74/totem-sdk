@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { getMasterBookings } from "../../api/internal"
 
 import PageSection from "../../cabinet/PageSection"
@@ -85,6 +85,7 @@ function SummaryCard({ label, value, hint }){
 export default function MasterBookingsPage() {
   const { bookingId } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const isMobile = useIsMobile()
 
   const {
@@ -102,8 +103,18 @@ export default function MasterBookingsPage() {
   const [client, setClient] = useState("")
   const [phone, setPhone] = useState("")
   const [serviceId, setServiceId] = useState("1")
+  const [bookingDate, setBookingDate] = useState("")
+  const [bookingTime, setBookingTime] = useState("")
 
   const masterSlug = master?.slug || slug
+  const isCreateMode = bookingId === "new"
+
+  useEffect(() => {
+    if(!isCreateMode) return
+
+    setBookingDate(searchParams.get("date") || "")
+    setBookingTime(searchParams.get("time") || "")
+  }, [isCreateMode, searchParams])
 
   useEffect(()=>{
     let cancelled = false
@@ -211,6 +222,11 @@ export default function MasterBookingsPage() {
   async function createBooking(date, time) {
     if (!masterSlug) return
 
+    if (!date || !time || !client.trim()) {
+      alert("Заполните дату, время и имя клиента")
+      return
+    }
+
     const start = date + "T" + time + ":00+06:00"
 
     try {
@@ -234,6 +250,92 @@ export default function MasterBookingsPage() {
     }
 
     navigate(`/master/${masterSlug}/schedule`)
+  }
+
+  if (isCreateMode) {
+    return (
+      <div style={{ padding: "20px" }}>
+        <button
+          onClick={() => navigate(`/master/${masterSlug}/schedule`)}
+          style={styles.backButton}
+        >
+          ← К календарю
+        </button>
+
+        <PageSection title="Новая запись">
+          <div style={styles.createForm}>
+            <div style={styles.fieldGroup}>
+              <label style={styles.fieldLabel}>Дата</label>
+              <input
+                type="date"
+                value={bookingDate}
+                onChange={(e) => setBookingDate(e.target.value)}
+                style={styles.fieldInput}
+              />
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.fieldLabel}>Время</label>
+              <input
+                type="time"
+                value={bookingTime}
+                onChange={(e) => setBookingTime(e.target.value)}
+                style={styles.fieldInput}
+              />
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.fieldLabel}>Клиент</label>
+              <input
+                type="text"
+                value={client}
+                onChange={(e) => setClient(e.target.value)}
+                placeholder="Имя клиента"
+                style={styles.fieldInput}
+              />
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.fieldLabel}>Телефон</label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Телефон"
+                style={styles.fieldInput}
+              />
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.fieldLabel}>Service ID</label>
+              <input
+                type="number"
+                value={serviceId}
+                onChange={(e) => setServiceId(e.target.value)}
+                min="1"
+                style={styles.fieldInput}
+              />
+            </div>
+
+            <div style={styles.createActions}>
+              <button
+                onClick={() => createBooking(bookingDate, bookingTime)}
+                style={styles.primaryButton}
+              >
+                Создать запись
+              </button>
+
+              <button
+                onClick={() => navigate(`/master/${masterSlug}/schedule`)}
+                style={styles.secondaryButton}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </PageSection>
+      </div>
+    )
   }
 
   if (bookingId) {
@@ -471,6 +573,51 @@ const styles = {
   },
   backButton: {
     marginBottom: "10px"
+  },
+  createForm: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+    maxWidth: "420px"
+  },
+  fieldGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px"
+  },
+  fieldLabel: {
+    fontSize: "13px",
+    color: "#6b7280",
+    fontWeight: 600
+  },
+  fieldInput: {
+    padding: "10px 12px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    fontSize: "14px"
+  },
+  createActions: {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap"
+  },
+  primaryButton: {
+    padding: "10px 14px",
+    borderRadius: "10px",
+    border: "1px solid #111827",
+    background: "#111827",
+    color: "#ffffff",
+    cursor: "pointer",
+    fontWeight: 600
+  },
+  secondaryButton: {
+    padding: "10px 14px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    color: "#111827",
+    cursor: "pointer",
+    fontWeight: 600
   },
   detailStatus: {
     marginBottom: "10px",
