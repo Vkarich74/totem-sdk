@@ -384,6 +384,101 @@ export async function getClients(salonSlug = getSalonSlug()){
   return { ok:true, clients: j.clients || [] };
 }
 
+export async function getSalonMetrics(salonSlug = getSalonSlug()){
+  return getMetrics(salonSlug);
+}
+
+export async function getSalonMasters(salonSlug = getSalonSlug()){
+  return getMasters(salonSlug);
+}
+
+export async function getSalonWalletBalance(salonSlug = getSalonSlug()){
+  const r = await safeInternalJson(`/salons/${salonSlug}/wallet-balance`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_WALLET_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_WALLET_API_NOT_OK", detail:j };
+  return { ok:true, wallet: j.wallet || j.data?.wallet || j.data || j };
+}
+
+export async function getSalonSettlements(salonSlug = getSalonSlug()){
+  const r = await safeInternalJson(`/salons/${salonSlug}/settlements`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_SETTLEMENTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_SETTLEMENTS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    settlements: j.settlements || j.periods || j.items || j.data?.settlements || []
+  };
+}
+
+export async function getSalonPayouts(salonSlug = getSalonSlug()){
+  const r = await safeInternalJson(`/salons/${salonSlug}/payouts`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_PAYOUTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_PAYOUTS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    payouts: j.payouts || j.items || j.data?.payouts || []
+  };
+}
+
+export async function getSalonLedger(salonSlug = getSalonSlug()){
+  const r = await safeInternalJson(`/salons/${salonSlug}/ledger`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_LEDGER_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_LEDGER_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    ledger: j.ledger || j.entries || j.items || j.data?.ledger || []
+  };
+}
+
+export async function getSalonContracts(salonSlug = getSalonSlug()){
+  const r = await safeInternalJson(`/salons/${salonSlug}/contracts`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_CONTRACTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_CONTRACTS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    contracts: j.contracts || j.items || j.data?.contracts || []
+  };
+}
+
+export async function createSalonContract(salonSlug = getSalonSlug(), payload = {}){
+  const r = await safeInternalJson(`/salons/${salonSlug}/contracts`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if(!r.ok) return { ok:false, error:"SALON_CONTRACT_CREATE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_CONTRACT_CREATE_API_NOT_OK", detail:j };
+  return { ok:true, contract: j.contract || j.data || j };
+}
+
+export async function acceptContract(contractId){
+  const r = await safeInternalJson(`/contracts/${contractId}/accept`, { method: "POST" });
+  if(!r.ok) return { ok:false, error:"CONTRACT_ACCEPT_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"CONTRACT_ACCEPT_API_NOT_OK", detail:j };
+  return { ok:true, contract: j.contract || j.data || j };
+}
+
+export async function archiveContract(contractId){
+  const r = await safeInternalJson(`/contracts/${contractId}/archive`, { method: "POST" });
+  if(!r.ok) return { ok:false, error:"CONTRACT_ARCHIVE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"CONTRACT_ARCHIVE_API_NOT_OK", detail:j };
+  return { ok:true, contract: j.contract || j.data || j };
+}
+
+export async function getSalonServices(salonSlug = getSalonSlug()){
+  const r = await safeInternalJson(`/salons/${salonSlug}/services`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_SERVICES_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_SERVICES_API_NOT_OK", detail:j };
+  return { ok:true, services: j.services || j.items || j.data?.services || [] };
+}
+
 /* ===============================
    MASTER API
 ================================ */
@@ -424,6 +519,36 @@ export async function getMasterClients(masterSlug = getMasterSlug()){
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_CLIENTS_API_NOT_OK", detail:j };
   return { ok:true, clients: j.clients || [] };
+}
+
+export async function getMasterServices(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/masters/${masterSlug}/services`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_SERVICES_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_SERVICES_API_NOT_OK", detail:j };
+  return { ok:true, services: j.services || j.items || j.data?.services || [] };
+}
+
+export async function updateMasterService(masterSlug = getMasterSlug(), serviceId, payload = {}){
+  const r = await safeInternalJson(`/masters/${masterSlug}/services/${serviceId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+  if(!r.ok) return { ok:false, error:"MASTER_SERVICE_UPDATE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_SERVICE_UPDATE_API_NOT_OK", detail:j };
+  return { ok:true, service: j.service || j.item || j.data || j };
+}
+
+export async function attachSalonService(salonSlug = getSalonSlug(), payload = {}){
+  const r = await safeInternalJson(`/salons/${salonSlug}/services`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if(!r.ok) return { ok:false, error:"SALON_SERVICE_ATTACH_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_SERVICE_ATTACH_API_NOT_OK", detail:j };
+  return { ok:true, service: j.service || j.item || j.data || j };
 }
 
 export async function getMasterWalletBalance(masterSlug = getMasterSlug()){

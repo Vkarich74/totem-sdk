@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com"
+import { getSalonSettlements } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -186,18 +182,15 @@ export default function SalonSettlementsPage(){
         setLoading(true)
         setError("")
 
-        const response = await fetch(`${API_BASE}/internal/salons/${encodeURIComponent(slug)}/settlements`)
-        const text = await response.text()
+        const result = await getSalonSettlements(slug)
 
         if(cancelled) return
 
-        const data = safeParse(text)
-
-        if(!data || !response.ok){
+        if(!result?.ok){
           throw new Error("SALON_SETTLEMENTS_FETCH_FAILED")
         }
 
-        setSettlements(normalizeSettlements(data))
+        setSettlements(normalizeSettlements({ settlements: result.settlements || [] }))
       }catch(e){
         console.error("SALON_SETTLEMENTS_LOAD_FAILED", e)
 

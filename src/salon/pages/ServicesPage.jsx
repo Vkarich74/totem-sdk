@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { resolveSalonSlug } from "../SalonContext";
+import { attachSalonService, getMasterServices, getSalonMasters, getSalonServices, updateMasterService } from "../../api/internal";
 
 import PageSection from "../../cabinet/PageSection";
 import StatGrid from "../../cabinet/StatGrid";
 import EmptyState from "../../cabinet/EmptyState";
-
-const API_BASE = import.meta.env.VITE_API_BASE;
 
 function buttonStyle(kind = "default", disabled = false) {
   const base = {
@@ -161,13 +160,12 @@ export default function ServicesPage() {
   const [salonMasters, setSalonMasters] = useState([]);
 
   async function fetchSalonMasters() {
-    const response = await fetch(`${API_BASE}/internal/salons/${slug}/masters`);
-    if (!response.ok) {
-      throw new Error(`SALON_MASTERS_LOAD_FAILED_${response.status}`);
+    const result = await getSalonMasters(slug);
+    if (!result?.ok) {
+      const status = Number(result?.detail?.status || result?.detail?.response?.status || 0);
+      throw new Error(status ? `SALON_MASTERS_LOAD_FAILED_${status}` : "SALON_MASTERS_LOAD_FAILED");
     }
-
-    const payload = await response.json();
-    const list = Array.isArray(payload?.masters) ? payload.masters : [];
+    const list = Array.isArray(result?.masters) ? result.masters : [];
     return list.filter((item) => item?.status === "active");
   }
 
@@ -183,17 +181,17 @@ export default function ServicesPage() {
       if (showLoader) setLoading(true);
       setError("");
 
-      const [servicesResponse, activeMasters] = await Promise.all([
-        fetch(`${API_BASE}/internal/salons/${slug}/services`),
+      const [servicesResult, activeMasters] = await Promise.all([
+        getSalonServices(slug),
         fetchSalonMasters()
       ]);
 
-      if (!servicesResponse.ok) {
-        throw new Error(`LOAD_FAILED_${servicesResponse.status}`);
+      if (!servicesResult?.ok) {
+        const status = Number(servicesResult?.detail?.status || servicesResult?.detail?.response?.status || 0);
+        throw new Error(status ? `LOAD_FAILED_${status}` : "LOAD_FAILED");
       }
 
-      const payload = await servicesResponse.json();
-      const normalizedServices = normalizeServicesResponse(payload);
+      const normalizedServices = normalizeServicesResponse(servicesResult);
 
       setServices(normalizedServices);
       setSalonMasters(activeMasters);
@@ -228,13 +226,13 @@ export default function ServicesPage() {
 
       const responses = await Promise.all(
         activeMasters.map(async (currentMaster) => {
-          const response = await fetch(`${API_BASE}/internal/masters/${currentMaster.slug}/services`);
-          if (!response.ok) {
-            throw new Error(`MASTER_SERVICES_LOAD_FAILED_${currentMaster.slug}_${response.status}`);
+          const result = await getMasterServices(currentMaster.slug);
+          if (!result?.ok) {
+            const status = Number(result?.detail?.status || result?.detail?.response?.status || 0);
+            throw new Error(`MASTER_SERVICES_LOAD_FAILED_${currentMaster.slug}_${status || "ERROR"}`);
           }
 
-          const payload = await response.json();
-          const list = normalizeServicesResponse(payload);
+          const list = normalizeServicesResponse(result);
 
           return list.map((item) => ({
             ...item,
@@ -270,13 +268,8 @@ export default function ServicesPage() {
         throw new Error("MASTER_SLUG_MISSING");
       }
 
-      const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(service.master_slug)}/services/${service.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active: !service.active })
-      });
-
-      if (!response.ok) throw new Error("TOGGLE_FAILED");
+      const result = await updateMasterService(encodeURIComponent(service.master_slug), service.id, { active: !service.active });
+      if (!result?.ok) throw new Error("TOGGLE_FAILED");
 
       await loadServices(false);
       setSuccess(service.active ? "Услуга выключена" : "Услуга включена");
@@ -308,13 +301,8 @@ export default function ServicesPage() {
         throw new Error("MASTER_SLUG_MISSING");
       }
 
-      const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(service.master_slug)}/services/${service.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ price })
-      });
-
-      if (!response.ok) throw new Error("UPDATE_PRICE_FAILED");
+      const result = await updateMasterService(encodeURIComponent(service.master_slug), service.id, { price });
+      if (!result?.ok) throw new Error("UPDATE_PRICE_FAILED");
 
       await loadServices(false);
       setSuccess("Цена услуги обновлена");
@@ -346,13 +334,8 @@ export default function ServicesPage() {
         throw new Error("MASTER_SLUG_MISSING");
       }
 
-      const response = await fetch(`${API_BASE}/internal/masters/${encodeURIComponent(service.master_slug)}/services/${service.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ duration_min: durationMin })
-      });
-
-      if (!response.ok) throw new Error("UPDATE_DURATION_FAILED");
+      const result = await updateMasterService(encodeURIComponent(service.master_slug), service.id, { duration_min: durationMin });
+      if (!result?.ok) throw new Error("UPDATE_DURATION_FAILED");
 
       await loadServices(false);
       setSuccess("Длительность услуги обновлена");
@@ -388,23 +371,18 @@ export default function ServicesPage() {
       setError("");
       setSuccess("");
 
-      const response = await fetch(`${API_BASE}/internal/salons/${slug}/services`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          master_id: Number(targetMasterId),
-          service_pk: Number(selected.service_pk),
-          price: Number(selected.price),
-          duration_min: Number(selected.duration_min),
-          active: true
-        })
+      const response = await attachSalonService(slug, {
+        master_id: Number(targetMasterId),
+        service_pk: Number(selected.service_pk),
+        price: Number(selected.price),
+        duration_min: Number(selected.duration_min),
+        active: true
       });
 
-      if (!response.ok) {
+      if (!response?.ok) {
         let message = "Ошибка подключения услуги";
         try {
-          const payload = await response.json();
-          message = payload?.error || message;
+          message = response?.error || response?.detail?.json?.error || message;
         } catch (parseError) {
           console.error("ATTACH_ERROR_PARSE_FAILED", parseError);
         }

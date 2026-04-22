@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug, buildSalonPath } from "../SalonContext"
+import { acceptContract, archiveContract, createSalonContract, getSalonContracts, getSalonMasters } from "../../api/internal"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
@@ -407,17 +408,10 @@ export default function SalonContractsPage() {
 
   async function loadContracts() {
     try {
-      const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`
-      )
+      const result = await getSalonContracts(salonSlug)
 
-      const data = await safeReadJson(res)
-
-      if (Array.isArray(data)) {
-        setContracts(data)
-      }
-      else if (Array.isArray(data.contracts)) {
-        setContracts(data.contracts)
+      if (Array.isArray(result?.contracts)) {
+        setContracts(result.contracts)
       }
       else {
         setContracts([])
@@ -434,17 +428,10 @@ export default function SalonContractsPage() {
 
   async function loadMasters() {
     try {
-      const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/masters`
-      )
+      const result = await getSalonMasters(salonSlug)
 
-      const data = await safeReadJson(res)
-
-      if (Array.isArray(data)) {
-        setMasters(data)
-      }
-      else if (Array.isArray(data.masters)) {
-        setMasters(data.masters)
+      if (Array.isArray(result?.masters)) {
+        setMasters(result.masters)
       }
       else {
         setMasters([])
@@ -826,21 +813,10 @@ export default function SalonContractsPage() {
         payload.effective_from = effectiveFrom
       }
 
-      const res = await fetch(
-        `https://api.totemv.com/internal/salons/${salonSlug}/contracts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        }
-      )
+      const result = await createSalonContract(salonSlug, payload)
 
-      const data = await safeReadJson(res)
-
-      if (!res.ok || !data.ok) {
-        setCreateContractError(data.error || "Не удалось создать контракт")
+      if (!result?.ok) {
+        setCreateContractError(result?.error || result?.detail?.json?.error || "Не удалось создать контракт")
         return
       }
 
@@ -866,17 +842,10 @@ export default function SalonContractsPage() {
     setContractActionLoadingId(contractId)
 
     try {
-      const res = await fetch(
-        `https://api.totemv.com/internal/contracts/${contractId}/accept`,
-        {
-          method: "POST"
-        }
-      )
+      const result = await acceptContract(contractId)
 
-      const data = await safeReadJson(res)
-
-      if (!res.ok || !data.ok) {
-        setContractActionError(data.error || "Не удалось принять контракт")
+      if (!result?.ok) {
+        setContractActionError(result?.error || result?.detail?.json?.error || "Не удалось принять контракт")
         return
       }
 
@@ -901,17 +870,10 @@ export default function SalonContractsPage() {
     setContractActionLoadingId(contractId)
 
     try {
-      const res = await fetch(
-        `https://api.totemv.com/internal/contracts/${contractId}/archive`,
-        {
-          method: "POST"
-        }
-      )
+      const result = await archiveContract(contractId)
 
-      const data = await safeReadJson(res)
-
-      if (!res.ok || !data.ok) {
-        setContractActionError(data.error || "Не удалось архивировать контракт")
+      if (!result?.ok) {
+        setContractActionError(result?.error || result?.detail?.json?.error || "Не удалось архивировать контракт")
         return
       }
 

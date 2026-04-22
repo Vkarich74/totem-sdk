@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { resolveSalonSlug } from "../SalonContext";
 import PageSection from "../../cabinet/PageSection";
-
-const API_BASE = import.meta.env.VITE_API_BASE;
+import { getClients } from "../../api/internal";
 
 export default function ClientsPage(){
 
@@ -24,14 +23,10 @@ try{
 setLoading(true);
 setError(null);
 
-const res = await fetch(
-`${API_BASE}/internal/salons/${salonSlug}/clients`
-);
+const result = await getClients(salonSlug);
 
-const data = await res.json();
-
-if(data.ok){
-setClients(data.clients || []);
+if(result?.ok){
+setClients(result.clients || []);
 }else{
 setError("Ошибка загрузки клиентов");
 }

@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com"
+import { getSalonLedger } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -195,18 +191,15 @@ export default function SalonTransactionsPage(){
         setLoading(true)
         setError("")
 
-        const response = await fetch(`${API_BASE}/internal/salons/${encodeURIComponent(slug)}/ledger`)
-        const text = await response.text()
+        const result = await getSalonLedger(slug)
 
         if(cancelled) return
 
-        const data = safeParse(text)
-
-        if(!data || !response.ok){
+        if(!result?.ok){
           throw new Error("SALON_LEDGER_FETCH_FAILED")
         }
 
-        setTransactions(normalizeLedger(data))
+        setTransactions(normalizeLedger({ ledger: result.ledger || [] }))
       }catch(e){
         console.error("SALON_TRANSACTIONS_LOAD_FAILED", e)
 

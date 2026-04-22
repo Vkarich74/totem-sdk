@@ -4,26 +4,7 @@ import { resolveSalonSlug } from "../SalonContext"
 import { generateTimeSlots } from "../../calendar/calendarEngine"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
-
-const API_BASE = import.meta.env.VITE_API_BASE || "https://api.totemv.com"
-
-
-async function fetchJson(url, options){
-  const response = await fetch(url, options)
-
-  let data = null
-  try{
-    data = await response.json()
-  }catch{
-    data = null
-  }
-
-  if(!response.ok){
-    throw new Error(data?.error || `HTTP_${response.status}`)
-  }
-
-  return data
-}
+import { createBooking as createInternalBooking, getBookings, getMasters, moveBooking as moveInternalBooking } from "../../api/internal"
 
 
 function useIsMobile(){
@@ -178,8 +159,8 @@ export default function CalendarPage(){
       setError("")
 
       const [resBookings, resMasters] = await Promise.all([
-        fetchJson(`${API_BASE}/internal/salons/${salonSlug}/bookings`),
-        fetchJson(`${API_BASE}/internal/salons/${salonSlug}/masters`)
+        getBookings(salonSlug),
+        getMasters(salonSlug)
       ])
 
       if(!resBookings?.ok){
@@ -252,18 +233,15 @@ export default function CalendarPage(){
 
     try{
       setActionLoading(`${master?.id || master?.name}-${time}`)
-      await fetchJson(`${API_BASE}/internal/bookings/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          salon_slug: salonSlug,
-          master_name: master.name,
-          client_name: client,
-          start_at: `${selectedDay}T${time}:00`
-        })
+      const result = await createInternalBooking({
+        salon_slug: salonSlug,
+        master_name: master.name,
+        client_name: client,
+        start_at: `${selectedDay}T${time}:00`
       })
+      if(!result?.ok){
+        throw new Error(result?.error || "CREATE_BOOKING_FAILED")
+      }
       await load()
     }catch(actionError){
       console.error("SALON CALENDAR CREATE BOOKING ERROR", actionError)
@@ -280,15 +258,10 @@ export default function CalendarPage(){
 
     try{
       setActionLoading(String(booking.id))
-      await fetchJson(`${API_BASE}/internal/bookings/${booking.id}/move`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          start_at: `${selectedDay}T${newTime}:00`
-        })
-      })
+      const result = await moveInternalBooking(booking.id, `${selectedDay}T${newTime}:00`)
+      if(!result?.ok){
+        throw new Error(result?.error || "MOVE_BOOKING_FAILED")
+      }
       await load()
     }catch(actionError){
       console.error("SALON CALENDAR MOVE BOOKING ERROR", actionError)

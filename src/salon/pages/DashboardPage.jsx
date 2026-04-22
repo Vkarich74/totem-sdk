@@ -2,11 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com"
+import { getSalonMetrics } from "../../api/internal"
 
 function money(value){
   return new Intl.NumberFormat("ru-RU").format(Number(value) || 0) + " сом"
@@ -180,24 +176,13 @@ export default function DashboardPage(){
         setMetricsError("")
         setEmpty(false)
 
-        const response = await fetch(
-          API_BASE + "/internal/salons/" + encodeURIComponent(slug) + "/metrics"
-        )
-
-        const text = await response.text()
-        let raw = null
-
-        try{
-          raw = JSON.parse(text)
-        }catch{
-          raw = null
+        const result = await getSalonMetrics(slug)
+        if(!result?.ok){
+          const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
+          throw new Error(status ? "SALON_METRICS_HTTP_" + status : (result?.error || "SALON_METRICS_LOAD_FAILED"))
         }
 
-        if(!response.ok){
-          throw new Error("SALON_METRICS_HTTP_" + response.status)
-        }
-
-        const data = normalizeMetricsResponse(raw)
+        const data = normalizeMetricsResponse(result)
 
         if(!cancelled){
           setMetrics(data)

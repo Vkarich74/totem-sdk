@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com"
+import { getSalonContracts, getSalonMetrics, getSalonPayouts, getSalonSettlements, getSalonWalletBalance } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -227,45 +223,26 @@ export default function SalonFinancePage(){
         setError("")
 
         const [
-          metricsRes,
-          walletRes,
-          contractsRes,
-          settlementsRes,
-          payoutsRes
-        ] = await Promise.allSettled([
-          fetch(`${API_BASE}/internal/salons/${slug}/metrics`),
-          fetch(`${API_BASE}/internal/salons/${slug}/wallet-balance`),
-          fetch(`${API_BASE}/internal/salons/${slug}/contracts`),
-          fetch(`${API_BASE}/internal/salons/${slug}/settlements`),
-          fetch(`${API_BASE}/internal/salons/${slug}/payouts`)
-        ])
-
-        async function parseResult(result, fallback){
-          if(result.status !== "fulfilled") return fallback
-          const response = result.value
-          if(!response.ok) return fallback
-          try{
-            return await response.json()
-          }catch{
-            return fallback
-          }
-        }
-
-        const [metricsRaw, walletRaw, contractsRaw, settlementsRaw, payoutsRaw] = await Promise.all([
-          parseResult(metricsRes, {}),
-          parseResult(walletRes, {}),
-          parseResult(contractsRes, {}),
-          parseResult(settlementsRes, {}),
-          parseResult(payoutsRes, {})
+          metricsRaw,
+          walletRaw,
+          contractsRaw,
+          settlementsRaw,
+          payoutsRaw
+        ] = await Promise.all([
+          getSalonMetrics(slug),
+          getSalonWalletBalance(slug),
+          getSalonContracts(slug),
+          getSalonSettlements(slug),
+          getSalonPayouts(slug)
         ])
 
         if(cancelled) return
 
-        setMetrics(normalizeMetrics(metricsRaw))
-        setWalletBalance(normalizeWallet(walletRaw))
-        setContracts(normalizeList(contractsRaw, ["contracts", "items"]))
-        setSettlements(normalizeList(settlementsRaw, ["settlements", "periods", "items"]))
-        setPayouts(normalizeList(payoutsRaw, ["payouts", "items"]))
+        setMetrics(normalizeMetrics(metricsRaw?.ok ? metricsRaw : {}))
+        setWalletBalance(normalizeWallet(walletRaw?.ok ? walletRaw.wallet : {}))
+        setContracts(normalizeList(contractsRaw?.ok ? { contracts: contractsRaw.contracts } : {}, ["contracts", "items"]))
+        setSettlements(normalizeList(settlementsRaw?.ok ? { settlements: settlementsRaw.settlements } : {}, ["settlements", "periods", "items"]))
+        setPayouts(normalizeList(payoutsRaw?.ok ? { payouts: payoutsRaw.payouts } : {}, ["payouts", "items"]))
       }catch(loadError){
         console.error("SALON FINANCE LOAD ERROR", loadError)
 
