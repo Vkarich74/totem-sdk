@@ -233,13 +233,16 @@ export default function ServicesPage() {
         return;
       }
 
-      const responses = await Promise.allSettled(
-        activeMasters.map(async (currentMaster) => {
-          const masterSlug = resolveMasterSlug(currentMaster);
-          if (!masterSlug) {
-            return [];
-          }
+      const requestableMasters = activeMasters.filter((currentMaster) => Boolean(resolveMasterSlug(currentMaster)));
 
+      if (requestableMasters.length === 0) {
+        setMasterServices([]);
+        return;
+      }
+
+      const responses = await Promise.allSettled(
+        requestableMasters.map(async (currentMaster) => {
+          const masterSlug = resolveMasterSlug(currentMaster);
           const result = await getMasterServices(masterSlug);
           if (!result?.ok) {
             const status = Number(result?.detail?.status || result?.detail?.response?.status || 0);
@@ -267,7 +270,7 @@ export default function ServicesPage() {
         console.error("LOAD_MASTER_SERVICES_PARTIAL_FAILED", rejected);
       }
 
-      if (fulfilled.length === 0 && activeMasters.length > 0 && rejected.length > 0) {
+      if (fulfilled.length === 0 && requestableMasters.length > 0 && rejected.length === requestableMasters.length) {
         throw new Error("MASTER_SERVICES_LOAD_FAILED");
       }
 
