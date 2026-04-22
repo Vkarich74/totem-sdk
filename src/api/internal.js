@@ -372,8 +372,9 @@ export async function getMasters(salonSlug = getSalonSlug()){
   const r = await safeInternalJson(`/salons/${salonSlug}/masters`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTERS_FETCH_FAILED", detail:r };
   const j = r.json;
-  if(!j || !j.ok) return { ok:false, error:"MASTERS_API_NOT_OK", detail:j };
-  return { ok:true, masters: j.masters || [] };
+  if(Array.isArray(j)) return { ok:true, masters: j };
+  if(!j || j.ok === false) return { ok:false, error:"MASTERS_API_NOT_OK", detail:j };
+  return { ok:true, masters: j.masters || j.items || j.data?.masters || [] };
 }
 
 export async function getClients(salonSlug = getSalonSlug()){
@@ -475,8 +476,40 @@ export async function getSalonServices(salonSlug = getSalonSlug()){
   const r = await safeInternalJson(`/salons/${salonSlug}/services`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"SALON_SERVICES_FETCH_FAILED", detail:r };
   const j = r.json;
-  if(!j || !j.ok) return { ok:false, error:"SALON_SERVICES_API_NOT_OK", detail:j };
+  if(Array.isArray(j)) return { ok:true, services: j };
+  if(!j || j.ok === false) return { ok:false, error:"SALON_SERVICES_API_NOT_OK", detail:j };
   return { ok:true, services: j.services || j.items || j.data?.services || [] };
+}
+
+export async function terminateSalonMaster(salonSlug = getSalonSlug(), masterId){
+  const r = await safeInternalJson(`/salons/${salonSlug}/masters/${masterId}/terminate`, {
+    method: "POST"
+  });
+  if(!r.ok) return { ok:false, error:"SALON_MASTER_TERMINATE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || j.ok === false) return { ok:false, error:"SALON_MASTER_TERMINATE_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
+export async function activateSalonMaster(salonSlug = getSalonSlug(), masterId){
+  const r = await safeInternalJson(`/salons/${salonSlug}/masters/${masterId}/activate`, {
+    method: "POST"
+  });
+  if(!r.ok) return { ok:false, error:"SALON_MASTER_ACTIVATE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || j.ok === false) return { ok:false, error:"SALON_MASTER_ACTIVATE_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
+export async function provisionMaster(payload = {}){
+  const r = await safeInternalJson(`/provision/masters`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if(!r.ok) return { ok:false, error:"PROVISION_MASTER_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || j.ok === false) return { ok:false, error:"PROVISION_MASTER_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
 }
 
 /* ===============================
@@ -525,7 +558,8 @@ export async function getMasterServices(masterSlug = getMasterSlug()){
   const r = await safeInternalJson(`/masters/${masterSlug}/services`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTER_SERVICES_FETCH_FAILED", detail:r };
   const j = r.json;
-  if(!j || !j.ok) return { ok:false, error:"MASTER_SERVICES_API_NOT_OK", detail:j };
+  if(Array.isArray(j)) return { ok:true, services: j };
+  if(!j || j.ok === false) return { ok:false, error:"MASTER_SERVICES_API_NOT_OK", detail:j };
   return { ok:true, services: j.services || j.items || j.data?.services || [] };
 }
 

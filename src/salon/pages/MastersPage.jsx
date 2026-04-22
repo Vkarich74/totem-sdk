@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { buildSalonPath, resolveSalonSlug } from "../SalonContext";
+import { activateSalonMaster, getSalonMasters, provisionMaster, terminateSalonMaster } from "../../api/internal";
 
 import PageSection from "../../cabinet/PageSection";
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com";
 
 function statusLabel(status) {
   if (status === "active") return "Активен";
@@ -308,27 +304,13 @@ export default function MastersPage() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(`${API_BASE}/internal/salons/${encodeURIComponent(slug)}/masters`);
-      const text = await response.text();
-
-      let data = null;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
+      const result = await getSalonMasters(slug);
+      if (!result?.ok) {
+        const status = Number(result?.detail?.status || result?.detail?.response?.status || 0);
+        throw new Error(status ? `SALON_MASTERS_HTTP_${status}` : (result?.error || "LOAD_MASTERS_FAILED"));
       }
 
-      if (!response.ok) {
-        throw new Error(data?.error || `SALON_MASTERS_HTTP_${response.status}`);
-      }
-
-      if (Array.isArray(data)) {
-        setMasters(data);
-      } else if (Array.isArray(data?.masters)) {
-        setMasters(data.masters);
-      } else {
-        setMasters([]);
-      }
+      setMasters(Array.isArray(result?.masters) ? result.masters : []);
     } catch (loadError) {
       console.error("LOAD_MASTERS_ERROR", loadError);
       setMasters([]);
@@ -352,15 +334,9 @@ export default function MastersPage() {
     try {
       setProcessingId(masterId);
 
-      const response = await fetch(
-        `${API_BASE}/internal/salons/${encodeURIComponent(slug)}/masters/${masterId}/terminate`,
-        { method: "POST" }
-      );
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || !data?.ok) {
-        alert(data?.error || "Ошибка при прекращении сотрудничества");
+      const result = await terminateSalonMaster(slug, masterId);
+      if (!result?.ok) {
+        alert(result?.error || result?.detail?.json?.error || "Ошибка при прекращении сотрудничества");
         return;
       }
 
@@ -377,15 +353,9 @@ export default function MastersPage() {
     try {
       setProcessingId(id);
 
-      const response = await fetch(
-        `${API_BASE}/internal/salons/${encodeURIComponent(slug)}/masters/${id}/activate`,
-        { method: "POST" }
-      );
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || data?.ok === false) {
-        alert(data?.error || "Ошибка активации мастера");
+      const result = await activateSalonMaster(slug, id);
+      if (!result?.ok) {
+        alert(result?.error || result?.detail?.json?.error || "Ошибка активации мастера");
         return;
       }
 
@@ -406,19 +376,13 @@ export default function MastersPage() {
     if (!email) return;
 
     try {
-      const response = await fetch(`${API_BASE}/internal/provision/masters`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          name
-        })
+      const result = await provisionMaster({
+        email,
+        name
       });
 
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || data?.ok === false) {
-        alert(data?.error || "Ошибка создания мастера");
+      if (!result?.ok) {
+        alert(result?.error || result?.detail?.json?.error || "Ошибка создания мастера");
         return;
       }
 
