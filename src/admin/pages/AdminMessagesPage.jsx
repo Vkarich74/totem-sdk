@@ -67,6 +67,53 @@ export default function AdminMessagesPage() {
     }
   }, [])
 
+  async function loadMessagesNow() {
+    setError("")
+
+    const token = getAuthToken()
+    const response = await fetch(`${API_BASE}/internal/admin/messages`, {
+      headers: token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : undefined,
+    })
+
+    const payload = await response.json()
+
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error || `HTTP_${response.status}`)
+    }
+
+    const list = Array.isArray(payload?.data?.items) ? payload.data.items : []
+    setItems(list)
+    setLoading(false)
+  }
+
+  async function handleRetry(id) {
+    try {
+      const token = getAuthToken()
+      const response = await fetch(`${API_BASE}/internal/admin/messages/${id}/retry`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok || payload?.ok === false) {
+        throw new Error(payload?.error || `HTTP_${response.status}`)
+      }
+
+      await loadMessagesNow()
+    } catch (e) {
+      setError(e?.message || "RETRY_FAILED")
+      setLoading(false)
+    }
+  }
+
   if (loading) {
     return <div style={{ padding: 20 }}>Загрузка...</div>
   }
@@ -96,6 +143,13 @@ export default function AdminMessagesPage() {
               <div><strong>channel:</strong> {item.channel || "—"}</div>
               <div><strong>recipient_type:</strong> {item.recipient_type || "—"}</div>
               <div><strong>status:</strong> {item.status || "—"}</div>
+              <button
+                type="button"
+                onClick={() => handleRetry(item.id)}
+                style={{ marginTop: 8 }}
+              >
+                Retry
+              </button>
             </div>
           ))}
         </div>
