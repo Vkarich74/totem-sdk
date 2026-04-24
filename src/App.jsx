@@ -393,39 +393,32 @@ function CabinetRouter() {
 }
 
 function AdminRouter() {
-  const hash = window.location.hash || "";
+  const hashParts = getHashParts();
   const pathParts = getPathParts();
-  const pathnameRoute = !hash && pathParts[0] === "admin" ? pathParts[1] : "";
+  const adminParts = hashParts[0] === "admin" ? hashParts : pathParts;
+  const adminRoute = adminParts[0] === "admin" ? adminParts[1] || "" : "";
 
-  if (pathnameRoute === "") {
+  if (adminRoute === "") {
     return <AdminDashboardPage />;
   }
 
-  if (pathnameRoute === "login") {
+  if (adminRoute === "login") {
     return <AdminLoginPage />;
   }
 
-  if (pathnameRoute === "messages") {
+  if (adminRoute === "messages") {
     return <AdminMessagesPage />;
   }
 
-  if (pathnameRoute === "leads") {
+  if (adminRoute === "leads") {
     return <AdminLeadsPage />;
   }
 
-  if (pathnameRoute === "cases") {
+  if (adminRoute === "cases") {
     return <AdminCasesPage />;
   }
 
-  return (
-    <Routes>
-      <Route path="admin" element={<AdminDashboardPage />} />
-      <Route path="admin/login" element={<AdminLoginPage />} />
-      <Route path="admin/leads" element={<AdminLeadsPage />} />
-      <Route path="admin/cases" element={<AdminCasesPage />} />
-      <Route path="admin/messages" element={<AdminMessagesPage />} />
-    </Routes>
-  );
+  return <AdminDashboardPage />;
 }
 
 export default function App() {
