@@ -105,7 +105,8 @@ const MASTER_STATIC_SEGMENTS = new Set([
 function getHashParts() {
   const hash = window.location.hash || "";
   const clean = hash.replace(/^#\/?/, "");
-  return clean.split("/").filter(Boolean);
+  const path = clean.split("?")[0];
+  return path.split("/").filter(Boolean);
 }
 
 function getPathParts() {
