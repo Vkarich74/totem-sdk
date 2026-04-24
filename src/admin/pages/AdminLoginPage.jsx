@@ -2,6 +2,14 @@ import { useState } from "react"
 
 const API_BASE = (window.TOTEM_API_BASE || "https://api.totemv.com").replace(/\/$/, "")
 
+function getReturnTo(){
+  const hash = window.location.hash || ""
+  const query = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : window.location.search.slice(1)
+  const value = new URLSearchParams(query).get("returnTo") || ""
+
+  return value.trim()
+}
+
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -38,7 +46,8 @@ export default function AdminLoginPage() {
       }
 
       window.localStorage.setItem("TOTEM_AUTH_TOKEN", token)
-      window.location.assign("#/admin/messages")
+      const returnTo = getReturnTo()
+      window.location.assign(returnTo ? `#${returnTo}` : "#/admin/messages")
     } catch (err) {
       setError(err?.message || "LOGIN_FAILED")
     } finally {

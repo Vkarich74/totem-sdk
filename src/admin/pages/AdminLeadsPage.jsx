@@ -10,6 +10,16 @@ function getAuthToken(){
   }
 }
 
+function AdminNavigation(){
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <a href="#/admin/messages">Сообщения</a>
+      <span> | </span>
+      <a href="#/admin/leads">Лиды</a>
+    </div>
+  )
+}
+
 export default function AdminLeadsPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -75,7 +85,13 @@ export default function AdminLeadsPage() {
 
   if (error) {
     if (error === "NO_AUTH" || error === "HTTP_401" || error === "HTTP_403") {
-      return <div style={{ padding: 20 }}>Требуется вход администратора</div>
+      return (
+        <div style={{ padding: 20 }}>
+          <AdminNavigation />
+          <div>Требуется вход администратора</div>
+          <a href="#/admin/login?returnTo=/admin/leads">Войти как администратор</a>
+        </div>
+      )
     }
 
     return <div style={{ padding: 20 }}>Ошибка: {error}</div>
@@ -83,6 +99,7 @@ export default function AdminLeadsPage() {
 
   return (
     <div style={{ padding: 20 }}>
+      <AdminNavigation />
       <h1 style={{ margin: "0 0 16px" }}>Лиды</h1>
 
       {items.length === 0 ? (
