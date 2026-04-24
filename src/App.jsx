@@ -121,6 +121,14 @@ function isAdminRoute() {
   return hash.startsWith("#/admin") || pathname.startsWith("/admin");
 }
 
+function isAdminLoginRoute() {
+  const hashParts = getHashParts();
+  const pathParts = getPathParts();
+  const adminParts = hashParts[0] === "admin" ? hashParts : pathParts;
+
+  return adminParts[0] === "admin" && adminParts[1] === "login";
+}
+
 function getStoredSalonSlug() {
   return (
     window.SALON_SLUG ||
@@ -301,6 +309,161 @@ function AuthBootstrapGate({ children }){
   return children;
 }
 
+function AdminAuthGate({ children }) {
+  const [state, setState] = useState({
+    loading: true,
+    status: "loading",
+    error: "",
+    retryKey: 0,
+  });
+
+  function retry() {
+    setState({
+      loading: true,
+      status: "loading",
+      error: "",
+      retryKey: state.retryKey + 1,
+    });
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    async function run() {
+      const token = String(window.localStorage.getItem("TOTEM_AUTH_TOKEN") || "").trim();
+
+      if (!token) {
+        if (active) {
+          setState((current) => ({
+            ...current,
+            loading: false,
+            status: "login",
+            error: "",
+          }));
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch("https://api.totemv.com/internal/admin/auth/session", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const payload = await response.json().catch(() => null);
+
+        if (!active) return;
+
+        if (response.status === 401) {
+          window.localStorage.removeItem("TOTEM_AUTH_TOKEN");
+          setState((current) => ({
+            ...current,
+            loading: false,
+            status: "login",
+            error: "",
+          }));
+          return;
+        }
+
+        if (response.status === 403) {
+          window.localStorage.removeItem("TOTEM_AUTH_TOKEN");
+          setState((current) => ({
+            ...current,
+            loading: false,
+            status: "forbidden",
+            error: "FORBIDDEN",
+          }));
+          return;
+        }
+
+        if (
+          response.ok &&
+          payload?.ok === true &&
+          payload?.authenticated === true &&
+          String(payload?.auth?.role || "") === "admin"
+        ) {
+          setState((current) => ({
+            ...current,
+            loading: false,
+            status: "authenticated",
+            error: "",
+          }));
+          return;
+        }
+
+        setState((current) => ({
+          ...current,
+          loading: false,
+          status: "error",
+          error: payload?.error || `HTTP_${response.status}`,
+        }));
+      } catch (error) {
+        if (active) {
+          setState((current) => ({
+            ...current,
+            loading: false,
+            status: "error",
+            error: error?.message || "ADMIN_SESSION_CHECK_FAILED",
+          }));
+        }
+      }
+    }
+
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [state.retryKey]);
+
+  if (state.loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f9fafb",
+          color: "#111827",
+          font: "16px/1.5 Arial, sans-serif"
+        }}
+      >
+        Проверка admin session…
+      </div>
+    );
+  }
+
+  if (state.status === "login") {
+    return <AdminLoginPage />;
+  }
+
+  if (state.status === "forbidden") {
+    return (
+      <div style={{ padding: 24 }}>
+        <h1>Доступ запрещён</h1>
+        <p>Требуется admin session.</p>
+      </div>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <div style={{ padding: 24 }}>
+        <h1>Ошибка проверки admin session</h1>
+        <p>{state.error || "ADMIN_SESSION_CHECK_FAILED"}</p>
+        <button type="button" onClick={retry}>
+          Повторить
+        </button>
+      </div>
+    );
+  }
+
+  return children;
+}
+
 function CabinetRouter() {
   const slug = getSlugFromPath();
   const publicType = getPublicPage();
@@ -427,7 +590,13 @@ export default function App() {
     return (
       <ErrorBoundary>
         <HashRouter>
-          <AdminRouter />
+          {isAdminLoginRoute() ? (
+            <AdminRouter />
+          ) : (
+            <AdminAuthGate>
+              <AdminRouter />
+            </AdminAuthGate>
+          )}
         </HashRouter>
       </ErrorBoundary>
     );
