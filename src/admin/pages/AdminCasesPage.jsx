@@ -24,6 +24,13 @@ function AdminNavigation(){
   )
 }
 
+function getStatusForAction(action){
+  if (action === "approve") return "approved"
+  if (action === "reject") return "rejected"
+  if (action === "close") return "closed"
+  return ""
+}
+
 export default function AdminCasesPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -134,6 +141,22 @@ export default function AdminCasesPage() {
 
       if (!response.ok || payload?.ok === false) {
         throw new Error(payload?.error || `HTTP_${response.status}`)
+      }
+
+      const status = getStatusForAction(action)
+      const statusResponse = await fetch(`${API_BASE}/internal/admin/moderation/${id}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      })
+
+      const statusPayload = await statusResponse.json()
+
+      if (!statusResponse.ok || statusPayload?.ok === false) {
+        throw new Error(statusPayload?.error || `HTTP_${statusResponse.status}`)
       }
 
       await loadCasesNow()
