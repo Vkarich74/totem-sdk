@@ -179,8 +179,6 @@ export default function AdminMessagesPage() {
   }
 
   async function handleRetry(id) {
-    console.log("RETRY_START", id)
-
     try {
       const token = getAuthToken()
       const response = await fetch(`${API_BASE}/internal/admin/messages/${id}/retry`, {
@@ -287,7 +285,6 @@ export default function AdminMessagesPage() {
                   type="button"
                   disabled={false}
                   onClick={() => {
-                    console.log("RETRY_CLICK", item.id)
                     handleRetry(item.id)
                   }}
                   style={{ cursor: "pointer" }}
