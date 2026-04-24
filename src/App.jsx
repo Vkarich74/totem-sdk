@@ -387,10 +387,6 @@ function CabinetRouter() {
         <Route path="settings" element={<MasterSettingsPage />} />
       </Route>
 
-      <Route path="admin/login" element={<AdminLoginPage />} />
-      <Route path="admin/leads" element={<AdminLeadsPage />} />
-      <Route path="admin/cases" element={<AdminCasesPage />} />
-      <Route path="admin/messages" element={<AdminMessagesPage />} />
     </Routes>
   );
 }
