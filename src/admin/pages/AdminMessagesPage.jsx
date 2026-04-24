@@ -10,6 +10,46 @@ function getAuthToken(){
   }
 }
 
+function getStatusStyle(status){
+  const base = {
+    display: "inline-block",
+    padding: "2px 8px",
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 600,
+  }
+
+  if (status === "sent") {
+    return {
+      ...base,
+      background: "#dcfce7",
+      color: "#166534",
+    }
+  }
+
+  if (status === "failed") {
+    return {
+      ...base,
+      background: "#fee2e2",
+      color: "#991b1b",
+    }
+  }
+
+  if (status === "pending") {
+    return {
+      ...base,
+      background: "#fef3c7",
+      color: "#92400e",
+    }
+  }
+
+  return {
+    ...base,
+    background: "#f3f4f6",
+    color: "#374151",
+  }
+}
+
 export default function AdminMessagesPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -181,7 +221,10 @@ export default function AdminMessagesPage() {
               <div><strong>id:</strong> {item.id || "—"}</div>
               <div><strong>channel:</strong> {item.channel || "—"}</div>
               <div><strong>recipient_type:</strong> {item.recipient_type || "—"}</div>
-              <div><strong>status:</strong> {item.status || "—"}</div>
+              <div>
+                <strong>status:</strong>{" "}
+                <span style={getStatusStyle(item.status)}>{item.status || "—"}</span>
+              </div>
               <button
                 type="button"
                 disabled={false}
