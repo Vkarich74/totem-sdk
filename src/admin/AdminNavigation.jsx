@@ -1,18 +1,32 @@
 export default function AdminNavigation(){
+  function navigate(hash){
+    window.location.hash = hash;
+    window.location.reload();
+  }
+
   function handleLogout(){
     localStorage.removeItem("TOTEM_AUTH_TOKEN");
-    window.location.assign("#/admin/login");
+    window.location.hash = "#/admin/login";
+    window.location.reload();
   }
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <a href="#/admin/messages">Сообщения</a>
+      <button type="button" onClick={() => navigate("#/admin/messages")}>
+        Сообщения
+      </button>
       <span> | </span>
-      <a href="#/admin/leads">Лиды</a>
+      <button type="button" onClick={() => navigate("#/admin/leads")}>
+        Лиды
+      </button>
       <span> | </span>
-      <a href="#/admin/cases">Кейсы</a>
+      <button type="button" onClick={() => navigate("#/admin/cases")}>
+        Кейсы
+      </button>
       <span> | </span>
-      <a href="#/admin/login">Логин</a>
+      <button type="button" onClick={() => navigate("#/admin/login")}>
+        Логин
+      </button>
       <span> | </span>
       <button type="button" onClick={handleLogout}>
         Выход
