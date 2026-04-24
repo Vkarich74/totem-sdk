@@ -112,6 +112,13 @@ function getPathParts() {
   return path.split("/").filter(Boolean);
 }
 
+function isAdminRoute() {
+  const hash = window.location.hash || "";
+  const pathname = window.location.pathname || "";
+
+  return hash.startsWith("#/admin") || pathname.startsWith("/admin");
+}
+
 function getStoredSalonSlug() {
   return (
     window.SALON_SLUG ||
@@ -388,7 +395,48 @@ function CabinetRouter() {
   );
 }
 
+function AdminRouter() {
+  const hash = window.location.hash || "";
+  const pathParts = getPathParts();
+  const pathnameRoute = !hash && pathParts[0] === "admin" ? pathParts[1] : "";
+
+  if (pathnameRoute === "login") {
+    return <AdminLoginPage />;
+  }
+
+  if (pathnameRoute === "messages") {
+    return <AdminMessagesPage />;
+  }
+
+  if (pathnameRoute === "leads") {
+    return <AdminLeadsPage />;
+  }
+
+  if (pathnameRoute === "cases") {
+    return <AdminCasesPage />;
+  }
+
+  return (
+    <Routes>
+      <Route path="admin/login" element={<AdminLoginPage />} />
+      <Route path="admin/leads" element={<AdminLeadsPage />} />
+      <Route path="admin/cases" element={<AdminCasesPage />} />
+      <Route path="admin/messages" element={<AdminMessagesPage />} />
+    </Routes>
+  );
+}
+
 export default function App() {
+  if (isAdminRoute()) {
+    return (
+      <ErrorBoundary>
+        <HashRouter>
+          <AdminRouter />
+        </HashRouter>
+      </ErrorBoundary>
+    );
+  }
+
   const publicRoute = getPublicRouteFromPathname();
 
   return (
