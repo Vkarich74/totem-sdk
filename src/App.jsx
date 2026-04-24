@@ -129,6 +129,20 @@ function isAdminLoginRoute() {
   return adminParts[0] === "admin" && adminParts[1] === "login";
 }
 
+function getCurrentAdminReturnTo() {
+  const hash = window.location.hash || "";
+  if (hash.startsWith("#/admin")) {
+    return hash.replace(/^#/, "").split("?")[0] || "/admin";
+  }
+
+  const pathname = window.location.pathname || "";
+  if (pathname.startsWith("/admin")) {
+    return pathname.split("?")[0] || "/admin";
+  }
+
+  return "/admin";
+}
+
 function getStoredSalonSlug() {
   return (
     window.SALON_SLUG ||
@@ -417,6 +431,19 @@ function AdminAuthGate({ children }) {
       active = false;
     };
   }, [state.retryKey]);
+
+  useEffect(() => {
+    if (state.status !== "login" || isAdminLoginRoute()) {
+      return;
+    }
+
+    const returnTo = getCurrentAdminReturnTo();
+    const targetHash = `#/admin/login?returnTo=${encodeURIComponent(returnTo)}`;
+
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
+    }
+  }, [state.status]);
 
   if (state.loading) {
     return (
