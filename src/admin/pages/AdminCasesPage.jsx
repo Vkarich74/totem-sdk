@@ -33,6 +33,7 @@ function getStatusForAction(action){
 
 export default function AdminCasesPage() {
   const [items, setItems] = useState([])
+  const [auditById, setAuditById] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -165,6 +166,41 @@ export default function AdminCasesPage() {
     }
   }
 
+  async function handleAudit(id) {
+    try {
+      setError("")
+
+      const token = getAuthToken()
+      if (!token) {
+        setItems([])
+        setError("NO_AUTH")
+        return
+      }
+
+      const response = await fetch(`${API_BASE}/internal/admin/moderation/${id}/audit`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok || payload?.ok === false) {
+        throw new Error(payload?.error || `HTTP_${response.status}`)
+      }
+
+      const auditItems = Array.isArray(payload?.data?.items) ? payload.data.items : []
+
+      setAuditById((current) => ({
+        ...current,
+        [id]: auditItems,
+      }))
+    } catch (e) {
+      setError(e?.message || "AUDIT_LOAD_FAILED")
+    }
+  }
+
   if (loading) {
     return <div style={{ padding: 20 }}>Загрузка...</div>
   }
@@ -213,7 +249,33 @@ export default function AdminCasesPage() {
                 <button type="button" onClick={() => handleAction(item.id, "close")}>
                   Close
                 </button>
+                <button type="button" onClick={() => handleAudit(item.id)}>
+                  Audit
+                </button>
               </div>
+              {Array.isArray(auditById[item.id]) ? (
+                <div style={{ marginTop: 8 }}>
+                  {auditById[item.id].length === 0 ? (
+                    <div>Audit пустой</div>
+                  ) : (
+                    <div style={{ display: "grid", gap: 6 }}>
+                      {auditById[item.id].map((auditItem, index) => (
+                        <div key={index}>
+                          <span>{auditItem.type || auditItem.action || "-"}</span>
+                          <span> | </span>
+                          <span>{auditItem.value || auditItem.status || "-"}</span>
+                          {auditItem.created_at ? (
+                            <>
+                              <span> | </span>
+                              <span>{auditItem.created_at}</span>
+                            </>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
