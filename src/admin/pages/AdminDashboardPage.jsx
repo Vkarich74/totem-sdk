@@ -12,6 +12,11 @@ export default function AdminDashboardPage(){
   });
   const [loading, setLoading] = useState(Boolean(token));
 
+  function navigate(targetHash){
+    window.location.hash = targetHash;
+    window.location.reload();
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -92,13 +97,19 @@ export default function AdminDashboardPage(){
       <h2>Быстрые ссылки</h2>
       <ul>
         <li>
-          <a href="#/admin/messages">Сообщения</a>
+          <button type="button" onClick={() => navigate("#/admin/messages")}>
+            Сообщения
+          </button>
         </li>
         <li>
-          <a href="#/admin/leads">Лиды</a>
+          <button type="button" onClick={() => navigate("#/admin/leads")}>
+            Лиды
+          </button>
         </li>
         <li>
-          <a href="#/admin/cases">Кейсы</a>
+          <button type="button" onClick={() => navigate("#/admin/cases")}>
+            Кейсы
+          </button>
         </li>
       </ul>
 

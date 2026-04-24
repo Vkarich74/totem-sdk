@@ -12,6 +12,10 @@ export default function AdminNavigation(){
 
   return (
     <div style={{ marginBottom: 16 }}>
+      <button type="button" onClick={() => navigate("#/admin")}>
+        Дешборд
+      </button>
+      <span> | </span>
       <button type="button" onClick={() => navigate("#/admin/messages")}>
         Сообщения
       </button>
