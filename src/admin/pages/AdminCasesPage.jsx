@@ -29,6 +29,33 @@ export default function AdminCasesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
+  async function loadCasesNow() {
+    setError("")
+
+    const token = getAuthToken()
+    if (!token) {
+      setItems([])
+      setError("NO_AUTH")
+      return
+    }
+
+    const response = await fetch(`${API_BASE}/internal/admin/moderation`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const payload = await response.json()
+
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error || `HTTP_${response.status}`)
+    }
+
+    const list = Array.isArray(payload?.data?.items) ? payload.data.items : []
+    setItems(list)
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -83,6 +110,38 @@ export default function AdminCasesPage() {
     }
   }, [])
 
+  async function handleAction(id, action) {
+    try {
+      setError("")
+
+      const token = getAuthToken()
+      if (!token) {
+        setItems([])
+        setError("NO_AUTH")
+        return
+      }
+
+      const response = await fetch(`${API_BASE}/internal/admin/moderation/${id}/action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok || payload?.ok === false) {
+        throw new Error(payload?.error || `HTTP_${response.status}`)
+      }
+
+      await loadCasesNow()
+    } catch (e) {
+      setError(e?.message || "ACTION_FAILED")
+    }
+  }
+
   if (loading) {
     return <div style={{ padding: 20 }}>Загрузка...</div>
   }
@@ -121,6 +180,17 @@ export default function AdminCasesPage() {
               <div><strong>id:</strong> {item.id || "-"}</div>
               <div><strong>lead_id:</strong> {item.lead_runtime_id || item.lead_id || "-"}</div>
               <div><strong>status:</strong> {item.status || "-"}</div>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button type="button" onClick={() => handleAction(item.id, "approve")}>
+                  Approve
+                </button>
+                <button type="button" onClick={() => handleAction(item.id, "reject")}>
+                  Reject
+                </button>
+                <button type="button" onClick={() => handleAction(item.id, "close")}>
+                  Close
+                </button>
+              </div>
             </div>
           ))}
         </div>
