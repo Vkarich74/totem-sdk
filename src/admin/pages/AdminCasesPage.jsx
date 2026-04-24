@@ -18,6 +18,8 @@ function AdminNavigation(){
       <a href="#/admin/leads">Лиды</a>
       <span> | </span>
       <a href="#/admin/cases">Кейсы</a>
+      <span> | </span>
+      <a href="#/admin/login">Логин</a>
     </div>
   )
 }
