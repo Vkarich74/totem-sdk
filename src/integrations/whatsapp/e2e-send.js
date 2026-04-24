@@ -1,1 +1,47 @@
-﻿const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo4OCwicm9sZSI6ImFkbWluIiwic2Vzc2lvbl9pZCI6IjQxN2Y5MTMzLTU0MDUtNGYxOS04N2E3LTBkN2VhNjg3NjMwYiIsImlhdCI6MTc3Njk5ODU3NiwiZXhwIjoxNzc3MDAyMTc2fQ.fvIkJluDwWM53bMEsqf6jHc_3YMHkYD6voDY0DPD4II';  async function post(path, body) {   const res = await fetch(`https://api.totemv.com${path}`, {     method: 'POST',     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },     body: JSON.stringify(body),   });   return res.json(); }  async function main() {   const lead = await post('/internal/admin/leads', { lead_type: 'whatsapp', name: 'Test Lead', phone: '+996556250974', source: 'phase7_e2e' });   console.log('LEAD', lead);   const leadId = lead?.data?.id;   const caze = await post('/internal/admin/moderation', { lead_id: leadId });   console.log('CASE', caze);   const caseId = caze?.data?.id;   const msg = await post('/internal/admin/messages/send', { channel: 'whatsapp', recipient_type: 'lead', recipient_id: '+996556250974', lead_id: leadId, moderation_case_id: caseId, text: 'test message' });   console.log('MESSAGE', msg); }  main();
+const token = String(process.env.TOTEM_AUTH_TOKEN || "").trim();
+
+if (!token) {
+  throw new Error("TOTEM_AUTH_TOKEN_MISSING");
+}
+
+async function post(path, body) {
+  const res = await fetch(`https://api.totemv.com${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  return res.json();
+}
+
+async function main() {
+  const lead = await post("/internal/admin/leads", {
+    lead_type: "whatsapp",
+    name: "Test Lead",
+    phone: "+996556250974",
+    source: "phase7_e2e",
+  });
+  console.log("LEAD", lead);
+
+  const leadId = lead?.data?.id;
+  const caze = await post("/internal/admin/moderation", {
+    lead_id: leadId,
+  });
+  console.log("CASE", caze);
+
+  const caseId = caze?.data?.id;
+  const msg = await post("/internal/admin/messages/send", {
+    channel: "whatsapp",
+    recipient_type: "lead",
+    recipient_id: "+996556250974",
+    lead_id: leadId,
+    moderation_case_id: caseId,
+    text: "test message",
+  });
+  console.log("MESSAGE", msg);
+}
+
+main();
