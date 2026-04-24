@@ -44,6 +44,7 @@ import AdminMessagesPage from "./admin/pages/AdminMessagesPage";
 import AdminLoginPage from "./admin/pages/AdminLoginPage";
 import AdminLeadsPage from "./admin/pages/AdminLeadsPage";
 import AdminCasesPage from "./admin/pages/AdminCasesPage";
+import AdminDashboardPage from "./admin/pages/AdminDashboardPage";
 
 /* MASTER FINANCE */
 import MasterMoneyPage from "./master/payments/MasterMoneyPage";
@@ -396,6 +397,10 @@ function AdminRouter() {
   const pathParts = getPathParts();
   const pathnameRoute = !hash && pathParts[0] === "admin" ? pathParts[1] : "";
 
+  if (pathnameRoute === "") {
+    return <AdminDashboardPage />;
+  }
+
   if (pathnameRoute === "login") {
     return <AdminLoginPage />;
   }
@@ -414,6 +419,7 @@ function AdminRouter() {
 
   return (
     <Routes>
+      <Route path="admin" element={<AdminDashboardPage />} />
       <Route path="admin/login" element={<AdminLoginPage />} />
       <Route path="admin/leads" element={<AdminLeadsPage />} />
       <Route path="admin/cases" element={<AdminCasesPage />} />
