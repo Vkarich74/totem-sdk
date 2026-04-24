@@ -40,7 +40,21 @@ export default function AdminMessagesPage() {
         const payload = await response.json()
 
         if (!response.ok || payload?.ok === false) {
-          throw new Error(payload?.error || `HTTP_${response.status}`)
+          const code = payload?.error || `HTTP_${response.status}`
+
+          if (
+            code === "NO_AUTH" ||
+            code === "HTTP_401" ||
+            code === "HTTP_403"
+          ) {
+            if (!cancelled) {
+              setItems([])
+              setError(code)
+            }
+            return
+          }
+
+          throw new Error(code)
         }
 
         const list = Array.isArray(payload?.data?.items) ? payload.data.items : []
@@ -82,7 +96,19 @@ export default function AdminMessagesPage() {
     const payload = await response.json()
 
     if (!response.ok || payload?.ok === false) {
-      throw new Error(payload?.error || `HTTP_${response.status}`)
+      const code = payload?.error || `HTTP_${response.status}`
+
+      if (
+        code === "NO_AUTH" ||
+        code === "HTTP_401" ||
+        code === "HTTP_403"
+      ) {
+        setItems([])
+        setError(code)
+        return
+      }
+
+      throw new Error(code)
     }
 
     const list = Array.isArray(payload?.data?.items) ? payload.data.items : []
@@ -119,6 +145,10 @@ export default function AdminMessagesPage() {
   }
 
   if (error) {
+    if (error === "NO_AUTH" || error === "HTTP_401" || error === "HTTP_403") {
+      return <div style={{ padding: 20 }}>Требуется вход администратора</div>
+    }
+
     return <div style={{ padding: 20 }}>Ошибка: {error}</div>
   }
 
