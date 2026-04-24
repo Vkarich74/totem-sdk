@@ -1,5 +1,5 @@
 export async function sendWhatsAppMessage(phone, text, leadId, caseId) {
-  const response = await fetch("https://api.totemv.com/internal/messages/send", {
+  const response = await fetch("https://api.totemv.com/internal/admin/messages/send", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
