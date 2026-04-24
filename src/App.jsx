@@ -42,6 +42,7 @@ import MasterServicesPage from "./master/pages/MasterServicesPage";
 import MasterTemplateEditorPage from "./master/pages/MasterTemplateEditorPage";
 import AdminMessagesPage from "./admin/pages/AdminMessagesPage";
 import AdminLoginPage from "./admin/pages/AdminLoginPage";
+import AdminLeadsPage from "./admin/pages/AdminLeadsPage";
 
 /* MASTER FINANCE */
 import MasterMoneyPage from "./master/payments/MasterMoneyPage";
@@ -379,6 +380,7 @@ function CabinetRouter() {
       </Route>
 
       <Route path="admin/login" element={<AdminLoginPage />} />
+      <Route path="admin/leads" element={<AdminLeadsPage />} />
       <Route path="admin/messages" element={<AdminMessagesPage />} />
     </Routes>
   );
