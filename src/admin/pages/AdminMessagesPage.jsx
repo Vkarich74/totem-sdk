@@ -4,12 +4,7 @@ const API_BASE = (window.TOTEM_API_BASE || "https://api.totemv.com").replace(/\/
 
 function getAuthToken(){
   try{
-    return (
-      window.localStorage.getItem("TOTEM_AUTH_TOKEN") ||
-      window.localStorage.getItem("TOTEM_ACCESS_TOKEN") ||
-      window.localStorage.getItem("TOTEM_INTERNAL_TOKEN") ||
-      ""
-    ).trim()
+    return (window.localStorage.getItem("TOTEM_AUTH_TOKEN") || "").trim()
   }catch(e){
     return ""
   }
@@ -29,12 +24,19 @@ export default function AdminMessagesPage() {
         setError("")
 
         const token = getAuthToken()
+        if (!token) {
+          if (!cancelled) {
+            setItems([])
+            setError("NO_AUTH")
+          }
+          return
+        }
+
         const response = await fetch(`${API_BASE}/internal/admin/messages`, {
-          headers: token
-            ? {
-                Authorization: `Bearer ${token}`,
-              }
-            : undefined,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         })
 
         const payload = await response.json()
@@ -85,12 +87,17 @@ export default function AdminMessagesPage() {
     setError("")
 
     const token = getAuthToken()
+    if (!token) {
+      setItems([])
+      setError("NO_AUTH")
+      return
+    }
+
     const response = await fetch(`${API_BASE}/internal/admin/messages`, {
-      headers: token
-        ? {
-            Authorization: `Bearer ${token}`,
-          }
-        : undefined,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     })
 
     const payload = await response.json()
