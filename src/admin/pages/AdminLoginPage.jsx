@@ -10,6 +10,18 @@ function getReturnTo(){
   return value.trim()
 }
 
+function getAdminTargetHash(returnTo){
+  const normalized = returnTo.startsWith("#") ? returnTo : `#${returnTo}`
+  const allowedTargets = new Set([
+    "#/admin",
+    "#/admin/messages",
+    "#/admin/leads",
+    "#/admin/cases",
+  ])
+
+  return allowedTargets.has(normalized) ? normalized : "#/admin"
+}
+
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -47,7 +59,9 @@ export default function AdminLoginPage() {
 
       window.localStorage.setItem("TOTEM_AUTH_TOKEN", token)
       const returnTo = getReturnTo()
-      window.location.assign(returnTo ? `#${returnTo}` : "#/admin/messages")
+      const targetHash = returnTo ? getAdminTargetHash(returnTo) : "#/admin"
+      window.location.hash = targetHash
+      window.location.reload()
     } catch (err) {
       setError(err?.message || "LOGIN_FAILED")
     } finally {
