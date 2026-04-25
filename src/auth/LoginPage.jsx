@@ -1,7 +1,42 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { authLogin, authStart } from "../api/internal"
 
+
+function decodeAuthTokenRole(token){
+  try{
+    const payload = String(token || "").split(".")[1]
+
+    if(!payload){
+      return ""
+    }
+
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/")
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=")
+    const parsed = JSON.parse(window.atob(padded))
+
+    return String(parsed?.role || "").trim().toLowerCase()
+  }catch{
+    return ""
+  }
+}
+
+function clearAdminTokenForCabinetLogin(){
+  const authToken = window.localStorage.getItem("TOTEM_AUTH_TOKEN")
+  const accessToken = window.localStorage.getItem("TOTEM_ACCESS_TOKEN")
+
+  if(decodeAuthTokenRole(authToken) === "admin"){
+    window.localStorage.removeItem("TOTEM_AUTH_TOKEN")
+  }
+
+  if(decodeAuthTokenRole(accessToken) === "admin"){
+    window.localStorage.removeItem("TOTEM_ACCESS_TOKEN")
+  }
+}
+
+function shouldClearAdminToken(originRole){
+  return originRole === "master" || originRole === "salon_admin"
+}
 
 export default function LoginPage(){
   const navigate = useNavigate()
@@ -17,6 +52,12 @@ export default function LoginPage(){
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    if(shouldClearAdminToken(originRole)){
+      clearAdminTokenForCabinetLogin()
+    }
+  }, [originRole])
 
   function redirectToCabinet(){
     if(originRole === "master"){
@@ -36,6 +77,10 @@ export default function LoginPage(){
     if(!effectiveRole || !effectiveSlug){
       setError("Ошибка контекста входа")
       return
+    }
+
+    if(shouldClearAdminToken(originRole)){
+      clearAdminTokenForCabinetLogin()
     }
 
     setLoading(true)
@@ -68,6 +113,10 @@ export default function LoginPage(){
     if(!effectiveRole || !effectiveSlug){
       setError("Ошибка контекста входа")
       return
+    }
+
+    if(shouldClearAdminToken(originRole)){
+      clearAdminTokenForCabinetLogin()
     }
 
     setLoading(true)
