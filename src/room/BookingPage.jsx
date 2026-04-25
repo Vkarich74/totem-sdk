@@ -49,6 +49,15 @@ function formatDateRu(dateStr) {
   return new Date(dateStr).toLocaleDateString("ru-RU");
 }
 
+function getPaymentStatusLabel(status) {
+  const normalized = String(status || "").toLowerCase();
+
+  if (normalized === "confirmed") return "Оплата получена";
+  if (normalized === "failed") return "Оплата не прошла";
+  if (normalized === "refunded") return "Оплата возвращена";
+  return "Ожидаем оплату";
+}
+
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
 
@@ -76,8 +85,13 @@ export default function BookingPage() {
   const [initLoading, setInitLoading] = useState(true);
   const [error, setError] = useState("");
   const [successData, setSuccessData] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentStatusLoading, setPaymentStatusLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentData, setPaymentData] = useState(null);
 
   const submitLockRef = useRef(false);
+  const paymentLockRef = useRef(false);
 
   useEffect(() => {
     if (!slug) {
@@ -108,6 +122,17 @@ export default function BookingPage() {
 
     loadData();
   }, [slug]);
+
+  useEffect(() => {
+    if (!paymentData?.payment_id) return;
+    if (String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase() === "confirmed") return;
+
+    const timer = window.setInterval(() => {
+      checkPaymentStatus({ silent: true });
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [paymentData?.payment_id, paymentData?.status, paymentData?.payment?.status]);
 
   function validatePhone(phone) {
     return /^[0-9+\-\s()]{6,20}$/.test(phone);
@@ -187,6 +212,8 @@ export default function BookingPage() {
         time,
         clientName
       });
+      setPaymentData(null);
+      setPaymentError("");
 
     } catch (err) {
       setError(err.message);
@@ -196,8 +223,90 @@ export default function BookingPage() {
     }
   }
 
+  async function startPayment() {
+    if (!successData?.bookingId || paymentLoading || paymentLockRef.current) return;
+
+    paymentLockRef.current = true;
+    setPaymentLoading(true);
+    setPaymentError("");
+
+    try {
+      const res = await fetch(`${API_BASE}/internal/payments/xpay/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          booking_id: successData.bookingId
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || data?.message || "Не удалось создать оплату");
+      }
+
+      setPaymentData({
+        ...data,
+        payment_id: data.payment_id || data?.payment?.id,
+        status: data?.payment?.status || data.status || "pending"
+      });
+    } catch (err) {
+      setPaymentError(err.message);
+    } finally {
+      setPaymentLoading(false);
+      paymentLockRef.current = false;
+    }
+  }
+
+  async function checkPaymentStatus(options = {}) {
+    const paymentId = paymentData?.payment_id || paymentData?.payment?.id;
+
+    if (!paymentId || paymentStatusLoading) return;
+
+    if (!options.silent) {
+      setPaymentError("");
+    }
+
+    setPaymentStatusLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/internal/payments/xpay/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          payment_id: paymentId
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || data?.message || "Не удалось проверить оплату");
+      }
+
+      setPaymentData((prev) => ({
+        ...(prev || {}),
+        ...data,
+        payment_id: data.payment_id || data?.payment?.id || paymentId,
+        status: data?.payment?.status || data.totem_status || data.status || prev?.status || "pending"
+      }));
+    } catch (err) {
+      if (!options.silent) {
+        setPaymentError(err.message);
+      }
+    } finally {
+      setPaymentStatusLoading(false);
+    }
+  }
+
   function resetForm() {
     setSuccessData(null);
+    setPaymentData(null);
+    setPaymentError("");
     setStep("form");
     setDate("");
     setTime("");
@@ -218,6 +327,11 @@ export default function BookingPage() {
   }
 
   if (successData) {
+    const paymentStatus = paymentData?.status || paymentData?.payment?.status || "";
+    const qrImage = paymentData?.qr_image || paymentData?.payment?.qr_image || "";
+    const qrCode = paymentData?.qr_code || paymentData?.payment?.qr_code || "";
+    const paymentId = paymentData?.payment_id || paymentData?.payment?.id || "";
+
     return (
       <div style={styles.page}>
         <div style={styles.card}>
@@ -233,6 +347,44 @@ export default function BookingPage() {
 
           <div style={styles.bookingNumber}>
             № {formatBookingNumber(successData.bookingId)}
+          </div>
+
+          <div style={styles.paymentBlock}>
+            <h3 style={styles.paymentTitle}>Оплата</h3>
+
+            {!paymentData ? (
+              <button onClick={startPayment} disabled={paymentLoading} style={styles.button}>
+                {paymentLoading ? "Создаём оплату..." : "Оплатить через XPAY"}
+              </button>
+            ) : (
+              <>
+                <div style={styles.paymentStatus}>
+                  {getPaymentStatusLabel(paymentStatus)}
+                </div>
+
+                {paymentId ? (
+                  <div style={styles.paymentMeta}>
+                    Платёж № {paymentId}
+                  </div>
+                ) : null}
+
+                {qrImage ? (
+                  <img src={qrImage} alt="XPAY QR" style={styles.qrImage} />
+                ) : null}
+
+                {qrCode ? (
+                  <a href={qrCode} target="_blank" rel="noreferrer" style={styles.payLink}>
+                    Открыть страницу оплаты
+                  </a>
+                ) : null}
+
+                <button onClick={() => checkPaymentStatus()} disabled={paymentStatusLoading} style={styles.secondaryButton}>
+                  {paymentStatusLoading ? "Проверяем..." : "Проверить оплату"}
+                </button>
+              </>
+            )}
+
+            {paymentError && <div style={styles.error}>{paymentError}</div>}
           </div>
 
           <button onClick={resetForm} style={styles.secondaryButton}>
@@ -416,6 +568,51 @@ const styles = {
     borderRadius: 12,
     fontWeight: 600,
     marginBottom: 16
+  },
+  paymentBlock: {
+    marginBottom: 16,
+    padding: 14,
+    border: "1px solid #e5e7eb",
+    borderRadius: 14,
+    background: "#fafafa"
+  },
+  paymentTitle: {
+    margin: "0 0 10px 0",
+    fontSize: 18
+  },
+  paymentStatus: {
+    padding: 10,
+    borderRadius: 10,
+    background: "#111",
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: 600,
+    marginBottom: 10
+  },
+  paymentMeta: {
+    fontSize: 13,
+    color: "#555",
+    textAlign: "center",
+    marginBottom: 10
+  },
+  qrImage: {
+    display: "block",
+    width: "100%",
+    maxWidth: 240,
+    margin: "10px auto",
+    borderRadius: 12
+  },
+  payLink: {
+    display: "block",
+    textAlign: "center",
+    padding: 12,
+    borderRadius: 12,
+    background: "#fff",
+    color: "#111",
+    border: "1px solid #111",
+    textDecoration: "none",
+    fontWeight: 600,
+    marginTop: 10
   },
   error: {
     color: "#d32f2f",
