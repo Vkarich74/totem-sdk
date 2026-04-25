@@ -143,6 +143,41 @@ function getCurrentAdminReturnTo() {
   return "/admin";
 }
 
+function getStoredAuthToken() {
+  return String(
+    window.localStorage.getItem("TOTEM_AUTH_TOKEN") ||
+    window.localStorage.getItem("TOTEM_ACCESS_TOKEN") ||
+    ""
+  ).trim();
+}
+
+function decodeAuthTokenPayload(token) {
+  try {
+    const payload = String(token || "").split(".")[1];
+
+    if (!payload) {
+      return null;
+    }
+
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+
+    return JSON.parse(window.atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function getAuthTokenRole(token) {
+  const payload = decodeAuthTokenPayload(token);
+  return String(payload?.role || "").toLowerCase();
+}
+
+function clearStoredAuthTokens() {
+  window.localStorage.removeItem("TOTEM_AUTH_TOKEN");
+  window.localStorage.removeItem("TOTEM_ACCESS_TOKEN");
+}
+
 function getStoredSalonSlug() {
   return (
     window.SALON_SLUG ||
@@ -277,6 +312,17 @@ function AuthBootstrapGate({ children }){
     let active = true;
 
     async function run(){
+      const token = getStoredAuthToken();
+
+      if(token && getAuthTokenRole(token) === "admin"){
+        clearStoredAuthTokens();
+
+        if(active){
+          setState({ loading: false });
+        }
+        return;
+      }
+
       if(!hasAuthAccessToken()){
         if(active){
           setState({ loading: false });
@@ -290,6 +336,10 @@ function AuthBootstrapGate({ children }){
 
       if(!session?.ok || !session?.authenticated){
         clearAuthAccessToken();
+        clearStoredAuthTokens();
+      }else if(String(session?.auth?.role || session?.role || "").toLowerCase() === "admin"){
+        clearAuthAccessToken();
+        clearStoredAuthTokens();
       }
 
       setState({ loading: false });
