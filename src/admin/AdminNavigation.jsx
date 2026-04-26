@@ -28,6 +28,10 @@ export default function AdminNavigation(){
         Кейсы
       </button>
       <span> | </span>
+      <button type="button" onClick={() => navigate("#/admin/clients")}>
+        Клиенты
+      </button>
+      <span> | </span>
       <button type="button" onClick={() => navigate("#/admin/login")}>
         Логин
       </button>
