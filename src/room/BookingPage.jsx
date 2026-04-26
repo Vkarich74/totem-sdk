@@ -212,7 +212,10 @@ export default function BookingPage() {
         }
 
         if (repeatServiceId) {
-          const repeatedService = loadedServices.find((s) => String(s.id) === String(repeatServiceId));
+          const repeatedService = loadedServices.find((s) => (
+            String(s.id) === String(repeatServiceId) ||
+            String(s.service_pk) === String(repeatServiceId)
+          ));
 
           if (repeatedService) {
             setSelectedService(String(repeatedService.id));
