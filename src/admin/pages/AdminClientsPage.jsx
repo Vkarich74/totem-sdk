@@ -51,11 +51,48 @@ function normalizeClientsPayload(payload){
   return []
 }
 
+function normalizeAuditPayload(payload){
+  if(Array.isArray(payload?.data?.items)){
+    return payload.data.items
+  }
+
+  if(Array.isArray(payload?.audit)){
+    return payload.audit
+  }
+
+  if(Array.isArray(payload?.items)){
+    return payload.items
+  }
+
+  return []
+}
+
+function stringifyMetadata(value){
+  if(!value){
+    return "-"
+  }
+
+  if(typeof value === "string"){
+    return value
+  }
+
+  try{
+    return JSON.stringify(value)
+  }catch(e){
+    return "-"
+  }
+}
+
 export default function AdminClientsPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [search, setSearch] = useState("")
+
+  const [auditClientId, setAuditClientId] = useState("")
+  const [auditItems, setAuditItems] = useState([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [auditError, setAuditError] = useState("")
 
   useEffect(() => {
     let cancelled = false
@@ -110,6 +147,47 @@ export default function AdminClientsPage() {
       cancelled = true
     }
   }, [])
+
+  async function loadClientAudit(clientId){
+    const safeClientId = String(clientId || "").trim()
+
+    if(!safeClientId){
+      return
+    }
+
+    try{
+      setAuditClientId(safeClientId)
+      setAuditItems([])
+      setAuditError("")
+      setAuditLoading(true)
+
+      const token = getAuthToken()
+      if(!token){
+        setAuditError("NO_AUTH")
+        return
+      }
+
+      const response = await fetch(`${API_BASE}/internal/admin/clients/${safeClientId}/audit`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const payload = await response.json()
+
+      if(!response.ok || payload?.ok === false){
+        throw new Error(payload?.error || `HTTP_${response.status}`)
+      }
+
+      setAuditItems(normalizeAuditPayload(payload))
+    }catch(e){
+      setAuditItems([])
+      setAuditError(e?.message || "AUDIT_LOAD_FAILED")
+    }finally{
+      setAuditLoading(false)
+    }
+  }
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -237,10 +315,45 @@ export default function AdminClientsPage() {
               <div><strong>salon:</strong> {item.salon_slug || item.salon_name || "-"}</div>
               <div><strong>bookings_total:</strong> {item.bookings_total ?? 0}</div>
               <div><strong>last_booking_at:</strong> {formatDateTime(item.last_booking_at)}</div>
+
+              <button
+                type="button"
+                onClick={() => loadClientAudit(item.id)}
+                style={styles.auditButton}
+              >
+                Audit
+              </button>
             </div>
           ))}
         </div>
       )}
+
+      {auditClientId ? (
+        <div style={styles.auditPanel}>
+          <h2 style={{ margin: "0 0 12px" }}>Client audit: {auditClientId}</h2>
+
+          {auditLoading ? (
+            <div>Загрузка audit...</div>
+          ) : auditError ? (
+            <div style={styles.errorText}>Ошибка audit: {auditError}</div>
+          ) : auditItems.length === 0 ? (
+            <div>Audit пустой</div>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {auditItems.map((item) => (
+                <div key={item.id} style={styles.auditCard}>
+                  <div><strong>id:</strong> {item.id || "-"}</div>
+                  <div><strong>booking_id:</strong> {item.booking_id || "-"}</div>
+                  <div><strong>actor_type:</strong> {item.actor_type || "-"}</div>
+                  <div><strong>action:</strong> {item.action || "-"}</div>
+                  <div><strong>metadata:</strong> {stringifyMetadata(item.metadata)}</div>
+                  <div><strong>created_at:</strong> {formatDateTime(item.created_at)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -259,6 +372,34 @@ const styles = {
   },
   statValue: {
     fontSize: 22,
+    fontWeight: 700,
+  },
+  auditButton: {
+    marginTop: 10,
+    border: "1px solid #111",
+    borderRadius: 8,
+    background: "#fff",
+    color: "#111",
+    padding: "8px 12px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  auditPanel: {
+    marginTop: 20,
+    border: "1px solid #ddd",
+    borderRadius: 8,
+    padding: 12,
+    background: "#fff",
+  },
+  auditCard: {
+    border: "1px solid #eee",
+    borderRadius: 8,
+    padding: 10,
+    background: "#fafafa",
+    wordBreak: "break-word",
+  },
+  errorText: {
+    color: "#b91c1c",
     fontWeight: 700,
   },
 }
