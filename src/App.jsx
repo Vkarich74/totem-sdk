@@ -7,6 +7,7 @@ import PublicMasterPage from "./public/PublicMasterPage";
 
 import BookingPage from "./room/BookingPage";
 import SalonBookingsPage from "./room/SalonBookingsPage";
+import ClientCabinetPage from "./client/ClientCabinetPage";
 
 import SalonLayout from "./salon/SalonLayout";
 
@@ -569,6 +570,7 @@ function CabinetRouter() {
 
       <Route path="booking" element={<BookingPage slug={slug} />} />
       <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
+      <Route path="client/:clientId/:token" element={<ClientCabinetPage />} />
 
       <Route path="salon" element={<SalonLayout />}>
         <Route index element={<DashboardPage />} />
