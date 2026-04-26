@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
+const BOOKING_PAYMENT_STATE_PREFIX = "TOTEM_BOOKING_PAYMENT_STATE";
 
 function generateKey() {
   return crypto.randomUUID();
@@ -58,6 +59,67 @@ function getPaymentStatusLabel(status) {
   return "Ожидаем оплату";
 }
 
+function getBookingPaymentStateKey(slug) {
+  return `${BOOKING_PAYMENT_STATE_PREFIX}:${String(slug || "").trim()}`;
+}
+
+function readBookingPaymentState(slug) {
+  if (!slug) return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(getBookingPaymentStateKey(slug));
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.successData?.bookingId) return null;
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeBookingPaymentState(slug, successData, paymentData) {
+  if (!slug || !successData?.bookingId) return;
+
+  try {
+    window.sessionStorage.setItem(
+      getBookingPaymentStateKey(slug),
+      JSON.stringify({
+        successData,
+        paymentData: paymentData || null,
+        savedAt: Date.now()
+      })
+    );
+  } catch {
+    // sessionStorage can be unavailable in restricted browser modes
+  }
+}
+
+function clearBookingPaymentState(slug) {
+  if (!slug) return;
+
+  try {
+    window.sessionStorage.removeItem(getBookingPaymentStateKey(slug));
+  } catch {
+    // sessionStorage can be unavailable in restricted browser modes
+  }
+}
+
+function getPaymentIdFromData(paymentData) {
+  return paymentData?.payment_id || paymentData?.payment?.id || paymentData?.id || "";
+}
+
+function getQrTransactionIdFromData(paymentData) {
+  return (
+    paymentData?.qr_transaction_id ||
+    paymentData?.payment?.qr_transaction_id ||
+    paymentData?.transaction_id ||
+    paymentData?.status?.qr_transaction_id ||
+    ""
+  );
+}
+
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
 
@@ -92,6 +154,25 @@ export default function BookingPage() {
 
   const submitLockRef = useRef(false);
   const paymentLockRef = useRef(false);
+  const restoredStateRef = useRef(false);
+
+  useEffect(() => {
+    if (!slug || restoredStateRef.current) return;
+
+    restoredStateRef.current = true;
+
+    const restored = readBookingPaymentState(slug);
+    if (!restored?.successData) return;
+
+    setSuccessData(restored.successData);
+    setPaymentData(restored.paymentData || null);
+    setPaymentError("");
+  }, [slug]);
+
+  useEffect(() => {
+    if (!slug || !successData?.bookingId) return;
+    writeBookingPaymentState(slug, successData, paymentData);
+  }, [slug, successData, paymentData]);
 
   useEffect(() => {
     if (!slug) {
@@ -205,15 +286,18 @@ export default function BookingPage() {
         throw new Error(data?.error || data?.message || "Ошибка создания записи");
       }
 
-      setSuccessData({
+      const nextSuccessData = {
         bookingId: data.booking_id || data?.booking?.id,
         masterName: selectedMasterName,
         date,
         time,
         clientName
-      });
+      };
+
+      setSuccessData(nextSuccessData);
       setPaymentData(null);
       setPaymentError("");
+      writeBookingPaymentState(slug, nextSuccessData, null);
 
     } catch (err) {
       setError(err.message);
@@ -247,11 +331,15 @@ export default function BookingPage() {
         throw new Error(data?.error || data?.message || "Не удалось создать оплату");
       }
 
-      setPaymentData({
+      const nextPaymentData = {
         ...data,
         payment_id: data.payment_id || data?.payment?.id,
+        qr_transaction_id: data.qr_transaction_id || data?.payment?.qr_transaction_id || data.transaction_id || null,
         status: data?.payment?.status || data.status || "pending"
-      });
+      };
+
+      setPaymentData(nextPaymentData);
+      writeBookingPaymentState(slug, successData, nextPaymentData);
     } catch (err) {
       setPaymentError(err.message);
     } finally {
@@ -261,7 +349,8 @@ export default function BookingPage() {
   }
 
   async function checkPaymentStatus(options = {}) {
-    const paymentId = paymentData?.payment_id || paymentData?.payment?.id;
+    const paymentId = getPaymentIdFromData(paymentData);
+    const qrTransactionId = getQrTransactionIdFromData(paymentData);
 
     if (!paymentId || paymentStatusLoading) return;
 
@@ -272,14 +361,20 @@ export default function BookingPage() {
     setPaymentStatusLoading(true);
 
     try {
+      const requestBody = {
+        payment_id: paymentId
+      };
+
+      if (qrTransactionId) {
+        requestBody.qr_transaction_id = qrTransactionId;
+      }
+
       const res = await fetch(`${API_BASE}/internal/payments/xpay/status`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          payment_id: paymentId
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await res.json();
@@ -288,12 +383,18 @@ export default function BookingPage() {
         throw new Error(data?.error || data?.message || "Не удалось проверить оплату");
       }
 
-      setPaymentData((prev) => ({
-        ...(prev || {}),
+      const nextPaymentData = {
+        ...(paymentData || {}),
         ...data,
         payment_id: data.payment_id || data?.payment?.id || paymentId,
-        status: data?.payment?.status || data.totem_status || data.status || prev?.status || "pending"
-      }));
+        qr_transaction_id: data.qr_transaction_id || data?.payment?.qr_transaction_id || qrTransactionId || null,
+        status: data?.payment?.status || data.totem_status || data.status || paymentData?.status || "pending"
+      };
+
+      setPaymentData(nextPaymentData);
+      if (successData?.bookingId) {
+        writeBookingPaymentState(slug, successData, nextPaymentData);
+      }
     } catch (err) {
       if (!options.silent) {
         setPaymentError(err.message);
@@ -304,6 +405,7 @@ export default function BookingPage() {
   }
 
   function resetForm() {
+    clearBookingPaymentState(slug);
     setSuccessData(null);
     setPaymentData(null);
     setPaymentError("");
@@ -330,7 +432,8 @@ export default function BookingPage() {
     const paymentStatus = paymentData?.status || paymentData?.payment?.status || "";
     const qrImage = paymentData?.qr_image || paymentData?.payment?.qr_image || "";
     const qrCode = paymentData?.qr_code || paymentData?.payment?.qr_code || "";
-    const paymentId = paymentData?.payment_id || paymentData?.payment?.id || "";
+    const paymentId = getPaymentIdFromData(paymentData);
+    const isPaymentConfirmed = String(paymentStatus || "").toLowerCase() === "confirmed";
 
     return (
       <div style={styles.page}>
@@ -358,7 +461,7 @@ export default function BookingPage() {
               </button>
             ) : (
               <>
-                <div style={styles.paymentStatus}>
+                <div style={isPaymentConfirmed ? styles.paymentStatusConfirmed : styles.paymentStatus}>
                   {getPaymentStatusLabel(paymentStatus)}
                 </div>
 
@@ -368,18 +471,18 @@ export default function BookingPage() {
                   </div>
                 ) : null}
 
-                {qrImage ? (
+                {qrImage && !isPaymentConfirmed ? (
                   <img src={qrImage} alt="XPAY QR" style={styles.qrImage} />
                 ) : null}
 
-                {qrCode ? (
+                {qrCode && !isPaymentConfirmed ? (
                   <a href={qrCode} target="_blank" rel="noreferrer" style={styles.payLink}>
                     Открыть страницу оплаты
                   </a>
                 ) : null}
 
                 <button onClick={() => checkPaymentStatus()} disabled={paymentStatusLoading} style={styles.secondaryButton}>
-                  {paymentStatusLoading ? "Проверяем..." : "Проверить оплату"}
+                  {paymentStatusLoading ? "Проверяем..." : isPaymentConfirmed ? "Обновить статус оплаты" : "Проверить оплату"}
                 </button>
               </>
             )}
@@ -584,6 +687,15 @@ const styles = {
     padding: 10,
     borderRadius: 10,
     background: "#111",
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: 600,
+    marginBottom: 10
+  },
+  paymentStatusConfirmed: {
+    padding: 10,
+    borderRadius: 10,
+    background: "#0f7a3b",
     color: "#fff",
     textAlign: "center",
     fontWeight: 600,
