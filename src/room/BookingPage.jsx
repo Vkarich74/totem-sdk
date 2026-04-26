@@ -128,6 +128,11 @@ export default function BookingPage() {
     window.SALON_SLUG ||
     null;
 
+  const repeatMasterId = searchParams.get("master") || "";
+  const repeatServiceId = searchParams.get("service") || "";
+  const repeatClientId = searchParams.get("client") || "";
+  const repeatClientToken = searchParams.get("token") || searchParams.get("client_token") || "";
+
   const [masters, setMasters] = useState([]);
   const [services, setServices] = useState([]);
 
@@ -191,8 +196,28 @@ export default function BookingPage() {
         const mastersData = await mastersRes.json();
         const servicesData = await servicesRes.json();
 
-        setMasters(mastersData.masters || []);
-        setServices(servicesData.services || []);
+        const loadedMasters = mastersData.masters || [];
+        const loadedServices = servicesData.services || [];
+
+        setMasters(loadedMasters);
+        setServices(loadedServices);
+
+        if (repeatMasterId) {
+          const repeatedMaster = loadedMasters.find((m) => String(m.id) === String(repeatMasterId));
+
+          if (repeatedMaster) {
+            setSelectedMaster(String(repeatedMaster.id));
+            setSelectedMasterName(repeatedMaster.name || "");
+          }
+        }
+
+        if (repeatServiceId) {
+          const repeatedService = loadedServices.find((s) => String(s.id) === String(repeatServiceId));
+
+          if (repeatedService) {
+            setSelectedService(String(repeatedService.id));
+          }
+        }
 
       } catch {
         setError("Ошибка загрузки данных");
@@ -202,7 +227,37 @@ export default function BookingPage() {
     }
 
     loadData();
-  }, [slug]);
+  }, [slug, repeatMasterId, repeatServiceId]);
+
+  useEffect(() => {
+    if (!repeatClientId || !repeatClientToken) return;
+
+    let active = true;
+
+    async function loadRepeatClient() {
+      try {
+        const response = await fetch(`${API_BASE}/public/clients/${repeatClientId}/${repeatClientToken}`);
+        const payload = await response.json().catch(() => null);
+
+        if (!active) return;
+
+        if (!response.ok || payload?.ok !== true || !payload?.client) {
+          return;
+        }
+
+        setClientName(payload.client.name || "");
+        setClientPhone(payload.client.phone || "");
+      } catch {
+        // Repeat booking prefill is optional. Form remains usable manually.
+      }
+    }
+
+    loadRepeatClient();
+
+    return () => {
+      active = false;
+    };
+  }, [repeatClientId, repeatClientToken]);
 
   useEffect(() => {
     if (!paymentData?.payment_id) return;
@@ -291,7 +346,9 @@ export default function BookingPage() {
         masterName: selectedMasterName,
         date,
         time,
-        clientName
+        clientName,
+        client: data?.client || null,
+        clientCabinetUrl: data?.client_cabinet?.url || ""
       };
 
       setSuccessData(nextSuccessData);
@@ -451,6 +508,12 @@ export default function BookingPage() {
           <div style={styles.bookingNumber}>
             № {formatBookingNumber(successData.bookingId)}
           </div>
+
+          {successData.clientCabinetUrl ? (
+            <a href={successData.clientCabinetUrl} style={styles.clientCabinetLink}>
+              Перейти в кабинет клиента
+            </a>
+          ) : null}
 
           <div style={styles.paymentBlock}>
             <h3 style={styles.paymentTitle}>Оплата</h3>
@@ -669,6 +732,18 @@ const styles = {
     color: "#fff",
     textAlign: "center",
     borderRadius: 12,
+    fontWeight: 600,
+    marginBottom: 16
+  },
+  clientCabinetLink: {
+    display: "block",
+    textAlign: "center",
+    padding: 12,
+    borderRadius: 12,
+    background: "#fff",
+    color: "#111",
+    border: "1px solid #111",
+    textDecoration: "none",
     fontWeight: 600,
     marginBottom: 16
   },
