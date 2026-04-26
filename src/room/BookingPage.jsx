@@ -104,7 +104,7 @@ export default function BookingPage() {
       try {
         const [mastersRes, servicesRes] = await Promise.all([
           fetch(`${API_BASE}/public/salons/${slug}/masters`),
-          fetch(`${API_BASE}/internal/salons/${slug}/services`)
+          fetch(`${API_BASE}/public/salons/${slug}/services`)
         ]);
 
         const mastersData = await mastersRes.json();
