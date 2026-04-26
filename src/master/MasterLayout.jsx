@@ -106,18 +106,24 @@ function SessionGate({ slug, children }){
 
       const authenticated = Boolean(session?.ok && session?.authenticated)
       const role = String(session?.role || session?.identity?.role || session?.auth?.role || "")
+      const masters = Array.isArray(session?.identity?.masters) ? session.identity.masters : []
+      const ownership = Array.isArray(session?.identity?.ownership) ? session.identity.ownership : []
       const masterSlug = String(
         session?.identity?.master_slug ||
         session?.auth?.master_slug ||
         ""
       )
 
-      const hasAccess =
-        authenticated &&
+      const hasMasterAccess =
         role === "master" &&
-        (!masterSlug || masterSlug === String(slug || ""))
+        (
+          masters.length > 0 ||
+          ownership.length > 0 ||
+          !masterSlug ||
+          masterSlug === String(slug || "")
+        )
 
-      if(!hasAccess){
+      if(!authenticated || !hasMasterAccess){
         try{
           await logoutCurrentSession()
         }catch(e){
