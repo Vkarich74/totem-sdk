@@ -46,6 +46,7 @@ import AdminLoginPage from "./admin/pages/AdminLoginPage";
 import AdminLeadsPage from "./admin/pages/AdminLeadsPage";
 import AdminCasesPage from "./admin/pages/AdminCasesPage";
 import AdminDashboardPage from "./admin/pages/AdminDashboardPage";
+import AdminClientsPage from "./admin/pages/AdminClientsPage";
 
 /* MASTER FINANCE */
 import MasterMoneyPage from "./master/payments/MasterMoneyPage";
@@ -659,6 +660,10 @@ function AdminRouter() {
 
   if (adminRoute === "cases") {
     return <AdminCasesPage />;
+  }
+
+  if (adminRoute === "clients") {
+    return <AdminClientsPage />;
   }
 
   return <AdminDashboardPage />;
