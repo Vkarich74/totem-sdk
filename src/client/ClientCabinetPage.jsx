@@ -183,6 +183,10 @@ export default function ClientCabinetPage() {
 
     params.set("client", String(clientId || ""));
 
+    if (token) {
+      params.set("token", String(token));
+    }
+
     window.location.hash = `#/booking?${params.toString()}`;
   }
 
