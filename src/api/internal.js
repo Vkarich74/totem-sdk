@@ -335,6 +335,190 @@ export async function finishPasswordReset(payload){
 }
 
 /* ===============================
+   ADMIN OPEN OWNER API
+================================ */
+
+export async function getAdminOpenOwnerStats(){
+  const r = await safeInternalJson(`/admin/open-owner/stats`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_STATS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_STATS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    stats:j
+  };
+}
+
+export async function precheckAdminOpenOwner(payload = {}){
+  const r = await safeInternalJson(`/admin/open-owner/precheck`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_PRECHECK_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_PRECHECK_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    valid:Boolean(j.valid),
+    errors:j.errors || [],
+    normalized:j.normalized || null,
+    checks:j.checks || [],
+    result:j
+  };
+}
+
+export async function createAdminOpenOwnerRequest(payload = {}){
+  const r = await safeInternalJson(`/admin/open-owner/requests`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_CREATE_REQUEST_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_CREATE_REQUEST_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request:j.request || null,
+    moderation_case_id:j.moderation_case_id || null,
+    audit_event_id:j.audit_event_id || null,
+    result:j
+  };
+}
+
+export async function listAdminOpenOwnerRequests({ limit = 100 } = {}){
+  const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0 ? Number(limit) : 100;
+  const r = await safeInternalJson(`/admin/open-owner/requests?limit=${encodeURIComponent(String(safeLimit))}`, {
+    method: "GET"
+  });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_LIST_REQUESTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_LIST_REQUESTS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    requests:j.requests || [],
+    result:j
+  };
+}
+
+export async function getAdminOpenOwnerRequest(requestId){
+  const id = encodeURIComponent(String(requestId || "").trim());
+  const r = await safeInternalJson(`/admin/open-owner/requests/${id}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_GET_REQUEST_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_GET_REQUEST_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request:j.request || null,
+    result:j
+  };
+}
+
+export async function approveAdminOpenOwnerRequest(requestId){
+  const id = encodeURIComponent(String(requestId || "").trim());
+  const r = await safeInternalJson(`/admin/open-owner/requests/${id}/approve`, {
+    method: "POST"
+  });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_APPROVE_REQUEST_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_APPROVE_REQUEST_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request:j.request || null,
+    audit_event_id:j.audit_event_id || null,
+    idempotent:Boolean(j.idempotent),
+    result:j
+  };
+}
+
+export async function provisionAdminOpenOwnerRequest(requestId){
+  const id = encodeURIComponent(String(requestId || "").trim());
+  const r = await safeInternalJson(`/admin/open-owner/requests/${id}/provision`, {
+    method: "POST"
+  });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_PROVISION_REQUEST_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_PROVISION_REQUEST_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request:j.request || null,
+    provision_result:j.provision_result || null,
+    bind_result:j.bind_result || null,
+    links:j.links || null,
+    audit_event_id:j.audit_event_id || null,
+    idempotent:Boolean(j.idempotent),
+    result:j
+  };
+}
+
+export async function previewAdminOpenOwnerEmail(requestId){
+  const id = encodeURIComponent(String(requestId || "").trim());
+  const r = await safeInternalJson(`/admin/open-owner/requests/${id}/email-preview`, {
+    method: "POST"
+  });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_EMAIL_PREVIEW_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_EMAIL_PREVIEW_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request:j.request || null,
+    preview:j.preview || null,
+    audit_event_id:j.audit_event_id || null,
+    result:j
+  };
+}
+
+export async function sendAdminOpenOwnerEmail(requestId){
+  const id = encodeURIComponent(String(requestId || "").trim());
+  const r = await safeInternalJson(`/admin/open-owner/requests/${id}/send-email`, {
+    method: "POST"
+  });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_SEND_EMAIL_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_SEND_EMAIL_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request:j.request || null,
+    message_id:j.message_id || null,
+    gmail_message_id:j.gmail_message_id || null,
+    audit_event_id:j.audit_event_id || null,
+    result:j
+  };
+}
+
+export async function resendAdminOpenOwnerEmail(requestId){
+  const id = encodeURIComponent(String(requestId || "").trim());
+  const r = await safeInternalJson(`/admin/open-owner/requests/${id}/resend-email`, {
+    method: "POST"
+  });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_RESEND_EMAIL_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_RESEND_EMAIL_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request:j.request || null,
+    message_id:j.message_id || null,
+    gmail_message_id:j.gmail_message_id || null,
+    audit_event_id:j.audit_event_id || null,
+    result:j
+  };
+}
+
+export async function getAdminOpenOwnerAudit(requestId){
+  const id = encodeURIComponent(String(requestId || "").trim());
+  const r = await safeInternalJson(`/admin/open-owner/requests/${id}/audit`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_AUDIT_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_AUDIT_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request_id:j.request_id || null,
+    audit_events:j.audit_events || [],
+    messages:j.messages || [],
+    traces:j.traces || [],
+    result:j
+  };
+}
+
+/* ===============================
    SALON (OWNER) API
 ================================ */
 
