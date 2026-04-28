@@ -32,6 +32,10 @@ export default function AdminNavigation(){
         Клиенты
       </button>
       <span> | </span>
+      <button type="button" onClick={() => navigate("#/admin/owners")}>
+        Владельцы
+      </button>
+      <span> | </span>
       <button type="button" onClick={() => navigate("#/admin/open-owner")}>
         Открытие владельца
       </button>
