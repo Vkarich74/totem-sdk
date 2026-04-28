@@ -117,6 +117,18 @@ function getPathParts() {
   return path.split("/").filter(Boolean);
 }
 
+function getSlugFromSearchForType(type) {
+  const params = new URLSearchParams(window.location.search || "");
+  const slug = String(params.get("slug") || "").trim();
+  const pathParts = getPathParts();
+
+  if (!slug || pathParts[0] !== type) {
+    return null;
+  }
+
+  return slug;
+}
+
 function isAdminRoute() {
   const hash = window.location.hash || "";
   const pathname = window.location.pathname || "";
@@ -184,6 +196,7 @@ function clearStoredAuthTokens() {
 function getStoredSalonSlug() {
   return (
     window.SALON_SLUG ||
+    getSlugFromSearchForType("salon") ||
     window.localStorage.getItem("totem_salon_slug") ||
     window.sessionStorage.getItem("totem_salon_slug") ||
     null
@@ -193,6 +206,7 @@ function getStoredSalonSlug() {
 function getStoredMasterSlug() {
   return (
     window.MASTER_SLUG ||
+    getSlugFromSearchForType("master") ||
     window.localStorage.getItem("totem_master_slug") ||
     window.sessionStorage.getItem("totem_master_slug") ||
     null
