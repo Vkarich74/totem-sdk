@@ -468,22 +468,38 @@ export async function previewAdminOpenOwnerEmail(requestId){
 
 export async function sendAdminOpenOwnerEmail(requestId){
   const id = encodeURIComponent(String(requestId || "").trim());
-  const r = await safeInternalJson(`/admin/open-owner/requests/${id}/send-email`, {
-    method: "POST"
-  });
-  const j = r.json;
+  let response = null;
+  let text = "";
 
-  if(!r.ok){
+  try{
+    response = await fetch(API_BASE + "/admin/open-owner/requests/" + id + "/send-email", {
+      method: "POST",
+      headers: buildJsonHeaders({}, true)
+    });
+    text = await response.text();
+  }catch(e){
+    return { ok:false, error:"ADMIN_OPEN_OWNER_SEND_EMAIL_FETCH_FAILED", detail:e };
+  }
+
+  let j = null;
+  try{
+    j = text ? JSON.parse(text) : null;
+  }catch(e){
+    j = null;
+  }
+
+  if(!response.ok){
     return {
       ok:false,
-      error:j?.error || "ADMIN_OPEN_OWNER_SEND_EMAIL_FETCH_FAILED",
-      status:r.status || null,
+      error:j?.error || ("HTTP_" + response.status),
+      status:response.status || null,
       request:j?.request || null,
       message_id:j?.message_id || null,
       gmail_message_id:j?.gmail_message_id || null,
       audit_event_id:j?.audit_event_id || null,
       result:j || null,
-      detail:r
+      raw:text || "",
+      detail:{ ok:false, status:response.status || null, json:j, text }
     };
   }
 
@@ -500,22 +516,38 @@ export async function sendAdminOpenOwnerEmail(requestId){
 
 export async function resendAdminOpenOwnerEmail(requestId){
   const id = encodeURIComponent(String(requestId || "").trim());
-  const r = await safeInternalJson(`/admin/open-owner/requests/${id}/resend-email`, {
-    method: "POST"
-  });
-  const j = r.json;
+  let response = null;
+  let text = "";
 
-  if(!r.ok){
+  try{
+    response = await fetch(API_BASE + "/admin/open-owner/requests/" + id + "/resend-email", {
+      method: "POST",
+      headers: buildJsonHeaders({}, true)
+    });
+    text = await response.text();
+  }catch(e){
+    return { ok:false, error:"ADMIN_OPEN_OWNER_RESEND_EMAIL_FETCH_FAILED", detail:e };
+  }
+
+  let j = null;
+  try{
+    j = text ? JSON.parse(text) : null;
+  }catch(e){
+    j = null;
+  }
+
+  if(!response.ok){
     return {
       ok:false,
-      error:j?.error || "ADMIN_OPEN_OWNER_RESEND_EMAIL_FETCH_FAILED",
-      status:r.status || null,
+      error:j?.error || ("HTTP_" + response.status),
+      status:response.status || null,
       request:j?.request || null,
       message_id:j?.message_id || null,
       gmail_message_id:j?.gmail_message_id || null,
       audit_event_id:j?.audit_event_id || null,
       result:j || null,
-      detail:r
+      raw:text || "",
+      detail:{ ok:false, status:response.status || null, json:j, text }
     };
   }
 
