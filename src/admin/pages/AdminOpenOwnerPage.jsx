@@ -95,6 +95,8 @@ function getStatusLabel(status){
       return "Открывается"
     case "provisioned":
       return "Доступ создан"
+    case "activated":
+      return "Активирован"
     case "email_ready":
       return "Email готов"
     case "email_sent":
@@ -118,14 +120,60 @@ function canProvision(request){
   return String(request?.status || "") === "approved"
 }
 
+function canActivate(request){
+  return String(request?.status || "") === "provisioned"
+}
+
 function canPreviewEmail(request){
   const status = String(request?.status || "")
-  return status === "provisioned" || status === "email_ready" || status === "email_failed" || status === "email_sent"
+  return status === "activated" || status === "email_ready" || status === "email_failed" || status === "email_sent"
 }
 
 function canSendEmail(request){
   const status = String(request?.status || "")
   return status === "email_ready" || status === "email_failed"
+}
+
+function canCreateRequest(precheckResult){
+  return Boolean(precheckResult?.valid)
+}
+
+function getAdminOpenOwnerAuthHeaders(){
+  const token = localStorage.getItem("TOTEM_AUTH_TOKEN") || ""
+
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
+
+async function activateAdminOpenOwnerRequest(requestId){
+  const response = await fetch(
+    `https://api.totemv.com/internal/admin/open-owner/requests/${encodeURIComponent(requestId)}/activate`,
+    {
+      method: "POST",
+      headers: getAdminOpenOwnerAuthHeaders(),
+    }
+  )
+
+  let data = null
+
+  try{
+    data = await response.json()
+  }catch(e){
+    data = null
+  }
+
+  if(!response.ok){
+    return {
+      ok: false,
+      status: response.status,
+      error: data?.error || `HTTP_${response.status}`,
+      ...(data || {}),
+    }
+  }
+
+  return data || { ok: true }
 }
 
 export default function AdminOpenOwnerPage(){
@@ -307,6 +355,10 @@ export default function AdminOpenOwnerPage(){
     }finally{
       setActionLoading(false)
     }
+  }
+
+  async function runActivate(){
+    await runRequestAction("ACTIVATE", activateAdminOpenOwnerRequest)
   }
 
   async function runSendEmail(){
@@ -544,7 +596,7 @@ export default function AdminOpenOwnerPage(){
               Precheck
             </button>
 
-            <button type="button" onClick={createRequest} disabled={actionLoading} style={styles.primaryButton}>
+            <button type="button" onClick={createRequest} disabled={actionLoading || !canCreateRequest(precheckResult)} style={styles.primaryButton}>
               Create request
             </button>
 
@@ -625,6 +677,15 @@ export default function AdminOpenOwnerPage(){
               style={styles.primaryButton}
             >
               Provision
+            </button>
+
+            <button
+              type="button"
+              onClick={runActivate}
+              disabled={actionLoading || !canActivate(selectedRequest)}
+              style={styles.primaryButton}
+            >
+              Activate
             </button>
 
             <button
