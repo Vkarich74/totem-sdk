@@ -220,21 +220,15 @@ export default function PublicMasterPage({ slug }) {
           return;
         }
 
-        if (!json?.published_exists) {
-          setRemoteState({
-            loading: false,
-            ok: false,
-            payload: null,
-            errorCode: "MASTER_PUBLIC_NOT_PUBLISHED",
-            statusCode: response.status || 0,
-          });
-          return;
+        const payload = json.payload || null;
+        if (payload?.identity && !payload.identity.master_name && json?.master?.name) {
+          payload.identity = { ...payload.identity, master_name: json.master.name };
         }
 
         setRemoteState({
           loading: false,
           ok: true,
-          payload: json.payload || null,
+          payload,
           errorCode: "",
           statusCode: response.status || 200,
         });
