@@ -265,7 +265,7 @@ export default function AdminOpenOwnerPage(){
       }
 
       setPrecheckResult(result.result || result)
-      setNotice(result.valid ? "Precheck PASS" : "Precheck FAILED")
+      setNotice(result.valid ? "Проверка пройдена" : "Проверка не пройдена")
     }catch(e){
       setError(e?.message || "PRECHECK_FAILED")
     }finally{
@@ -285,7 +285,7 @@ export default function AdminOpenOwnerPage(){
         throw new Error(result.error || "CREATE_REQUEST_FAILED")
       }
 
-      setNotice(`Request создан: ${result.request?.id || "-"}`)
+      setNotice(`Заявка создана: ${result.request?.id || "-"}`)
       setSelectedRequestId(String(result.request?.id || ""))
       setSelectedRequest(result.request || null)
       setPrecheckResult(null)
@@ -315,14 +315,14 @@ export default function AdminOpenOwnerPage(){
       const result = await handler(selectedRequest.id)
 
       if(!result.ok){
-        throw new Error(result.error || `${actionName}_FAILED`)
+        throw new Error(result.error || `${actionName}: ошибка`)
       }
 
       setSelectedRequest(result.request || selectedRequest)
-      setNotice(`${actionName} PASS`)
+      setNotice(`${actionName}: выполнено`)
       await loadData()
     }catch(e){
-      setError(e?.message || `${actionName}_FAILED`)
+      setError(e?.message || `${actionName}: ошибка`)
     }finally{
       setActionLoading(false)
     }
@@ -348,7 +348,7 @@ export default function AdminOpenOwnerPage(){
 
       setSelectedRequest(result.request || selectedRequest)
       setEmailPreview(result.preview || null)
-      setNotice("Email preview PASS")
+      setNotice("Предпросмотр email готов")
       await loadData()
     }catch(e){
       setError(e?.message || "EMAIL_PREVIEW_FAILED")
@@ -358,11 +358,11 @@ export default function AdminOpenOwnerPage(){
   }
 
   async function runActivate(){
-    await runRequestAction("ACTIVATE", activateAdminOpenOwnerRequest)
+    await runRequestAction("Активация", activateAdminOpenOwnerRequest)
   }
 
   async function runSendEmail(){
-    await runRequestAction("SEND_EMAIL", sendAdminOpenOwnerEmail)
+    await runRequestAction("Отправка email", sendAdminOpenOwnerEmail)
   }
 
   async function loadAudit(requestId = selectedRequest?.id){
@@ -385,7 +385,7 @@ export default function AdminOpenOwnerPage(){
       }
 
       setAudit(result)
-      setNotice("Audit loaded")
+      setNotice("Аудит загружен")
     }catch(e){
       setAudit(null)
       setError(e?.message || "AUDIT_LOAD_FAILED")
@@ -443,22 +443,22 @@ export default function AdminOpenOwnerPage(){
 
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Requests</div>
+          <div style={styles.statLabel}>Заявки</div>
           <div style={styles.statValue}>{visibleStats.total}</div>
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Provisioned</div>
+          <div style={styles.statLabel}>Доступ создан</div>
           <div style={styles.statValue}>{visibleStats.provision?.provisioned ?? 0}</div>
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Email sent</div>
+          <div style={styles.statLabel}>Email отправлены</div>
           <div style={styles.statValue}>{visibleStats.byEmailStatus?.sent ?? 0}</div>
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Errors</div>
+          <div style={styles.statLabel}>Ошибки</div>
           <div style={styles.statValue}>
             {(Number(visibleStats.errors?.provision_failed || 0) + Number(visibleStats.errors?.email_failed || 0))}
           </div>
@@ -493,7 +493,7 @@ export default function AdminOpenOwnerPage(){
             </label>
 
             <label style={styles.label}>
-              Slug
+              Слаг
               <input
                 value={form.slug}
                 onChange={(event) => updateFormField("slug", event.target.value)}
@@ -568,7 +568,7 @@ export default function AdminOpenOwnerPage(){
 
                 {form.work_mode === "attached_to_salon" ? (
                   <label style={styles.label}>
-                    Slug салона
+                    Слаг салона
                     <input
                       value={form.salon_slug}
                       onChange={(event) => updateFormField("salon_slug", event.target.value)}
@@ -581,7 +581,7 @@ export default function AdminOpenOwnerPage(){
             ) : null}
 
             <label style={{ ...styles.label, gridColumn: "1 / -1" }}>
-              Admin notes
+              Заметка администратора
               <textarea
                 value={form.admin_notes}
                 onChange={(event) => updateFormField("admin_notes", event.target.value)}
@@ -593,33 +593,33 @@ export default function AdminOpenOwnerPage(){
 
           <div style={styles.buttonRow}>
             <button type="button" onClick={runPrecheck} disabled={actionLoading} style={styles.secondaryButton}>
-              Precheck
+              Проверить
             </button>
 
             <button type="button" onClick={createRequest} disabled={actionLoading || !canCreateRequest(precheckResult)} style={styles.primaryButton}>
-              Create request
+              Создать заявку
             </button>
 
             <button type="button" onClick={loadData} disabled={actionLoading} style={styles.secondaryButton}>
-              Refresh
+              Обновить
             </button>
           </div>
 
           {precheckResult ? (
             <div style={styles.resultBox}>
-              <h3 style={styles.smallTitle}>Precheck result</h3>
-              <div><strong>valid:</strong> {String(Boolean(precheckResult.valid))}</div>
-              <div><strong>errors:</strong> {stringifyValue(precheckResult.errors || [])}</div>
-              <div><strong>normalized:</strong> {stringifyValue(precheckResult.normalized)}</div>
+              <h3 style={styles.smallTitle}>Результат проверки</h3>
+              <div><strong>Действителен:</strong> {String(Boolean(precheckResult.valid))}</div>
+              <div><strong>Ошибки:</strong> {stringifyValue(precheckResult.errors || [])}</div>
+              <div><strong>Нормализовано:</strong> {stringifyValue(precheckResult.normalized)}</div>
             </div>
           ) : null}
         </section>
 
         <section style={styles.panel}>
-          <h2 style={styles.panelTitle}>Requests</h2>
+          <h2 style={styles.panelTitle}>Заявки</h2>
 
           {sortedRequests.length === 0 ? (
-            <div>Requests пустые</div>
+            <div>Заявок нет</div>
           ) : (
             <div style={styles.requestsList}>
               {sortedRequests.map((request) => (
@@ -645,38 +645,38 @@ export default function AdminOpenOwnerPage(){
 
       {selectedRequest ? (
         <section style={styles.panel}>
-          <h2 style={styles.panelTitle}>Selected request #{selectedRequest.id}</h2>
+          <h2 style={styles.panelTitle}>Выбранная заявка #{selectedRequest.id}</h2>
 
           <div style={styles.detailGrid}>
-            <div><strong>status:</strong> {selectedRequest.status || "-"}</div>
-            <div><strong>email_status:</strong> {selectedRequest.email_status || "-"}</div>
-            <div><strong>owner_type:</strong> {selectedRequest.owner_type || "-"}</div>
-            <div><strong>slug:</strong> {selectedRequest.slug_final || "-"}</div>
+            <div><strong>Статус:</strong> {selectedRequest.status || "-"}</div>
+            <div><strong>Статус email:</strong> {selectedRequest.email_status || "-"}</div>
+            <div><strong>Тип:</strong> {selectedRequest.owner_type || "-"}</div>
+            <div><strong>Слаг:</strong> {selectedRequest.slug_final || "-"}</div>
             <div><strong>email:</strong> {selectedRequest.email || "-"}</div>
-            <div><strong>phone:</strong> {selectedRequest.phone_normalized || selectedRequest.phone_raw || "-"}</div>
-            <div><strong>created_owner_id:</strong> {selectedRequest.created_owner_id || "-"}</div>
-            <div><strong>created_auth_user_id:</strong> {selectedRequest.created_auth_user_id || "-"}</div>
-            <div><strong>message_id:</strong> {selectedRequest.message_id || "-"}</div>
-            <div><strong>created_at:</strong> {formatDateTime(selectedRequest.created_at)}</div>
+            <div><strong>Телефон:</strong> {selectedRequest.phone_normalized || selectedRequest.phone_raw || "-"}</div>
+            <div><strong>ID владельца:</strong> {selectedRequest.created_owner_id || "-"}</div>
+            <div><strong>ID пользователя:</strong> {selectedRequest.created_auth_user_id || "-"}</div>
+            <div><strong>ID сообщения:</strong> {selectedRequest.message_id || "-"}</div>
+            <div><strong>Создано:</strong> {formatDateTime(selectedRequest.created_at)}</div>
           </div>
 
           <div style={styles.buttonRow}>
             <button
               type="button"
-              onClick={() => runRequestAction("APPROVE", approveAdminOpenOwnerRequest)}
+              onClick={() => runRequestAction("Одобрение", approveAdminOpenOwnerRequest)}
               disabled={actionLoading || !canApprove(selectedRequest)}
               style={styles.primaryButton}
             >
-              Approve
+              Одобрить
             </button>
 
             <button
               type="button"
-              onClick={() => runRequestAction("PROVISION", provisionAdminOpenOwnerRequest)}
+              onClick={() => runRequestAction("Создание доступа", provisionAdminOpenOwnerRequest)}
               disabled={actionLoading || !canProvision(selectedRequest)}
               style={styles.primaryButton}
             >
-              Provision
+              Создать доступ
             </button>
 
             <button
@@ -685,7 +685,7 @@ export default function AdminOpenOwnerPage(){
               disabled={actionLoading || !canActivate(selectedRequest)}
               style={styles.primaryButton}
             >
-              Activate
+              Активировать
             </button>
 
             <button
@@ -694,7 +694,7 @@ export default function AdminOpenOwnerPage(){
               disabled={actionLoading || !canPreviewEmail(selectedRequest)}
               style={styles.secondaryButton}
             >
-              Email preview
+              Предпросмотр email
             </button>
 
             <button
@@ -703,7 +703,7 @@ export default function AdminOpenOwnerPage(){
               disabled={actionLoading || !canSendEmail(selectedRequest)}
               style={styles.secondaryButton}
             >
-              Send email
+              Отправить email
             </button>
 
             <button
@@ -712,15 +712,15 @@ export default function AdminOpenOwnerPage(){
               disabled={auditLoading}
               style={styles.secondaryButton}
             >
-              Audit
+              Аудит
             </button>
           </div>
 
           {emailPreview ? (
             <div style={styles.resultBox}>
-              <h3 style={styles.smallTitle}>Email preview</h3>
-              <div><strong>to:</strong> {emailPreview.to || "-"}</div>
-              <div><strong>subject:</strong> {emailPreview.subject || "-"}</div>
+              <h3 style={styles.smallTitle}>Предпросмотр email</h3>
+              <div><strong>Кому:</strong> {emailPreview.to || "-"}</div>
+              <div><strong>Тема:</strong> {emailPreview.subject || "-"}</div>
               <pre style={styles.pre}>{emailPreview.text || "-"}</pre>
             </div>
           ) : null}
@@ -729,28 +729,28 @@ export default function AdminOpenOwnerPage(){
 
       {audit ? (
         <section style={styles.panel}>
-          <h2 style={styles.panelTitle}>Audit request #{audit.request_id}</h2>
+          <h2 style={styles.panelTitle}>Аудит заявки #{audit.request_id}</h2>
 
           <div style={styles.statsGrid}>
             <div style={styles.statCard}>
-              <div style={styles.statLabel}>Events</div>
+              <div style={styles.statLabel}>События</div>
               <div style={styles.statValue}>{audit.audit_events.length}</div>
             </div>
 
             <div style={styles.statCard}>
-              <div style={styles.statLabel}>Messages</div>
+              <div style={styles.statLabel}>Сообщения</div>
               <div style={styles.statValue}>{audit.messages.length}</div>
             </div>
 
             <div style={styles.statCard}>
-              <div style={styles.statLabel}>Traces</div>
+              <div style={styles.statLabel}>Трассировки</div>
               <div style={styles.statValue}>{audit.traces.length}</div>
             </div>
           </div>
 
           <div style={styles.auditGrid}>
             <div>
-              <h3 style={styles.smallTitle}>Audit events</h3>
+              <h3 style={styles.smallTitle}>События аудита</h3>
               {audit.audit_events.length === 0 ? <div>Пусто</div> : audit.audit_events.map((item) => (
                 <div key={item.id} style={styles.auditCard}>
                   <div><strong>{item.event_type || "-"}</strong></div>
@@ -761,10 +761,10 @@ export default function AdminOpenOwnerPage(){
             </div>
 
             <div>
-              <h3 style={styles.smallTitle}>Messages</h3>
+              <h3 style={styles.smallTitle}>Сообщения</h3>
               {audit.messages.length === 0 ? <div>Пусто</div> : audit.messages.map((item) => (
                 <div key={item.id} style={styles.auditCard}>
-                  <div><strong>message #{item.id}</strong> / {item.status || "-"}</div>
+                  <div><strong>сообщение #{item.id}</strong> / {item.status || "-"}</div>
                   <div>{formatDateTime(item.created_at)}</div>
                   <div>{stringifyValue(item.data)}</div>
                 </div>
@@ -772,11 +772,11 @@ export default function AdminOpenOwnerPage(){
             </div>
 
             <div>
-              <h3 style={styles.smallTitle}>Traces</h3>
+              <h3 style={styles.smallTitle}>Трассировки</h3>
               {audit.traces.length === 0 ? <div>Пусто</div> : audit.traces.map((item) => (
                 <div key={item.id} style={styles.auditCard}>
-                  <div><strong>trace #{item.id}</strong> / {item.status || "-"}</div>
-                  <div>message_id: {item.message_id || "-"}</div>
+                  <div><strong>трассировка #{item.id}</strong> / {item.status || "-"}</div>
+                  <div>ID сообщения: {item.message_id || "-"}</div>
                   <div>{formatDateTime(item.created_at)}</div>
                   <div>{stringifyValue(item.data)}</div>
                 </div>
