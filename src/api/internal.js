@@ -471,9 +471,23 @@ export async function sendAdminOpenOwnerEmail(requestId){
   const r = await safeInternalJson(`/admin/open-owner/requests/${id}/send-email`, {
     method: "POST"
   });
-  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_SEND_EMAIL_FETCH_FAILED", detail:r };
   const j = r.json;
-  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_SEND_EMAIL_API_NOT_OK", detail:j };
+
+  if(!r.ok){
+    return {
+      ok:false,
+      error:j?.error || "ADMIN_OPEN_OWNER_SEND_EMAIL_FETCH_FAILED",
+      status:r.status || null,
+      request:j?.request || null,
+      message_id:j?.message_id || null,
+      gmail_message_id:j?.gmail_message_id || null,
+      audit_event_id:j?.audit_event_id || null,
+      result:j || null,
+      detail:r
+    };
+  }
+
+  if(!j || !j.ok) return { ok:false, error:j?.error || "ADMIN_OPEN_OWNER_SEND_EMAIL_API_NOT_OK", detail:j, result:j || null };
   return {
     ok:true,
     request:j.request || null,
@@ -489,9 +503,23 @@ export async function resendAdminOpenOwnerEmail(requestId){
   const r = await safeInternalJson(`/admin/open-owner/requests/${id}/resend-email`, {
     method: "POST"
   });
-  if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_RESEND_EMAIL_FETCH_FAILED", detail:r };
   const j = r.json;
-  if(!j || !j.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_RESEND_EMAIL_API_NOT_OK", detail:j };
+
+  if(!r.ok){
+    return {
+      ok:false,
+      error:j?.error || "ADMIN_OPEN_OWNER_RESEND_EMAIL_FETCH_FAILED",
+      status:r.status || null,
+      request:j?.request || null,
+      message_id:j?.message_id || null,
+      gmail_message_id:j?.gmail_message_id || null,
+      audit_event_id:j?.audit_event_id || null,
+      result:j || null,
+      detail:r
+    };
+  }
+
+  if(!j || !j.ok) return { ok:false, error:j?.error || "ADMIN_OPEN_OWNER_RESEND_EMAIL_API_NOT_OK", detail:j, result:j || null };
   return {
     ok:true,
     request:j.request || null,
