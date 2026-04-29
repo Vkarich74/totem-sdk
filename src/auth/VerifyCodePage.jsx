@@ -49,14 +49,14 @@ export default function VerifyCodePage(){
   }, [location.state]);
 
   const query = new URLSearchParams(location.search);
-  const originRole = String(query.get("role") || "").trim().toLowerCase();
   const effectiveRole = normalizeVerifyRole(
     query.get("role"),
     query.get("owner_type")
   );
   const effectiveSlug = String(query.get("slug") || "").trim();
+  const queryLogin = String(query.get("login") || "").trim();
 
-  const [login, setLogin] = useState(initialLogin);
+  const [login, setLogin] = useState(initialLogin || queryLogin || "");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -90,7 +90,7 @@ export default function VerifyCodePage(){
       }
 
       const target = resolveRedirectTarget(
-        originRole,
+        effectiveRole,
         res?.auth?.slug || effectiveSlug
       );
       navigate(target, { replace: true });

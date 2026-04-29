@@ -9,10 +9,14 @@ function normalizeEmail(value){
 export default function ResetPasswordPage(){
   const navigate = useNavigate();
   const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const role = String(query.get("role") || "").trim().toLowerCase();
+  const slug = String(query.get("slug") || "").trim().toLowerCase();
+  const initialLogin = normalizeEmail(query.get("login") || "");
 
   const initialEmail = useMemo(() => {
-    return normalizeEmail(location.state?.email || "");
-  }, [location.state]);
+    return initialLogin || normalizeEmail(location.state?.email || "");
+  }, [initialLogin, location.state]);
 
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
@@ -26,6 +30,11 @@ export default function ResetPasswordPage(){
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    if(!role || !slug){
+      setError("Ошибка контекста входа");
+      return;
+    }
 
     const normalizedEmail = normalizeEmail(email);
     const normalizedCode = String(code || "").trim();
@@ -58,7 +67,9 @@ export default function ResetPasswordPage(){
       const result = await finishPasswordReset({
         email: normalizedEmail,
         code: normalizedCode,
-        password: normalizedPassword
+        password: normalizedPassword,
+        role,
+        slug
       });
 
       if(!result?.ok){
@@ -69,7 +80,10 @@ export default function ResetPasswordPage(){
 
       setSuccess("Пароль обновлён. Возвращаем на страницу входа.");
 
-      navigate("/auth/login", { replace: true });
+      navigate(
+        `/auth/login?role=${encodeURIComponent(role)}&slug=${encodeURIComponent(slug)}&login=${encodeURIComponent(normalizedEmail)}`,
+        { replace: true }
+      );
     }catch(e){
       setError("Ошибка сброса пароля");
     }finally{

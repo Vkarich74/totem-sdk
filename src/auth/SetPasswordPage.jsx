@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { setPassword } from "../api/internal";
 
 export default function SetPasswordPage(){
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const query = new URLSearchParams(location.search);
+  const role = String(query.get("role") || "").trim().toLowerCase();
+  const slug = String(query.get("slug") || "").trim().toLowerCase();
+  const login = String(query.get("login") || "").trim();
 
   const [password, setPasswordValue] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -40,6 +46,21 @@ export default function SetPasswordPage(){
       }
 
       setSuccess("Пароль сохранён. Выполните вход заново.");
+
+      if(role && slug){
+        const params = new URLSearchParams({
+          role,
+          slug
+        });
+
+        if(login){
+          params.set("login", login);
+        }
+
+        navigate(`/auth/login?${params.toString()}`, { replace: true });
+        return;
+      }
+
       navigate("/auth/login", { replace: true });
     }catch(e){
       setError("Ошибка сохранения пароля");

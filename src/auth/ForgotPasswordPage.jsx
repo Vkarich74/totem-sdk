@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { startPasswordReset } from "../api/internal";
 
 function normalizeEmail(value){
@@ -8,8 +8,14 @@ function normalizeEmail(value){
 
 export default function ForgotPasswordPage(){
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [email, setEmail] = useState("");
+  const query = new URLSearchParams(location.search);
+  const role = String(query.get("role") || "").trim().toLowerCase();
+  const slug = String(query.get("slug") || "").trim().toLowerCase();
+  const initialLogin = String(query.get("login") || "").trim();
+
+  const [email, setEmail] = useState(initialLogin);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -18,6 +24,11 @@ export default function ForgotPasswordPage(){
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    if(!role || !slug){
+      setError("Ошибка контекста входа");
+      return;
+    }
 
     const normalizedEmail = normalizeEmail(email);
 
@@ -30,7 +41,10 @@ export default function ForgotPasswordPage(){
 
     try{
       const result = await startPasswordReset({
+        login: normalizedEmail,
         email: normalizedEmail,
+        role,
+        slug,
         channel: "email"
       });
 
@@ -42,12 +56,10 @@ export default function ForgotPasswordPage(){
 
       setSuccess("Код отправлен. Переходим к подтверждению.");
 
-      navigate("/auth/reset", {
-        replace: true,
-        state: {
-          email: normalizedEmail
-        }
-      });
+      navigate(
+        `/auth/reset?role=${encodeURIComponent(role)}&slug=${encodeURIComponent(slug)}&login=${encodeURIComponent(normalizedEmail)}`,
+        { replace: true }
+      );
     }catch(e){
       setError("Ошибка запуска восстановления");
     }finally{

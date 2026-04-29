@@ -53,6 +53,32 @@ export default function LoginPage(){
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  function buildForgotPasswordHref(){
+    if(!effectiveRole || !effectiveSlug){
+      return ""
+    }
+
+    const params = new URLSearchParams({
+      role: effectiveRole,
+      slug: effectiveSlug
+    })
+
+    if(login.trim()){
+      params.set("login", login.trim())
+    }
+
+    return `/auth/forgot-password?${params.toString()}`
+  }
+
+  function handleForgotPasswordClick(e){
+    const href = buildForgotPasswordHref()
+
+    if(!href){
+      e.preventDefault()
+      setError("Ошибка контекста входа")
+    }
+  }
+
   useEffect(() => {
     if(shouldClearAdminToken(originRole)){
       clearAdminTokenForCabinetLogin()
@@ -199,6 +225,16 @@ export default function LoginPage(){
             {loading ? "Загрузка..." : "Войти"}
           </button>
         </form>
+
+        <div style={{ marginTop: "12px", textAlign: "right" }}>
+          <a
+            href={buildForgotPasswordHref() || "#"}
+            onClick={handleForgotPasswordClick}
+            style={{ fontSize: "14px" }}
+          >
+            Забыли пароль?
+          </a>
+        </div>
       </div>
     </div>
   )
