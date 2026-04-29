@@ -40,16 +40,35 @@ export default function ForgotPasswordPage(){
     setLoading(true);
 
     try{
-      const result = await startPasswordReset({
+      const payload = {
         login: normalizedEmail,
         email: normalizedEmail,
         role,
         slug,
+        owner_slug: slug,
         channel: "email"
+      };
+
+      if(role === "salon_admin"){
+        payload.salon_slug = slug;
+      }
+
+      if(role === "master"){
+        payload.master_slug = slug;
+      }
+
+      const result = await startPasswordReset({
+        ...payload
       });
 
       if(!result?.ok){
         setError("Не удалось запустить восстановление");
+        setLoading(false);
+        return;
+      }
+
+      if(result?.neutral === true){
+        setError("Пользователь с таким email и кабинетом не найден. Проверьте роль и салон/мастера.");
         setLoading(false);
         return;
       }
