@@ -67,7 +67,7 @@ export default function LoginPage(){
       params.set("login", login.trim())
     }
 
-    return `/auth/forgot-password?${params.toString()}`
+    return `#/auth/forgot-password?${params.toString()}`
   }
 
   function handleForgotPasswordClick(e){
