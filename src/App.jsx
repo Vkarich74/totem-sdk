@@ -49,6 +49,7 @@ import AdminDashboardPage from "./admin/pages/AdminDashboardPage";
 import AdminClientsPage from "./admin/pages/AdminClientsPage";
 import AdminOpenOwnerPage from "./admin/pages/AdminOpenOwnerPage";
 import AdminOwnersPage from "./admin/pages/AdminOwnersPage";
+import AdminFinancePage from "./admin/pages/AdminFinancePage";
 
 /* MASTER FINANCE */
 import MasterMoneyPage from "./master/payments/MasterMoneyPage";
@@ -688,6 +689,10 @@ function AdminRouter() {
 
   if (adminRoute === "open-owner") {
     return <AdminOpenOwnerPage />;
+  }
+
+  if (adminRoute === "finance") {
+    return <AdminFinancePage />;
   }
 
   return <AdminDashboardPage />;
