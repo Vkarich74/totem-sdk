@@ -119,11 +119,7 @@ function SessionGate({ slug, children }){
         )
 
       if(!authenticated || !hasSalonAccess){
-        try{
-          await logoutCurrentSession()
-        }catch(e){
-          clearAuthAccessToken()
-        }
+        clearAuthAccessToken()
 
         if(active){
           setState({ loading: false, allowed: false })

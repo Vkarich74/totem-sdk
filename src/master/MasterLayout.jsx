@@ -118,11 +118,7 @@ function SessionGate({ slug, children }){
         (!masterSlug || masterSlug === String(slug || ""))
 
       if(!hasAccess){
-        try{
-          await logoutCurrentSession()
-        }catch(e){
-          clearAuthAccessToken()
-        }
+        clearAuthAccessToken()
 
         if(active){
           setState({ loading: false, allowed: false })
