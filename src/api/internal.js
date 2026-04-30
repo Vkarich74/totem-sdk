@@ -983,10 +983,34 @@ export async function moveBooking(id,start_at){
    WITHDRAWS (FIXED)
 ================================ */
 
-export async function createSalonWithdraw(amount, billingAccess, salonSlug = getSalonSlug()){
-  if (!canWithdrawByBilling(billingAccess)) {
-    return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
+export async function getSalonMoneyCoreSummary(salonSlug = getSalonSlug()){
+  try{
+    const r = await safeInternalJson(`/salons/${salonSlug}/money-core/summary`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"SALON_MONEY_CORE_SUMMARY_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_MONEY_CORE_SUMMARY_API_NOT_OK", detail:j };
+    return { ok:true, summary:j.summary || j.data || j };
+  }catch(e){
+    return { ok:false, error:"SALON_MONEY_CORE_SUMMARY_FETCH_FAILED", detail:e };
   }
+}
+
+export async function getMasterMoneyCoreSummary(masterSlug = getMasterSlug()){
+  try{
+    const r = await safeInternalJson(`/masters/${masterSlug}/money-core/summary`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MASTER_MONEY_CORE_SUMMARY_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_MONEY_CORE_SUMMARY_API_NOT_OK", detail:j };
+    return { ok:true, summary:j.summary || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MASTER_MONEY_CORE_SUMMARY_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function createSalonWithdraw(amount, billingAccess, salonSlug = getSalonSlug()){
+    if (!canWithdrawByBilling(billingAccess)) {
+      return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
+    }
 
   const r = await safeInternalJson(
     `/salons/${salonSlug}/withdraw`,
