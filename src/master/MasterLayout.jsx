@@ -200,12 +200,10 @@ function MasterLayoutInner(){
       clearAuthAccessToken()
     }
 
-    if(!slug){
-      window.location.hash = "/"
-      return
-    }
-
-    window.location.hash = `/master/${slug}`
+    const params = new URLSearchParams()
+    params.set("role", "master")
+    if(slug) params.set("slug", slug)
+    window.location.hash = `/auth/login?${params.toString()}`
   }
 
   return (

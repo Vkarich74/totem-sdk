@@ -205,13 +205,10 @@ function SalonLayoutInner(){
       clearAuthAccessToken()
     }
 
-    if(!slug){
-      window.location.hash = "/"
-      return
-    }
-
-    // FIX: redirect через hash
-    window.location.hash = `/salon/${slug}`
+    const params = new URLSearchParams()
+    params.set("role", "salon_admin")
+    if(slug) params.set("slug", slug)
+    window.location.hash = `/auth/login?${params.toString()}`
   }
 
   return (
