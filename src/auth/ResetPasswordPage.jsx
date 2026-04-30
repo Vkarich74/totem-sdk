@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { finishPasswordReset } from "../api/internal";
+import { authLogin, finishPasswordReset } from "../api/internal";
 
 function normalizeEmail(value){
   return String(value || "").trim().toLowerCase();
@@ -78,7 +78,25 @@ export default function ResetPasswordPage(){
         return;
       }
 
-      setSuccess("Пароль обновлён. Возвращаем на страницу входа.");
+      setSuccess("Пароль обновлён. Входим в кабинет...");
+
+      const loginResult = await authLogin({
+        login: normalizedEmail,
+        password: normalizedPassword,
+        role,
+        slug
+      });
+
+      if(loginResult?.ok && loginResult?.access_token){
+        window.localStorage.setItem("TOTEM_AUTH_TOKEN", loginResult.access_token);
+        navigate(
+          role === "master"
+            ? `/master/${slug}/dashboard`
+            : `/salon/${slug}/dashboard`,
+          { replace: true }
+        );
+        return;
+      }
 
       navigate(
         `/auth/login?role=${encodeURIComponent(role)}&slug=${encodeURIComponent(slug)}&login=${encodeURIComponent(normalizedEmail)}`,
