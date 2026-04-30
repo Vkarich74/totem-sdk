@@ -5,6 +5,7 @@ import { useMaster } from "../MasterContext";
 import {
   getMasterActiveContract,
   getMasterContractHistory,
+  getMasterMoneyCoreSummary,
   getMasterPayouts,
   getMasterSettlements,
   getMasterWalletBalance
@@ -187,6 +188,7 @@ export default function MasterFinancePage() {
   const [wallet, setWallet] = useState(null);
   const [settlements, setSettlements] = useState([]);
   const [payouts, setPayouts] = useState([]);
+  const [moneyCoreSummary, setMoneyCoreSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -210,19 +212,21 @@ export default function MasterFinancePage() {
           return;
         }
 
-        const [
-          activeResult,
-          historyResult,
-          walletResult,
-          settlementsResult,
-          payoutsResult
-        ] = await Promise.allSettled([
-          getMasterActiveContract(masterSlug),
-          getMasterContractHistory(masterSlug),
-          getMasterWalletBalance(masterSlug),
-          getMasterSettlements(masterSlug),
-          getMasterPayouts(masterSlug)
-        ]);
+          const [
+            activeResult,
+            historyResult,
+            walletResult,
+            settlementsResult,
+            payoutsResult,
+            moneyCoreResult
+          ] = await Promise.allSettled([
+            getMasterActiveContract(masterSlug),
+            getMasterContractHistory(masterSlug),
+            getMasterWalletBalance(masterSlug),
+            getMasterSettlements(masterSlug),
+            getMasterPayouts(masterSlug),
+            getMasterMoneyCoreSummary(masterSlug)
+          ]);
 
         if (cancelled) return;
 
@@ -254,7 +258,16 @@ export default function MasterFinancePage() {
           payoutsResult.status === "fulfilled" && payoutsResult.value?.ok
             ? normalizePayoutsResponse(payoutsResult.value)
             : []
-        );
+          );
+
+        const summarySource =
+          moneyCoreResult.status === "fulfilled" ? moneyCoreResult.value : null;
+        const summary =
+          summarySource?.summary ||
+          summarySource?.data ||
+          summarySource ||
+          null;
+        setMoneyCoreSummary(summary);
 
         if (
           (activeResult.status === "rejected" || !activeResult.value?.ok) &&
@@ -274,6 +287,7 @@ export default function MasterFinancePage() {
           setWallet(null);
           setSettlements([]);
           setPayouts([]);
+          setMoneyCoreSummary(null);
           setError("Не удалось загрузить finance overview");
         }
       } finally {
@@ -307,6 +321,7 @@ export default function MasterFinancePage() {
 
   const settlementTotal = useMemo(() => sumAmounts(settlements), [settlements]);
   const payoutTotal = useMemo(() => sumAmounts(payouts), [payouts]);
+  const moneyCoreZones = moneyCoreSummary || {};
 
   const lastSettlement = useMemo(() => {
     if (!settlements.length) return null;
@@ -350,6 +365,35 @@ export default function MasterFinancePage() {
               <StatCard label="Сеты" value={String(settlements.length)} hint={money(settlementTotal)} />
               <StatCard label="Выплаты" value={String(payouts.length)} hint={money(payoutTotal)} />
             </section>
+
+            <Panel
+              title="Money Core: баланс и вывод"
+              subtitle="Новая модель вывода средств. Сейчас доступен только read-only режим."
+            >
+              <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: "#fff7ed", border: "1px solid #fed7aa", color: "#92400e" }}>
+                Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
+              </div>
+
+              {moneyCoreSummary ? (
+                <section style={styles.grid}>
+                  <StatCard label="provider_hold" value={money(moneyCoreZones.provider_hold)} hint="Резерв у провайдера" />
+                  <StatCard label="pending_settlement" value={money(moneyCoreZones.pending_settlement)} hint="Ожидает расчёта" />
+                  <StatCard label="available" value={money(moneyCoreZones.available)} hint="Доступно к выводу" />
+                  <StatCard label="locked" value={money(moneyCoreZones.locked)} hint="Заблокировано" />
+                  <StatCard label="paid_out" value={money(moneyCoreZones.paid_out)} hint="Уже выплачено" />
+                  <StatCard label="refunded" value={money(moneyCoreZones.refunded)} hint="Возвраты" />
+                  <StatCard label="reversed" value={money(moneyCoreZones.reversed)} hint="Ревёрсы" />
+                  <StatCard label="requires_review" value={money(moneyCoreZones.requires_review)} hint="Требует проверки" />
+                  <StatCard label="commission" value={money(moneyCoreZones.commission)} hint="Комиссия" />
+                  <StatCard label="fee_reserved" value={money(moneyCoreZones.fee_reserved)} hint="Резерв под fee" />
+                </section>
+              ) : (
+                <EmptyState
+                  title="Money Core баланс пока не сформирован"
+                  text="Доступный вывод появится после подтверждённого settlement."
+                />
+              )}
+            </Panel>
 
             <section style={styles.actionsGrid}>
               <Link to={`/master/${masterSlug}/money`} style={styles.actionCard}>
