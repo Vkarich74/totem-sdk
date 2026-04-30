@@ -120,6 +120,11 @@ function SessionGate({ slug, children }){
       if(!hasAccess){
         clearAuthAccessToken()
 
+        const params = new URLSearchParams()
+        params.set("role", "master")
+        if(slug) params.set("slug", slug)
+        window.location.hash = `/auth/login?${params.toString()}`
+
         if(active){
           setState({ loading: false, allowed: false })
         }

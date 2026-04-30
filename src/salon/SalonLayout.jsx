@@ -121,6 +121,12 @@ function SessionGate({ slug, children }){
       if(!authenticated || !hasSalonAccess){
         clearAuthAccessToken()
 
+        const safeSlug = String(slug || "").trim()
+        const params = new URLSearchParams()
+        params.set("role", "salon_admin")
+        if(safeSlug) params.set("slug", safeSlug)
+        window.location.hash = `/auth/login?${params.toString()}`
+
         if(active){
           setState({ loading: false, allowed: false })
         }
