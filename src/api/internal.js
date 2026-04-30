@@ -172,6 +172,9 @@ export async function loginWithPassword({ email = "", phone = "", password = "" 
   if(!r.ok) return { ok:false, error:"AUTH_LOGIN_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"AUTH_LOGIN_API_NOT_OK", detail:j };
+  if(!j.access_token){
+    return { ok:false, error:"AUTH_LOGIN_NO_TOKEN", detail:j };
+  }
 
   if(j.access_token){
     setAuthAccessToken(j.access_token);
@@ -181,7 +184,7 @@ export async function loginWithPassword({ email = "", phone = "", password = "" 
 
   return {
     ok:true,
-    access_token:j.access_token || "",
+    access_token:j.access_token,
     token_type:j.token_type || "Bearer",
     auth:j.auth || null
   };
@@ -216,6 +219,9 @@ export async function authLogin({ login = "", password = "", role = "", slug = "
   if(!r.ok) return { ok:false, error:"AUTH_LOGIN_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"AUTH_LOGIN_API_NOT_OK", detail:j };
+  if(!j.access_token){
+    return { ok:false, error:"AUTH_LOGIN_NO_TOKEN", detail:j };
+  }
 
   if(j.access_token){
     setAuthAccessToken(j.access_token);
@@ -225,7 +231,7 @@ export async function authLogin({ login = "", password = "", role = "", slug = "
 
   return {
     ok:true,
-    access_token:j.access_token || "",
+    access_token:j.access_token,
     token_type:j.token_type || "Bearer",
     auth:j.auth || null
   };
