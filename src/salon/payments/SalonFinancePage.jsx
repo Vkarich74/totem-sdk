@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { getSalonContracts, getSalonMetrics, getSalonPayouts, getSalonSettlements, getSalonWalletBalance } from "../../api/internal"
+import { getSalonContracts, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPayouts, getSalonSettlements, getSalonWalletBalance } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -198,6 +198,7 @@ export default function SalonFinancePage(){
   const [contracts, setContracts] = useState([])
   const [settlements, setSettlements] = useState([])
   const [payouts, setPayouts] = useState([])
+  const [moneyCoreSummary, setMoneyCoreSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -227,13 +228,15 @@ export default function SalonFinancePage(){
           walletRaw,
           contractsRaw,
           settlementsRaw,
-          payoutsRaw
+          payoutsRaw,
+          moneyCoreRaw
         ] = await Promise.all([
           getSalonMetrics(slug),
           getSalonWalletBalance(slug),
           getSalonContracts(slug),
           getSalonSettlements(slug),
-          getSalonPayouts(slug)
+          getSalonPayouts(slug),
+          getSalonMoneyCoreSummary(slug)
         ])
 
         if(cancelled) return
@@ -243,6 +246,7 @@ export default function SalonFinancePage(){
         setContracts(normalizeList(contractsRaw?.ok ? { contracts: contractsRaw.contracts } : {}, ["contracts", "items"]))
         setSettlements(normalizeList(settlementsRaw?.ok ? { settlements: settlementsRaw.settlements } : {}, ["settlements", "periods", "items"]))
         setPayouts(normalizeList(payoutsRaw?.ok ? { payouts: payoutsRaw.payouts } : {}, ["payouts", "items"]))
+        setMoneyCoreSummary((moneyCoreRaw?.ok ? moneyCoreRaw.summary : null) || moneyCoreRaw?.data || moneyCoreRaw || null)
       }catch(loadError){
         console.error("SALON FINANCE LOAD ERROR", loadError)
 
@@ -252,6 +256,7 @@ export default function SalonFinancePage(){
           setContracts([])
           setSettlements([])
           setPayouts([])
+          setMoneyCoreSummary(null)
           setError(loadError?.message || "SALON_FINANCE_LOAD_FAILED")
         }
       }finally{
@@ -308,6 +313,7 @@ export default function SalonFinancePage(){
   const pageLoading = contextLoading || loading
   const pageError = !pageLoading && (contextError || error)
   const showEmpty = !pageLoading && !pageError && !contracts.length && !settlements.length && !payouts.length && !walletBalance && !metricsView.revenueMonth
+  const moneyCoreZones = moneyCoreSummary || {}
 
   return (
     <div style={styles.page}>
@@ -355,6 +361,35 @@ export default function SalonFinancePage(){
           <StatCard title="Доход за месяц" value={money(metricsView.revenueMonth)} note="Главный срез по текущей выручке" />
           <StatCard title="Активные контракты" value={String(activeContracts.length)} note="Связка с мастерами и правила расчётов" />
         </section>
+
+        <Panel
+          title="Money Core: баланс и вывод"
+          note="Новая модель вывода средств. Сейчас доступен только read-only режим."
+        >
+          <div style={{ marginBottom: 12, color: "#92400e", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: 12 }}>
+            Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
+          </div>
+
+          {moneyCoreSummary ? (
+            <div style={styles.statsGrid}>
+              <StatCard title="provider_hold" value={money(moneyCoreZones.provider_hold)} note="Резерв у провайдера" />
+              <StatCard title="pending_settlement" value={money(moneyCoreZones.pending_settlement)} note="Ожидает расчёта" />
+              <StatCard title="available" value={money(moneyCoreZones.available)} note="Доступно к выводу" />
+              <StatCard title="locked" value={money(moneyCoreZones.locked)} note="Заблокировано под выплаты" />
+              <StatCard title="paid_out" value={money(moneyCoreZones.paid_out)} note="Уже выплачено" />
+              <StatCard title="refunded" value={money(moneyCoreZones.refunded)} note="Возвраты" />
+              <StatCard title="reversed" value={money(moneyCoreZones.reversed)} note="Ревёрсы" />
+              <StatCard title="requires_review" value={money(moneyCoreZones.requires_review)} note="Требует проверки" />
+              <StatCard title="commission" value={money(moneyCoreZones.commission)} note="Комиссия" />
+              <StatCard title="fee_reserved" value={money(moneyCoreZones.fee_reserved)} note="Резерв под fee" />
+            </div>
+          ) : (
+            <EmptyState
+              title="Money Core баланс пока не сформирован"
+              text="Доступный вывод появится после подтверждённого settlement."
+            />
+          )}
+        </Panel>
 
         <div style={styles.mainStack}>
           <Panel
