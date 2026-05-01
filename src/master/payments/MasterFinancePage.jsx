@@ -520,6 +520,148 @@ export default function MasterFinancePage() {
                         text="Для этого владельца пока нет сохранённых реквизитов."
                       />
                     )}
+
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb", display: "grid", gap: 12 }}>
+                      <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+                        Добавление реквизитов будет доступно после включения Money Core write-флагов.
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                        <label style={{ display: "grid", gap: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Способ вывода</span>
+                          <select
+                            disabled
+                            defaultValue=""
+                            style={{
+                              width: "100%",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 12,
+                              background: "#f9fafb",
+                              color: "#6b7280",
+                              padding: "12px 14px",
+                              fontSize: 14,
+                              cursor: "not-allowed"
+                            }}
+                          >
+                            <option value="">Выберите способ вывода</option>
+                          </select>
+                        </label>
+
+                        <label style={{ display: "grid", gap: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Получатель</span>
+                          <input
+                            disabled
+                            defaultValue=""
+                            placeholder="Имя получателя"
+                            style={{
+                              width: "100%",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 12,
+                              background: "#f9fafb",
+                              color: "#6b7280",
+                              padding: "12px 14px",
+                              fontSize: 14,
+                              cursor: "not-allowed"
+                            }}
+                          />
+                        </label>
+
+                        <label style={{ display: "grid", gap: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Телефон</span>
+                          <input
+                            disabled
+                            defaultValue=""
+                            placeholder="+996..."
+                            style={{
+                              width: "100%",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 12,
+                              background: "#f9fafb",
+                              color: "#6b7280",
+                              padding: "12px 14px",
+                              fontSize: 14,
+                              cursor: "not-allowed"
+                            }}
+                          />
+                        </label>
+
+                        <label style={{ display: "grid", gap: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Банк</span>
+                          <input
+                            disabled
+                            defaultValue=""
+                            placeholder="Название банка"
+                            style={{
+                              width: "100%",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 12,
+                              background: "#f9fafb",
+                              color: "#6b7280",
+                              padding: "12px 14px",
+                              fontSize: 14,
+                              cursor: "not-allowed"
+                            }}
+                          />
+                        </label>
+
+                        <label style={{ display: "grid", gap: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Маска счёта / карты</span>
+                          <input
+                            disabled
+                            defaultValue=""
+                            placeholder="**** 1234"
+                            style={{
+                              width: "100%",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 12,
+                              background: "#f9fafb",
+                              color: "#6b7280",
+                              padding: "12px 14px",
+                              fontSize: 14,
+                              cursor: "not-allowed"
+                            }}
+                          />
+                        </label>
+
+                        <label style={{ display: "grid", gap: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Отношение к владельцу</span>
+                          <select
+                            disabled
+                            defaultValue=""
+                            style={{
+                              width: "100%",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 12,
+                              background: "#f9fafb",
+                              color: "#6b7280",
+                              padding: "12px 14px",
+                              fontSize: 14,
+                              cursor: "not-allowed"
+                            }}
+                          >
+                            <option value="">Выберите отношение</option>
+                          </select>
+                        </label>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          borderRadius: 12,
+                          background: "#e5e7eb",
+                          color: "#6b7280",
+                          padding: "12px 16px",
+                          fontWeight: 700,
+                          opacity: 0.55,
+                          cursor: "not-allowed",
+                          justifySelf: "start"
+                        }}
+                      >
+                        Добавить реквизиты
+                      </button>
+                    </div>
                   </Panel>
 
                   <Panel title="Настройки вывода" subtitle="Текущий режим Money Core без возможности записи">
