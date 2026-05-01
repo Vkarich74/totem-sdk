@@ -128,6 +128,15 @@ function StatCard({ label, value, hint }) {
   );
 }
 
+function EmptyState({ title, text }) {
+  return (
+    <div style={styles.emptyState}>
+      <div style={styles.emptyStateTitle}>{title}</div>
+      <div style={styles.emptyStateText}>{text}</div>
+    </div>
+  );
+}
+
 function Panel({ title, subtitle, children }) {
   return (
     <section style={styles.panel}>
