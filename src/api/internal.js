@@ -1007,6 +1007,146 @@ export async function getMasterMoneyCoreSummary(masterSlug = getMasterSlug()){
   }
 }
 
+export async function getMoneyCoreDestinationProviders(filters = {}){
+  try{
+    const qs = new URLSearchParams();
+    if(filters.method) qs.set("method", String(filters.method));
+    if(typeof filters.enabled !== "undefined" && filters.enabled !== null && filters.enabled !== ""){
+      qs.set("enabled", String(filters.enabled));
+    }
+    if(filters.country) qs.set("country", String(filters.country));
+
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const r = await safeInternalJson(`/money-core/destination-providers${suffix}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_DESTINATION_PROVIDERS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_DESTINATION_PROVIDERS_API_NOT_OK", detail:j };
+    return { ok:true, providers:j.providers || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_DESTINATION_PROVIDERS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getMoneyCoreOwnerWithdrawDestinations(ownerType, ownerId, filters = {}){
+  try{
+    const qs = new URLSearchParams();
+    if(filters.method) qs.set("method", String(filters.method));
+    if(filters.status) qs.set("status", String(filters.status));
+
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const r = await safeInternalJson(`/money-core/owners/${encodeURIComponent(ownerType)}/${encodeURIComponent(ownerId)}/withdraw-destinations${suffix}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_DESTINATIONS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_DESTINATIONS_API_NOT_OK", detail:j };
+    return { ok:true, destinations:j.destinations || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_DESTINATIONS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function createMoneyCoreOwnerWithdrawDestination(ownerType, ownerId, payload = {}){
+  try{
+    const r = await safeInternalJson(`/money-core/owners/${encodeURIComponent(ownerType)}/${encodeURIComponent(ownerId)}/withdraw-destinations`, {
+      method: "POST",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_DESTINATION_CREATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_DESTINATION_CREATE_API_NOT_OK", detail:j };
+    return { ok:true, destination:j.destination || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_DESTINATION_CREATE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function updateMoneyCoreWithdrawDestination(destinationId, payload = {}){
+  try{
+    const r = await safeInternalJson(`/money-core/withdraw-destinations/${encodeURIComponent(destinationId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_WITHDRAW_DESTINATION_UPDATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_WITHDRAW_DESTINATION_UPDATE_API_NOT_OK", detail:j };
+    return { ok:true, destination:j.destination || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_WITHDRAW_DESTINATION_UPDATE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function archiveMoneyCoreWithdrawDestination(destinationId){
+  try{
+    const r = await safeInternalJson(`/money-core/withdraw-destinations/${encodeURIComponent(destinationId)}/archive`, { method: "POST" });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_WITHDRAW_DESTINATION_ARCHIVE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_WITHDRAW_DESTINATION_ARCHIVE_API_NOT_OK", detail:j };
+    return { ok:true, destination:j.destination || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_WITHDRAW_DESTINATION_ARCHIVE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getMoneyCoreOwnerWithdrawSettings(ownerType, ownerId){
+  try{
+    const r = await safeInternalJson(`/money-core/owners/${encodeURIComponent(ownerType)}/${encodeURIComponent(ownerId)}/withdraw-settings`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_SETTINGS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_SETTINGS_API_NOT_OK", detail:j };
+    return { ok:true, settings:j.settings || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_SETTINGS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function updateMoneyCoreOwnerWithdrawSettings(ownerType, ownerId, payload = {}){
+  try{
+    const r = await safeInternalJson(`/money-core/owners/${encodeURIComponent(ownerType)}/${encodeURIComponent(ownerId)}/withdraw-settings`, {
+      method: "PATCH",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_SETTINGS_UPDATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_SETTINGS_UPDATE_API_NOT_OK", detail:j };
+    return { ok:true, settings:j.settings || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_SETTINGS_UPDATE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getMoneyCoreOwnerWithdrawRequests(ownerType, ownerId, filters = {}){
+  try{
+    const qs = new URLSearchParams();
+    if(filters.status) qs.set("status", String(filters.status));
+    if(typeof filters.destination_id !== "undefined" && filters.destination_id !== null && filters.destination_id !== "") qs.set("destination_id", String(filters.destination_id));
+    if(typeof filters.limit !== "undefined" && filters.limit !== null && filters.limit !== "") qs.set("limit", String(filters.limit));
+    if(typeof filters.offset !== "undefined" && filters.offset !== null && filters.offset !== "") qs.set("offset", String(filters.offset));
+
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const r = await safeInternalJson(`/money-core/owners/${encodeURIComponent(ownerType)}/${encodeURIComponent(ownerId)}/withdraw-requests${suffix}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_REQUESTS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_REQUESTS_API_NOT_OK", detail:j };
+    return { ok:true, requests:j.requests || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_REQUESTS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function createMoneyCoreOwnerWithdrawRequest(ownerType, ownerId, payload = {}){
+  try{
+    const r = await safeInternalJson(`/money-core/owners/${encodeURIComponent(ownerType)}/${encodeURIComponent(ownerId)}/withdraw-requests`, {
+      method: "POST",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_REQUEST_CREATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_REQUEST_CREATE_API_NOT_OK", detail:j };
+    return { ok:true, request:j.request || j.data || j, ledger:j.ledger || null };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_OWNER_WITHDRAW_REQUEST_CREATE_FETCH_FAILED", detail:e };
+  }
+}
+
 export async function createSalonWithdraw(amount, billingAccess, salonSlug = getSalonSlug()){
     if (!canWithdrawByBilling(billingAccess)) {
       return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };
