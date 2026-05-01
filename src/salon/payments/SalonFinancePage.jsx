@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { getSalonContracts, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPayouts, getSalonSettlements, getSalonWalletBalance } from "../../api/internal"
+import { getMoneyCoreDestinationProviders, getMoneyCoreOwnerWithdrawDestinations, getMoneyCoreOwnerWithdrawRequests, getMoneyCoreOwnerWithdrawSettings, getSalonContracts, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPayouts, getSalonSettlements, getSalonWalletBalance } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -199,6 +199,10 @@ export default function SalonFinancePage(){
   const [settlements, setSettlements] = useState([])
   const [payouts, setPayouts] = useState([])
   const [moneyCoreSummary, setMoneyCoreSummary] = useState(null)
+  const [moneyCoreDestinationProviders, setMoneyCoreDestinationProviders] = useState([])
+  const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([])
+  const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null)
+  const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -272,6 +276,58 @@ export default function SalonFinancePage(){
       cancelled = true
     }
   }, [slug])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadMoneyCoreCabinet(){
+      const owner = moneyCoreSummary?.owner
+
+      if(!owner?.type || !owner?.id){
+        if(!cancelled){
+          setMoneyCoreDestinationProviders([])
+          setMoneyCoreWithdrawDestinations([])
+          setMoneyCoreWithdrawSettings(null)
+          setMoneyCoreWithdrawRequests([])
+        }
+        return
+      }
+
+      try{
+        const [
+          providersRaw,
+          destinationsRaw,
+          settingsRaw,
+          requestsRaw
+        ] = await Promise.all([
+          getMoneyCoreDestinationProviders({ enabled: true, country: "KG" }),
+          getMoneyCoreOwnerWithdrawDestinations(owner.type, owner.id),
+          getMoneyCoreOwnerWithdrawSettings(owner.type, owner.id),
+          getMoneyCoreOwnerWithdrawRequests(owner.type, owner.id, { limit: 10, offset: 0 })
+        ])
+
+        if(cancelled) return
+
+        setMoneyCoreDestinationProviders(Array.isArray(providersRaw?.providers) ? providersRaw.providers : [])
+        setMoneyCoreWithdrawDestinations(Array.isArray(destinationsRaw?.destinations) ? destinationsRaw.destinations : [])
+        setMoneyCoreWithdrawSettings(settingsRaw?.settings || null)
+        setMoneyCoreWithdrawRequests(Array.isArray(requestsRaw?.requests) ? requestsRaw.requests : [])
+      }catch(e){
+        if(!cancelled){
+          setMoneyCoreDestinationProviders([])
+          setMoneyCoreWithdrawDestinations([])
+          setMoneyCoreWithdrawSettings(null)
+          setMoneyCoreWithdrawRequests([])
+        }
+      }
+    }
+
+    loadMoneyCoreCabinet()
+
+    return () => {
+      cancelled = true
+    }
+  }, [moneyCoreSummary?.owner?.type, moneyCoreSummary?.owner?.id])
 
   const billingUi = useMemo(
     () => getBillingUi(billingAccess, billingBlockReason),
@@ -362,10 +418,10 @@ export default function SalonFinancePage(){
           <StatCard title="Активные контракты" value={String(activeContracts.length)} note="Связка с мастерами и правила расчётов" />
         </section>
 
-        <Panel
-          title="Money Core: баланс и вывод"
-          note="Новая модель вывода средств. Сейчас доступен только read-only режим."
-        >
+            <Panel
+              title="Money Core: баланс и вывод"
+              note="Новая модель вывода средств. Сейчас доступен только read-only режим."
+            >
           <div style={{ marginBottom: 12, color: "#92400e", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: 12 }}>
             Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
           </div>
@@ -383,13 +439,91 @@ export default function SalonFinancePage(){
               <StatCard title="commission" value={money(moneyCoreZones.commission)} note="Комиссия" />
               <StatCard title="fee_reserved" value={money(moneyCoreZones.fee_reserved)} note="Резерв под fee" />
             </div>
-          ) : (
-            <EmptyState
-              title="Money Core баланс пока не сформирован"
-              text="Доступный вывод появится после подтверждённого settlement."
-            />
-          )}
-        </Panel>
+              ) : (
+                <EmptyState
+                  title="Money Core баланс пока не сформирован"
+                  text="Доступный вывод появится после подтверждённого settlement."
+                />
+              )}
+
+              <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+                <Panel title="Способы вывода" note="Доступные провайдеры вывода для Money Core">
+                  {moneyCoreDestinationProviders.length ? (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {moneyCoreDestinationProviders.map((item) => (
+                        <PreviewRow
+                          key={item.code}
+                          title={item.name || item.code}
+                          meta={`${item.code} · ${item.method || "—"}`}
+                          status={item.enabled ? "Доступен" : "Отключён"}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="Провайдеры не настроены"
+                      text="Список способов вывода пока пуст."
+                    />
+                  )}
+                </Panel>
+
+                <Panel title="Мои реквизиты" note="Сохранённые реквизиты для вывода средств">
+                  {moneyCoreWithdrawDestinations.length ? (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {moneyCoreWithdrawDestinations.map((item) => (
+                        <PreviewRow
+                          key={item.id}
+                          title={item.method || "—"}
+                          meta={`${item.status || "—"} · ${item.destination_relation || "—"}`}
+                          value={item.phone || item.bank_name || item.account_masked || item.card_last4 || "—"}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="Реквизиты ещё не добавлены"
+                      text="Для этого владельца пока нет сохранённых реквизитов."
+                    />
+                  )}
+                </Panel>
+
+                <Panel title="Настройки вывода" note="Текущий режим Money Core без возможности записи">
+                  {moneyCoreWithdrawSettings ? (
+                    <div style={styles.statsGrid}>
+                      <StatCard title="Режим" value={moneyCoreWithdrawSettings.mode || "—"} note="Текущий режим" />
+                      <StatCard title="Автозаявки" value={String(Boolean(moneyCoreWithdrawSettings.auto_submit_enabled))} note="Автоматизация" />
+                      <StatCard title="Проверка админом" value={String(Boolean(moneyCoreWithdrawSettings.requires_admin_review))} note="Контроль" />
+                      <StatCard title="Способ суммы" value={moneyCoreWithdrawSettings.amount_mode || "—"} note="Модель суммы" />
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="Настройки вывода не заданы"
+                      text="Пока используется дефолтная read-only конфигурация."
+                    />
+                  )}
+                </Panel>
+
+                <Panel title="История заявок" note="Последние заявки на вывод по Money Core">
+                  {moneyCoreWithdrawRequests.length ? (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {moneyCoreWithdrawRequests.map((item) => (
+                        <PreviewRow
+                          key={item.id}
+                          title={`Заявка #${item.id}`}
+                          meta={`${item.status || "—"} · ${formatDateTime(item.created_at)}`}
+                          value={money(item.amount)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="Заявок пока нет"
+                      text="История выводов появится после включения write-флагов."
+                    />
+                  )}
+                </Panel>
+              </div>
+            </Panel>
 
         <div style={styles.mainStack}>
           <Panel
