@@ -137,6 +137,21 @@ function EmptyState({ title, text }) {
   );
 }
 
+function PreviewRow({ title, meta, status, value }) {
+  return (
+    <div style={styles.previewRow}>
+      <div style={{ minWidth: 0, flex: "1 1 240px" }}>
+        <div style={styles.previewTitle}>{title}</div>
+        {meta ? <div style={styles.previewMeta}>{meta}</div> : null}
+      </div>
+      <div style={styles.previewAside}>
+        {typeof value !== "undefined" ? <div style={styles.previewValue}>{value}</div> : null}
+        {status ? <div style={styles.previewStatus}>{status}</div> : null}
+      </div>
+    </div>
+  );
+}
+
 function Panel({ title, subtitle, children }) {
   return (
     <section style={styles.panel}>
