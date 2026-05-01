@@ -237,6 +237,8 @@ export default function AdminFinancePage() {
   const [payoutExecutions, setPayoutExecutions] = useState([]);
   const [reconciliationRuns, setReconciliationRuns] = useState([]);
   const [exceptions, setExceptions] = useState([]);
+  const [moneyReceipts, setMoneyReceipts] = useState([]);
+  const [moneyAuditEvents, setMoneyAuditEvents] = useState([]);
 
   const loadAll = useCallback(async () => {
     const token = getAuthToken();
@@ -259,6 +261,8 @@ export default function AdminFinancePage() {
         payoutExecutionsPayload,
         reconciliationPayload,
         exceptionsPayload,
+        receiptsPayload,
+        auditEventsPayload,
       ] = await Promise.all([
         fetchJson("/internal/money-core/admin/overview"),
         fetchJson("/internal/money-core/admin/provider-events?limit=5&offset=0"),
@@ -268,6 +272,8 @@ export default function AdminFinancePage() {
         fetchJson("/internal/money-core/admin/payout-executions?limit=5&offset=0"),
         fetchJson("/internal/money-core/admin/reconciliation?limit=5&offset=0"),
         fetchJson("/internal/money-core/admin/exceptions?limit=5&offset=0"),
+        fetchJson("/internal/money-core/admin/receipts?limit=5&offset=0"),
+        fetchJson("/internal/money-core/admin/audit-events?limit=5&offset=0"),
       ]);
 
       setOverview(overviewPayload?.data || null);
@@ -278,6 +284,8 @@ export default function AdminFinancePage() {
       setPayoutExecutions(Array.isArray(payoutExecutionsPayload?.data) ? payoutExecutionsPayload.data : []);
       setReconciliationRuns(Array.isArray(reconciliationPayload?.data) ? reconciliationPayload.data : []);
       setExceptions(Array.isArray(exceptionsPayload?.data) ? exceptionsPayload.data : []);
+      setMoneyReceipts(Array.isArray(receiptsPayload?.data) ? receiptsPayload.data : []);
+      setMoneyAuditEvents(Array.isArray(auditEventsPayload?.data) ? auditEventsPayload.data : []);
     } catch (e) {
       setError(e?.message || "Не удалось загрузить финансовый центр.");
     } finally {
@@ -321,14 +329,24 @@ export default function AdminFinancePage() {
         value: reconciliationRuns.length,
         hint: "Запуски reconciliation",
       },
-      {
-        title: "Исключения",
-        value: exceptions.length,
-        hint: "Mismatches и отклонения",
-      },
-    ],
-    [providerEvents.length, settlements.length, ownerBalances.length, withdrawRequests.length, payoutExecutions.length, reconciliationRuns.length, exceptions.length]
-  );
+        {
+          title: "Исключения",
+          value: exceptions.length,
+          hint: "Mismatches и отклонения",
+        },
+        {
+          title: "Квитанции",
+          value: moneyReceipts.length,
+          hint: "Чеки и подтверждения выплат",
+        },
+        {
+          title: "Аудит Money Core",
+          value: moneyAuditEvents.length,
+          hint: "Финансовые audit-события",
+        },
+      ],
+      [providerEvents.length, settlements.length, ownerBalances.length, withdrawRequests.length, payoutExecutions.length, reconciliationRuns.length, exceptions.length, moneyReceipts.length, moneyAuditEvents.length]
+    );
 
   const overviewData = overview || {};
   const overviewTiles = [
@@ -339,6 +357,8 @@ export default function AdminFinancePage() {
     { title: "Payout executions", value: overviewData.payout_executions?.total_count ?? "—", hint: "Выплаты" },
     { title: "Reconciliation runs", value: overviewData.reconciliation_runs?.total_count ?? "—", hint: "Запуски сверки" },
     { title: "Exceptions", value: overviewData.reconciliation_mismatches?.total_count ?? "—", hint: "Исключения" },
+    { title: "Money receipts", value: overviewData.money_receipts?.total_count ?? "—", hint: "Квитанции" },
+    { title: "Money audit events", value: overviewData.money_audit_events?.total_count ?? "—", hint: "Аудит" },
   ];
 
   const providerEventsColumns = [
@@ -397,6 +417,24 @@ export default function AdminFinancePage() {
     { key: "mismatch_type", title: "Тип", dataIndex: "mismatch_type" },
     { key: "source_type", title: "Источник", dataIndex: "source_type" },
     { key: "status", title: "Статус", dataIndex: "status", render: (_, row) => <Pill tone="blue">{statusLabel(row.status)}</Pill> },
+  ];
+
+  const receiptColumns = [
+    { key: "id", title: "ID", dataIndex: "id" },
+    { key: "receipt_type", title: "Тип квитанции", dataIndex: "receipt_type" },
+    { key: "source_type", title: "Источник", dataIndex: "source_type" },
+    { key: "amount", title: "Сумма", dataIndex: "amount", render: (value) => formatNumber(value) },
+    { key: "external_ref", title: "Внешний реф", dataIndex: "external_ref" },
+    { key: "issued_at", title: "Выдано", dataIndex: "issued_at", render: (value) => formatDate(value) },
+  ];
+
+  const auditEventColumns = [
+    { key: "id", title: "ID", dataIndex: "id" },
+    { key: "event_type", title: "Тип события", dataIndex: "event_type" },
+    { key: "actor_type", title: "Actor", dataIndex: "actor_type" },
+    { key: "owner_type", title: "Owner", dataIndex: "owner_type" },
+    { key: "source_type", title: "Источник", dataIndex: "source_type" },
+    { key: "created_at", title: "Создано", dataIndex: "created_at", render: (value) => formatDate(value) },
   ];
 
   if (!getAuthToken()) {
@@ -495,6 +533,14 @@ export default function AdminFinancePage() {
 
         <SectionCard title="Исключения">
           <DataTable columns={exceptionsColumns} rows={exceptions} />
+        </SectionCard>
+
+        <SectionCard title="Квитанции">
+          <DataTable columns={receiptColumns} rows={moneyReceipts} />
+        </SectionCard>
+
+        <SectionCard title="Аудит Money Core">
+          <DataTable columns={auditEventColumns} rows={moneyAuditEvents} />
         </SectionCard>
       </div>
     </div>
