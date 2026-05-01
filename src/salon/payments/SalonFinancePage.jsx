@@ -663,6 +663,99 @@ export default function SalonFinancePage(){
                       text="История выводов появится после включения write-флагов."
                     />
                   )}
+
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eef2f7", display: "grid", gap: 12 }}>
+                    <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+                      Создание заявки будет доступно после controlled write-smoke и включения Money Core write-флагов.
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Доступно к выводу</div>
+                        <div style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 12, background: "#f9fafb", padding: "12px 14px", fontSize: 14, color: "#111827" }}>
+                          {money(moneyCoreZones.available)}
+                        </div>
+                      </div>
+
+                      <label style={{ display: "grid", gap: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Сумма вывода</span>
+                        <input
+                          disabled
+                          defaultValue=""
+                          placeholder="0 сом"
+                          style={{
+                            width: "100%",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 12,
+                            background: "#f9fafb",
+                            color: "#6b7280",
+                            padding: "12px 14px",
+                            fontSize: 14,
+                            cursor: "not-allowed"
+                          }}
+                        />
+                      </label>
+
+                      <label style={{ display: "grid", gap: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Реквизиты</span>
+                        <select
+                          disabled
+                          defaultValue=""
+                          style={{
+                            width: "100%",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 12,
+                            background: "#f9fafb",
+                            color: "#6b7280",
+                            padding: "12px 14px",
+                            fontSize: 14,
+                            cursor: "not-allowed"
+                          }}
+                        >
+                          <option value="">Выберите реквизиты</option>
+                        </select>
+                      </label>
+
+                      <label style={{ display: "grid", gap: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Комментарий</span>
+                        <textarea
+                          disabled
+                          defaultValue=""
+                          placeholder="Комментарий к заявке"
+                          rows={3}
+                          style={{
+                            width: "100%",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 12,
+                            background: "#f9fafb",
+                            color: "#6b7280",
+                            padding: "12px 14px",
+                            fontSize: 14,
+                            cursor: "not-allowed",
+                            resize: "vertical"
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled
+                      style={{
+                        border: "1px solid #cbd5e1",
+                        borderRadius: 12,
+                        background: "#e5e7eb",
+                        color: "#6b7280",
+                        padding: "12px 16px",
+                        fontWeight: 700,
+                        opacity: 0.55,
+                        cursor: "not-allowed",
+                        justifySelf: "start"
+                      }}
+                    >
+                      Создать заявку на вывод
+                    </button>
+                  </div>
                 </Panel>
               </div>
             </Panel>
