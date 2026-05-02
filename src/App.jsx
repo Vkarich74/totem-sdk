@@ -4,6 +4,7 @@ import ErrorBoundary from "./core/ErrorBoundary";
 
 import PublicSalonPage from "./public/PublicSalonPage";
 import PublicMasterPage from "./public/PublicMasterPage";
+import MobileHomePage from "./public/MobileHomePage.jsx";
 
 import BookingPage from "./room/BookingPage";
 import SalonBookingsPage from "./room/SalonBookingsPage";
@@ -264,6 +265,10 @@ function getPublicRouteFromPathname() {
     return { type: "salon", slug: pathParts[1] };
   }
 
+  if (pathParts[0] === "mobile") {
+    return { type: "mobile" };
+  }
+
   return null;
 }
 
@@ -317,6 +322,10 @@ function PublicPathRouter() {
 
   if (publicRoute.type === "master") {
     return <PublicMasterPage slug={publicRoute.slug} />;
+  }
+
+  if (publicRoute.type === "mobile") {
+    return <MobileHomePage />;
   }
 
   return <PublicSalonPage slug={publicRoute.slug} />;
