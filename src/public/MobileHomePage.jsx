@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getMobileCityHome, getMobileLocations } from "../api/publicApi";
+import { getMobileCityHome, getMobileLocations, getMobileSalonCatalog } from "../api/publicApi";
 
 function parseMobileRoute() {
   const hash = String(window.location.hash || "").replace(/^#\/?/, "");
@@ -105,6 +105,7 @@ export default function MobileHomePage() {
     error: "",
     data: null,
   });
+  const [catalogBySlug, setCatalogBySlug] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -221,6 +222,94 @@ export default function MobileHomePage() {
     );
   }, [activeCountries]);
 
+  async function toggleSalonCatalog(salonSlug) {
+    const slug = String(salonSlug || "").trim();
+    if (!slug) {
+      return;
+    }
+
+    const current = catalogBySlug[slug] || {
+      expanded: false,
+      loading: false,
+      error: "",
+      data: null,
+    };
+
+    if (current.expanded) {
+      setCatalogBySlug((prev) => ({
+        ...prev,
+        [slug]: {
+          ...current,
+          expanded: false,
+        },
+      }));
+      return;
+    }
+
+    if (current.loading) {
+      setCatalogBySlug((prev) => ({
+        ...prev,
+        [slug]: {
+          ...current,
+          expanded: true,
+        },
+      }));
+      return;
+    }
+
+    if (current.data) {
+      setCatalogBySlug((prev) => ({
+        ...prev,
+        [slug]: {
+          ...current,
+          expanded: true,
+          error: "",
+        },
+      }));
+      return;
+    }
+
+    setCatalogBySlug((prev) => ({
+      ...prev,
+      [slug]: {
+        ...current,
+        expanded: true,
+        loading: true,
+        error: "",
+      },
+    }));
+
+    try {
+      const catalog = await getMobileSalonCatalog(slug);
+
+      setCatalogBySlug((prev) => {
+        const latest = prev[slug] || current;
+        return {
+          ...prev,
+          [slug]: {
+            ...latest,
+            expanded: Boolean(latest.expanded),
+            loading: false,
+            error: catalog ? "" : "Каталог временно недоступен.",
+            data: catalog,
+          },
+        };
+      });
+    } catch (error) {
+      setCatalogBySlug((prev) => {
+        const latest = prev[slug] || current;
+        return {
+          ...prev,
+          [slug]: {
+            ...latest,
+            loading: false,
+            error: "Каталог временно недоступен.",
+          },
+        };
+      });
+    }
+  }
+
   if (state.loading) {
     return (
       <div style={shellStyle}>
@@ -297,32 +386,12 @@ export default function MobileHomePage() {
           {salons.length ? (
             <div style={gridStyle}>
               {salons.map((salon) => (
-                <Card key={`salon-${salon.id}`} style={{ padding: 14, borderRadius: 14 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>
-                    {formatLabel(salon.name)}
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-                    @{formatLabel(salon.slug)} · {formatLabel(salon.city, "город не указан")}
-                  </div>
-                  <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    <EntityBadge>enabled: {String(Boolean(salon.enabled))}</EntityBadge>
-                    {salon.status ? <EntityBadge>{formatLabel(salon.status)}</EntityBadge> : null}
-                  </div>
-                  <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    <a
-                      href={buildAbsoluteOwnerUrl(`/salon/${encodeURIComponent(String(salon.slug || "").trim())}`)}
-                      style={secondaryLinkStyle}
-                    >
-                      Открыть салон
-                    </a>
-                    <a
-                      href={buildHashPath(`/booking?salon=${encodeURIComponent(String(salon.slug || "").trim())}`)}
-                      style={primaryLinkStyle}
-                    >
-                      Записаться в салон
-                    </a>
-                  </div>
-                </Card>
+                <SalonCard
+                  key={`salon-${salon.id}`}
+                  salon={salon}
+                  catalogState={catalogBySlug[String(salon.slug || "").trim()] || null}
+                  onToggleCatalog={toggleSalonCatalog}
+                />
               ))}
             </div>
           ) : (
@@ -500,6 +569,108 @@ function EmptyState({ text }) {
   );
 }
 
+function SalonCard({ salon, catalogState, onToggleCatalog }) {
+  const slug = String(salon?.slug || "").trim();
+  const catalogOpen = Boolean(catalogState?.expanded);
+  const catalogLoading = Boolean(catalogState?.loading);
+  const catalogError = String(catalogState?.error || "").trim();
+  const catalogData = catalogState?.data || null;
+  const masters = Array.isArray(catalogData?.masters) ? catalogData.masters : [];
+  const services = Array.isArray(catalogData?.services) ? catalogData.services : [];
+
+  return (
+    <Card style={{ padding: 14, borderRadius: 14 }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>
+        {formatLabel(salon?.name)}
+      </div>
+      <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+        @{formatLabel(slug)} · {formatLabel(salon?.city, "город не указан")}
+      </div>
+      <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <EntityBadge>enabled: {String(Boolean(salon?.enabled))}</EntityBadge>
+        {salon?.status ? <EntityBadge>{formatLabel(salon.status)}</EntityBadge> : null}
+      </div>
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <a
+          href={buildAbsoluteOwnerUrl(`/salon/${encodeURIComponent(slug)}`)}
+          style={secondaryLinkStyle}
+        >
+          Открыть салон
+        </a>
+        <a
+          href={buildHashPath(`/booking?salon=${encodeURIComponent(slug)}`)}
+          style={primaryLinkStyle}
+        >
+          Записаться в салон
+        </a>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <button type="button" onClick={() => onToggleCatalog(slug)} style={catalogButtonStyle}>
+          {catalogOpen ? "Скрыть каталог" : "Показать каталог"}
+        </button>
+      </div>
+
+      {catalogOpen && catalogLoading ? (
+        <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>Загрузка каталога…</div>
+      ) : null}
+
+      {catalogOpen && catalogError ? (
+        <div style={{ marginTop: 12, fontSize: 13, color: "#991b1b" }}>
+          Каталог временно недоступен.
+        </div>
+      ) : null}
+
+      {catalogOpen && catalogData ? (
+        <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+          <div>
+            <div style={catalogSectionTitleStyle}>Услуги</div>
+            {services.length ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                {services.map((service, index) => (
+                  <div key={`service-${slug}-${service.service_pk || index}`} style={catalogItemStyle}>
+                    <div style={{ fontWeight: 700, color: "#111827" }}>
+                      {formatLabel(service?.name, "Услуга")}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 13, color: "#4b5563", lineHeight: 1.45 }}>
+                      Цена: {formatLabel(service?.price, "—")} · Длительность:{" "}
+                      {formatLabel(service?.duration_min, "—")} мин · Активна:{" "}
+                      {String(Boolean(service?.active))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={catalogEmptyStyle}>Услуги пока не опубликованы.</div>
+            )}
+          </div>
+
+          <div>
+            <div style={catalogSectionTitleStyle}>Мастера</div>
+            {masters.length ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                {masters.map((master) => (
+                  <div key={`master-${slug}-${master.id}`} style={catalogItemStyle}>
+                    <div style={{ fontWeight: 700, color: "#111827" }}>
+                      {formatLabel(master?.name, "Мастер")}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 13, color: "#4b5563", lineHeight: 1.45 }}>
+                      @{formatLabel(master?.slug, "slug не указан")} · Активен:{" "}
+                      {String(Boolean(master?.active))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={catalogEmptyStyle}>Мастера пока не опубликованы.</div>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
 const shellStyle = {
   width: "100%",
   maxWidth: 480,
@@ -586,4 +757,43 @@ const secondaryLinkStyle = {
   textDecoration: "none",
   fontWeight: 800,
   fontSize: 14,
+};
+
+const catalogButtonStyle = {
+  width: "100%",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "11px 14px",
+  borderRadius: 14,
+  background: "#fff",
+  border: "1px solid #d1d5db",
+  color: "#111827",
+  fontWeight: 800,
+  fontSize: 14,
+  cursor: "pointer",
+};
+
+const catalogSectionTitleStyle = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: "#111827",
+  marginBottom: 8,
+};
+
+const catalogItemStyle = {
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
+};
+
+const catalogEmptyStyle = {
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "#f9fafb",
+  border: "1px dashed #d1d5db",
+  color: "#6b7280",
+  fontSize: 14,
+  lineHeight: 1.5,
 };
