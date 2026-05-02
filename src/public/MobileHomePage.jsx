@@ -155,10 +155,10 @@ export default function MobileHomePage() {
           return;
         }
 
-        if (!result?.ok) {
+        if (!result) {
           setConfig({
             loading: false,
-            error: result?.error || "PUBLIC_MOBILE_CONFIG_FAILED",
+            error: "PUBLIC_MOBILE_CONFIG_FAILED",
             data: null,
           });
           return;
@@ -167,7 +167,7 @@ export default function MobileHomePage() {
         setConfig({
           loading: false,
           error: "",
-          data: result?.config || null,
+          data: result,
         });
       } catch (error) {
         if (!active) {
