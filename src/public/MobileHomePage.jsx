@@ -3,6 +3,7 @@ import {
   getMobileAnnouncements,
   getMobileCityHome,
   getMobileLocations,
+  getMobileReferral,
   getMobileSalonCatalog
 } from "../api/publicApi";
 
@@ -115,6 +116,11 @@ export default function MobileHomePage() {
     error: "",
     items: [],
   });
+  const [referral, setReferral] = useState({
+    loading: true,
+    error: "",
+    data: null,
+  });
   const [catalogBySlug, setCatalogBySlug] = useState({});
 
   useEffect(() => {
@@ -176,6 +182,54 @@ export default function MobileHomePage() {
         setState({
           loading: false,
           error: error?.message || "MOBILE_PAGE_FAILED",
+          data: null,
+        });
+      }
+    }
+
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [route.mode, route.countryCode, route.citySlug]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function run() {
+      setReferral({
+        loading: true,
+        error: "",
+        data: null,
+      });
+
+      try {
+        const result =
+          route.mode === "city"
+            ? await getMobileReferral({
+                country: route.countryCode,
+                city: route.citySlug,
+              })
+            : await getMobileReferral();
+
+        if (!active) {
+          return;
+        }
+
+        setReferral({
+          loading: false,
+          error: "",
+          data: result?.referral || null,
+        });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setReferral({
+          loading: false,
+          error: error?.message || "PUBLIC_MOBILE_REFERRAL_REQUEST_FAILED",
           data: null,
         });
       }
@@ -455,6 +509,8 @@ export default function MobileHomePage() {
 
         <AnnouncementsBlock announcements={announcements} />
 
+        <ReferralBlock referral={referral} />
+
         <Card>
           <SectionTitle subtitle="Доступные салоны в этом городе.">Салоны</SectionTitle>
           {salons.length ? (
@@ -531,6 +587,8 @@ export default function MobileHomePage() {
       </Card>
 
       <AnnouncementsBlock announcements={announcements} />
+
+      <ReferralBlock referral={referral} />
 
       <Card>
         <SectionTitle subtitle="Активные страны для мобильной витрины.">Страны</SectionTitle>
@@ -666,6 +724,55 @@ function AnnouncementsBlock({ announcements }) {
         </div>
       ) : (
         <div style={emptyNoteStyle}>Уведомлений пока нет.</div>
+      )}
+    </Card>
+  );
+}
+
+function ReferralBlock({ referral }) {
+  const loading = Boolean(referral?.loading);
+  const error = String(referral?.error || "").trim();
+  const data = referral?.data || null;
+  const enabled = Boolean(data?.enabled);
+  const available = Boolean(data?.available);
+  const shareUrl = String(data?.share_url || "").trim();
+
+  async function copyReferralLink() {
+    if (!shareUrl || !window.navigator?.clipboard?.writeText) {
+      return;
+    }
+
+    try {
+      await window.navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // no-op
+    }
+  }
+
+  return (
+    <Card>
+      <SectionTitle subtitle="Персональная ссылка для приглашения друзей.">Реферальная программа</SectionTitle>
+
+      {loading ? (
+        <div style={emptyNoteStyle}>Загрузка реферальной программы…</div>
+      ) : error ? (
+        <div style={emptyNoteStyle}>Реферальная программа скоро появится.</div>
+      ) : !enabled ? (
+        <div style={emptyNoteStyle}>Реферальная программа скоро появится.</div>
+      ) : !available ? (
+        <div style={emptyNoteStyle}>Сейчас нет активной реферальной ссылки.</div>
+      ) : (
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
+            Скопируйте персональную ссылку и поделитесь ей с друзьями.
+          </div>
+
+          <div style={referralUrlBoxStyle}>{shareUrl}</div>
+
+          <button type="button" onClick={copyReferralLink} style={referralCopyButtonStyle}>
+            Скопировать ссылку
+          </button>
+        </div>
       )}
     </Card>
   );
@@ -981,4 +1088,29 @@ const announcementActionStyle = {
   textDecoration: "none",
   fontWeight: 800,
   fontSize: 13,
+};
+
+const referralUrlBoxStyle = {
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
+  color: "#111827",
+  fontSize: 13,
+  lineHeight: 1.5,
+  wordBreak: "break-all",
+};
+
+const referralCopyButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "11px 14px",
+  borderRadius: 14,
+  background: "#111827",
+  color: "#fff",
+  border: "none",
+  fontWeight: 800,
+  fontSize: 14,
+  cursor: "pointer",
 };
