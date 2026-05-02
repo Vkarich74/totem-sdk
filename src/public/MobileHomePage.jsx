@@ -338,7 +338,7 @@ export default function MobileHomePage() {
                   </div>
                   <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
                     <a
-                      href={buildAbsoluteOwnerUrl(`/master/${encodeURIComponent(String(master.slug || "").trim())}`)}
+                      href={buildAbsoluteOwnerUrl(`/master?slug=${encodeURIComponent(String(master.slug || "").trim())}`)}
                       style={secondaryLinkStyle}
                     >
                       Открыть мастера
