@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { SalonProvider, useSalonContext } from "./SalonContext"
 import SalonSidebar from "./SalonSidebar"
+import MobileBottomNav from "../mobile/MobileBottomNav"
 import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
 import {
@@ -81,6 +82,26 @@ function BillingOverlay({ billingAccess, billingBlockReason }){
       </div>
     </div>
   )
+}
+
+function getSalonMobileActiveKey() {
+  const hash = String(window.location.hash || "").toLowerCase()
+
+  if (hash.includes("/bookings")) return "bookings"
+  if (hash.includes("/masters")) return "masters"
+  if (hash.includes("/clients")) return "clients"
+  if (
+    hash.includes("/finance") ||
+    hash.includes("/money") ||
+    hash.includes("/transactions") ||
+    hash.includes("/payouts") ||
+    hash.includes("/settlements") ||
+    hash.includes("/contracts")
+  ) {
+    return "finance"
+  }
+
+  return "dashboard"
 }
 
 function SessionGate({ slug, children }){
@@ -187,6 +208,7 @@ function SalonLayoutInner(){
     billingBlockReason,
     loading: salonLoading
   } = useSalonContext()
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
 
   useEffect(() => {
     window.__TOTEM_SALON_BILLING__ = {
@@ -197,6 +219,19 @@ function SalonLayoutInner(){
       billingBlockReason
     }
   }, [billingAccess, salonLoading, canWrite, canWithdraw, billingBlockReason])
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768)
+    }
+
+    handleResize()
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [])
 
   async function logout(){
     try{
@@ -221,33 +256,77 @@ function SalonLayoutInner(){
           canWithdraw={canWithdraw}
         />
 
-        <CabinetLayout
-          header={<CabinetHeader slug={slug} onLogout={logout} />}
-          sidebar={<SalonSidebar slug={slug} />}
-          page={<Outlet />}
-          odoo={
-            <div
-              id="odoo-content"
-              style={{
-                width: "30%",
-                overflow: "auto",
-                padding: "20px",
-                minHeight: 0
-              }}
-            >
-              <div style={{
-                padding: "16px",
-                border: "1px solid #e5e7eb",
-                borderRadius: "16px",
-                background: "#fff",
-                color: "#111827",
-                font: "14px/1.5 Arial, sans-serif"
-              }}>
-                Odoo блок отключён в cabinet runtime.
-              </div>
+        {isMobile ? (
+          <>
+            <CabinetHeader slug={slug} onLogout={logout} />
+            <div style={{
+              minHeight: "100vh",
+              background: "#f9fafb",
+              padding: "16px 12px 104px",
+              boxSizing: "border-box"
+            }}>
+              <Outlet />
             </div>
-          }
-        />
+            <MobileBottomNav
+              activeKey={getSalonMobileActiveKey()}
+              items={[
+                {
+                  key: "dashboard",
+                  label: "Главная",
+                  href: `#/salon/${encodeURIComponent(String(slug || "").trim())}/dashboard`,
+                },
+                {
+                  key: "bookings",
+                  label: "Записи",
+                  href: `#/salon/${encodeURIComponent(String(slug || "").trim())}/bookings`,
+                },
+                {
+                  key: "masters",
+                  label: "Мастера",
+                  href: `#/salon/${encodeURIComponent(String(slug || "").trim())}/masters`,
+                },
+                {
+                  key: "clients",
+                  label: "Клиенты",
+                  href: `#/salon/${encodeURIComponent(String(slug || "").trim())}/clients`,
+                },
+                {
+                  key: "finance",
+                  label: "Финансы",
+                  href: `#/salon/${encodeURIComponent(String(slug || "").trim())}/finance`,
+                },
+              ]}
+            />
+          </>
+        ) : (
+          <CabinetLayout
+            header={<CabinetHeader slug={slug} onLogout={logout} />}
+            sidebar={<SalonSidebar slug={slug} />}
+            page={<Outlet />}
+            odoo={
+              <div
+                id="odoo-content"
+                style={{
+                  width: "30%",
+                  overflow: "auto",
+                  padding: "20px",
+                  minHeight: 0
+                }}
+              >
+                <div style={{
+                  padding: "16px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "16px",
+                  background: "#fff",
+                  color: "#111827",
+                  font: "14px/1.5 Arial, sans-serif"
+                }}>
+                  Odoo блок отключён в cabinet runtime.
+                </div>
+              </div>
+            }
+          />
+        )}
 
         <BillingOverlay
           billingAccess={billingAccess}
