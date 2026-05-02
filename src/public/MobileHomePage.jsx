@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { getMobileCityHome, getMobileLocations, getMobileSalonCatalog } from "../api/publicApi";
+import {
+  getMobileAnnouncements,
+  getMobileCityHome,
+  getMobileLocations,
+  getMobileSalonCatalog
+} from "../api/publicApi";
 
 function parseMobileRoute() {
   const hash = String(window.location.hash || "").replace(/^#\/?/, "");
@@ -105,6 +110,11 @@ export default function MobileHomePage() {
     error: "",
     data: null,
   });
+  const [announcements, setAnnouncements] = useState({
+    loading: true,
+    error: "",
+    items: [],
+  });
   const [catalogBySlug, setCatalogBySlug] = useState({});
 
   useEffect(() => {
@@ -167,6 +177,68 @@ export default function MobileHomePage() {
           loading: false,
           error: error?.message || "MOBILE_PAGE_FAILED",
           data: null,
+        });
+      }
+    }
+
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [route.mode, route.countryCode, route.citySlug]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function run() {
+      setAnnouncements({
+        loading: true,
+        error: "",
+        items: [],
+      });
+
+      try {
+        const options =
+          route.mode === "city"
+            ? {
+                country: route.countryCode,
+                city: route.citySlug,
+                audience: "client",
+              }
+            : {
+                audience: "client",
+              };
+
+        const result = await getMobileAnnouncements(options);
+
+        if (!active) {
+          return;
+        }
+
+        if (!result?.ok) {
+          setAnnouncements({
+            loading: false,
+            error: result?.error || "PUBLIC_MOBILE_ANNOUNCEMENTS_REQUEST_FAILED",
+            items: [],
+          });
+          return;
+        }
+
+        setAnnouncements({
+          loading: false,
+          error: "",
+          items: Array.isArray(result.announcements) ? result.announcements : [],
+        });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setAnnouncements({
+          loading: false,
+          error: error?.message || "PUBLIC_MOBILE_ANNOUNCEMENTS_REQUEST_FAILED",
+          items: [],
         });
       }
     }
@@ -381,6 +453,8 @@ export default function MobileHomePage() {
           </div>
         </Card>
 
+        <AnnouncementsBlock announcements={announcements} />
+
         <Card>
           <SectionTitle subtitle="Доступные салоны в этом городе.">Салоны</SectionTitle>
           {salons.length ? (
@@ -455,6 +529,8 @@ export default function MobileHomePage() {
           Сначала откройте нужный салон. После перехода на экран записи можно выбрать мастера, услугу и удобное время.
         </div>
       </Card>
+
+      <AnnouncementsBlock announcements={announcements} />
 
       <Card>
         <SectionTitle subtitle="Активные страны для мобильной витрины.">Страны</SectionTitle>
@@ -565,6 +641,61 @@ function EmptyState({ text }) {
       }}
     >
       {text}
+    </div>
+  );
+}
+
+function AnnouncementsBlock({ announcements }) {
+  const items = Array.isArray(announcements?.items) ? announcements.items : [];
+  const loading = Boolean(announcements?.loading);
+  const error = String(announcements?.error || "").trim();
+
+  return (
+    <Card>
+      <SectionTitle subtitle="Актуальные сообщения и акционные объявления.">Уведомления</SectionTitle>
+
+      {loading ? (
+        <div style={emptyNoteStyle}>Загрузка уведомлений…</div>
+      ) : error ? (
+        <div style={emptyNoteStyle}>Уведомления временно недоступны.</div>
+      ) : items.length ? (
+        <div style={gridStyle}>
+          {items.map((item) => (
+            <AnnouncementItem key={item?.announcement_uid || item?.id} item={item} />
+          ))}
+        </div>
+      ) : (
+        <div style={emptyNoteStyle}>Уведомлений пока нет.</div>
+      )}
+    </Card>
+  );
+}
+
+function AnnouncementItem({ item }) {
+  const actionUrl = String(item?.action_url || "").trim();
+  const hasAction = Boolean(actionUrl);
+  const isExternal = /^https?:\/\//i.test(actionUrl);
+
+  return (
+    <div style={announcementItemStyle}>
+      <div style={announcementTitleStyle}>{formatLabel(item?.title_ru || item?.title_en, "Уведомление")}</div>
+      <div style={announcementBodyStyle}>{formatLabel(item?.body_ru || item?.body_en, "")}</div>
+      <div style={announcementMetaStyle}>
+        <span>Приоритет: {formatLabel(item?.priority, "—")}</span>
+        {item?.published_at ? <span>Опубликовано: {formatLabel(item?.published_at)}</span> : null}
+      </div>
+      {hasAction ? (
+        <div style={{ marginTop: 10 }}>
+          <a
+            href={actionUrl}
+            target={isExternal ? "_blank" : undefined}
+            rel={isExternal ? "noreferrer" : undefined}
+            style={announcementActionStyle}
+          >
+            Подробнее
+          </a>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -796,4 +927,58 @@ const catalogEmptyStyle = {
   color: "#6b7280",
   fontSize: 14,
   lineHeight: 1.5,
+};
+
+const emptyNoteStyle = {
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "#f9fafb",
+  border: "1px dashed #d1d5db",
+  color: "#6b7280",
+  fontSize: 14,
+  lineHeight: 1.5,
+};
+
+const announcementItemStyle = {
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
+};
+
+const announcementTitleStyle = {
+  fontSize: 16,
+  fontWeight: 800,
+  color: "#111827",
+  lineHeight: 1.3,
+};
+
+const announcementBodyStyle = {
+  marginTop: 6,
+  fontSize: 14,
+  color: "#4b5563",
+  lineHeight: 1.55,
+  whiteSpace: "pre-wrap",
+};
+
+const announcementMetaStyle = {
+  marginTop: 8,
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 8,
+  fontSize: 12,
+  color: "#6b7280",
+};
+
+const announcementActionStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "10px 12px",
+  borderRadius: 12,
+  background: "#111827",
+  color: "#fff",
+  textDecoration: "none",
+  fontWeight: 800,
+  fontSize: 13,
 };
