@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { MasterProvider, useMaster } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
+import MobileBottomNav from "../mobile/MobileBottomNav"
 import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
 import {
@@ -81,6 +82,25 @@ function BillingOverlay({ billingAccess, billingBlockReason }){
       </div>
     </div>
   )
+}
+
+function getMasterMobileActiveKey() {
+  const hash = String(window.location.hash || "").toLowerCase()
+
+  if (hash.includes("/bookings")) return "bookings"
+  if (hash.includes("/schedule")) return "schedule"
+  if (hash.includes("/clients")) return "clients"
+  if (
+    hash.includes("/finance") ||
+    hash.includes("/money") ||
+    hash.includes("/transactions") ||
+    hash.includes("/payouts") ||
+    hash.includes("/sets")
+  ) {
+    return "finance"
+  }
+
+  return "dashboard"
 }
 
 function SessionGate({ slug, children }){
@@ -182,6 +202,7 @@ function MasterLayoutInner(){
     billingBlockReason,
     loading: masterLoading
   } = useMaster()
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
 
   useEffect(() => {
     window.__TOTEM_MASTER_BILLING__ = {
@@ -192,6 +213,19 @@ function MasterLayoutInner(){
       billingBlockReason
     }
   }, [billingAccess, masterLoading, canWrite, canWithdraw, billingBlockReason])
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768)
+    }
+
+    handleResize()
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [])
 
   async function logout(){
     try{
@@ -216,12 +250,58 @@ function MasterLayoutInner(){
           canWithdraw={canWithdraw}
         />
 
-        <CabinetLayout
-          header={<CabinetHeader slug={slug} onLogout={logout} />}
-          sidebar={<MasterSidebar slug={slug} />}
-          page={<Outlet />}
-          odoo={null}
-        />
+        {isMobile ? (
+          <>
+            <CabinetHeader slug={slug} onLogout={logout} />
+            <div style={{
+              minHeight: "100vh",
+              background: "#f9fafb",
+              padding: "16px 12px 104px",
+              boxSizing: "border-box"
+            }}>
+              <Outlet />
+            </div>
+            <MobileBottomNav
+              activeKey={getMasterMobileActiveKey()}
+              items={[
+                {
+                  key: "dashboard",
+                  label: "Главная",
+                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/dashboard`,
+                },
+                {
+                  key: "bookings",
+                  label: "Записи",
+                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/bookings`,
+                },
+                {
+                  key: "schedule",
+                  label: "Расписание",
+                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/schedule`,
+                },
+                {
+                  key: "clients",
+                  label: "Клиенты",
+                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/clients`,
+                },
+                {
+                  key: "finance",
+                  label: "Финансы",
+                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/finance`,
+                },
+              ]}
+            />
+          </>
+        ) : null}
+
+        {!isMobile ? (
+          <CabinetLayout
+            header={<CabinetHeader slug={slug} onLogout={logout} />}
+            sidebar={<MasterSidebar slug={slug} />}
+            page={<Outlet />}
+            odoo={null}
+          />
+        ) : null}
 
         <BillingOverlay
           billingAccess={billingAccess}
