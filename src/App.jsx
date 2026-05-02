@@ -274,6 +274,10 @@ function getPublicRouteFromPathname() {
     return { type: "mobile" };
   }
 
+  if (hashParts[0] === "booking") {
+    return { type: "booking" };
+  }
+
   return null;
 }
 
@@ -331,6 +335,10 @@ function PublicPathRouter() {
 
   if (publicRoute.type === "mobile") {
     return <MobileHomePage />;
+  }
+
+  if (publicRoute.type === "booking") {
+    return <BookingPage />;
   }
 
   return <PublicSalonPage slug={publicRoute.slug} />;
