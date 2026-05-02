@@ -38,6 +38,10 @@ function formatLabel(value, fallback = "—") {
   return text || fallback;
 }
 
+function buildHashPath(path) {
+  return `#${path}`;
+}
+
 function Card({ children, style }) {
   return (
     <div
@@ -291,6 +295,20 @@ export default function MobileHomePage() {
                     <EntityBadge>enabled: {String(Boolean(salon.enabled))}</EntityBadge>
                     {salon.status ? <EntityBadge>{formatLabel(salon.status)}</EntityBadge> : null}
                   </div>
+                  <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <a
+                      href={buildHashPath(`/salon/${encodeURIComponent(String(salon.slug || "").trim())}`)}
+                      style={secondaryLinkStyle}
+                    >
+                      Открыть салон
+                    </a>
+                    <a
+                      href={buildHashPath(`/booking?salon=${encodeURIComponent(String(salon.slug || "").trim())}`)}
+                      style={primaryLinkStyle}
+                    >
+                      Записаться
+                    </a>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -313,6 +331,14 @@ export default function MobileHomePage() {
                   </div>
                   <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
                     <EntityBadge>active: {String(Boolean(master.active))}</EntityBadge>
+                  </div>
+                  <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <a
+                      href={buildHashPath(`/master/${encodeURIComponent(String(master.slug || "").trim())}`)}
+                      style={secondaryLinkStyle}
+                    >
+                      Открыть мастера
+                    </a>
                   </div>
                 </Card>
               ))}
@@ -524,4 +550,18 @@ const cityLinkStyle = {
   border: "1px solid #e5e7eb",
   textDecoration: "none",
   color: "#111827",
+};
+
+const secondaryLinkStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "11px 14px",
+  borderRadius: 14,
+  background: "#f3f4f6",
+  border: "1px solid #e5e7eb",
+  color: "#111827",
+  textDecoration: "none",
+  fontWeight: 800,
+  fontSize: 14,
 };
