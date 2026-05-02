@@ -58,3 +58,41 @@ export async function getMobileSalonCatalog(slug) {
   const json = await res.json();
   return json;
 }
+
+export async function getMobileAnnouncements(options = {}) {
+  const params = new URLSearchParams();
+  const country = String(options.country || "").trim();
+  const city = String(options.city || "").trim();
+  const audience = String(options.audience || "").trim();
+
+  if (country) {
+    params.set("country", country);
+  }
+
+  if (city) {
+    params.set("city", city);
+  }
+
+  if (audience) {
+    params.set("audience", audience);
+  }
+
+  const query = params.toString();
+  const url = query ? `${API}/public/mobile/announcements?${query}` : `${API}/public/mobile/announcements`;
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    return {
+      ok: false,
+      announcements: [],
+      error: "PUBLIC_MOBILE_ANNOUNCEMENTS_REQUEST_FAILED",
+    };
+  }
+
+  const json = await res.json();
+
+  return {
+    ok: Boolean(json?.ok),
+    announcements: Array.isArray(json?.announcements) ? json.announcements : [],
+  };
+}
