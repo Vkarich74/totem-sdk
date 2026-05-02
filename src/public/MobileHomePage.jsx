@@ -284,6 +284,15 @@ export default function MobileHomePage() {
         </div>
 
         <Card>
+          <SectionTitle subtitle="Запись начинается с выбора салона. Мастер и услуга выбираются уже на экране записи.">
+            Быстрая запись
+          </SectionTitle>
+          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
+            Выберите салон ниже и нажмите "Записаться в салон". На следующем экране можно выбрать мастера, услугу и удобное время.
+          </div>
+        </Card>
+
+        <Card>
           <SectionTitle subtitle="Доступные салоны в этом городе.">Салоны</SectionTitle>
           {salons.length ? (
             <div style={gridStyle}>
