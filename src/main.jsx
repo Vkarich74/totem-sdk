@@ -40,6 +40,13 @@ function resolveContext() {
       slug: hashParts[1]
     };
   }
+
+  if (hashParts.length >= 1 && hashParts[0] === "mobile") {
+    return {
+      mode: "mobile",
+      slug: null
+    };
+  }
   // 🔥 КОНЕЦ ДОБАВЛЕНИЯ
 
   // Detect from URL (fallback)
@@ -57,6 +64,13 @@ function resolveContext() {
     return {
       mode: "salon",
       slug: parts[1]
+    };
+  }
+
+  if (parts.length >= 1 && parts[0] === "mobile") {
+    return {
+      mode: "mobile",
+      slug: null
     };
   }
 

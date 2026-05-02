@@ -256,6 +256,7 @@ function getSlugFromPath() {
 
 function getPublicRouteFromPathname() {
   const pathParts = getPathParts();
+  const hashParts = getHashParts();
 
   if (pathParts[0] === "master" && pathParts[1] && !MASTER_STATIC_SEGMENTS.has(pathParts[1])) {
     return { type: "master", slug: pathParts[1] };
@@ -266,6 +267,10 @@ function getPublicRouteFromPathname() {
   }
 
   if (pathParts[0] === "mobile") {
+    return { type: "mobile" };
+  }
+
+  if (hashParts[0] === "mobile") {
     return { type: "mobile" };
   }
 
