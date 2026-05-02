@@ -310,7 +310,7 @@ export default function MobileHomePage() {
                       href={buildHashPath(`/booking?salon=${encodeURIComponent(String(salon.slug || "").trim())}`)}
                       style={primaryLinkStyle}
                     >
-                      Записаться
+                      Записаться в салон
                     </a>
                   </div>
                 </Card>
@@ -368,6 +368,15 @@ export default function MobileHomePage() {
           Это мобильный вход в каталог. Сейчас доступны только read-only данные по странам и городам.
         </div>
       </div>
+
+      <Card>
+        <SectionTitle subtitle="Запись начинается с выбора салона. Мастер и услуга выбираются уже на экране записи.">
+          Быстрая запись
+        </SectionTitle>
+        <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
+          Сначала откройте нужный салон. После перехода на экран записи можно выбрать мастера, услугу и удобное время.
+        </div>
+      </Card>
 
       <Card>
         <SectionTitle subtitle="Активные страны для мобильной витрины.">Страны</SectionTitle>
