@@ -985,7 +985,7 @@ function ReferralBlock({ referral }) {
 function HelpBlock() {
   return (
     <Card>
-      <SectionTitle subtitle="Дополнительные способы связи и запроса информации.">Помощь и обратная связь</SectionTitle>
+      <SectionTitle subtitle="Дополнительные способы связи, версии и юридической информации.">Помощь, версия и документы</SectionTitle>
 
       <div style={helpGridStyle}>
         <div style={helpItemStyle}>
@@ -996,6 +996,31 @@ function HelpBlock() {
         <div style={helpItemStyle}>
           <div style={helpItemTitleStyle}>Запрос данных</div>
           <div style={helpItemTextStyle}>Форма скоро появится.</div>
+        </div>
+
+        <div style={helpItemStyle}>
+          <div style={helpItemTitleStyle}>Поддержка</div>
+          <div style={helpItemTextStyle}>Напишите нам: kantotemus@gmail.com</div>
+        </div>
+
+        <div style={helpItemStyle}>
+          <div style={helpItemTitleStyle}>Как записаться</div>
+          <div style={helpItemTextStyle}>Выберите город, салон и нажмите "Записаться в салон".</div>
+        </div>
+
+        <div style={helpItemStyle}>
+          <div style={helpItemTitleStyle}>О приложении</div>
+          <div style={helpItemTextStyle}>TOTEM Mobile V1, версия 1.0.0.</div>
+        </div>
+
+        <div style={helpItemStyle}>
+          <div style={helpItemTitleStyle}>Политика конфиденциальности</div>
+          <div style={helpItemTextStyle}>Документ будет доступен перед публичным запуском.</div>
+        </div>
+
+        <div style={helpItemStyle}>
+          <div style={helpItemTitleStyle}>Условия использования</div>
+          <div style={helpItemTextStyle}>Документ будет доступен перед публичным запуском.</div>
         </div>
       </div>
     </Card>
