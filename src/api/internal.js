@@ -1007,6 +1007,14 @@ export async function getMasterMoneyCoreSummary(masterSlug = getMasterSlug()){
   }
 }
 
+export async function getInternalMobileConfig(){
+  return safeInternalJson(`/mobile/config`, { method: "GET" });
+}
+
+export async function getInternalMobileLocations(){
+  return safeInternalJson(`/mobile/locations`, { method: "GET" });
+}
+
 export async function getMoneyCoreDestinationProviders(filters = {}){
   try{
     const qs = new URLSearchParams();

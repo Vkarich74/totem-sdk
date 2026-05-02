@@ -21,3 +21,32 @@ export async function getMetrics(slug) {
   const json = await res.json();
   return json.metrics || null;
 }
+
+export async function getMobileConfig() {
+  const res = await fetch(`${API}/public/mobile/config`);
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json.config || null;
+}
+
+export async function getMobileLocations() {
+  const res = await fetch(`${API}/public/mobile/locations`);
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json.locations || null;
+}
+
+export async function getMobileCityHome(countryCode, citySlug) {
+  const normalizedCountryCode = encodeURIComponent(
+    String(countryCode || "").trim().toUpperCase()
+  );
+  const normalizedCitySlug = encodeURIComponent(
+    String(citySlug || "").trim().toLowerCase()
+  );
+  const res = await fetch(
+    `${API}/public/mobile/city/${normalizedCountryCode}/${normalizedCitySlug}/home`
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json.home || null;
+}
