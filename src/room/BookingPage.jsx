@@ -518,6 +518,15 @@ export default function BookingPage() {
             </a>
           ) : null}
 
+          {successData.clientCabinetUrl ? (
+            <div style={styles.clientCabinetHint}>
+              <div style={styles.clientCabinetHintTitle}>Мой кабинет клиента</div>
+              <div style={styles.clientCabinetHintText}>
+                Сохраните персональную ссылку. По ней можно открыть историю записей, повторить запись и обновить данные клиента.
+              </div>
+            </div>
+          ) : null}
+
           <div style={styles.paymentBlock}>
             <h3 style={styles.paymentTitle}>Оплата</h3>
 
@@ -749,6 +758,24 @@ const styles = {
     textDecoration: "none",
     fontWeight: 600,
     marginBottom: 16
+  },
+  clientCabinetHint: {
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 14,
+    border: "1px solid #e5e7eb",
+    background: "#f9fafb"
+  },
+  clientCabinetHintTitle: {
+    fontSize: 16,
+    fontWeight: 700,
+    marginBottom: 6,
+    color: "#111827"
+  },
+  clientCabinetHintText: {
+    fontSize: 14,
+    lineHeight: "1.6",
+    color: "#4b5563"
   },
   paymentBlock: {
     marginBottom: 16,
