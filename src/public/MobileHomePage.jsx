@@ -43,7 +43,7 @@ function buildHashPath(path) {
 }
 
 function buildAbsoluteOwnerUrl(path) {
-  return `https://totemv.com${path}`;
+  return `https://www.totemv.com${path}`;
 }
 
 function Card({ children, style }) {
@@ -301,7 +301,7 @@ export default function MobileHomePage() {
                   </div>
                   <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
                     <a
-                      href={buildAbsoluteOwnerUrl(`/#/salon/${encodeURIComponent(String(salon.slug || "").trim())}`)}
+                      href={buildAbsoluteOwnerUrl(`/salon/${encodeURIComponent(String(salon.slug || "").trim())}`)}
                       style={secondaryLinkStyle}
                     >
                       Открыть салон
@@ -338,7 +338,7 @@ export default function MobileHomePage() {
                   </div>
                   <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
                     <a
-                      href={buildAbsoluteOwnerUrl(`/#/master/${encodeURIComponent(String(master.slug || "").trim())}`)}
+                      href={buildAbsoluteOwnerUrl(`/master/${encodeURIComponent(String(master.slug || "").trim())}`)}
                       style={secondaryLinkStyle}
                     >
                       Открыть мастера
