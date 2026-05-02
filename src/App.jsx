@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ErrorBoundary from "./core/ErrorBoundary";
 
 import PublicSalonPage from "./public/PublicSalonPage";
@@ -323,7 +323,10 @@ function RedirectToMasterSlug({ tail = "" }) {
 }
 
 function PublicPathRouter() {
+  const location = useLocation();
   const publicRoute = getPublicRouteFromPathname();
+
+  void location;
 
   if (!publicRoute) {
     return null;
