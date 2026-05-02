@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   getMobileAnnouncements,
+  getMobileConfig,
   getMobileCityHome,
   getMobileLocations,
   getMobileReferral,
@@ -37,6 +38,15 @@ function isActiveEntity(entity) {
   }
 
   return status === "active" || status === "enabled" || status === "published";
+}
+
+function isEnabledFlag(flag) {
+  if (!flag) {
+    return false;
+  }
+
+  const status = normalizeStatus(flag.status);
+  return flag.enabled === true && (status === "active" || status === "enabled");
 }
 
 function formatLabel(value, fallback = "—") {
@@ -106,6 +116,11 @@ function EntityBadge({ children }) {
 
 export default function MobileHomePage() {
   const route = useMemo(() => parseMobileRoute(), []);
+  const [config, setConfig] = useState({
+    loading: true,
+    error: "",
+    data: null,
+  });
   const [state, setState] = useState({
     loading: true,
     error: "",
@@ -124,6 +139,68 @@ export default function MobileHomePage() {
   const [catalogBySlug, setCatalogBySlug] = useState({});
 
   useEffect(() => {
+    let active = true;
+
+    async function run() {
+      setConfig({
+        loading: true,
+        error: "",
+        data: null,
+      });
+
+      try {
+        const result = await getMobileConfig();
+
+        if (!active) {
+          return;
+        }
+
+        if (!result?.ok) {
+          setConfig({
+            loading: false,
+            error: result?.error || "PUBLIC_MOBILE_CONFIG_FAILED",
+            data: null,
+          });
+          return;
+        }
+
+        setConfig({
+          loading: false,
+          error: "",
+          data: result?.config || null,
+        });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setConfig({
+          loading: false,
+          error: error?.message || "PUBLIC_MOBILE_CONFIG_FAILED",
+          data: null,
+        });
+      }
+    }
+
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [route.mode, route.countryCode, route.citySlug]);
+
+  const mobileV1Flag = useMemo(() => {
+    const flags = Array.isArray(config.data?.feature_flags) ? config.data.feature_flags : [];
+    return flags.find((flag) => String(flag?.flag_key || "") === "mobile_v1_enabled") || null;
+  }, [config.data]);
+
+  const mobileV1Enabled = isEnabledFlag(mobileV1Flag);
+
+  useEffect(() => {
+    if (config.loading || config.error || !mobileV1Enabled) {
+      return;
+    }
+
     let active = true;
 
     async function run() {
@@ -192,9 +269,13 @@ export default function MobileHomePage() {
     return () => {
       active = false;
     };
-  }, [route.mode, route.countryCode, route.citySlug]);
+  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled]);
 
   useEffect(() => {
+    if (config.loading || config.error || !mobileV1Enabled) {
+      return;
+    }
+
     let active = true;
 
     async function run() {
@@ -240,9 +321,13 @@ export default function MobileHomePage() {
     return () => {
       active = false;
     };
-  }, [route.mode, route.countryCode, route.citySlug]);
+  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled]);
 
   useEffect(() => {
+    if (config.loading || config.error || !mobileV1Enabled) {
+      return;
+    }
+
     let active = true;
 
     async function run() {
@@ -302,7 +387,7 @@ export default function MobileHomePage() {
     return () => {
       active = false;
     };
-  }, [route.mode, route.countryCode, route.citySlug]);
+  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled]);
 
   const activeCountries = useMemo(() => {
     if (route.mode !== "home") {
@@ -347,6 +432,50 @@ export default function MobileHomePage() {
       )
     );
   }, [activeCountries]);
+
+  if (config.loading) {
+    return (
+      <div style={shellStyle}>
+        <Card>
+          <SectionTitle subtitle="Мобильная витрина загружается.">Мобильная витрина</SectionTitle>
+          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
+            Загрузка мобильной витрины…
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (config.error) {
+    return (
+      <div style={shellStyle}>
+        <Card>
+          <SectionTitle subtitle="Не удалось загрузить конфигурацию мобильной витрины.">
+            Мобильная витрина
+          </SectionTitle>
+          <div style={{ fontSize: 14, color: "#991b1b", lineHeight: 1.55 }}>
+            Мобильная витрина временно недоступна.
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!mobileV1Enabled) {
+    return (
+      <div style={shellStyle}>
+        <Card>
+          <SectionTitle subtitle="Раздел открыт только для внутренней проверки.">Мобильная витрина</SectionTitle>
+          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
+            Мобильная витрина скоро появится.
+          </div>
+          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+            Сейчас раздел открыт только для внутренней проверки.
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   async function toggleSalonCatalog(salonSlug) {
     const slug = String(salonSlug || "").trim();
