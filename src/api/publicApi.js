@@ -50,3 +50,11 @@ export async function getMobileCityHome(countryCode, citySlug) {
   const json = await res.json();
   return json.home || null;
 }
+
+export async function getMobileSalonCatalog(slug) {
+  const normalizedSlug = encodeURIComponent(String(slug || "").trim());
+  const res = await fetch(`${API}/public/mobile/salons/${normalizedSlug}/catalog`);
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json;
+}
