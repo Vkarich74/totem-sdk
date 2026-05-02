@@ -47,6 +47,13 @@ function resolveContext() {
       slug: null
     };
   }
+
+  if (hashParts.length >= 3 && hashParts[0] === "client") {
+    return {
+      mode: "client",
+      slug: null
+    };
+  }
   // 🔥 КОНЕЦ ДОБАВЛЕНИЯ
 
   // Detect from URL (fallback)
@@ -70,6 +77,13 @@ function resolveContext() {
   if (parts.length >= 1 && parts[0] === "mobile") {
     return {
       mode: "mobile",
+      slug: null
+    };
+  }
+
+  if (parts.length >= 3 && parts[0] === "client") {
+    return {
+      mode: "client",
       slug: null
     };
   }
