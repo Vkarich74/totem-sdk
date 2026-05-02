@@ -96,3 +96,23 @@ export async function getMobileAnnouncements(options = {}) {
     announcements: Array.isArray(json?.announcements) ? json.announcements : [],
   };
 }
+
+export async function getMobileReferral(options = {}) {
+  const params = new URLSearchParams();
+  const country = String(options.country || "").trim();
+  const city = String(options.city || "").trim();
+
+  if (country) {
+    params.set("country", country);
+  }
+
+  if (city) {
+    params.set("city", city);
+  }
+
+  const query = params.toString();
+  const url = query ? `${API}/public/mobile/referral?${query}` : `${API}/public/mobile/referral`;
+  const res = await fetch(url);
+  const json = await res.json();
+  return json;
+}
