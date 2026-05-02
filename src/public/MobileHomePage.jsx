@@ -511,6 +511,8 @@ export default function MobileHomePage() {
 
         <ReferralBlock referral={referral} />
 
+        <HelpBlock />
+
         <Card>
           <SectionTitle subtitle="Доступные салоны в этом городе.">Салоны</SectionTitle>
           {salons.length ? (
@@ -589,6 +591,8 @@ export default function MobileHomePage() {
       <AnnouncementsBlock announcements={announcements} />
 
       <ReferralBlock referral={referral} />
+
+      <HelpBlock />
 
       <Card>
         <SectionTitle subtitle="Активные страны для мобильной витрины.">Страны</SectionTitle>
@@ -774,6 +778,26 @@ function ReferralBlock({ referral }) {
           </button>
         </div>
       )}
+    </Card>
+  );
+}
+
+function HelpBlock() {
+  return (
+    <Card>
+      <SectionTitle subtitle="Дополнительные способы связи и запроса информации.">Помощь и обратная связь</SectionTitle>
+
+      <div style={helpGridStyle}>
+        <div style={helpItemStyle}>
+          <div style={helpItemTitleStyle}>Обратная связь</div>
+          <div style={helpItemTextStyle}>Форма скоро появится.</div>
+        </div>
+
+        <div style={helpItemStyle}>
+          <div style={helpItemTitleStyle}>Запрос данных</div>
+          <div style={helpItemTextStyle}>Форма скоро появится.</div>
+        </div>
+      </div>
     </Card>
   );
 }
@@ -1113,4 +1137,29 @@ const referralCopyButtonStyle = {
   fontWeight: 800,
   fontSize: 14,
   cursor: "pointer",
+};
+
+const helpGridStyle = {
+  display: "grid",
+  gap: 10,
+};
+
+const helpItemStyle = {
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
+};
+
+const helpItemTitleStyle = {
+  fontSize: 15,
+  fontWeight: 800,
+  color: "#111827",
+  marginBottom: 6,
+};
+
+const helpItemTextStyle = {
+  fontSize: 14,
+  lineHeight: 1.55,
+  color: "#6b7280",
 };
