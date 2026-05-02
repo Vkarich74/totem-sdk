@@ -195,6 +195,26 @@ export default function MobileHomePage() {
   }, [config.data]);
 
   const mobileV1Enabled = isEnabledFlag(mobileV1Flag);
+  const mobileCityHomeFlag = useMemo(() => {
+    const flags = Array.isArray(config.data?.feature_flags) ? config.data.feature_flags : [];
+    return flags.find((flag) => String(flag?.flag_key || "") === "mobile_city_home_enabled") || null;
+  }, [config.data]);
+  const mobileNotificationsFlag = useMemo(() => {
+    const flags = Array.isArray(config.data?.feature_flags) ? config.data.feature_flags : [];
+    return flags.find((flag) => String(flag?.flag_key || "") === "mobile_notifications_enabled") || null;
+  }, [config.data]);
+  const mobileReferralFlag = useMemo(() => {
+    const flags = Array.isArray(config.data?.feature_flags) ? config.data.feature_flags : [];
+    return flags.find((flag) => String(flag?.flag_key || "") === "mobile_referral_enabled") || null;
+  }, [config.data]);
+  const mobilePwaFlag = useMemo(() => {
+    const flags = Array.isArray(config.data?.feature_flags) ? config.data.feature_flags : [];
+    return flags.find((flag) => String(flag?.flag_key || "") === "mobile_pwa_enabled") || null;
+  }, [config.data]);
+  const mobileCityHomeEnabled = isEnabledFlag(mobileCityHomeFlag);
+  const mobileNotificationsEnabled = isEnabledFlag(mobileNotificationsFlag);
+  const mobileReferralEnabled = isEnabledFlag(mobileReferralFlag);
+  const mobilePwaEnabled = isEnabledFlag(mobilePwaFlag);
 
   useEffect(() => {
     if (config.loading || config.error || !mobileV1Enabled) {
@@ -207,6 +227,15 @@ export default function MobileHomePage() {
       setState({ loading: true, error: "", data: null });
 
       try {
+        if (route.mode === "city" && !mobileCityHomeEnabled) {
+          setState({
+            loading: false,
+            error: "",
+            data: { disabled: true },
+          });
+          return;
+        }
+
         if (route.mode === "city") {
           const data = await getMobileCityHome(route.countryCode, route.citySlug);
 
@@ -269,10 +298,23 @@ export default function MobileHomePage() {
     return () => {
       active = false;
     };
-  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled]);
+  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled, mobileCityHomeEnabled]);
 
   useEffect(() => {
     if (config.loading || config.error || !mobileV1Enabled) {
+      return;
+    }
+
+    if (!mobileReferralEnabled) {
+      setReferral({
+        loading: false,
+        error: "",
+        data: {
+          enabled: false,
+          available: false,
+          reason: "FEATURE_DISABLED",
+        },
+      });
       return;
     }
 
@@ -321,10 +363,20 @@ export default function MobileHomePage() {
     return () => {
       active = false;
     };
-  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled]);
+  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled, mobileReferralEnabled]);
 
   useEffect(() => {
     if (config.loading || config.error || !mobileV1Enabled) {
+      return;
+    }
+
+    if (!mobileNotificationsEnabled) {
+      setAnnouncements({
+        loading: false,
+        error: "",
+        items: [],
+        disabled: true,
+      });
       return;
     }
 
@@ -387,7 +439,7 @@ export default function MobileHomePage() {
     return () => {
       active = false;
     };
-  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled]);
+  }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled, mobileNotificationsEnabled]);
 
   const activeCountries = useMemo(() => {
     if (route.mode !== "home") {
@@ -471,6 +523,22 @@ export default function MobileHomePage() {
           </div>
           <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
             Сейчас раздел открыт только для внутренней проверки.
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (route.mode === "city" && !mobileCityHomeEnabled) {
+    return (
+      <div style={shellStyle}>
+        <Card>
+          <SectionTitle subtitle="Раздел открыт только для внутренней проверки.">Мобильная витрина</SectionTitle>
+          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
+            Городская витрина скоро появится.
+          </div>
+          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+            Сейчас городская витрина открыта только для внутренней проверки.
           </div>
         </Card>
       </div>
@@ -840,12 +908,15 @@ function AnnouncementsBlock({ announcements }) {
   const items = Array.isArray(announcements?.items) ? announcements.items : [];
   const loading = Boolean(announcements?.loading);
   const error = String(announcements?.error || "").trim();
+  const disabled = Boolean(announcements?.disabled);
 
   return (
     <Card>
       <SectionTitle subtitle="Актуальные сообщения и акционные объявления.">Уведомления</SectionTitle>
 
-      {loading ? (
+      {disabled ? (
+        <div style={emptyNoteStyle}>Уведомления скоро появятся.</div>
+      ) : loading ? (
         <div style={emptyNoteStyle}>Загрузка уведомлений…</div>
       ) : error ? (
         <div style={emptyNoteStyle}>Уведомления временно недоступны.</div>
