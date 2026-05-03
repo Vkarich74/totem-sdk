@@ -1111,16 +1111,6 @@ function HelpBlock({ countryCode, citySlug }) {
 
       <div style={helpGridStyle}>
         <div style={helpItemStyle}>
-          <div style={helpItemTitleStyle}>Обратная связь</div>
-          <div style={helpItemTextStyle}>Форма скоро появится.</div>
-        </div>
-
-        <div style={helpItemStyle}>
-          <div style={helpItemTitleStyle}>Запрос данных</div>
-          <div style={helpItemTextStyle}>Форма скоро появится.</div>
-        </div>
-
-        <div style={helpItemStyle}>
           <div style={helpItemTitleStyle}>Поддержка</div>
           <div style={helpItemTextStyle}>Напишите нам: kantotemus@gmail.com</div>
         </div>
