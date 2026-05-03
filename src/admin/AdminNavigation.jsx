@@ -40,6 +40,10 @@ export default function AdminNavigation(){
         Финансы
       </button>
       <span> | </span>
+      <button type="button" onClick={() => navigate("#/admin/mobile")}>
+        Мобильное
+      </button>
+      <span> | </span>
       <button type="button" onClick={() => navigate("#/admin/open-owner")}>
         Открытие владельца
       </button>
