@@ -186,7 +186,8 @@ export async function loginWithPassword({ email = "", phone = "", password = "" 
     ok:true,
     access_token:j.access_token,
     token_type:j.token_type || "Bearer",
-    auth:j.auth || null
+    auth:j.auth || null,
+    auth_context:j.auth_context || null
   };
 }
 
@@ -233,7 +234,8 @@ export async function authLogin({ login = "", password = "", role = "", slug = "
     ok:true,
     access_token:j.access_token,
     token_type:j.token_type || "Bearer",
-    auth:j.auth || null
+    auth:j.auth || null,
+    auth_context:j.auth_context || null
   };
 }
 

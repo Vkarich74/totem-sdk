@@ -956,19 +956,93 @@ export default function MobileHomePage() {
   const bishkekLink = "#/mobile/city/KG/bishkek";
 
   return (
-    <div style={shellStyle}>
-      <div style={heroStyle}>
-        <EntityBadge>Мобильная витрина</EntityBadge>
-        <h1 style={heroTitleStyle}>Выберите страну и город</h1>
-        <div style={heroTextStyle}>
-          Это мобильный вход в каталог. Сейчас доступны только read-only данные по странам и городам.
+      <div style={shellStyle}>
+        <div style={heroStyle}>
+          <EntityBadge>Мобильная витрина</EntityBadge>
+          <h1 style={heroTitleStyle}>Выберите страну и город</h1>
+          <div style={heroTextStyle}>
+            Это мобильный вход в каталог. Сейчас доступны только read-only данные по странам и городам.
+          </div>
         </div>
-      </div>
 
-      <Card>
-        <SectionTitle subtitle="Запись начинается с выбора салона. Мастер и услуга выбираются уже на экране записи.">
-          Быстрая запись
-        </SectionTitle>
+        <Card style={{ borderColor: "#dbeafe", background: "#f8fbff" }}>
+          <SectionTitle subtitle="Выберите, как хотите войти в TOTEM.">Кто вы?</SectionTitle>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <a
+              href="#/mobile/city/KG/bishkek"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 8,
+                minHeight: 96,
+                padding: 16,
+                borderRadius: 16,
+                border: "1px solid #dbeafe",
+                background: "#fff",
+                color: "#111827",
+                textDecoration: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>Клиент</div>
+              <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.45 }}>Найти салон и записаться</div>
+            </a>
+
+            <a
+              href="#/auth/login?role=master"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 8,
+                minHeight: 96,
+                padding: 16,
+                borderRadius: 16,
+                border: "1px solid #dcfce7",
+                background: "#f0fdf4",
+                color: "#111827",
+                textDecoration: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>Мастер</div>
+              <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.45 }}>Войти в кабинет мастера</div>
+            </a>
+
+            <a
+              href="#/auth/login?role=salon_admin"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 8,
+                minHeight: 96,
+                padding: 16,
+                borderRadius: 16,
+                border: "1px solid #fcd34d",
+                background: "#fffbeb",
+                color: "#111827",
+                textDecoration: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>Салон</div>
+              <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.45 }}>Войти в кабинет салона</div>
+            </a>
+          </div>
+        </Card>
+
+        <Card>
+          <SectionTitle subtitle="Запись начинается с выбора салона. Мастер и услуга выбираются уже на экране записи.">
+            Быстрая запись
+          </SectionTitle>
         <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
           Сначала откройте нужный салон. После перехода на экран записи можно выбрать мастера, услугу и удобное время.
         </div>

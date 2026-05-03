@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { authLogin, authStart } from "../api/internal"
+import { authLogin, authStart, clearAuthAccessToken } from "../api/internal"
 
 
 function decodeAuthTokenRole(token){
@@ -38,14 +38,89 @@ function shouldClearAdminToken(originRole){
   return originRole === "master" || originRole === "salon_admin"
 }
 
+function isOwnerRole(role){
+  const normalizedRole = String(role || "").trim().toLowerCase()
+  return normalizedRole === "master" || normalizedRole === "salon_admin"
+}
+
+function parseJsonLike(value){
+  if(!value){
+    return null
+  }
+
+  if(typeof value === "object"){
+    return value
+  }
+
+  const text = String(value || "").trim()
+  if(!text){
+    return null
+  }
+
+  try{
+    return JSON.parse(text)
+  }catch{
+    return null
+  }
+}
+
+function getApiErrorMeta(result){
+  const detail = result?.detail || null
+  const parsed = parseJsonLike(detail?.json || detail?.text)
+  const code = String(
+    result?.error ||
+    detail?.code ||
+    detail?.error ||
+    parsed?.code ||
+    parsed?.error ||
+    ""
+  ).trim()
+  const status = Number(detail?.status || parsed?.status || 0) || 0
+  const contexts = Array.isArray(parsed?.contexts)
+    ? parsed.contexts
+    : Array.isArray(parsed?.auth_contexts)
+      ? parsed.auth_contexts
+      : Array.isArray(parsed?.data?.contexts)
+        ? parsed.data.contexts
+        : []
+
+  return {
+    code,
+    status,
+    contexts,
+    raw: parsed || detail || null
+  }
+}
+
+function resolveOwnerSlugFromAuthResponse(result){
+  const candidates = [
+    result?.auth?.slug,
+    result?.auth?.owner_slug,
+    result?.auth?.salon_slug,
+    result?.auth?.master_slug,
+    result?.auth_context?.slug,
+    result?.slug,
+    result?.owner_slug
+  ]
+
+  for(const candidate of candidates){
+    const slug = String(candidate || "").trim()
+    if(slug){
+      return slug
+    }
+  }
+
+  return ""
+}
+
 export default function LoginPage(){
   const navigate = useNavigate()
   const location = useLocation()
 
   const query = new URLSearchParams(location.search)
   const originRole = String(query.get("role") || "").trim().toLowerCase()
-  const effectiveRole = query.get("role") || ""
-  const effectiveSlug = query.get("slug") || ""
+  const effectiveRole = String(query.get("role") || "").trim().toLowerCase()
+  const effectiveSlug = String(query.get("slug") || "").trim()
 
   const [mode, setMode] = useState("password")
   const [login, setLogin] = useState("")
@@ -75,6 +150,16 @@ export default function LoginPage(){
 
     if(!href){
       e.preventDefault()
+      if(!effectiveRole){
+        setError("Ошибка контекста входа")
+        return
+      }
+
+      if(isOwnerRole(effectiveRole) && !effectiveSlug){
+        setError("Для восстановления пароля откройте ссылку конкретного кабинета или обратитесь в поддержку.")
+        return
+      }
+
       setError("Ошибка контекста входа")
     }
   }
@@ -85,22 +170,62 @@ export default function LoginPage(){
     }
   }, [originRole])
 
-  function redirectToCabinet(){
-    if(originRole === "master"){
-      navigate(`/master/${effectiveSlug}`, { replace: true })
-      return
+  function redirectToCabinet(targetRole, targetSlug){
+    const resolvedRole = String(targetRole || effectiveRole || "").trim().toLowerCase()
+    const resolvedSlug = String(targetSlug || "").trim() || effectiveSlug
+
+    if(!resolvedSlug){
+      clearAuthAccessToken()
+      setError("Кабинет найден, но ссылка кабинета не определена.")
+      return false
     }
-    if(originRole === "salon_admin"){
-      navigate(`/salon/${effectiveSlug}`, { replace: true })
-      return
+
+    if(resolvedRole === "master"){
+      navigate(`/master/${encodeURIComponent(resolvedSlug)}/dashboard`, { replace: true })
+      return true
     }
+
+    if(resolvedRole === "salon_admin"){
+      navigate(`/salon/${encodeURIComponent(resolvedSlug)}/dashboard`, { replace: true })
+      return true
+    }
+
     navigate("/", { replace: true })
+    return true
+  }
+
+  function isMultipleOwnerContextsError(result){
+    const meta = getApiErrorMeta(result)
+
+    if(meta.code === "MULTIPLE_OWNER_CONTEXTS"){
+      return true
+    }
+
+    if(meta.status === 409 && meta.contexts.length > 1){
+      return true
+    }
+
+    const rawText = String(result?.detail?.text || "").toUpperCase()
+    if(rawText.includes("MULTIPLE_OWNER_CONTEXTS")){
+      return true
+    }
+
+    return false
+  }
+
+  function resolveLoginOwnerSlug(result){
+    return resolveOwnerSlugFromAuthResponse(result)
   }
 
   async function handlePasswordLogin(e){
     e.preventDefault()
 
-    if(!effectiveRole || !effectiveSlug){
+    if(!effectiveRole){
+      setError("Ошибка контекста входа")
+      return
+    }
+
+    if(!effectiveSlug && !isOwnerRole(effectiveRole)){
       setError("Ошибка контекста входа")
       return
     }
@@ -117,11 +242,24 @@ export default function LoginPage(){
         login,
         password,
         role: effectiveRole,
-        slug: effectiveSlug
+        ...(effectiveSlug ? { slug: effectiveSlug } : {})
       })
 
       if(res?.ok && res?.access_token){
-        redirectToCabinet()
+        const resolvedSlug = resolveLoginOwnerSlug(res)
+
+        if(!effectiveSlug && isOwnerRole(effectiveRole) && !resolvedSlug){
+          clearAuthAccessToken()
+          setError("Кабинет найден, но ссылка кабинета не определена.")
+          return
+        }
+
+        redirectToCabinet(effectiveRole, resolvedSlug || effectiveSlug)
+        return
+      }
+
+      if(isMultipleOwnerContextsError(res)){
+        setError("Найдено несколько кабинетов. Выберите точную ссылку кабинета или обратитесь в поддержку.")
         return
       }
 
@@ -136,7 +274,12 @@ export default function LoginPage(){
   async function handleOtpStart(e){
     e.preventDefault()
 
-    if(!effectiveRole || !effectiveSlug){
+    if(!effectiveRole){
+      setError("Ошибка контекста входа")
+      return
+    }
+
+    if(!effectiveSlug && !isOwnerRole(effectiveRole)){
       setError("Ошибка контекста входа")
       return
     }
@@ -153,18 +296,31 @@ export default function LoginPage(){
         login,
         purpose: "login",
         role: effectiveRole,
-        slug: effectiveSlug
+        ...(effectiveSlug ? { slug: effectiveSlug } : {})
       })
 
       if(res?.ok){
+        const resolvedSlug = resolveOwnerSlugFromAuthResponse(res?.result)
+
+        if(!effectiveSlug && isOwnerRole(effectiveRole) && !resolvedSlug){
+          clearAuthAccessToken()
+          setError("Кабинет найден, но ссылка кабинета не определена.")
+          return
+        }
+
         navigate(
-          `/auth/verify?role=${encodeURIComponent(effectiveRole)}&slug=${encodeURIComponent(effectiveSlug)}`,
+          `/auth/verify?role=${encodeURIComponent(effectiveRole)}${resolvedSlug || effectiveSlug ? `&slug=${encodeURIComponent(resolvedSlug || effectiveSlug)}` : ""}`,
           {
             state: {
               login
             }
           }
         )
+        return
+      }
+
+      if(isMultipleOwnerContextsError(res)){
+        setError("Найдено несколько кабинетов. Выберите точную ссылку кабинета или обратитесь в поддержку.")
         return
       }
 
