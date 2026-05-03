@@ -24,7 +24,7 @@ function resolveContext() {
 
   // 🔥 ДОБАВЛЕНО: HASH ROUTER SUPPORT
   const hash = window.location.hash || "";
-  const hashPath = hash.replace(/^#/, "");
+  const hashPath = hash.replace(/^#/, "").split("?")[0];
   const hashParts = hashPath.split("/").filter(Boolean);
 
   if (hashParts.length >= 2 && hashParts[0] === "master") {
