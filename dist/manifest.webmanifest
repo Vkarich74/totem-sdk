@@ -1,0 +1,26 @@
+{
+  "name": "TOTEM — мобильная витрина",
+  "short_name": "TOTEM",
+  "description": "Мобильная витрина TOTEM для записи в салоны и к мастерам.",
+  "start_url": "/#/mobile",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "orientation": "portrait-primary",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
