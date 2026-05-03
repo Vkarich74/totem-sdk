@@ -48,6 +48,13 @@ function resolveContext() {
     };
   }
 
+  if (hashParts.length >= 1 && hashParts[0] === "booking") {
+    return {
+      mode: "booking",
+      slug: null
+    };
+  }
+
   if (hashParts.length >= 3 && hashParts[0] === "client") {
     return {
       mode: "client",
@@ -77,6 +84,13 @@ function resolveContext() {
   if (parts.length >= 1 && parts[0] === "mobile") {
     return {
       mode: "mobile",
+      slug: null
+    };
+  }
+
+  if (parts.length >= 1 && parts[0] === "booking") {
+    return {
+      mode: "booking",
       slug: null
     };
   }
