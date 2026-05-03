@@ -1320,6 +1320,8 @@ function HelpBlock({ countryCode, citySlug }) {
             <label style={helpFieldStyle}>
               <span style={helpLabelStyle}>Сообщение</span>
               <textarea
+                name="feedback_message"
+                aria-label="Сообщение для обратной связи"
                 value={feedbackMessage}
                 onChange={(event) => setFeedbackMessage(event.target.value)}
                 disabled={feedbackLoading}
@@ -1345,6 +1347,8 @@ function HelpBlock({ countryCode, citySlug }) {
               <span style={helpLabelStyle}>Email для ответа</span>
               <input
                 type="email"
+                name="data_contact_email"
+                aria-label="Email для ответа"
                 value={dataContactEmail}
                 onChange={(event) => setDataContactEmail(event.target.value)}
                 disabled={dataLoading}
@@ -1357,6 +1361,8 @@ function HelpBlock({ countryCode, citySlug }) {
             <label style={helpFieldStyle}>
               <span style={helpLabelStyle}>Сообщение</span>
               <textarea
+                name="data_request_message"
+                aria-label="Сообщение для запроса по данным"
                 value={dataMessage}
                 onChange={(event) => setDataMessage(event.target.value)}
                 disabled={dataLoading}

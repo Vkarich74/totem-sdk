@@ -610,6 +610,8 @@ export default function BookingPage() {
         <form onSubmit={goToPreview} style={styles.form}>
           <input
             type="text"
+            name="client_name"
+            aria-label="Имя клиента"
             placeholder="Ваше имя"
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
@@ -618,6 +620,8 @@ export default function BookingPage() {
 
           <input
             type="tel"
+            name="client_phone"
+            aria-label="Телефон клиента"
             placeholder="Телефон"
             value={clientPhone}
             onChange={(e) => setClientPhone(e.target.value)}
@@ -625,6 +629,8 @@ export default function BookingPage() {
           />
 
           <select
+            name="master_id"
+            aria-label="Выбор мастера"
             value={selectedMaster}
             onChange={(e) => {
               const id = e.target.value;
@@ -644,6 +650,8 @@ export default function BookingPage() {
           </select>
 
           <select
+            name="service_id"
+            aria-label="Выбор услуги"
             value={selectedService}
             onChange={(e) => setSelectedService(e.target.value)}
             style={styles.input}
@@ -658,6 +666,8 @@ export default function BookingPage() {
 
           <input
             type="date"
+            name="booking_date"
+            aria-label="Дата записи"
             min={todayISO()}
             value={date}
             onChange={(e) => setDate(e.target.value)}
@@ -665,6 +675,8 @@ export default function BookingPage() {
           />
 
           <select
+            name="booking_time"
+            aria-label="Выбор времени"
             value={time}
             onChange={(e) => setTime(e.target.value)}
             style={styles.input}
