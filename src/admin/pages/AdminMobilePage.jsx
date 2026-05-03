@@ -247,6 +247,11 @@ function getFlagDraft(row) {
   };
 }
 
+function getCrmRouting(row) {
+  const crm = row?.payload_json?.routing?.crm;
+  return crm && typeof crm === "object" ? crm : null;
+}
+
 export default function AdminMobilePage() {
   const token = getAuthToken();
   const [loading, setLoading] = useState(Boolean(token));
@@ -442,10 +447,14 @@ export default function AdminMobilePage() {
         render: (_, row) => {
           const key = String(row.id);
           const draft = feedbackDrafts[key] || String(row.status || "new");
-          const saving = savingKey === `feedback:${key}`;
+          const saving = savingKey === `feedback:${key}` || savingKey === `feedback-crm:${key}`;
+          const crmRouting = getCrmRouting(row);
 
           return (
             <div style={{ display: "grid", gap: 8 }}>
+              {crmRouting?.lead_db_id ? (
+                <div style={{ fontSize: 12, color: "#6b7280" }}>CRM: lead #{crmRouting.lead_db_id}</div>
+              ) : null}
               <select
                 value={draft}
                 disabled={saving}
@@ -485,6 +494,34 @@ export default function AdminMobilePage() {
                 }}
               >
                 Сохранить
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={async () => {
+                  setSavingKey(`feedback-crm:${key}`);
+                  setError("");
+                  try {
+                    const result = await fetchJson(`/internal/admin/mobile/feedback/${row.id}/route-crm`, {
+                      method: "POST",
+                    });
+                    await loadAll();
+                    setSuccess(result?.data?.routing?.routing_status === "existing" ? "CRM routing уже был выполнен" : "CRM routing выполнен");
+                  } catch (nextError) {
+                    setError(String(nextError?.message || nextError || "ADMIN_MOBILE_FEEDBACK_ROUTE_CRM_FAILED"));
+                  } finally {
+                    setSavingKey("");
+                  }
+                }}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                В CRM
               </button>
             </div>
           );
@@ -547,10 +584,14 @@ export default function AdminMobilePage() {
         render: (_, row) => {
           const key = String(row.id);
           const draft = dataRequestDrafts[key] || String(row.status || "new");
-          const saving = savingKey === `data:${key}`;
+          const saving = savingKey === `data:${key}` || savingKey === `data-crm:${key}`;
+          const crmRouting = getCrmRouting(row);
 
           return (
             <div style={{ display: "grid", gap: 8 }}>
+              {crmRouting?.lead_db_id ? (
+                <div style={{ fontSize: 12, color: "#6b7280" }}>CRM: lead #{crmRouting.lead_db_id}</div>
+              ) : null}
               <select
                 value={draft}
                 disabled={saving}
@@ -590,6 +631,34 @@ export default function AdminMobilePage() {
                 }}
               >
                 Сохранить
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={async () => {
+                  setSavingKey(`data-crm:${key}`);
+                  setError("");
+                  try {
+                    const result = await fetchJson(`/internal/admin/mobile/data-requests/${row.id}/route-crm`, {
+                      method: "POST",
+                    });
+                    await loadAll();
+                    setSuccess(result?.data?.routing?.routing_status === "existing" ? "CRM routing уже был выполнен" : "CRM routing выполнен");
+                  } catch (nextError) {
+                    setError(String(nextError?.message || nextError || "ADMIN_MOBILE_DATA_REQUEST_ROUTE_CRM_FAILED"));
+                  } finally {
+                    setSavingKey("");
+                  }
+                }}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                В CRM
               </button>
             </div>
           );
