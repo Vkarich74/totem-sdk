@@ -5,7 +5,9 @@ import {
   getMobileCityHome,
   getMobileLocations,
   getMobileReferral,
-  getMobileSalonCatalog
+  getMobileSalonCatalog,
+  postMobileDataRequest,
+  postMobileFeedback
 } from "../api/publicApi";
 
 function parseMobileRoute() {
@@ -722,7 +724,7 @@ export default function MobileHomePage() {
 
         <ReferralBlock referral={referral} />
 
-        <HelpBlock />
+        <HelpBlock countryCode={route.countryCode} citySlug={route.citySlug} />
 
         <Card>
           <SectionTitle subtitle="Доступные салоны в этом городе.">Салоны</SectionTitle>
@@ -803,7 +805,7 @@ export default function MobileHomePage() {
 
       <ReferralBlock referral={referral} />
 
-      <HelpBlock />
+      <HelpBlock countryCode={route.countryCode} citySlug={route.citySlug} />
 
       <Card>
         <SectionTitle subtitle="Активные страны для мобильной витрины.">Страны</SectionTitle>
@@ -1019,7 +1021,90 @@ function ReferralBlock({ referral }) {
   );
 }
 
-function HelpBlock() {
+function HelpBlock({ countryCode, citySlug }) {
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackStatus, setFeedbackStatus] = useState("");
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [dataContactEmail, setDataContactEmail] = useState("");
+  const [dataMessage, setDataMessage] = useState("");
+  const [dataStatus, setDataStatus] = useState("");
+  const [dataLoading, setDataLoading] = useState(false);
+
+  async function handleFeedbackSubmit(event) {
+    event.preventDefault();
+
+    if (feedbackLoading) {
+      return;
+    }
+
+    setFeedbackLoading(true);
+    setFeedbackStatus("");
+
+    try {
+      const result = await postMobileFeedback({
+        message: feedbackMessage,
+        country: countryCode,
+        city: citySlug,
+        source: "mobile",
+        payload_json: {
+          source: "mobile_help_block",
+        },
+      });
+
+      if (result?.ok === false) {
+        setFeedbackStatus(result?.error ? `Ошибка: ${result.error}` : "Ошибка отправки.");
+        return;
+      }
+
+      setFeedbackMessage("");
+      setFeedbackStatus("Спасибо, обращение отправлено.");
+    } catch (error) {
+      const errorCode = String(error?.message || "").trim();
+      setFeedbackStatus(errorCode ? `Ошибка: ${errorCode}` : "Ошибка отправки.");
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }
+
+  async function handleDataRequestSubmit(event) {
+    event.preventDefault();
+
+    if (dataLoading) {
+      return;
+    }
+
+    setDataLoading(true);
+    setDataStatus("");
+
+    try {
+      const result = await postMobileDataRequest({
+        request_type: "data_access",
+        contact_email: dataContactEmail,
+        message: dataMessage,
+        country: countryCode,
+        city: citySlug,
+        source: "mobile",
+        payload_json: {
+          source: "mobile_help_block",
+        },
+      });
+
+      if (result?.ok === false) {
+        setDataStatus(result?.error ? `Ошибка: ${result.error}` : "Ошибка отправки.");
+        return;
+      }
+
+      setDataContactEmail("");
+      setDataMessage("");
+      setDataStatus("Запрос отправлен.");
+    } catch (error) {
+      const errorCode = String(error?.message || "").trim();
+      setDataStatus(errorCode ? `Ошибка: ${errorCode}` : "Ошибка отправки.");
+    } finally {
+      setDataLoading(false);
+    }
+  }
+
   return (
     <Card>
       <SectionTitle subtitle="Дополнительные способы связи, версии и юридической информации.">Помощь, версия и документы</SectionTitle>
@@ -1058,6 +1143,67 @@ function HelpBlock() {
         <div style={helpItemStyle}>
           <div style={helpItemTitleStyle}>Условия использования</div>
           <div style={helpItemTextStyle}>Документ будет доступен перед публичным запуском.</div>
+        </div>
+
+        <div style={helpFormCardStyle}>
+          <div style={helpFormTitleStyle}>Обратная связь</div>
+          <form onSubmit={handleFeedbackSubmit} style={helpFormGridStyle}>
+            <label style={helpFieldStyle}>
+              <span style={helpLabelStyle}>Сообщение</span>
+              <textarea
+                value={feedbackMessage}
+                onChange={(event) => setFeedbackMessage(event.target.value)}
+                disabled={feedbackLoading}
+                rows={4}
+                required
+                style={helpTextareaStyle}
+                placeholder="Напишите, что важно исправить или улучшить"
+              />
+            </label>
+
+            <button type="submit" disabled={feedbackLoading} style={helpSubmitButtonStyle}>
+              {feedbackLoading ? "Отправляем…" : "Отправить обращение"}
+            </button>
+
+            {feedbackStatus ? <div style={helpStatusStyle}>{feedbackStatus}</div> : null}
+          </form>
+        </div>
+
+        <div style={helpFormCardStyle}>
+          <div style={helpFormTitleStyle}>Запрос по данным</div>
+          <form onSubmit={handleDataRequestSubmit} style={helpFormGridStyle}>
+            <label style={helpFieldStyle}>
+              <span style={helpLabelStyle}>Email для ответа</span>
+              <input
+                type="email"
+                value={dataContactEmail}
+                onChange={(event) => setDataContactEmail(event.target.value)}
+                disabled={dataLoading}
+                required
+                style={helpInputStyle}
+                placeholder="email@example.com"
+              />
+            </label>
+
+            <label style={helpFieldStyle}>
+              <span style={helpLabelStyle}>Сообщение</span>
+              <textarea
+                value={dataMessage}
+                onChange={(event) => setDataMessage(event.target.value)}
+                disabled={dataLoading}
+                rows={4}
+                required
+                style={helpTextareaStyle}
+                placeholder="Опишите запрос по данным"
+              />
+            </label>
+
+            <button type="submit" disabled={dataLoading} style={helpSubmitButtonStyle}>
+              {dataLoading ? "Отправляем…" : "Отправить запрос"}
+            </button>
+
+            {dataStatus ? <div style={helpStatusStyle}>{dataStatus}</div> : null}
+          </form>
         </div>
       </div>
     </Card>
@@ -1424,4 +1570,76 @@ const helpItemTextStyle = {
   fontSize: 14,
   lineHeight: 1.55,
   color: "#6b7280",
+};
+
+const helpFormCardStyle = {
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
+};
+
+const helpFormTitleStyle = {
+  fontSize: 15,
+  fontWeight: 800,
+  color: "#111827",
+  marginBottom: 10,
+};
+
+const helpFormGridStyle = {
+  display: "grid",
+  gap: 12,
+};
+
+const helpFieldStyle = {
+  display: "grid",
+  gap: 6,
+};
+
+const helpLabelStyle = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#374151",
+};
+
+const helpTextareaStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  minHeight: 104,
+  padding: "12px 13px",
+  border: "1px solid #d1d5db",
+  borderRadius: 12,
+  fontSize: 14,
+  fontFamily: "inherit",
+  resize: "vertical",
+};
+
+const helpInputStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "12px 13px",
+  border: "1px solid #d1d5db",
+  borderRadius: 12,
+  fontSize: 14,
+  fontFamily: "inherit",
+};
+
+const helpSubmitButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "11px 14px",
+  borderRadius: 12,
+  background: "#111827",
+  color: "#fff",
+  border: "none",
+  fontWeight: 800,
+  fontSize: 14,
+  cursor: "pointer",
+};
+
+const helpStatusStyle = {
+  fontSize: 13,
+  color: "#4b5563",
+  lineHeight: 1.45,
 };

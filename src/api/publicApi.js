@@ -142,3 +142,55 @@ export async function postMobileReferralEvent(payload = {}) {
     throw error;
   }
 }
+
+export async function postMobileFeedback(payload = {}) {
+  const res = await fetch(`${API}/public/mobile/feedback`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  try {
+    const json = await res.json();
+
+    if (!res.ok) {
+      return json;
+    }
+
+    return json;
+  } catch (error) {
+    if (!res.ok) {
+      throw new Error("PUBLIC_MOBILE_FEEDBACK_REQUEST_FAILED");
+    }
+
+    throw error;
+  }
+}
+
+export async function postMobileDataRequest(payload = {}) {
+  const res = await fetch(`${API}/public/mobile/data-request`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  try {
+    const json = await res.json();
+
+    if (!res.ok) {
+      return json;
+    }
+
+    return json;
+  } catch (error) {
+    if (!res.ok) {
+      throw new Error("PUBLIC_MOBILE_DATA_REQUEST_REQUEST_FAILED");
+    }
+
+    throw error;
+  }
+}
