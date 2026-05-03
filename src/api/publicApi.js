@@ -116,3 +116,29 @@ export async function getMobileReferral(options = {}) {
   const json = await res.json();
   return json;
 }
+
+export async function postMobileReferralEvent(payload = {}) {
+  const res = await fetch(`${API}/public/mobile/referral/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  try {
+    const json = await res.json();
+
+    if (!res.ok) {
+      return json;
+    }
+
+    return json;
+  } catch (error) {
+    if (!res.ok) {
+      throw new Error("PUBLIC_MOBILE_REFERRAL_EVENT_REQUEST_FAILED");
+    }
+
+    throw error;
+  }
+}
