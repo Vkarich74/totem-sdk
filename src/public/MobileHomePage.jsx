@@ -441,6 +441,18 @@ export default function MobileHomePage() {
     };
   }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled, mobileNotificationsEnabled]);
 
+  useEffect(() => {
+    if (!mobileV1Enabled || !mobilePwaEnabled) {
+      return;
+    }
+
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+      return;
+    }
+
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, [mobileV1Enabled, mobilePwaEnabled]);
+
   const activeCountries = useMemo(() => {
     if (route.mode !== "home") {
       return [];
