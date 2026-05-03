@@ -1155,6 +1155,192 @@ export async function createMoneyCoreOwnerWithdrawRequest(ownerType, ownerId, pa
   }
 }
 
+export async function getSalonWithdrawDestinations(salonSlug, filters = {}){
+  try{
+    const qs = new URLSearchParams();
+    if(filters.method) qs.set("method", String(filters.method));
+    if(filters.status) qs.set("status", String(filters.status));
+
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const r = await safeInternalJson(`/salons/${encodeURIComponent(String(salonSlug || "").trim())}/money-core/withdraw-destinations${suffix}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"SALON_WITHDRAW_DESTINATIONS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_WITHDRAW_DESTINATIONS_API_NOT_OK", detail:j };
+    return { ok:true, destinations:j.destinations || j.data || j };
+  }catch(e){
+    return { ok:false, error:"SALON_WITHDRAW_DESTINATIONS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function createSalonWithdrawDestination(salonSlug, payload = {}){
+  try{
+    const r = await safeInternalJson(`/salons/${encodeURIComponent(String(salonSlug || "").trim())}/money-core/withdraw-destinations`, {
+      method: "POST",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"SALON_WITHDRAW_DESTINATION_CREATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_WITHDRAW_DESTINATION_CREATE_API_NOT_OK", detail:j };
+    return { ok:true, destination:j.destination || j.data || j };
+  }catch(e){
+    return { ok:false, error:"SALON_WITHDRAW_DESTINATION_CREATE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getSalonWithdrawSettings(salonSlug){
+  try{
+    const r = await safeInternalJson(`/salons/${encodeURIComponent(String(salonSlug || "").trim())}/money-core/withdraw-settings`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"SALON_WITHDRAW_SETTINGS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_WITHDRAW_SETTINGS_API_NOT_OK", detail:j };
+    return { ok:true, settings:j.settings || j.data || j };
+  }catch(e){
+    return { ok:false, error:"SALON_WITHDRAW_SETTINGS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function updateSalonWithdrawSettings(salonSlug, payload = {}){
+  try{
+    const r = await safeInternalJson(`/salons/${encodeURIComponent(String(salonSlug || "").trim())}/money-core/withdraw-settings`, {
+      method: "PATCH",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"SALON_WITHDRAW_SETTINGS_UPDATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_WITHDRAW_SETTINGS_UPDATE_API_NOT_OK", detail:j };
+    return { ok:true, settings:j.settings || j.data || j };
+  }catch(e){
+    return { ok:false, error:"SALON_WITHDRAW_SETTINGS_UPDATE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getSalonWithdrawRequests(salonSlug, filters = {}){
+  try{
+    const qs = new URLSearchParams();
+    if(filters.status) qs.set("status", String(filters.status));
+    if(typeof filters.destination_id !== "undefined" && filters.destination_id !== null && filters.destination_id !== "") qs.set("destination_id", String(filters.destination_id));
+    if(typeof filters.limit !== "undefined" && filters.limit !== null && filters.limit !== "") qs.set("limit", String(filters.limit));
+    if(typeof filters.offset !== "undefined" && filters.offset !== null && filters.offset !== "") qs.set("offset", String(filters.offset));
+
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const r = await safeInternalJson(`/salons/${encodeURIComponent(String(salonSlug || "").trim())}/money-core/withdraw-requests${suffix}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"SALON_WITHDRAW_REQUESTS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_WITHDRAW_REQUESTS_API_NOT_OK", detail:j };
+    return { ok:true, requests:j.requests || j.data || j };
+  }catch(e){
+    return { ok:false, error:"SALON_WITHDRAW_REQUESTS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function createSalonWithdrawRequest(salonSlug, payload = {}){
+  try{
+    const r = await safeInternalJson(`/salons/${encodeURIComponent(String(salonSlug || "").trim())}/money-core/withdraw-requests`, {
+      method: "POST",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"SALON_WITHDRAW_REQUEST_CREATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_WITHDRAW_REQUEST_CREATE_API_NOT_OK", detail:j };
+    return { ok:true, request:j.request || j.data || j, ledger:j.ledger || null };
+  }catch(e){
+    return { ok:false, error:"SALON_WITHDRAW_REQUEST_CREATE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getMasterWithdrawDestinations(masterSlug, filters = {}){
+  try{
+    const qs = new URLSearchParams();
+    if(filters.method) qs.set("method", String(filters.method));
+    if(filters.status) qs.set("status", String(filters.status));
+
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const r = await safeInternalJson(`/masters/${encodeURIComponent(String(masterSlug || "").trim())}/money-core/withdraw-destinations${suffix}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MASTER_WITHDRAW_DESTINATIONS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_WITHDRAW_DESTINATIONS_API_NOT_OK", detail:j };
+    return { ok:true, destinations:j.destinations || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MASTER_WITHDRAW_DESTINATIONS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function createMasterWithdrawDestination(masterSlug, payload = {}){
+  try{
+    const r = await safeInternalJson(`/masters/${encodeURIComponent(String(masterSlug || "").trim())}/money-core/withdraw-destinations`, {
+      method: "POST",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"MASTER_WITHDRAW_DESTINATION_CREATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_WITHDRAW_DESTINATION_CREATE_API_NOT_OK", detail:j };
+    return { ok:true, destination:j.destination || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MASTER_WITHDRAW_DESTINATION_CREATE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getMasterWithdrawSettings(masterSlug){
+  try{
+    const r = await safeInternalJson(`/masters/${encodeURIComponent(String(masterSlug || "").trim())}/money-core/withdraw-settings`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MASTER_WITHDRAW_SETTINGS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_WITHDRAW_SETTINGS_API_NOT_OK", detail:j };
+    return { ok:true, settings:j.settings || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MASTER_WITHDRAW_SETTINGS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function updateMasterWithdrawSettings(masterSlug, payload = {}){
+  try{
+    const r = await safeInternalJson(`/masters/${encodeURIComponent(String(masterSlug || "").trim())}/money-core/withdraw-settings`, {
+      method: "PATCH",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"MASTER_WITHDRAW_SETTINGS_UPDATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_WITHDRAW_SETTINGS_UPDATE_API_NOT_OK", detail:j };
+    return { ok:true, settings:j.settings || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MASTER_WITHDRAW_SETTINGS_UPDATE_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getMasterWithdrawRequests(masterSlug, filters = {}){
+  try{
+    const qs = new URLSearchParams();
+    if(filters.status) qs.set("status", String(filters.status));
+    if(typeof filters.destination_id !== "undefined" && filters.destination_id !== null && filters.destination_id !== "") qs.set("destination_id", String(filters.destination_id));
+    if(typeof filters.limit !== "undefined" && filters.limit !== null && filters.limit !== "") qs.set("limit", String(filters.limit));
+    if(typeof filters.offset !== "undefined" && filters.offset !== null && filters.offset !== "") qs.set("offset", String(filters.offset));
+
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const r = await safeInternalJson(`/masters/${encodeURIComponent(String(masterSlug || "").trim())}/money-core/withdraw-requests${suffix}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MASTER_WITHDRAW_REQUESTS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_WITHDRAW_REQUESTS_API_NOT_OK", detail:j };
+    return { ok:true, requests:j.requests || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MASTER_WITHDRAW_REQUESTS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function createMasterWithdrawRequest(masterSlug, payload = {}){
+  try{
+    const r = await safeInternalJson(`/masters/${encodeURIComponent(String(masterSlug || "").trim())}/money-core/withdraw-requests`, {
+      method: "POST",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"MASTER_WITHDRAW_REQUEST_CREATE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_WITHDRAW_REQUEST_CREATE_API_NOT_OK", detail:j };
+    return { ok:true, request:j.request || j.data || j, ledger:j.ledger || null };
+  }catch(e){
+    return { ok:false, error:"MASTER_WITHDRAW_REQUEST_CREATE_FETCH_FAILED", detail:e };
+  }
+}
+
 export async function createSalonWithdraw(amount, billingAccess, salonSlug = getSalonSlug()){
     if (!canWithdrawByBilling(billingAccess)) {
       return { ok:false, error:"WITHDRAW_BLOCKED_BY_BILLING" };

@@ -4,15 +4,15 @@ import { useMaster } from "../MasterContext";
 
 import {
   getMoneyCoreDestinationProviders,
-  getMoneyCoreOwnerWithdrawDestinations,
-  getMoneyCoreOwnerWithdrawRequests,
-  getMoneyCoreOwnerWithdrawSettings,
   getMasterActiveContract,
   getMasterContractHistory,
   getMasterMoneyCoreSummary,
   getMasterPayouts,
   getMasterSettlements,
-  getMasterWalletBalance
+  getMasterWalletBalance,
+  getMasterWithdrawDestinations,
+  getMasterWithdrawRequests,
+  getMasterWithdrawSettings
 } from "../../api/internal";
 
 import {
@@ -340,9 +340,9 @@ export default function MasterFinancePage() {
     let cancelled = false;
 
     async function loadMoneyCoreCabinet() {
-      const owner = moneyCoreSummary?.owner;
+      const masterSlugValue = masterSlug;
 
-      if (!owner?.type || !owner?.id) {
+      if (!masterSlugValue) {
         if (!cancelled) {
           setMoneyCoreDestinationProviders([]);
           setMoneyCoreWithdrawDestinations([]);
@@ -359,10 +359,10 @@ export default function MasterFinancePage() {
           settingsResult,
           requestsResult,
         ] = await Promise.all([
-          getMoneyCoreDestinationProviders({ enabled: true, country: "KG" }),
-          getMoneyCoreOwnerWithdrawDestinations(owner.type, owner.id),
-          getMoneyCoreOwnerWithdrawSettings(owner.type, owner.id),
-          getMoneyCoreOwnerWithdrawRequests(owner.type, owner.id, { limit: 10, offset: 0 }),
+          getMoneyCoreDestinationProviders({ enabled: true }),
+          getMasterWithdrawDestinations(masterSlugValue),
+          getMasterWithdrawSettings(masterSlugValue),
+          getMasterWithdrawRequests(masterSlugValue, { limit: 10, offset: 0 }),
         ]);
 
         if (cancelled) return;
@@ -386,7 +386,7 @@ export default function MasterFinancePage() {
     return () => {
       cancelled = true;
     };
-  }, [moneyCoreSummary?.owner?.type, moneyCoreSummary?.owner?.id]);
+  }, [masterSlug]);
 
   const billingSnapshot = getBillingSnapshot();
   const billingStateLabel = formatBillingState(

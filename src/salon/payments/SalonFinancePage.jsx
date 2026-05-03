@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { getMoneyCoreDestinationProviders, getMoneyCoreOwnerWithdrawDestinations, getMoneyCoreOwnerWithdrawRequests, getMoneyCoreOwnerWithdrawSettings, getSalonContracts, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPayouts, getSalonSettlements, getSalonWalletBalance } from "../../api/internal"
+import { getMoneyCoreDestinationProviders, getSalonContracts, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -281,9 +281,9 @@ export default function SalonFinancePage(){
     let cancelled = false
 
     async function loadMoneyCoreCabinet(){
-      const owner = moneyCoreSummary?.owner
+      const ownerSlug = slug
 
-      if(!owner?.type || !owner?.id){
+      if(!ownerSlug){
         if(!cancelled){
           setMoneyCoreDestinationProviders([])
           setMoneyCoreWithdrawDestinations([])
@@ -300,10 +300,10 @@ export default function SalonFinancePage(){
           settingsRaw,
           requestsRaw
         ] = await Promise.all([
-          getMoneyCoreDestinationProviders({ enabled: true, country: "KG" }),
-          getMoneyCoreOwnerWithdrawDestinations(owner.type, owner.id),
-          getMoneyCoreOwnerWithdrawSettings(owner.type, owner.id),
-          getMoneyCoreOwnerWithdrawRequests(owner.type, owner.id, { limit: 10, offset: 0 })
+          getMoneyCoreDestinationProviders({ enabled: true }),
+          getSalonWithdrawDestinations(ownerSlug),
+          getSalonWithdrawSettings(ownerSlug),
+          getSalonWithdrawRequests(ownerSlug, { limit: 10, offset: 0 })
         ])
 
         if(cancelled) return
