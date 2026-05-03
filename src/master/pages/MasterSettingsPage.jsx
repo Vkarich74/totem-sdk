@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
+import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 
 function Block({ title, hint, children }) {
   return (
@@ -249,6 +250,15 @@ export default function MasterSettingsPage() {
               Открыть финансы
             </Link>
           </div>
+        </Block>
+
+        <Block title="Моя ссылка и QR" hint="Быстрый доступ к ссылке записи и QR-коду для клиентов.">
+          <OwnerBookingQrCard
+            ownerType="master"
+            slug={slug}
+            title="QR для записи к мастеру"
+            subtitle="Клиент откроет форму записи с выбранным мастером."
+          />
         </Block>
 
         <button

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
+import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import { getSalonMetrics } from "../../api/internal"
 
 function money(value){
@@ -296,6 +297,13 @@ export default function DashboardPage(){
           <QuickAction to={buildSalonPath(slug, "finance")} title="Открыть финансы" note="Обзор денег, баланса и переход к расчётам и контрактам." />
         </div>
       </PageSection>
+
+      <OwnerBookingQrCard
+        ownerType="salon"
+        slug={slug}
+        title="QR для записи в салон"
+        subtitle="Клиент откроет форму записи салона."
+      />
 
       <PageSection title="Маршруты из dashboard">
         <div style={{

@@ -64,6 +64,10 @@ function buildAbsoluteOwnerUrl(path) {
   return `https://www.totemv.com${path}`;
 }
 
+function buildPublicBookingUrl(salonSlug) {
+  return `https://app.totemv.com/#/booking?salon=${encodeURIComponent(String(salonSlug || "").trim())}`;
+}
+
 function Card({ children, style }) {
   return (
     <div
@@ -1516,12 +1520,66 @@ function AnnouncementItem({ item }) {
 
 function SalonCard({ salon, catalogState, onToggleCatalog }) {
   const slug = String(salon?.slug || "").trim();
+  const bookingUrl = slug ? buildPublicBookingUrl(slug) : "";
   const catalogOpen = Boolean(catalogState?.expanded);
   const catalogLoading = Boolean(catalogState?.loading);
   const catalogError = String(catalogState?.error || "").trim();
   const catalogData = catalogState?.data || null;
   const masters = Array.isArray(catalogData?.masters) ? catalogData.masters : [];
   const services = Array.isArray(catalogData?.services) ? catalogData.services : [];
+  const [bookingStatus, setBookingStatus] = useState("");
+
+  useEffect(() => {
+    if (!bookingStatus) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setBookingStatus("");
+    }, 2000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [bookingStatus]);
+
+  async function copyBookingLink() {
+    if (!bookingUrl || !window.navigator?.clipboard?.writeText) {
+      setBookingStatus("Не удалось скопировать ссылку");
+      return;
+    }
+
+    try {
+      await window.navigator.clipboard.writeText(bookingUrl);
+      setBookingStatus("Ссылка скопирована");
+    } catch {
+      setBookingStatus("Не удалось скопировать ссылку");
+    }
+  }
+
+  async function shareBookingLink() {
+    if (!bookingUrl) {
+      setBookingStatus("Ссылка недоступна");
+      return;
+    }
+
+    if (window.navigator?.share) {
+      try {
+        await window.navigator.share({
+          title: formatLabel(salon?.name, "Запись в салон"),
+          text: "Запись в салон",
+          url: bookingUrl,
+        });
+        setBookingStatus("Ссылка отправлена");
+        return;
+      } catch {
+        setBookingStatus("Не удалось поделиться ссылкой");
+        return;
+      }
+    }
+
+    await copyBookingLink();
+  }
 
   return (
     <Card style={{ padding: 14, borderRadius: 14 }}>
@@ -1555,6 +1613,21 @@ function SalonCard({ salon, catalogState, onToggleCatalog }) {
           {catalogOpen ? "Скрыть каталог" : "Показать каталог"}
         </button>
       </div>
+
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <button type="button" onClick={copyBookingLink} style={{ ...secondaryLinkStyle, cursor: "pointer", appearance: "none" }}>
+          Скопировать ссылку
+        </button>
+        <button type="button" onClick={shareBookingLink} style={{ ...secondaryLinkStyle, cursor: "pointer", appearance: "none" }}>
+          Поделиться
+        </button>
+      </div>
+
+      {bookingStatus ? (
+        <div style={{ marginTop: 10, fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+          {bookingStatus}
+        </div>
+      ) : null}
 
       {catalogOpen && catalogLoading ? (
         <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>Загрузка каталога…</div>

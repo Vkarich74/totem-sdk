@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
+import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 
 function Block({ title, hint, children }) {
   return (
@@ -299,6 +300,15 @@ export default function SettingsPage() {
               note="Привязки мастеров и договорные условия без смешения с финансами."
             />
           </div>
+        </Block>
+
+        <Block title="Публичная ссылка и QR" hint="Быстрый доступ к ссылке записи и QR-коду для клиентов.">
+          <OwnerBookingQrCard
+            ownerType="salon"
+            slug={slug}
+            title="QR для записи в салон"
+            subtitle="Клиент откроет форму записи салона."
+          />
         </Block>
 
         <button

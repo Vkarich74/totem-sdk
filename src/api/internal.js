@@ -1007,6 +1007,98 @@ export async function getMasterMoneyCoreSummary(masterSlug = getMasterSlug()){
   }
 }
 
+function normalizeOwnerBookingType(ownerType){
+  const value = String(ownerType || "").trim().toLowerCase();
+  if(value === "salon" || value === "master") return value;
+  return "";
+}
+
+async function safeInternalBlob(path, opts = {}){
+  const method = String(opts.method || "GET").toUpperCase();
+  const headers = buildJsonHeaders(opts.headers || {}, false);
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    method,
+    headers
+  });
+
+  if(!response.ok){
+    let detail = null;
+
+    try{
+      const text = await response.text();
+      detail = text ? JSON.parse(text) : null;
+    }catch(e){
+      detail = null;
+    }
+
+    return {
+      ok: false,
+      error: `HTTP_${response.status}`,
+      detail: {
+        status: response.status,
+        body: detail
+      }
+    };
+  }
+
+  const blob = await response.blob();
+  return { ok:true, blob, response };
+}
+
+export async function getOwnerBookingQrPayload(ownerType, slug){
+  try{
+    const safeOwnerType = normalizeOwnerBookingType(ownerType);
+    const safeSlug = String(slug || "").trim();
+
+    if(!safeOwnerType){
+      return { ok:false, error:"OWNER_TYPE_INVALID" };
+    }
+
+    if(!safeSlug){
+      return { ok:false, error:"OWNER_SLUG_REQUIRED" };
+    }
+
+    const r = await safeInternalJson(`/entry/${encodeURIComponent(safeOwnerType)}/${encodeURIComponent(safeSlug)}/qr-payload?target=booking`, {
+      method: "GET"
+    });
+
+    if(!r.ok) return { ok:false, error:"OWNER_BOOKING_QR_PAYLOAD_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"OWNER_BOOKING_QR_PAYLOAD_API_NOT_OK", detail:j };
+    return { ok:true, payload: j };
+  }catch(e){
+    return { ok:false, error:"OWNER_BOOKING_QR_PAYLOAD_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getOwnerBookingQrPngBlob(ownerType, slug){
+  try{
+    const safeOwnerType = normalizeOwnerBookingType(ownerType);
+    const safeSlug = String(slug || "").trim();
+
+    if(!safeOwnerType){
+      return { ok:false, error:"OWNER_TYPE_INVALID" };
+    }
+
+    if(!safeSlug){
+      return { ok:false, error:"OWNER_SLUG_REQUIRED" };
+    }
+
+    const r = await safeInternalBlob(`/entry/${encodeURIComponent(safeOwnerType)}/${encodeURIComponent(safeSlug)}/qr.png?target=booking`, {
+      method: "GET",
+      headers: {
+        Accept: "image/png"
+      }
+    });
+
+    if(!r.ok) return { ok:false, error:"OWNER_BOOKING_QR_PNG_FETCH_FAILED", detail:r };
+    return { ok:true, blob: r.blob };
+  }catch(e){
+    return { ok:false, error:"OWNER_BOOKING_QR_PNG_FETCH_FAILED", detail:e };
+  }
+}
+
 export async function getInternalMobileConfig(){
   return safeInternalJson(`/mobile/config`, { method: "GET" });
 }

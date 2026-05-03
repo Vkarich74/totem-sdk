@@ -5,6 +5,7 @@ import StatCard from "../../cabinet/StatCard"
 import StatGrid from "../../cabinet/StatGrid"
 import { useMaster } from "../MasterContext"
 import { getMasterMetrics } from "../../api/internal"
+import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 
 function money(n){
   return new Intl.NumberFormat("ru-RU").format(Number(n) || 0) + " сом"
@@ -299,6 +300,13 @@ export default function MasterDashboard() {
           <QuickAction to={`/master/${slug}/finance`} title="Открыть финансы" note="Обзор денег, баланса и переход к расчётам." />
         </div>
       </PageSection>
+
+      <OwnerBookingQrCard
+        ownerType="master"
+        slug={slug}
+        title="QR для записи к мастеру"
+        subtitle="Клиент откроет форму записи с выбранным мастером."
+      />
 
       <PageSection title="Маршруты из dashboard">
         <div style={{
