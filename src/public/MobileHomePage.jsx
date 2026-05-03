@@ -139,6 +139,11 @@ export default function MobileHomePage() {
     data: null,
   });
   const [catalogBySlug, setCatalogBySlug] = useState({});
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
+  const [installPromptVisible, setInstallPromptVisible] = useState(false);
+  const [pwaUpdateAvailable, setPwaUpdateAvailable] = useState(false);
+  const [pwaStatusMessage, setPwaStatusMessage] = useState("");
+  const [serviceWorkerRegistration, setServiceWorkerRegistration] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -217,6 +222,18 @@ export default function MobileHomePage() {
   const mobileNotificationsEnabled = isEnabledFlag(mobileNotificationsFlag);
   const mobileReferralEnabled = isEnabledFlag(mobileReferralFlag);
   const mobilePwaEnabled = isEnabledFlag(mobilePwaFlag);
+
+  useEffect(() => {
+    if (mobilePwaEnabled) {
+      return;
+    }
+
+    setDeferredInstallPrompt(null);
+    setInstallPromptVisible(false);
+    setPwaUpdateAvailable(false);
+    setPwaStatusMessage("");
+    setServiceWorkerRegistration(null);
+  }, [mobilePwaEnabled]);
 
   useEffect(() => {
     if (config.loading || config.error || !mobileV1Enabled) {
@@ -454,8 +471,150 @@ export default function MobileHomePage() {
       return;
     }
 
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    let active = true;
+    const cleanupHandlers = [];
+
+    async function run() {
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js");
+
+        if (!active) {
+          return;
+        }
+
+        setServiceWorkerRegistration(registration);
+
+        const onUpdateFound = () => {
+          const installingWorker = registration.installing;
+
+          if (!installingWorker) {
+            return;
+          }
+
+          const onStateChange = () => {
+            if (
+              installingWorker.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              setPwaUpdateAvailable(true);
+              setPwaStatusMessage("Доступно обновление мобильной витрины.");
+            }
+          };
+
+          installingWorker.addEventListener("statechange", onStateChange);
+
+          cleanupHandlers.push(() => {
+            installingWorker.removeEventListener("statechange", onStateChange);
+          });
+        };
+
+        registration.addEventListener("updatefound", onUpdateFound);
+        cleanupHandlers.push(() => {
+          registration.removeEventListener("updatefound", onUpdateFound);
+        });
+
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          setPwaUpdateAvailable(true);
+          setPwaStatusMessage("Доступно обновление мобильной витрины.");
+        }
+      } catch {
+        /* no-op */
+      }
+    }
+
+    run();
+
+    return () => {
+      active = false;
+
+      while (cleanupHandlers.length) {
+        const cleanup = cleanupHandlers.pop();
+        try {
+          cleanup();
+        } catch {
+          /* no-op */
+        }
+      }
+    };
   }, [mobileV1Enabled, mobilePwaEnabled]);
+
+  useEffect(() => {
+    if (!mobileV1Enabled || !mobilePwaEnabled) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const onBeforeInstallPrompt = (event) => {
+      event.preventDefault();
+      setDeferredInstallPrompt(event);
+      setInstallPromptVisible(true);
+      setPwaStatusMessage("");
+    };
+
+    const onAppInstalled = () => {
+      setDeferredInstallPrompt(null);
+      setInstallPromptVisible(false);
+      setPwaUpdateAvailable(false);
+      setPwaStatusMessage("Приложение установлено.");
+    };
+
+    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    window.addEventListener("appinstalled", onAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", onAppInstalled);
+    };
+  }, [mobileV1Enabled, mobilePwaEnabled]);
+
+  function handleInstallApp() {
+    if (!deferredInstallPrompt) {
+      return;
+    }
+
+    const promptEvent = deferredInstallPrompt;
+    setInstallPromptVisible(false);
+    setPwaStatusMessage("");
+
+    try {
+      promptEvent.prompt();
+    } catch {
+      setDeferredInstallPrompt(null);
+      return;
+    }
+
+    Promise.resolve(promptEvent.userChoice)
+      .then((choice) => {
+        if (choice?.outcome === "accepted") {
+          setPwaStatusMessage("Приложение установлено.");
+        }
+      })
+      .finally(() => {
+        setDeferredInstallPrompt(null);
+        setInstallPromptVisible(false);
+      });
+  }
+
+  function handleReloadForUpdate() {
+    if (serviceWorkerRegistration?.waiting || serviceWorkerRegistration?.installing || serviceWorkerRegistration?.active) {
+      window.location.reload();
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  }
+
+  function handleDismissPwaPrompt() {
+    setDeferredInstallPrompt(null);
+    setInstallPromptVisible(false);
+    setPwaUpdateAvailable(false);
+    setPwaStatusMessage("");
+  }
 
   const activeCountries = useMemo(() => {
     if (route.mode !== "home") {
@@ -726,6 +885,16 @@ export default function MobileHomePage() {
 
         <HelpBlock countryCode={route.countryCode} citySlug={route.citySlug} />
 
+        <PwaPromptBlock
+          mobilePwaEnabled={mobilePwaEnabled}
+          installPromptVisible={installPromptVisible}
+          pwaUpdateAvailable={pwaUpdateAvailable}
+          pwaStatusMessage={pwaStatusMessage}
+          onInstall={handleInstallApp}
+          onUpdate={handleReloadForUpdate}
+          onDismiss={handleDismissPwaPrompt}
+        />
+
         <Card>
           <SectionTitle subtitle="Доступные салоны в этом городе.">Салоны</SectionTitle>
           {salons.length ? (
@@ -806,6 +975,16 @@ export default function MobileHomePage() {
       <ReferralBlock referral={referral} />
 
       <HelpBlock countryCode={route.countryCode} citySlug={route.citySlug} />
+
+      <PwaPromptBlock
+        mobilePwaEnabled={mobilePwaEnabled}
+        installPromptVisible={installPromptVisible}
+        pwaUpdateAvailable={pwaUpdateAvailable}
+        pwaStatusMessage={pwaStatusMessage}
+        onInstall={handleInstallApp}
+        onUpdate={handleReloadForUpdate}
+        onDismiss={handleDismissPwaPrompt}
+      />
 
       <Card>
         <SectionTitle subtitle="Активные страны для мобильной витрины.">Страны</SectionTitle>
@@ -1194,6 +1373,106 @@ function HelpBlock({ countryCode, citySlug }) {
 
             {dataStatus ? <div style={helpStatusStyle}>{dataStatus}</div> : null}
           </form>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function PwaPromptBlock({
+  mobilePwaEnabled,
+  installPromptVisible,
+  pwaUpdateAvailable,
+  pwaStatusMessage,
+  onInstall,
+  onUpdate,
+  onDismiss,
+}) {
+  if (
+    !mobilePwaEnabled ||
+    (!installPromptVisible && !pwaUpdateAvailable && !pwaStatusMessage)
+  ) {
+    return null;
+  }
+
+  return (
+    <Card style={{ borderColor: "#dbeafe", background: "#f8fbff" }}>
+      <SectionTitle subtitle="Установка и обновление мобильной витрины.">Приложение TOTEM</SectionTitle>
+
+      <div style={{ display: "grid", gap: 12 }}>
+        {installPromptVisible ? (
+          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
+            Можно добавить TOTEM на главный экран и открывать как приложение.
+          </div>
+        ) : null}
+
+        {pwaUpdateAvailable ? (
+          <div style={{ fontSize: 14, color: "#1d4ed8", lineHeight: 1.55 }}>
+            Доступно обновление мобильной витрины.
+          </div>
+        ) : null}
+
+        {pwaStatusMessage ? (
+          <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+            {pwaStatusMessage}
+          </div>
+        ) : null}
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          {installPromptVisible ? (
+            <button
+              type="button"
+              onClick={onInstall}
+              style={{
+                border: "none",
+                borderRadius: 12,
+                background: "#111827",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 800,
+                padding: "10px 14px",
+                cursor: "pointer",
+              }}
+            >
+              Установить приложение
+            </button>
+          ) : null}
+
+          {pwaUpdateAvailable ? (
+            <button
+              type="button"
+              onClick={onUpdate}
+              style={{
+                border: "1px solid #1d4ed8",
+                borderRadius: 12,
+                background: "#eff6ff",
+                color: "#1d4ed8",
+                fontSize: 14,
+                fontWeight: 800,
+                padding: "10px 14px",
+                cursor: "pointer",
+              }}
+            >
+              Обновить приложение
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={onDismiss}
+            style={{
+              border: "1px solid #d1d5db",
+              borderRadius: 12,
+              background: "#fff",
+              color: "#374151",
+              fontSize: 14,
+              fontWeight: 700,
+              padding: "10px 14px",
+              cursor: "pointer",
+            }}
+          >
+            Скрыть
+          </button>
         </div>
       </div>
     </Card>
