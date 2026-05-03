@@ -53,6 +53,107 @@ function getLatestBooking(data) {
   return bookings[0] || null;
 }
 
+function getPageStyle(isMobile) {
+  return {
+    minHeight: "100vh",
+    padding: isMobile ? "12px 8px 20px" : "24px",
+    background: "#f8fafc",
+    color: "#111827",
+    fontFamily: "Inter, Arial, sans-serif"
+  };
+}
+
+function getHeaderStyle(isMobile) {
+  return {
+    maxWidth: "1040px",
+    margin: isMobile ? "0 auto 12px" : "0 auto 18px",
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "16px"
+  };
+}
+
+function getTitleStyle(isMobile) {
+  return {
+    margin: 0,
+    fontSize: isMobile ? "26px" : "30px",
+    lineHeight: 1.2
+  };
+}
+
+function getCardStyle(isMobile) {
+  return isMobile
+    ? {
+        maxWidth: "1040px",
+        margin: "0 auto 18px",
+        padding: "16px",
+        borderRadius: "16px",
+        background: "#ffffff",
+        boxShadow: "0 12px 35px rgba(15, 23, 42, 0.08)",
+        border: "1px solid #e5e7eb"
+      }
+    : {
+        maxWidth: "1040px",
+        margin: "0 auto 18px",
+        padding: "20px",
+        borderRadius: "18px",
+        background: "#ffffff",
+        boxShadow: "0 12px 35px rgba(15, 23, 42, 0.08)",
+        border: "1px solid #e5e7eb"
+      };
+}
+
+function getHistoryRowStyle(isMobile) {
+  return isMobile
+    ? {
+        display: "grid",
+        gap: "12px",
+        padding: "14px",
+        borderRadius: "14px",
+        border: "1px solid #e5e7eb",
+        background: "#ffffff"
+      }
+    : {
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "14px",
+        padding: "14px",
+        borderRadius: "14px",
+        border: "1px solid #e5e7eb",
+        background: "#ffffff"
+      };
+}
+
+function getHistoryRightStyle(isMobile) {
+  return isMobile
+    ? {
+        display: "grid",
+        justifyItems: "start",
+        alignContent: "start",
+        gap: "8px",
+        whiteSpace: "normal"
+      }
+    : {
+        display: "grid",
+        justifyItems: "end",
+        alignContent: "start",
+        gap: "8px",
+        whiteSpace: "nowrap"
+      };
+}
+
+function getActionButtonStyle(baseStyle, isMobile) {
+  return {
+    ...baseStyle,
+    ...(isMobile
+      ? {
+          width: "100%",
+          minHeight: 48
+        }
+      : null)
+  };
+}
+
 export default function ClientCabinetPage() {
   const { clientId, token } = useParams();
 
@@ -67,6 +168,7 @@ export default function ClientCabinetPage() {
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saveOk, setSaveOk] = useState("");
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
 
   const bookings = useMemo(() => getSafeBookingList(data), [data]);
   const latestBooking = useMemo(() => getLatestBooking(data), [data]);
@@ -109,6 +211,19 @@ export default function ClientCabinetPage() {
   useEffect(() => {
     loadClientCabinet();
   }, [clientId, token]);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   async function saveProfile(event) {
     event.preventDefault();
@@ -192,8 +307,8 @@ export default function ClientCabinetPage() {
 
   if (loading) {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
+      <div style={getPageStyle(isMobile)}>
+        <div style={getCardStyle(isMobile)}>
           <p style={styles.muted}>Загружаем кабинет клиента…</p>
         </div>
       </div>
@@ -202,11 +317,11 @@ export default function ClientCabinetPage() {
 
   if (error) {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h1 style={styles.title}>Кабинет клиента</h1>
+      <div style={getPageStyle(isMobile)}>
+        <div style={getCardStyle(isMobile)}>
+          <h1 style={getTitleStyle(isMobile)}>Кабинет клиента</h1>
           <p style={styles.error}>{error}</p>
-          <button type="button" onClick={loadClientCabinet} style={styles.primaryButton}>
+          <button type="button" onClick={loadClientCabinet} style={getActionButtonStyle(styles.primaryButton, isMobile)}>
             Повторить
           </button>
         </div>
@@ -215,11 +330,11 @@ export default function ClientCabinetPage() {
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
+    <div style={getPageStyle(isMobile)}>
+      <div style={getHeaderStyle(isMobile)}>
         <div>
           <p style={styles.eyebrow}>TOTEM</p>
-          <h1 style={styles.title}>Кабинет клиента</h1>
+          <h1 style={getTitleStyle(isMobile)}>Кабинет клиента</h1>
           <p style={styles.muted}>
             Здесь хранится ваша запись, история посещений и личная ссылка на кабинет.
           </p>
@@ -227,7 +342,7 @@ export default function ClientCabinetPage() {
       </div>
 
       <div style={styles.grid}>
-        <section style={styles.card}>
+        <section style={getCardStyle(isMobile)}>
           <h2 style={styles.sectionTitle}>Профиль</h2>
 
           <form onSubmit={saveProfile} style={styles.form}>
@@ -268,13 +383,13 @@ export default function ClientCabinetPage() {
             {saveError ? <p style={styles.error}>{saveError}</p> : null}
             {saveOk ? <p style={styles.success}>{saveOk}</p> : null}
 
-            <button type="submit" disabled={saving} style={styles.primaryButton}>
+            <button type="submit" disabled={saving} style={getActionButtonStyle(styles.primaryButton, isMobile)}>
               {saving ? "Сохраняем…" : "Сохранить"}
             </button>
           </form>
         </section>
 
-        <section style={styles.card}>
+        <section style={getCardStyle(isMobile)}>
           <h2 style={styles.sectionTitle}>Личная ссылка</h2>
           <p style={styles.muted}>
             Сохраните ссылку. По ней можно вернуться в кабинет без пароля.
@@ -282,7 +397,7 @@ export default function ClientCabinetPage() {
 
           <div style={styles.linkBox}>{personalLink}</div>
 
-          <button type="button" onClick={copyPersonalLink} style={styles.secondaryButton}>
+          <button type="button" onClick={copyPersonalLink} style={getActionButtonStyle(styles.secondaryButton, isMobile)}>
             Скопировать ссылку
           </button>
 
@@ -290,7 +405,7 @@ export default function ClientCabinetPage() {
         </section>
       </div>
 
-      <section style={styles.card}>
+      <section style={getCardStyle(isMobile)}>
         <h2 style={styles.sectionTitle}>Текущая запись</h2>
 
         {latestBooking ? (
@@ -310,7 +425,7 @@ export default function ClientCabinetPage() {
               <span>Салон: {latestBooking.salon_name || latestBooking.salon_slug || "—"}</span>
             </div>
 
-            <button type="button" onClick={() => repeatBooking(latestBooking)} style={styles.secondaryButton}>
+            <button type="button" onClick={() => repeatBooking(latestBooking)} style={getActionButtonStyle(styles.secondaryButton, isMobile)}>
               Повторить запись
             </button>
           </div>
@@ -319,13 +434,13 @@ export default function ClientCabinetPage() {
         )}
       </section>
 
-      <section style={styles.card}>
+      <section style={getCardStyle(isMobile)}>
         <h2 style={styles.sectionTitle}>История записей</h2>
 
         {bookings.length ? (
           <div style={styles.list}>
             {bookings.map((booking) => (
-              <div key={booking.id} style={styles.historyRow}>
+              <div key={booking.id} style={getHistoryRowStyle(isMobile)}>
                 <div>
                   <strong>{booking.service_name || "Услуга"}</strong>
                   <p style={styles.muted}>{formatDateTime(booking.start_at)}</p>
@@ -334,7 +449,7 @@ export default function ClientCabinetPage() {
                   </p>
                 </div>
 
-                <div style={styles.historyRight}>
+                <div style={getHistoryRightStyle(isMobile)}>
                   <span style={styles.badge}>{getBookingStatusLabel(booking.status)}</span>
                   <span>{formatMoney(booking.price_snapshot)}</span>
                 </div>
@@ -365,20 +480,6 @@ export default function ClientCabinetPage() {
 }
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    padding: "24px",
-    background: "#f8fafc",
-    color: "#111827",
-    fontFamily: "Inter, Arial, sans-serif"
-  },
-  header: {
-    maxWidth: "1040px",
-    margin: "0 auto 18px",
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "16px"
-  },
   eyebrow: {
     margin: "0 0 6px",
     color: "#6b7280",
@@ -386,26 +487,12 @@ const styles = {
     letterSpacing: "0.12em",
     textTransform: "uppercase"
   },
-  title: {
-    margin: 0,
-    fontSize: "30px",
-    lineHeight: 1.2
-  },
   grid: {
     maxWidth: "1040px",
     margin: "0 auto 18px",
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
     gap: "18px"
-  },
-  card: {
-    maxWidth: "1040px",
-    margin: "0 auto 18px",
-    padding: "20px",
-    borderRadius: "18px",
-    background: "#ffffff",
-    boxShadow: "0 12px 35px rgba(15, 23, 42, 0.08)",
-    border: "1px solid #e5e7eb"
   },
   sectionTitle: {
     margin: "0 0 14px",
@@ -513,13 +600,6 @@ const styles = {
     borderRadius: "14px",
     border: "1px solid #e5e7eb",
     background: "#ffffff"
-  },
-  historyRight: {
-    display: "grid",
-    justifyItems: "end",
-    alignContent: "start",
-    gap: "8px",
-    whiteSpace: "nowrap"
   },
   statsGrid: {
     maxWidth: "1040px",
