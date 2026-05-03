@@ -334,7 +334,9 @@ export default function MobileHomePage() {
                 country: route.countryCode,
                 city: route.citySlug,
               })
-            : await getMobileReferral();
+            : await getMobileReferral({
+                country: "KG",
+              });
 
         if (!active) {
           return;
@@ -952,16 +954,33 @@ function ReferralBlock({ referral }) {
   const enabled = Boolean(data?.enabled);
   const available = Boolean(data?.available);
   const shareUrl = String(data?.share_url || "").trim();
+  const [copyStatus, setCopyStatus] = useState("");
+
+  useEffect(() => {
+    if (!copyStatus) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCopyStatus("");
+    }, 2000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [copyStatus]);
 
   async function copyReferralLink() {
     if (!shareUrl || !window.navigator?.clipboard?.writeText) {
+      setCopyStatus("Не удалось скопировать ссылку");
       return;
     }
 
     try {
       await window.navigator.clipboard.writeText(shareUrl);
+      setCopyStatus("Ссылка скопирована");
     } catch {
-      // no-op
+      setCopyStatus("Не удалось скопировать ссылку");
     }
   }
 
@@ -988,6 +1007,12 @@ function ReferralBlock({ referral }) {
           <button type="button" onClick={copyReferralLink} style={referralCopyButtonStyle}>
             Скопировать ссылку
           </button>
+
+          {copyStatus ? (
+            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+              {copyStatus}
+            </div>
+          ) : null}
         </div>
       )}
     </Card>
