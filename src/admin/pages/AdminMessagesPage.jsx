@@ -56,6 +56,13 @@ export default function AdminMessagesPage() {
   const [auditById, setAuditById] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [recipientType, setRecipientType] = useState("client")
+  const [recipientId, setRecipientId] = useState("")
+  const [titleRu, setTitleRu] = useState("")
+  const [bodyRu, setBodyRu] = useState("")
+  const [sending, setSending] = useState(false)
+  const [sendOk, setSendOk] = useState("")
+  const [sendError, setSendError] = useState("")
 
   useEffect(() => {
     let cancelled = false
@@ -165,6 +172,64 @@ export default function AdminMessagesPage() {
     setLoading(false)
   }
 
+  async function handleSendInternalMessage() {
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        setSendError("NO_AUTH")
+        return
+      }
+
+      const safeRecipientId = String(recipientId || "").trim()
+      const safeBody = String(bodyRu || "").trim()
+      const safeTitle = String(titleRu || "").trim() || "Сообщение от TOTEM"
+
+      if (!safeRecipientId || !safeBody) {
+        setSendError("RECIPIENT_AND_BODY_REQUIRED")
+        return
+      }
+
+      setSending(true)
+      setSendError("")
+      setSendOk("")
+
+      const response = await fetch(`${API_BASE}/internal/admin/messages/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          channel: "internal",
+          direction: "outbound",
+          recipient_type: recipientType,
+          recipient_id: safeRecipientId,
+          recipient_label: safeRecipientId,
+          title_ru: safeTitle,
+          body: safeBody,
+          body_preview: safeBody,
+          status: "sent",
+        }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok || payload?.ok === false) {
+        throw new Error(payload?.error || `HTTP_${response.status}`)
+      }
+
+      setRecipientId("")
+      setTitleRu("")
+      setBodyRu("")
+      setSendOk("Сообщение отправлено")
+      await loadMessagesNow()
+    } catch (e) {
+      setSendError(e?.message || "SEND_FAILED")
+    } finally {
+      setSending(false)
+    }
+  }
+
   async function handleRetry(id) {
     try {
       const token = getAuthToken()
@@ -246,6 +311,59 @@ export default function AdminMessagesPage() {
     <div style={{ padding: 20 }}>
       <AdminNavigation />
       <h1 style={{ margin: "0 0 16px" }}>Сообщения</h1>
+
+      <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12, marginBottom: 16 }}>
+        <h2 style={{ margin: "0 0 12px" }}>Отправить внутреннее сообщение</h2>
+        <div style={{ display: "grid", gap: 10, maxWidth: 640 }}>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span>Тип получателя</span>
+            <select
+              value={recipientType}
+              onChange={(e) => setRecipientType(e.target.value)}
+            >
+              <option value="client">client</option>
+              <option value="master">master</option>
+              <option value="salon">salon</option>
+            </select>
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span>ID получателя</span>
+            <input
+              value={recipientId}
+              onChange={(e) => setRecipientId(e.target.value)}
+              placeholder="recipient id"
+            />
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span>Заголовок</span>
+            <input
+              value={titleRu}
+              onChange={(e) => setTitleRu(e.target.value)}
+              placeholder="Сообщение от TOTEM"
+            />
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span>Текст</span>
+            <textarea
+              rows={4}
+              value={bodyRu}
+              onChange={(e) => setBodyRu(e.target.value)}
+              placeholder="Введите текст сообщения"
+            />
+          </label>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={handleSendInternalMessage}
+              disabled={sending}
+            >
+              {sending ? "Отправка..." : "Отправить"}
+            </button>
+            {sendOk ? <span style={{ color: "#166534" }}>{sendOk}</span> : null}
+            {sendError ? <span style={{ color: "#991b1b" }}>Ошибка: {sendError}</span> : null}
+          </div>
+        </div>
+      </div>
 
       {items.length === 0 ? (
         <div>Сообщений нет</div>
