@@ -155,6 +155,22 @@ function getNotificationUid(notification){
   return String(uid || "").trim()
 }
 
+function getUnreadNotificationCount(items){
+  return getSafeNotificationList(items).reduce((count, item) => {
+    return count + (item?.read_at || item?.is_read ? 0 : 1)
+  }, 0)
+}
+
+function getResolvedUnreadCount(payload, items){
+  const apiUnreadCount = Number(payload?.unread_count)
+
+  if(Number.isFinite(apiUnreadCount) && apiUnreadCount >= 0){
+    return apiUnreadCount
+  }
+
+  return getUnreadNotificationCount(items)
+}
+
 function formatNotificationDate(value){
   if(!value) return "—"
 
@@ -191,6 +207,7 @@ export default function DashboardPage(){
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationsError, setNotificationsError] = useState("")
   const [readingNotificationUid, setReadingNotificationUid] = useState("")
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -254,6 +271,7 @@ export default function DashboardPage(){
           setNotifications([])
           setNotificationsLoading(false)
           setNotificationsError("")
+          setUnreadCount(0)
         }
         return
       }
@@ -269,12 +287,14 @@ export default function DashboardPage(){
 
         if(!cancelled){
           setNotifications(items)
+          setUnreadCount(getResolvedUnreadCount(result, items))
         }
       }catch(error){
         console.error("SALON NOTIFICATIONS LOAD ERROR", error)
 
         if(!cancelled){
           setNotifications([])
+          setUnreadCount(0)
           setNotificationsError(error?.message || "SALON_NOTIFICATIONS_LOAD_FAILED")
         }
       }finally{
@@ -293,6 +313,7 @@ export default function DashboardPage(){
 
   async function loadSalonNotifications(){
     if(!slug){
+      setUnreadCount(0)
       return
     }
 
@@ -301,10 +322,13 @@ export default function DashboardPage(){
       setNotificationsError("")
 
       const result = await getSalonNotifications(slug, { limit: 20 })
-      setNotifications(getSafeNotificationList(result))
+      const items = getSafeNotificationList(result)
+      setNotifications(items)
+      setUnreadCount(getResolvedUnreadCount(result, items))
     }catch(error){
       console.error("SALON NOTIFICATIONS LOAD ERROR", error)
       setNotifications([])
+      setUnreadCount(0)
       setNotificationsError(error?.message || "SALON_NOTIFICATIONS_LOAD_FAILED")
     }finally{
       setNotificationsLoading(false)
@@ -322,6 +346,9 @@ export default function DashboardPage(){
     try{
       await markSalonNotificationRead(slug, notificationUid)
       const readAt = new Date().toISOString()
+      if(!notification?.read_at && !notification?.is_read){
+        setUnreadCount((current)=>Math.max(0, current - 1))
+      }
 
       setNotifications((prev) => prev.map((item) => {
         if(getNotificationUid(item) !== notificationUid) return item
@@ -433,7 +460,23 @@ export default function DashboardPage(){
         subtitle="Клиент откроет форму записи салона."
       />
 
-      <PageSection title="Уведомления">
+      <PageSection title={(
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <span>Уведомления</span>
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "4px 10px",
+            borderRadius: "999px",
+            background: "#eff6ff",
+            color: "#1d4ed8",
+            fontSize: "12px",
+            fontWeight: 700
+          }}>
+            Новых: {unreadCount}
+          </span>
+        </div>
+      )}>
         {notificationsLoading ? (
           <div style={{
             border: "1px solid #e5e7eb",

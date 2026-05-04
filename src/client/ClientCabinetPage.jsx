@@ -60,6 +60,22 @@ function getNotificationUid(notification) {
   return String(notification?.notification_uid || notification?.uid || "").trim();
 }
 
+function getUnreadNotificationCount(items) {
+  return getSafeNotificationList(items).reduce((count, item) => {
+    return count + (item?.read_at || item?.is_read ? 0 : 1);
+  }, 0);
+}
+
+function getResolvedUnreadCount(payload, items) {
+  const apiUnreadCount = Number(payload?.unread_count);
+
+  if (Number.isFinite(apiUnreadCount) && apiUnreadCount >= 0) {
+    return apiUnreadCount;
+  }
+
+  return getUnreadNotificationCount(items);
+}
+
 function getLatestBooking(data) {
   const bookings = getSafeBookingList(data);
   return bookings[0] || null;
@@ -180,6 +196,7 @@ export default function ClientCabinetPage() {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
   const [readingNotificationUid, setReadingNotificationUid] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -227,6 +244,7 @@ export default function ClientCabinetPage() {
 
   async function loadClientNotifications() {
     if (!clientId || !token) {
+      setUnreadCount(0);
       return;
     }
 
@@ -235,9 +253,12 @@ export default function ClientCabinetPage() {
 
     try {
       const payload = await getClientNotifications(clientId, token, { limit: 20 });
-      setNotifications(getSafeNotificationList(payload));
+      const items = getSafeNotificationList(payload);
+      setNotifications(items);
+      setUnreadCount(getResolvedUnreadCount(payload, items));
     } catch (err) {
       setNotifications([]);
+      setUnreadCount(0);
       setNotificationsError(err?.message || "CLIENT_NOTIFICATIONS_FETCH_FAILED");
     } finally {
       setNotificationsLoading(false);
@@ -331,6 +352,9 @@ export default function ClientCabinetPage() {
 
     try {
       await markClientNotificationRead(clientId, token, notificationUid);
+      if (!notification?.read_at && !notification?.is_read) {
+        setUnreadCount((current) => Math.max(0, current - 1));
+      }
       setNotifications((current) =>
         getSafeNotificationList(current).map((item) => {
           const currentUid = getNotificationUid(item);
@@ -476,7 +500,10 @@ export default function ClientCabinetPage() {
       </div>
 
       <section style={getCardStyle(isMobile)}>
-        <h2 style={styles.sectionTitle}>Уведомления</h2>
+        <div style={styles.sectionHeaderWithBadge}>
+          <h2 style={styles.sectionTitle}>Уведомления</h2>
+          <span style={styles.unreadBadge}>Новых: {unreadCount}</span>
+        </div>
 
         {notificationsLoading ? (
           <p style={styles.muted}>Загружаем уведомления…</p>
@@ -616,6 +643,26 @@ const styles = {
   sectionTitle: {
     margin: "0 0 14px",
     fontSize: "20px"
+  },
+  sectionHeaderWithBadge: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    marginBottom: "14px",
+    flexWrap: "wrap"
+  },
+  unreadBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    fontSize: "13px",
+    fontWeight: 700,
+    whiteSpace: "nowrap"
   },
   muted: {
     margin: "4px 0",
