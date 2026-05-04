@@ -1438,7 +1438,7 @@ function ReferralBlock({ referral }) {
           <div style={referralUrlBoxStyle}>{shareUrl}</div>
 
           <button type="button" onClick={copyReferralLink} style={referralCopyButtonStyle}>
-            Скопировать ссылку
+            Скопировать реферальную ссылку
           </button>
 
           {copyStatus ? (
@@ -1924,7 +1924,7 @@ function SalonCard({ salon, catalogState, onToggleCatalog, countryCode, citySlug
 
       <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
         <button type="button" onClick={copyBookingLink} style={{ ...secondaryLinkStyle, cursor: "pointer", appearance: "none" }}>
-          Скопировать ссылку
+          Скопировать ссылку записи
         </button>
         <button type="button" onClick={shareBookingLink} style={{ ...secondaryLinkStyle, cursor: "pointer", appearance: "none" }}>
           Поделиться
