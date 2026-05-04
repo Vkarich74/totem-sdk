@@ -252,6 +252,11 @@ function getCrmRouting(row) {
   return crm && typeof crm === "object" ? crm : null;
 }
 
+function sanitizeRewardStatus(value) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return ["none", "pending", "approved", "rejected", "cancelled"].includes(raw) ? raw : "none";
+}
+
 export default function AdminMobilePage() {
   const token = getAuthToken();
   const [loading, setLoading] = useState(Boolean(token));
@@ -265,8 +270,10 @@ export default function AdminMobilePage() {
   const [flags, setFlags] = useState([]);
   const [feedbackDrafts, setFeedbackDrafts] = useState({});
   const [dataRequestDrafts, setDataRequestDrafts] = useState({});
+  const [rewardDrafts, setRewardDrafts] = useState({});
   const [flagDrafts, setFlagDrafts] = useState({});
   const [savingKey, setSavingKey] = useState("");
+  const [savingRewardEventId, setSavingRewardEventId] = useState("");
 
   const loadAll = useCallback(async () => {
     if (!token) {
@@ -375,6 +382,22 @@ export default function AdminMobilePage() {
 
     return () => window.clearTimeout(timeoutId);
   }, [success]);
+
+  const syncRewardDrafts = useCallback((items) => {
+    const nextDrafts = {};
+
+    items.forEach((item) => {
+      if (item?.id !== undefined && item?.id !== null) {
+        nextDrafts[String(item.id)] = sanitizeRewardStatus(item?.reward_status);
+      }
+    });
+
+    setRewardDrafts(nextDrafts);
+  }, []);
+
+  useEffect(() => {
+    syncRewardDrafts(referralEvents);
+  }, [referralEvents, syncRewardDrafts]);
 
   const stats = useMemo(() => {
     const flagsActive = flags.filter((item) => String(item?.status || "").toLowerCase() === "active").length;
@@ -694,8 +717,58 @@ export default function AdminMobilePage() {
         key: "reward_status",
         title: "Reward",
         dataIndex: "reward_status",
-        minWidth: 140,
-        render: (value) => <Pill tone={String(value) === "none" ? "neutral" : String(value) === "granted" ? "green" : String(value) === "failed" ? "red" : "amber"}>{statusLabel(value)}</Pill>,
+        minWidth: 260,
+        render: (_, row) => {
+          const key = String(row.id);
+          const draft = sanitizeRewardStatus(rewardDrafts[key] ?? row.reward_status);
+          const saving = savingRewardEventId === key;
+
+          return (
+            <div style={{ display: "grid", gap: 8 }}>
+              <select
+                value={draft}
+                disabled={saving}
+                onChange={(event) => setRewardDrafts((prev) => ({ ...prev, [key]: event.target.value }))}
+                style={{ padding: 8, borderRadius: 8, border: "1px solid #d1d5db" }}
+              >
+                <option value="none">Нет награды</option>
+                <option value="pending">Ожидает</option>
+                <option value="approved">Одобрено</option>
+                <option value="rejected">Отклонено</option>
+                <option value="cancelled">Отменено</option>
+              </select>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={async () => {
+                  setSavingRewardEventId(key);
+                  setError("");
+                  try {
+                    await fetchJson(`/internal/admin/mobile/referral-events/${row.id}/reward-status`, {
+                      method: "PATCH",
+                      body: JSON.stringify({ reward_status: sanitizeRewardStatus(draft) }),
+                    });
+                    await loadAll();
+                    setSuccess("Сохранено");
+                  } catch (nextError) {
+                    setError(String(nextError?.message || nextError || "ADMIN_MOBILE_REFERRAL_REWARD_SAVE_FAILED"));
+                  } finally {
+                    setSavingRewardEventId("");
+                  }
+                }}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                Сохранить
+              </button>
+            </div>
+          );
+        },
       },
       {
         key: "status",
@@ -707,7 +780,7 @@ export default function AdminMobilePage() {
       { key: "country_code", title: "Страна", dataIndex: "country_code", minWidth: 100 },
       { key: "created_at", title: "Создано", dataIndex: "created_at", minWidth: 160, render: (value) => formatDateTime(value) },
     ],
-    [],
+    [loadAll, rewardDrafts, savingRewardEventId],
   );
 
   const flagColumns = useMemo(
