@@ -194,3 +194,29 @@ export async function postMobileDataRequest(payload = {}) {
     throw error;
   }
 }
+
+export async function postMobileEvent(payload = {}) {
+  const res = await fetch(`${API}/public/mobile/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  try {
+    const json = await res.json();
+
+    if (!res.ok) {
+      return json;
+    }
+
+    return json;
+  } catch (error) {
+    if (!res.ok) {
+      throw new Error("PUBLIC_MOBILE_EVENT_REQUEST_FAILED");
+    }
+
+    throw error;
+  }
+}

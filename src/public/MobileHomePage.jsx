@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getMobileAnnouncements,
   getMobileConfig,
@@ -7,6 +7,7 @@ import {
   getMobileReferral,
   getMobileSalonCatalog,
   postMobileDataRequest,
+  postMobileEvent,
   postMobileFeedback
 } from "../api/publicApi";
 
@@ -66,6 +67,40 @@ function buildAbsoluteOwnerUrl(path) {
 
 function buildPublicBookingUrl(salonSlug) {
   return `https://app.totemv.com/#/booking?salon=${encodeURIComponent(String(salonSlug || "").trim())}`;
+}
+
+function getMobileAnalyticsSessionKey() {
+  const storageKey = "TOTEM_MOBILE_ANALYTICS_SESSION";
+
+  try {
+    const existing = window.sessionStorage.getItem(storageKey);
+
+    if (existing) {
+      return existing;
+    }
+
+    const nextValue = `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    window.sessionStorage.setItem(storageKey, nextValue);
+    return nextValue;
+  } catch {
+    return `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
+function trackMobileEvent(payload) {
+  const eventPayload = {
+    ...(payload || {}),
+    source: String(payload?.source || "mobile").trim() || "mobile",
+    session_key: String(payload?.session_key || getMobileAnalyticsSessionKey()).trim(),
+  };
+
+  void postMobileEvent(eventPayload).catch((error) => {
+    try {
+      console.warn("MOBILE_EVENT_TRACK_FAILED", String(error?.message || error || ""));
+    } catch {
+      /* no-op */
+    }
+  });
 }
 
 function Card({ children, style }) {
@@ -148,6 +183,7 @@ export default function MobileHomePage() {
   const [pwaUpdateAvailable, setPwaUpdateAvailable] = useState(false);
   const [pwaStatusMessage, setPwaStatusMessage] = useState("");
   const [serviceWorkerRegistration, setServiceWorkerRegistration] = useState(null);
+  const mobileAnalyticsTrackedRef = useRef(new Set());
 
   useEffect(() => {
     let active = true;
@@ -238,6 +274,52 @@ export default function MobileHomePage() {
     setPwaStatusMessage("");
     setServiceWorkerRegistration(null);
   }, [mobilePwaEnabled]);
+
+  useEffect(() => {
+    if (!mobileV1Enabled || config.loading || state.loading || state.error) {
+      return;
+    }
+
+    if (route.mode === "city" && !mobileCityHomeEnabled) {
+      return;
+    }
+
+    const routeKey =
+      route.mode === "city"
+        ? `city:${String(route.countryCode || "").trim().toUpperCase()}:${String(route.citySlug || "").trim().toLowerCase()}`
+        : "mobile:home";
+
+    if (mobileAnalyticsTrackedRef.current.has(routeKey)) {
+      return;
+    }
+
+    mobileAnalyticsTrackedRef.current.add(routeKey);
+
+    if (route.mode === "city") {
+      trackMobileEvent({
+        event_type: "city_open",
+        target_type: "city",
+        country_code: route.countryCode,
+        city_slug: route.citySlug,
+        route: `#/mobile/city/${route.countryCode}/${route.citySlug}`,
+        session_key: getMobileAnalyticsSessionKey(),
+        payload_json: {
+          ui: "mobile_city",
+        },
+      });
+      return;
+    }
+
+    trackMobileEvent({
+      event_type: "mobile_open",
+      target_type: "mobile",
+      route: "#/mobile",
+      session_key: getMobileAnalyticsSessionKey(),
+      payload_json: {
+        ui: "mobile_home",
+      },
+    });
+  }, [config.loading, mobileV1Enabled, mobileCityHomeEnabled, route.citySlug, route.countryCode, route.mode, state.error, state.loading]);
 
   useEffect(() => {
     if (config.loading || config.error || !mobileV1Enabled) {
@@ -909,6 +991,8 @@ export default function MobileHomePage() {
                   salon={salon}
                   catalogState={catalogBySlug[String(salon.slug || "").trim()] || null}
                   onToggleCatalog={toggleSalonCatalog}
+                  countryCode={route.countryCode}
+                  citySlug={route.citySlug}
                 />
               ))}
             </div>
@@ -935,6 +1019,19 @@ export default function MobileHomePage() {
                   <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
                     <a
                       href={buildAbsoluteOwnerUrl(`/master/${encodeURIComponent(String(master.slug || "").trim())}`)}
+                      onClick={() => trackMobileEvent({
+                        event_type: "master_card_open",
+                        target_type: "master",
+                        owner_type: "master",
+                        owner_slug: String(master.slug || "").trim(),
+                        country_code: route.countryCode,
+                        city_slug: route.citySlug,
+                        route: `/master/${encodeURIComponent(String(master.slug || "").trim())}`,
+                        session_key: getMobileAnalyticsSessionKey(),
+                        payload_json: {
+                          entry: "mobile_city_master_card",
+                        },
+                      })}
                       style={secondaryLinkStyle}
                     >
                       Открыть мастера
@@ -1297,6 +1394,18 @@ function HelpBlock({ countryCode, citySlug }) {
     setFeedbackLoading(true);
     setFeedbackStatus("");
 
+    trackMobileEvent({
+      event_type: "feedback_submit",
+      target_type: "feedback",
+      country_code: countryCode,
+      city_slug: citySlug,
+      route: "#/mobile/help",
+      session_key: getMobileAnalyticsSessionKey(),
+      payload_json: {
+        ui: "help_block",
+      },
+    });
+
     try {
       const result = await postMobileFeedback({
         message: feedbackMessage,
@@ -1332,6 +1441,18 @@ function HelpBlock({ countryCode, citySlug }) {
 
     setDataLoading(true);
     setDataStatus("");
+
+    trackMobileEvent({
+      event_type: "data_request_submit",
+      target_type: "data_request",
+      country_code: countryCode,
+      city_slug: citySlug,
+      route: "#/mobile/help",
+      session_key: getMobileAnalyticsSessionKey(),
+      payload_json: {
+        ui: "help_block",
+      },
+    });
 
     try {
       const result = await postMobileDataRequest({
@@ -1592,7 +1713,7 @@ function AnnouncementItem({ item }) {
   );
 }
 
-function SalonCard({ salon, catalogState, onToggleCatalog }) {
+function SalonCard({ salon, catalogState, onToggleCatalog, countryCode, citySlug }) {
   const slug = String(salon?.slug || "").trim();
   const bookingUrl = slug ? buildPublicBookingUrl(slug) : "";
   const catalogOpen = Boolean(catalogState?.expanded);
@@ -1676,6 +1797,19 @@ function SalonCard({ salon, catalogState, onToggleCatalog }) {
         </a>
         <a
           href={buildHashPath(`/booking?salon=${encodeURIComponent(slug)}`)}
+          onClick={() => trackMobileEvent({
+            event_type: "booking_entry_open",
+            target_type: "booking",
+            owner_type: "salon",
+            owner_slug: slug,
+            country_code: countryCode,
+            city_slug: citySlug,
+            route: "#/booking",
+            session_key: getMobileAnalyticsSessionKey(),
+            payload_json: {
+              entry: "salon_card",
+            },
+          })}
           style={primaryLinkStyle}
         >
           Записаться в салон
