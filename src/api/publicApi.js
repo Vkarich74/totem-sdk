@@ -117,6 +117,64 @@ export async function getMobileReferral(options = {}) {
   return json;
 }
 
+export async function getMobileNotifications(options = {}) {
+  const params = new URLSearchParams();
+  const country = String(options.country || "").trim();
+  const city = String(options.city || "").trim();
+  const audience = String(options.audience || "").trim();
+  const readerType = String(options.reader_type || "").trim();
+  const readerId = String(options.reader_id || "").trim();
+  const limit = String(options.limit || "").trim();
+
+  if (country) {
+    params.set("country", country);
+  }
+
+  if (city) {
+    params.set("city", city);
+  }
+
+  if (audience) {
+    params.set("audience", audience);
+  }
+
+  if (readerType) {
+    params.set("reader_type", readerType);
+  }
+
+  if (readerId) {
+    params.set("reader_id", readerId);
+  }
+
+  if (limit) {
+    params.set("limit", limit);
+  }
+
+  const query = params.toString();
+  const url = query ? `${API}/public/mobile/notifications?${query}` : `${API}/public/mobile/notifications`;
+  const res = await fetch(url);
+
+  try {
+    const json = await res.json();
+
+    return {
+      ok: Boolean(json?.ok),
+      notifications: Array.isArray(json?.notifications) ? json.notifications : [],
+      error: json?.ok ? "" : String(json?.error || "PUBLIC_MOBILE_NOTIFICATIONS_REQUEST_FAILED"),
+    };
+  } catch (error) {
+    if (!res.ok) {
+      return {
+        ok: false,
+        notifications: [],
+        error: "PUBLIC_MOBILE_NOTIFICATIONS_REQUEST_FAILED",
+      };
+    }
+
+    throw error;
+  }
+}
+
 export async function postMobileReferralEvent(payload = {}) {
   const res = await fetch(`${API}/public/mobile/referral/events`, {
     method: "POST",
@@ -215,6 +273,33 @@ export async function postMobileEvent(payload = {}) {
   } catch (error) {
     if (!res.ok) {
       throw new Error("PUBLIC_MOBILE_EVENT_REQUEST_FAILED");
+    }
+
+    throw error;
+  }
+}
+
+export async function postMobileNotificationRead(notificationUid, payload = {}) {
+  const safeNotificationUid = encodeURIComponent(String(notificationUid || "").trim());
+  const res = await fetch(`${API}/public/mobile/notifications/${safeNotificationUid}/read`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  try {
+    const json = await res.json();
+
+    if (!res.ok) {
+      return json;
+    }
+
+    return json;
+  } catch (error) {
+    if (!res.ok) {
+      throw new Error("PUBLIC_MOBILE_NOTIFICATION_READ_REQUEST_FAILED");
     }
 
     throw error;

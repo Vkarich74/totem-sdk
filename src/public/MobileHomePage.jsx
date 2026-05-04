@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  getMobileAnnouncements,
   getMobileConfig,
   getMobileCityHome,
   getMobileLocations,
+  getMobileNotifications,
   getMobileReferral,
   getMobileSalonCatalog,
   postMobileDataRequest,
   postMobileEvent,
+  postMobileNotificationRead,
   postMobileFeedback
 } from "../api/publicApi";
 
@@ -103,6 +104,24 @@ function trackMobileEvent(payload) {
   });
 }
 
+function getMobileNotificationReaderId() {
+  const storageKey = "TOTEM_MOBILE_NOTIFICATION_READER";
+
+  try {
+    const existing = window.sessionStorage.getItem(storageKey);
+
+    if (existing) {
+      return existing;
+    }
+
+    const nextValue = `mobile-reader-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    window.sessionStorage.setItem(storageKey, nextValue);
+    return nextValue;
+  } catch {
+    return `mobile-reader-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 function Card({ children, style }) {
   return (
     <div
@@ -178,6 +197,7 @@ export default function MobileHomePage() {
     data: null,
   });
   const [catalogBySlug, setCatalogBySlug] = useState({});
+  const [notificationMarkingUid, setNotificationMarkingUid] = useState("");
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [installPromptVisible, setInstallPromptVisible] = useState(false);
   const [pwaUpdateAvailable, setPwaUpdateAvailable] = useState(false);
@@ -497,18 +517,18 @@ export default function MobileHomePage() {
       });
 
       try {
-        const options =
-          route.mode === "city"
-            ? {
-                country: route.countryCode,
-                city: route.citySlug,
-                audience: "client",
-              }
-            : {
-                audience: "client",
-              };
+        const options = {
+          reader_type: "client",
+          reader_id: getMobileNotificationReaderId(),
+          limit: 20,
+        };
 
-        const result = await getMobileAnnouncements(options);
+        if (route.mode === "city") {
+          options.country = route.countryCode;
+          options.city = route.citySlug;
+        }
+
+        const result = await getMobileNotifications(options);
 
         if (!active) {
           return;
@@ -517,7 +537,7 @@ export default function MobileHomePage() {
         if (!result?.ok) {
           setAnnouncements({
             loading: false,
-            error: result?.error || "PUBLIC_MOBILE_ANNOUNCEMENTS_REQUEST_FAILED",
+            error: result?.error || "PUBLIC_MOBILE_NOTIFICATIONS_REQUEST_FAILED",
             items: [],
           });
           return;
@@ -526,7 +546,7 @@ export default function MobileHomePage() {
         setAnnouncements({
           loading: false,
           error: "",
-          items: Array.isArray(result.announcements) ? result.announcements : [],
+          items: Array.isArray(result.notifications) ? result.notifications : [],
         });
       } catch (error) {
         if (!active) {
@@ -535,7 +555,7 @@ export default function MobileHomePage() {
 
         setAnnouncements({
           loading: false,
-          error: error?.message || "PUBLIC_MOBILE_ANNOUNCEMENTS_REQUEST_FAILED",
+          error: error?.message || "PUBLIC_MOBILE_NOTIFICATIONS_REQUEST_FAILED",
           items: [],
         });
       }
@@ -547,6 +567,50 @@ export default function MobileHomePage() {
       active = false;
     };
   }, [route.mode, route.countryCode, route.citySlug, config.loading, config.error, mobileV1Enabled, mobileNotificationsEnabled]);
+
+  async function handleNotificationMarkRead(notification) {
+    const notificationUid = String(notification?.notification_uid || "").trim();
+
+    if (!notificationUid || notificationMarkingUid === notificationUid) {
+      return;
+    }
+
+    const readerId = getMobileNotificationReaderId();
+
+    setNotificationMarkingUid(notificationUid);
+
+    try {
+      const result = await postMobileNotificationRead(notificationUid, {
+        reader_type: "client",
+        reader_id: readerId,
+      });
+
+      if (result?.ok === false) {
+        return;
+      }
+
+      const readAt = result?.read?.read_at || null;
+
+      setAnnouncements((current) => ({
+        ...current,
+        items: Array.isArray(current?.items)
+          ? current.items.map((item) =>
+              String(item?.notification_uid || "") === notificationUid
+                ? {
+                    ...item,
+                    is_read: true,
+                    read_at: readAt,
+                  }
+                : item,
+            )
+          : [],
+      }));
+    } catch {
+      /* no-op */
+    } finally {
+      setNotificationMarkingUid("");
+    }
+  }
 
   useEffect(() => {
     if (!mobileV1Enabled || !mobilePwaEnabled) {
@@ -965,7 +1029,11 @@ export default function MobileHomePage() {
           </div>
         </Card>
 
-        <AnnouncementsBlock announcements={announcements} />
+        <AnnouncementsBlock
+          announcements={announcements}
+          onMarkRead={handleNotificationMarkRead}
+          markingUid={notificationMarkingUid}
+        />
 
         <ReferralBlock referral={referral} />
 
@@ -1145,7 +1213,11 @@ export default function MobileHomePage() {
         </div>
       </Card>
 
-      <AnnouncementsBlock announcements={announcements} />
+      <AnnouncementsBlock
+        announcements={announcements}
+        onMarkRead={handleNotificationMarkRead}
+        markingUid={notificationMarkingUid}
+      />
 
       <ReferralBlock referral={referral} />
 
@@ -1274,7 +1346,7 @@ function EmptyState({ text }) {
   );
 }
 
-function AnnouncementsBlock({ announcements }) {
+function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
   const items = Array.isArray(announcements?.items) ? announcements.items : [];
   const loading = Boolean(announcements?.loading);
   const error = String(announcements?.error || "").trim();
@@ -1293,7 +1365,12 @@ function AnnouncementsBlock({ announcements }) {
       ) : items.length ? (
         <div style={gridStyle}>
           {items.map((item) => (
-            <AnnouncementItem key={item?.announcement_uid || item?.id} item={item} />
+            <AnnouncementItem
+              key={item?.notification_uid || item?.id}
+              item={item}
+              onMarkRead={onMarkRead}
+              marking={markingUid === String(item?.notification_uid || "").trim()}
+            />
           ))}
         </div>
       ) : (
@@ -1684,10 +1761,14 @@ function PwaPromptBlock({
   );
 }
 
-function AnnouncementItem({ item }) {
+function AnnouncementItem({ item, onMarkRead, marking }) {
   const actionUrl = String(item?.action_url || "").trim();
+  const actionType = String(item?.action_type || "").trim();
+  const isRead = Boolean(item?.is_read);
+  const readAt = String(item?.read_at || "").trim();
   const hasAction = Boolean(actionUrl);
   const isExternal = /^https?:\/\//i.test(actionUrl);
+  const notificationUid = String(item?.notification_uid || "").trim();
 
   return (
     <div style={announcementItemStyle}>
@@ -1695,7 +1776,10 @@ function AnnouncementItem({ item }) {
       <div style={announcementBodyStyle}>{formatLabel(item?.body_ru || item?.body_en, "")}</div>
       <div style={announcementMetaStyle}>
         <span>Приоритет: {formatLabel(item?.priority, "—")}</span>
-        {item?.published_at ? <span>Опубликовано: {formatLabel(item?.published_at)}</span> : null}
+        {actionType ? <span>Тип: {formatLabel(actionType)}</span> : null}
+        {isRead ? <span>Прочитано</span> : <span>Не прочитано</span>}
+        {readAt ? <span>Прочитано: {formatLabel(readAt)}</span> : null}
+        {item?.created_at ? <span>Опубликовано: {formatLabel(item?.created_at)}</span> : null}
       </div>
       {hasAction ? (
         <div style={{ marginTop: 10 }}>
@@ -1707,6 +1791,22 @@ function AnnouncementItem({ item }) {
           >
             Подробнее
           </a>
+        </div>
+      ) : null}
+      {!isRead && notificationUid && typeof onMarkRead === "function" ? (
+        <div style={{ marginTop: 10 }}>
+          <button
+            type="button"
+            onClick={() => onMarkRead(item)}
+            disabled={marking}
+            style={{
+              ...secondaryLinkStyle,
+              appearance: "none",
+              cursor: "pointer",
+            }}
+          >
+            {marking ? "Отмечаем…" : "Отметить прочитанным"}
+          </button>
         </div>
       ) : null}
     </div>
