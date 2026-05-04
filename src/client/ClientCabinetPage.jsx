@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { getClientNotifications, markClientNotificationRead } from "../api/client.js";
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE ||
@@ -46,6 +47,17 @@ function formatMoney(value) {
 
 function getSafeBookingList(data) {
   return Array.isArray(data?.bookings) ? data.bookings : [];
+}
+
+function getSafeNotificationList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.notifications)) return payload.notifications;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+}
+
+function getNotificationUid(notification) {
+  return String(notification?.notification_uid || notification?.uid || "").trim();
 }
 
 function getLatestBooking(data) {
@@ -164,6 +176,10 @@ export default function ClientCabinetPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
+  const [readingNotificationUid, setReadingNotificationUid] = useState("");
 
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -172,6 +188,7 @@ export default function ClientCabinetPage() {
 
   const bookings = useMemo(() => getSafeBookingList(data), [data]);
   const latestBooking = useMemo(() => getLatestBooking(data), [data]);
+  const notificationItems = useMemo(() => getSafeNotificationList(notifications), [notifications]);
 
   const personalLink = data?.personal_link || `#/client/${clientId}/${token}`;
 
@@ -208,8 +225,28 @@ export default function ClientCabinetPage() {
     }
   }
 
+  async function loadClientNotifications() {
+    if (!clientId || !token) {
+      return;
+    }
+
+    setNotificationsLoading(true);
+    setNotificationsError("");
+
+    try {
+      const payload = await getClientNotifications(clientId, token, { limit: 20 });
+      setNotifications(getSafeNotificationList(payload));
+    } catch (err) {
+      setNotifications([]);
+      setNotificationsError(err?.message || "CLIENT_NOTIFICATIONS_FETCH_FAILED");
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadClientCabinet();
+    loadClientNotifications();
   }, [clientId, token]);
 
   useEffect(() => {
@@ -279,6 +316,39 @@ export default function ClientCabinetPage() {
       setCopyStatus("Ссылка скопирована");
     } catch {
       setCopyStatus("Скопируйте ссылку вручную");
+    }
+  }
+
+  async function readNotification(notification) {
+    if (readingNotificationUid) return;
+
+    const notificationUid = getNotificationUid(notification);
+    if (!notificationUid) {
+      return;
+    }
+
+    setReadingNotificationUid(notificationUid);
+
+    try {
+      await markClientNotificationRead(clientId, token, notificationUid);
+      setNotifications((current) =>
+        getSafeNotificationList(current).map((item) => {
+          const currentUid = getNotificationUid(item);
+          if (currentUid !== notificationUid) {
+            return item;
+          }
+
+          return {
+            ...item,
+            read_at: item.read_at || new Date().toISOString(),
+            is_read: true
+          };
+        })
+      );
+    } catch {
+      await loadClientNotifications();
+    } finally {
+      setReadingNotificationUid("");
     }
   }
 
@@ -404,6 +474,55 @@ export default function ClientCabinetPage() {
           {copyStatus ? <p style={styles.success}>{copyStatus}</p> : null}
         </section>
       </div>
+
+      <section style={getCardStyle(isMobile)}>
+        <h2 style={styles.sectionTitle}>Уведомления</h2>
+
+        {notificationsLoading ? (
+          <p style={styles.muted}>Загружаем уведомления…</p>
+        ) : notificationsError ? (
+          <p style={styles.error}>Не удалось загрузить уведомления</p>
+        ) : notificationItems.length ? (
+          <div style={styles.notificationList}>
+            {notificationItems.map((notification) => {
+              const notificationUid = getNotificationUid(notification);
+              const isRead = Boolean(notification?.read_at || notification?.is_read);
+
+              return (
+                <div key={notificationUid || notification.id} style={styles.notificationItem}>
+                  <div style={styles.notificationMain}>
+                    <strong style={styles.notificationTitle}>{notification.title_ru || notification.title_en || "Уведомление"}</strong>
+                    <p style={styles.muted}>{notification.body_ru || notification.body_en || "—"}</p>
+                    <div style={styles.notificationMeta}>
+                      <span style={styles.badge}>{notification.target_type || "client"}</span>
+                      <span style={styles.notificationPill}>{String(notification.priority || "normal")}</span>
+                      <span style={styles.notificationTime}>{formatDateTime(notification.created_at)}</span>
+                    </div>
+                  </div>
+
+                  <div style={styles.notificationRight}>
+                    <span style={isRead ? styles.notificationRead : styles.notificationUnread}>
+                      {isRead ? "Прочитано" : "Новое"}
+                    </span>
+                    {!isRead && notificationUid ? (
+                      <button
+                        type="button"
+                        onClick={() => readNotification(notification)}
+                        disabled={readingNotificationUid === notificationUid}
+                        style={getActionButtonStyle(styles.secondaryButton, isMobile)}
+                      >
+                        Прочитано
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p style={styles.muted}>Новых уведомлений пока нет.</p>
+        )}
+      </section>
 
       <section style={getCardStyle(isMobile)}>
         <h2 style={styles.sectionTitle}>Текущая запись</h2>
@@ -591,6 +710,75 @@ const styles = {
   list: {
     display: "grid",
     gap: "10px"
+  },
+  notificationList: {
+    display: "grid",
+    gap: "12px"
+  },
+  notificationItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "14px",
+    padding: "14px",
+    borderRadius: "14px",
+    border: "1px solid #e5e7eb",
+    background: "#f8fafc"
+  },
+  notificationMain: {
+    display: "grid",
+    gap: "8px",
+    minWidth: 0
+  },
+  notificationTitle: {
+    fontSize: "15px",
+    lineHeight: 1.4
+  },
+  notificationMeta: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+    alignItems: "center"
+  },
+  notificationPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "5px 10px",
+    borderRadius: "999px",
+    background: "#f3f4f6",
+    color: "#374151",
+    fontSize: "12px",
+    fontWeight: 800
+  },
+  notificationTime: {
+    color: "#6b7280",
+    fontSize: "12px"
+  },
+  notificationRight: {
+    display: "grid",
+    justifyItems: "end",
+    alignContent: "start",
+    gap: "8px",
+    minWidth: "120px"
+  },
+  notificationRead: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "5px 10px",
+    borderRadius: "999px",
+    background: "#dcfce7",
+    color: "#166534",
+    fontSize: "12px",
+    fontWeight: 800
+  },
+  notificationUnread: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "5px 10px",
+    borderRadius: "999px",
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    fontSize: "12px",
+    fontWeight: 800
   },
   historyRow: {
     display: "flex",
