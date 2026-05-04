@@ -1,4 +1,4 @@
-import { getAuthAccessToken } from "./internal"
+import { getAuthAccessToken } from "./internal.js"
 
 const API = "https://api.totemv.com"
 
@@ -42,6 +42,34 @@ export async function getMasterMetrics(slug) {
   const r = await fetch(API + "/internal/masters/" + slug + "/metrics")
   const j = await handleResponse(r)
   return j.metrics || j
+}
+
+export async function getMasterNotifications(slug, options = {}) {
+  const qs = new URLSearchParams()
+  if (typeof options.limit !== "undefined" && options.limit !== null && options.limit !== "") {
+    qs.set("limit", String(options.limit))
+  }
+
+  const suffix = qs.toString() ? `?${qs.toString()}` : ""
+  const r = await fetch(
+    API + "/internal/masters/" + encodeURIComponent(String(slug || "").trim()) + "/notifications" + suffix,
+    {
+      headers: buildAuthHeaders()
+    }
+  )
+  return handleResponse(r)
+}
+
+export async function markMasterNotificationRead(slug, notificationUid) {
+  const r = await fetch(
+    API + "/internal/masters/" + encodeURIComponent(String(slug || "").trim()) + "/notifications/" + encodeURIComponent(String(notificationUid || "").trim()) + "/read",
+    {
+      method: "POST",
+      headers: buildAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({})
+    }
+  )
+  return handleResponse(r)
 }
 
 // ======================

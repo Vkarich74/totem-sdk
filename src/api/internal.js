@@ -101,6 +101,21 @@ async function safeInternalJson(path, opts = {}){
   });
 }
 
+function buildQuery(params = {}){
+  const searchParams = new URLSearchParams();
+
+  for(const [key, value] of Object.entries(params || {})){
+    if(value === null || typeof value === "undefined" || value === ""){
+      continue;
+    }
+
+    searchParams.set(key, String(value));
+  }
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+}
+
 /* ===============================
    BILLING GUARDS
 ================================ */
@@ -584,6 +599,60 @@ export async function getAdminOpenOwnerAudit(requestId){
     traces:j.traces || [],
     result:j
   };
+}
+
+export async function getAdminNotifications(options = {}){
+  const suffix = buildQuery({
+    target_type: options.target_type,
+    target_id: options.target_id,
+    owner_type: options.owner_type,
+    owner_id: options.owner_id,
+    channel: options.channel,
+    status: options.status,
+    priority: options.priority,
+    limit: options.limit,
+    offset: options.offset
+  });
+
+  const r = await safeInternalJson(`/admin/notifications${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_NOTIFICATIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_NOTIFICATIONS_API_NOT_OK", detail:j };
+  return j;
+}
+
+export async function getAdminNotificationDeliveries(options = {}){
+  const suffix = buildQuery({
+    notification_id: options.notification_id,
+    channel: options.channel,
+    status: options.status,
+    provider: options.provider,
+    limit: options.limit,
+    offset: options.offset
+  });
+
+  const r = await safeInternalJson(`/admin/notifications/deliveries${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_NOTIFICATION_DELIVERIES_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_NOTIFICATION_DELIVERIES_API_NOT_OK", detail:j };
+  return j;
+}
+
+export async function getAdminPushSubscriptions(options = {}){
+  const suffix = buildQuery({
+    user_type: options.user_type,
+    user_id: options.user_id,
+    platform: options.platform,
+    enabled: options.enabled,
+    limit: options.limit,
+    offset: options.offset
+  });
+
+  const r = await safeInternalJson(`/admin/notifications/push-subscriptions${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_PUSH_SUBSCRIPTIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_PUSH_SUBSCRIPTIONS_API_NOT_OK", detail:j };
+  return j;
 }
 
 /* ===============================
