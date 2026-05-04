@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import AdminNavigation from "../AdminNavigation";
 import {
   getAdminNotificationDeliveries,
@@ -235,6 +235,13 @@ const notificationsColumns = [
     minWidth: 110,
     render: (_, row) => <Pill tone={statusTone(row.status)}>{textValue(row.status)}</Pill>,
   },
+  {
+    key: "action_type",
+    title: "Действие",
+    dataIndex: "action_type",
+    minWidth: 140,
+    render: (_, row) => <Pill tone={String(row.action_type || "").toLowerCase() === "money" ? "blue" : "neutral"}>{textValue(row.action_type)}</Pill>,
+  },
   { key: "title_ru", title: "Заголовок", dataIndex: "title_ru", minWidth: 180, render: (_, row) => shortText(row.title_ru || row.title_en || row.title, 42) },
   { key: "body_ru", title: "Текст", dataIndex: "body_ru", minWidth: 240, render: (_, row) => shortText(row.body_ru || row.body_en || row.body, 80) },
   { key: "created_at", title: "Создано", dataIndex: "created_at", minWidth: 150, render: (_, row) => formatDateTime(row.created_at) },
@@ -465,3 +472,5 @@ export default function AdminNotificationsPage() {
     </div>
   );
 }
+
+
