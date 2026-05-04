@@ -5,6 +5,7 @@ import StatCard from "../../cabinet/StatCard"
 import StatGrid from "../../cabinet/StatGrid"
 import { useMaster } from "../MasterContext"
 import { getMasterMetrics } from "../../api/internal"
+import { getMasterNotifications, markMasterNotificationRead } from "../../api/master.js"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 
 function money(n){
@@ -124,6 +125,35 @@ function SummaryCard({ title, value, note }){
   )
 }
 
+function getSafeNotificationList(payload){
+  if(Array.isArray(payload)) return payload
+  if(Array.isArray(payload?.notifications)) return payload.notifications
+  if(Array.isArray(payload?.data?.notifications)) return payload.data.notifications
+  if(Array.isArray(payload?.data?.items)) return payload.data.items
+  if(Array.isArray(payload?.items)) return payload.items
+  return []
+}
+
+function getNotificationUid(notification){
+  const uid = notification?.notification_uid ?? notification?.uid ?? notification?.id ?? ""
+  return String(uid || "").trim()
+}
+
+function formatNotificationDate(value){
+  if(!value) return "—"
+
+  const date = new Date(value)
+  if(Number.isNaN(date.getTime())) return "—"
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date)
+}
+
 export default function MasterDashboard() {
   const {
     loading: masterLoading,
@@ -140,6 +170,10 @@ export default function MasterDashboard() {
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState("")
   const [empty, setEmpty] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsError, setNotificationsError] = useState("")
+  const [readingNotificationUid, setReadingNotificationUid] = useState("")
 
   useEffect(()=>{
     let cancelled = false
@@ -214,6 +248,100 @@ export default function MasterDashboard() {
       cancelled = true
     }
   },[slug])
+
+  useEffect(()=>{
+    let cancelled = false
+
+    async function loadMasterNotificationsEffect(){
+      if(!slug){
+        if(!cancelled){
+          setNotifications([])
+          setNotificationsLoading(false)
+          setNotificationsError("")
+        }
+        return
+      }
+
+      try{
+        if(!cancelled){
+          setNotificationsLoading(true)
+          setNotificationsError("")
+        }
+
+        const result = await getMasterNotifications(slug, { limit: 20 })
+        const items = getSafeNotificationList(result)
+
+        if(!cancelled){
+          setNotifications(items)
+        }
+      }catch(error){
+        console.error("MASTER NOTIFICATIONS LOAD ERROR", error)
+
+        if(!cancelled){
+          setNotifications([])
+          setNotificationsError(error?.message || "MASTER_NOTIFICATIONS_LOAD_FAILED")
+        }
+      }finally{
+        if(!cancelled){
+          setNotificationsLoading(false)
+        }
+      }
+    }
+
+    loadMasterNotificationsEffect()
+
+    return ()=>{
+      cancelled = true
+    }
+  },[slug])
+
+  async function loadMasterNotifications(){
+    if(!slug){
+      return
+    }
+
+    try{
+      setNotificationsLoading(true)
+      setNotificationsError("")
+
+      const result = await getMasterNotifications(slug, { limit: 20 })
+      setNotifications(getSafeNotificationList(result))
+    }catch(error){
+      console.error("MASTER NOTIFICATIONS LOAD ERROR", error)
+      setNotifications([])
+      setNotificationsError(error?.message || "MASTER_NOTIFICATIONS_LOAD_FAILED")
+    }finally{
+      setNotificationsLoading(false)
+    }
+  }
+
+  async function readNotification(notification){
+    const notificationUid = getNotificationUid(notification)
+    if(!notificationUid || readingNotificationUid){
+      return
+    }
+
+    setReadingNotificationUid(notificationUid)
+
+    try{
+      await markMasterNotificationRead(slug, notificationUid)
+      const readAt = new Date().toISOString()
+
+      setNotifications((prev)=>prev.map((item)=>{
+        if(getNotificationUid(item) !== notificationUid) return item
+        return {
+          ...item,
+          is_read: true,
+          read_at: item?.read_at || readAt
+        }
+      }))
+    }catch(error){
+      console.error("MASTER NOTIFICATION READ ERROR", error)
+      await loadMasterNotifications()
+    }finally{
+      setReadingNotificationUid("")
+    }
+  }
 
   const loading = masterLoading || metricsLoading
   const error = masterError || metricsError
@@ -307,6 +435,133 @@ export default function MasterDashboard() {
         title="QR для записи к мастеру"
         subtitle="Клиент откроет форму записи с выбранным мастером."
       />
+
+      <PageSection title="Уведомления">
+        {notificationsLoading ? (
+          <div style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "14px",
+            background: "#fff",
+            padding: "14px",
+            color: "#6b7280",
+            fontSize: "14px"
+          }}>
+            Загружаем уведомления…
+          </div>
+        ) : notificationsError ? (
+          <div style={{
+            border: "1px solid #f5c2c7",
+            borderRadius: "14px",
+            background: "#fff5f5",
+            color: "#b42318",
+            padding: "14px",
+            fontSize: "14px"
+          }}>
+            Не удалось загрузить уведомления
+          </div>
+        ) : notifications.length ? (
+          <div style={{ display: "grid", gap: "12px" }}>
+            {notifications.map((notification)=>{
+              const uid = getNotificationUid(notification)
+              const isRead = Boolean(notification?.is_read || notification?.read_at)
+              const title = notification?.title_ru || notification?.title_en || notification?.title || "Без заголовка"
+              const body = notification?.body_ru || notification?.body_en || notification?.body || ""
+              const type = notification?.target_type || notification?.action_type || "—"
+              const priority = notification?.priority || "normal"
+
+              return (
+                <div
+                  key={uid || `${title}-${notification?.created_at || ""}`}
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "14px",
+                    background: isRead ? "#f9fafb" : "#fff",
+                    padding: "14px"
+                  }}
+                >
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    alignItems: "flex-start",
+                    marginBottom: "10px"
+                  }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "15px", fontWeight: 800, color: "#111827", marginBottom: "4px" }}>
+                        {title}
+                      </div>
+                      {body ? (
+                        <div style={{ fontSize: "13px", color: "#4b5563", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                          {body}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div style={{
+                      flexShrink: 0,
+                      borderRadius: "999px",
+                      padding: "6px 10px",
+                      background: isRead ? "#f3f4f6" : "#ecfdf3",
+                      color: isRead ? "#6b7280" : "#027a48",
+                      fontSize: "12px",
+                      fontWeight: 700
+                    }}>
+                      {isRead ? "Прочитано" : "Новое"}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                    gap: "8px",
+                    fontSize: "12px",
+                    color: "#667085"
+                  }}>
+                    <div>Тип: <strong style={{ color: "#344054" }}>{type}</strong></div>
+                    <div>Приоритет: <strong style={{ color: "#344054" }}>{priority}</strong></div>
+                    <div>Создано: <strong style={{ color: "#344054" }}>{formatNotificationDate(notification?.created_at)}</strong></div>
+                    <div>Статус: <strong style={{ color: "#344054" }}>{isRead ? "Прочитано" : "Не прочитано"}</strong></div>
+                  </div>
+
+                  {!isRead ? (
+                    <div style={{ marginTop: "12px" }}>
+                      <button
+                        type="button"
+                        onClick={()=>readNotification(notification)}
+                        disabled={readingNotificationUid === uid}
+                        style={{
+                          border: "1px solid #d0d5dd",
+                          borderRadius: "10px",
+                          background: "#fff",
+                          color: "#344054",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          padding: "8px 12px",
+                          cursor: readingNotificationUid === uid ? "not-allowed" : "pointer",
+                          opacity: readingNotificationUid === uid ? 0.7 : 1
+                        }}
+                      >
+                        Прочитано
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "14px",
+            background: "#fff",
+            padding: "14px",
+            color: "#6b7280",
+            fontSize: "14px"
+          }}>
+            Новых уведомлений пока нет.
+          </div>
+        )}
+      </PageSection>
 
       <PageSection title="Маршруты из dashboard">
         <div style={{
