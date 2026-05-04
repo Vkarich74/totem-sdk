@@ -52,6 +52,7 @@ import AdminOpenOwnerPage from "./admin/pages/AdminOpenOwnerPage";
 import AdminOwnersPage from "./admin/pages/AdminOwnersPage";
 import AdminFinancePage from "./admin/pages/AdminFinancePage";
 import AdminMobilePage from "./admin/pages/AdminMobilePage";
+import AdminNotificationsPage from "./admin/pages/AdminNotificationsPage";
 
 /* MASTER FINANCE */
 import MasterMoneyPage from "./master/payments/MasterMoneyPage";
@@ -723,6 +724,10 @@ function AdminRouter() {
 
   if (adminRoute === "mobile") {
     return <AdminMobilePage />;
+  }
+
+  if (adminRoute === "notifications") {
+    return <AdminNotificationsPage />;
   }
 
   return <AdminDashboardPage />;

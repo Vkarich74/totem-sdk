@@ -44,6 +44,10 @@ export default function AdminNavigation(){
         Мобильное
       </button>
       <span> | </span>
+      <button type="button" onClick={() => navigate("#/admin/notifications")}>
+        Уведомления
+      </button>
+      <span> | </span>
       <button type="button" onClick={() => navigate("#/admin/open-owner")}>
         Открытие владельца
       </button>
