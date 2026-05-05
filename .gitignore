@@ -22,6 +22,11 @@ dist-ssr
 *.sln
 *.sw?
 
+# Android release signing secrets
+android/keystore.properties
+*.jks
+*.keystore
+
 # Local backups
 _backup/
 backup/
