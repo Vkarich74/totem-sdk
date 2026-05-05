@@ -195,9 +195,8 @@ function getAuthTokenRole(token) {
 }
 
 function clearStoredAuthTokens() {
-  window.localStorage.removeItem("TOTEM_AUTH_TOKEN");
-  window.localStorage.removeItem("TOTEM_ACCESS_TOKEN");
-}
+    clearAuthAccessToken();
+  }
 
 function getStoredSalonSlug() {
   return (
@@ -496,7 +495,7 @@ function AdminAuthGate({ children }) {
         if (!active) return;
 
         if (response.status === 401) {
-          window.localStorage.removeItem("TOTEM_AUTH_TOKEN");
+          clearAuthAccessToken();
           setState((current) => ({
             ...current,
             loading: false,
@@ -506,12 +505,12 @@ function AdminAuthGate({ children }) {
           return;
         }
 
-        if (response.status === 403) {
-          window.localStorage.removeItem("TOTEM_AUTH_TOKEN");
-          setState((current) => ({
-            ...current,
-            loading: false,
-            status: "forbidden",
+          if (response.status === 403) {
+            clearAuthAccessToken();
+            setState((current) => ({
+              ...current,
+              loading: false,
+              status: "forbidden",
             error: "FORBIDDEN",
           }));
           return;
