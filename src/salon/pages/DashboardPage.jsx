@@ -508,6 +508,9 @@ export default function DashboardPage(){
               const body = notification?.body_ru || notification?.body_en || notification?.body || ""
               const type = notification?.target_type || notification?.action_type || "—"
               const priority = notification?.priority || "normal"
+              const actionUrl = String(notification?.action_url || "").trim()
+              const hasAction = Boolean(actionUrl)
+              const isExternal = /^https?:\/\//i.test(actionUrl)
 
               return (
                 <div
@@ -562,6 +565,32 @@ export default function DashboardPage(){
                     <div>Создано: <strong style={{ color: "#344054" }}>{formatNotificationDate(notification?.created_at)}</strong></div>
                     <div>Статус: <strong style={{ color: "#344054" }}>{isRead ? "Прочитано" : "Не прочитано"}</strong></div>
                   </div>
+
+                  {hasAction ? (
+                    <div style={{ marginTop: "12px" }}>
+                      <a
+                        href={actionUrl}
+                        target={isExternal ? "_blank" : undefined}
+                        rel={isExternal ? "noreferrer" : undefined}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minHeight: "40px",
+                          padding: "8px 14px",
+                          borderRadius: "10px",
+                          border: "1px solid #d0d5dd",
+                          background: "#fff",
+                          color: "#344054",
+                          textDecoration: "none",
+                          fontSize: "13px",
+                          fontWeight: 700
+                        }}
+                      >
+                        Открыть
+                      </a>
+                    </div>
+                  ) : null}
 
                   {!isRead ? (
                     <div style={{ marginTop: "12px" }}>
