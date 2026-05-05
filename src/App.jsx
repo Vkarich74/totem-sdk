@@ -262,6 +262,11 @@ function MobileLiteAdminRoute({ roleType }) {
   return <MobileLiteAdminPage roleType={roleType} slug={slug} />;
 }
 
+function MobileLiteAdminDynamicRoute() {
+  const { roleType, slug } = useParams();
+  return <MobileLiteAdminPage roleType={roleType} slug={slug} />;
+}
+
 function getPublicRouteFromPathname() {
   const pathParts = getPathParts();
   const hashParts = getHashParts();
@@ -628,6 +633,7 @@ function CabinetRouter() {
       <Route path="client/:clientId/:token" element={<ClientCabinetPage />} />
       <Route path="mobile/admin/master/:slug" element={<MobileLiteAdminRoute roleType="master" />} />
       <Route path="mobile/admin/salon/:slug" element={<MobileLiteAdminRoute roleType="salon" />} />
+      <Route path="mobile/admin/:roleType/:slug" element={<MobileLiteAdminDynamicRoute />} />
 
       <Route path="salon" element={<SalonLayout />}>
         <Route index element={<DashboardPage />} />
