@@ -1,0 +1,5 @@
+{ 
+  "appId": "com.totemv.app", 
+  "appName": "TOTEM", 
+  "webDir": "dist" 
+} 
