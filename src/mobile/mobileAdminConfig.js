@@ -7,6 +7,13 @@ function normalizeSlug(slug) {
   return String(slug || "").trim();
 }
 
+const MOBILE_ADMIN_NAV_LABELS = {
+  booking: "Букинг",
+  calendar: "Календарь",
+  finance: "Деньги",
+  stats: "Статистика",
+};
+
 function buildCards(roleType, slug) {
   const encodedSlug = encodeURIComponent(slug);
 
@@ -33,7 +40,7 @@ function buildBottomNavItems(cards) {
         .filter((card) => Boolean(card?.key && card?.href && card?.title))
         .map((card) => ({
           key: card.key,
-          label: card.key,
+          label: MOBILE_ADMIN_NAV_LABELS[card.key] || card.title || card.key,
           href: card.href,
         }))
     : [];
