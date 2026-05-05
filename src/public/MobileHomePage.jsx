@@ -11,6 +11,19 @@ import {
   postMobileNotificationRead,
   postMobileFeedback
 } from "../api/publicApi";
+import {
+  MobileShell,
+  MobileTopBar,
+  MobileHero,
+  MobileSection,
+  MobileCard,
+  MobileButton,
+  MobileBadge,
+  MobilePill,
+  MobileEmptyState,
+  MobileBottomNav,
+  MobileStatCard,
+} from "../mobile/MobileUi.jsx";
 
 function parseMobileRoute() {
   const pathname = String(window.location.pathname || "").replace(/\/+$/, "");
@@ -1127,215 +1140,25 @@ export default function MobileHomePage() {
     );
   }
 
-  const countries = sortedCountries;
-  const cities = activeCities;
-  const bishkekLink = "#/mobile/city/KG/bishkek";
-
   return (
-      <div style={shellStyle}>
-        <div style={heroStyle}>
-          <EntityBadge>Мобильная витрина</EntityBadge>
-          <h1 style={heroTitleStyle}>Выберите страну и город</h1>
-          <div style={heroTextStyle}>
-            Это мобильный вход в каталог. Сейчас доступны только read-only данные по странам и городам.
-          </div>
-        </div>
-
-        <Card style={{ borderColor: "#dbeafe", background: "#f8fbff" }}>
-          <SectionTitle subtitle="Выберите, как хотите войти в TOTEM.">Кто вы?</SectionTitle>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: 12,
-            }}
-          >
-            <a
-              href="#/mobile/city/KG/bishkek"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                gap: 8,
-                minHeight: 96,
-                padding: 16,
-                borderRadius: 16,
-                border: "1px solid #dbeafe",
-                background: "#fff",
-                color: "#111827",
-                textDecoration: "none",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>Клиент</div>
-              <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.45 }}>Найти салон и записаться</div>
-            </a>
-
-            <a
-              href="#/auth/login?role=master"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                gap: 8,
-                minHeight: 96,
-                padding: 16,
-                borderRadius: 16,
-                border: "1px solid #dcfce7",
-                background: "#f0fdf4",
-                color: "#111827",
-                textDecoration: "none",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>Мастер</div>
-              <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.45 }}>Войти в кабинет мастера</div>
-            </a>
-
-            <a
-              href="#/auth/login?role=salon_admin"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                gap: 8,
-                minHeight: 96,
-                padding: 16,
-                borderRadius: 16,
-                border: "1px solid #fcd34d",
-                background: "#fffbeb",
-                color: "#111827",
-                textDecoration: "none",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>Салон</div>
-              <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.45 }}>Войти в кабинет салона</div>
-            </a>
-          </div>
-        </Card>
-
-        <Card>
-          <SectionTitle subtitle="Запись начинается с выбора салона. Мастер и услуга выбираются уже на экране записи.">
-            Быстрая запись
-          </SectionTitle>
-        <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
-          Сначала откройте нужный салон. После перехода на экран записи можно выбрать мастера, услугу и удобное время.
-        </div>
-      </Card>
-
-      <AnnouncementsBlock
-        announcements={announcements}
-        onMarkRead={handleNotificationMarkRead}
-        markingUid={notificationMarkingUid}
-      />
-
-      <ReferralBlock referral={referral} />
-
-      <HelpBlock countryCode={route.countryCode} citySlug={route.citySlug} />
-
-      <PwaPromptBlock
-        mobilePwaEnabled={mobilePwaEnabled}
-        installPromptVisible={installPromptVisible}
-        pwaUpdateAvailable={pwaUpdateAvailable}
-        pwaStatusMessage={pwaStatusMessage}
-        onInstall={handleInstallApp}
-        onUpdate={handleReloadForUpdate}
-        onDismiss={handleDismissPwaPrompt}
-      />
-
-      <Card>
-        <SectionTitle subtitle="Активные страны для мобильной витрины.">Страны</SectionTitle>
-        {countries.length ? (
-          <div style={stackStyle}>
-            {countries.map((country) => {
-              const countryCode = String(country?.code || "").trim().toUpperCase();
-              const countryCities = homeCitiesByCountry.get(countryCode) || [];
-
-              return (
-                <Card key={`country-${countryCode}`} style={{ padding: 14, borderRadius: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>
-                        {formatLabel(country?.name_ru || country?.name_en || countryCode)}
-                      </div>
-                      <div style={{ marginTop: 4, fontSize: 13, color: "#6b7280" }}>
-                        {countryCode} · {formatLabel(country?.currency_code, "валюта не указана")}
-                      </div>
-                    </div>
-                    <EntityBadge>{countryCities.length} городов</EntityBadge>
-                  </div>
-
-                  {countryCode === "KG" ? (
-                    <a href={bishkekLink} style={primaryLinkStyle}>
-                      Открыть Бишкек
-                    </a>
-                  ) : null}
-
-                  {countryCities.length ? (
-                    <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-                      {countryCities.map((city) => {
-                        const citySlug = String(city?.slug || "").trim().toLowerCase();
-
-                        return (
-                          <a
-                            key={`city-${countryCode}-${citySlug}`}
-                            href={`#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(citySlug)}`}
-                            style={cityLinkStyle}
-                          >
-                            <div style={{ fontWeight: 700, color: "#111827" }}>
-                              {formatLabel(city?.name_ru || city?.name_en || citySlug)}
-                            </div>
-                            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
-                              {citySlug} · {formatLabel(city?.timezone, "timezone не указан")}
-                            </div>
-                          </a>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>
-                      В этой стране пока нет активных городов.
-                    </div>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyState text="Активные страны пока не найдены." />
-        )}
-      </Card>
-
-      <Card>
-        <SectionTitle subtitle="Активные города для мобильной витрины.">Города</SectionTitle>
-        {cities.length ? (
-          <div style={stackStyle}>
-            {cities.map((city) => {
-              const countryCode = String(city?.country_code || "").trim().toUpperCase();
-              const citySlug = String(city?.slug || "").trim().toLowerCase();
-
-              return (
-                <a
-                  key={`city-card-${countryCode}-${citySlug}`}
-                  href={`#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(citySlug)}`}
-                  style={cityLinkStyle}
-                >
-                  <div style={{ fontWeight: 800, color: "#111827" }}>
-                    {formatLabel(city?.name_ru || city?.name_en || citySlug)}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
-                    {countryCode} · {citySlug}
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyState text="Активные города пока не найдены." />
-        )}
-      </Card>
-    </div>
+    <HomeSurface
+      countries={sortedCountries}
+      cities={activeCities}
+      homeCitiesByCountry={homeCitiesByCountry}
+      announcements={announcements}
+      onMarkRead={handleNotificationMarkRead}
+      markingUid={notificationMarkingUid}
+      referral={referral}
+      mobilePwaEnabled={mobilePwaEnabled}
+      installPromptVisible={installPromptVisible}
+      pwaUpdateAvailable={pwaUpdateAvailable}
+      pwaStatusMessage={pwaStatusMessage}
+      onInstall={handleInstallApp}
+      onUpdate={handleReloadForUpdate}
+      onDismiss={handleDismissPwaPrompt}
+      helpCountryCode={route.countryCode}
+      helpCitySlug={route.citySlug}
+    />
   );
 }
 
@@ -2041,6 +1864,323 @@ function SalonCard({ salon, catalogState, onToggleCatalog, countryCode, citySlug
         </div>
       ) : null}
     </Card>
+  );
+}
+
+function HomeSurface({
+  countries,
+  cities,
+  homeCitiesByCountry,
+  announcements,
+  onMarkRead,
+  markingUid,
+  referral,
+  mobilePwaEnabled,
+  installPromptVisible,
+  pwaUpdateAvailable,
+  pwaStatusMessage,
+  onInstall,
+  onUpdate,
+  onDismiss,
+  helpCountryCode,
+  helpCitySlug,
+}) {
+  const featuredLocation = useMemo(() => {
+    for (const country of countries) {
+      const countryCode = String(country?.code || "").trim().toUpperCase();
+      if (!countryCode) {
+        continue;
+      }
+
+      const countryCities = homeCitiesByCountry.get(countryCode) || [];
+
+      if (countryCities.length) {
+        return {
+          country,
+          city: countryCities[0],
+        };
+      }
+    }
+
+    if (countries.length && cities.length) {
+      return {
+        country: countries[0],
+        city: cities[0],
+      };
+    }
+
+    return null;
+  }, [cities, countries, homeCitiesByCountry]);
+
+  const featuredCountryCode = String(featuredLocation?.country?.code || "").trim().toUpperCase();
+  const featuredCitySlug = String(featuredLocation?.city?.slug || "").trim().toLowerCase();
+  const featuredCountryName = formatLabel(
+    featuredLocation?.country?.name_ru || featuredLocation?.country?.name_en || featuredCountryCode
+  );
+  const featuredCityName = formatLabel(
+    featuredLocation?.city?.name_ru || featuredLocation?.city?.name_en || featuredCitySlug
+  );
+  const featuredLocationLabel = featuredLocation
+    ? `${featuredCountryName} · ${featuredCityName}`
+    : "Выберите город и начните запись";
+  const featuredCityHref = featuredLocation?.city
+    ? `#/mobile/city/${encodeURIComponent(featuredCountryCode)}/${encodeURIComponent(featuredCitySlug)}`
+    : "#cities";
+  const bookingHref = buildPublicBookingUrl("totem-demo-salon");
+  const totalAnnouncements = Array.isArray(announcements?.items) ? announcements.items.length : 0;
+  const unreadAnnouncements = Array.isArray(announcements?.items)
+    ? announcements.items.reduce((count, item) => count + (item?.is_read === true ? 0 : 1), 0)
+    : 0;
+  const cityNavHref = featuredLocation?.city ? featuredCityHref : "#cities";
+
+  return (
+    <MobileShell>
+      <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+        <MobileTopBar
+          title="TOTEM"
+          subtitle={`${featuredLocationLabel} · мобильная витрина`}
+          right={<MobileBadge tone="success">мобильная витрина</MobileBadge>}
+        />
+
+        <MobileHero
+          eyebrow="TOTEM Mobile"
+          title="Красота рядом — запись за пару минут"
+          subtitle="Выберите город, откройте запись и получайте напоминания, уведомления и помощь в одном месте."
+          actions={
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <MobileButton href="#cities">Выбрать город</MobileButton>
+              <MobileButton tone="secondary" href={bookingHref}>
+                Открыть запись
+              </MobileButton>
+            </div>
+          }
+        />
+
+        <MobileSection
+          title="Сейчас активно"
+          subtitle="Краткий обзор доступных стран, городов и сообщений."
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <MobileStatCard
+              label="Страны"
+              value={countries.length}
+              note="Активные направления"
+              tone="primary"
+            />
+            <MobileStatCard
+              label="Города"
+              value={cities.length}
+              note="Готовы к записи"
+              tone="success"
+            />
+            <MobileStatCard
+              label="Сообщения"
+              value={totalAnnouncements}
+              note={unreadAnnouncements > 0 ? `Новых: ${unreadAnnouncements}` : "Все прочитано"}
+              tone="warning"
+            />
+          </div>
+        </MobileSection>
+
+        <MobileSection
+          title="Почему удобно"
+          subtitle="TOTEM Mobile помогает быстро выбрать город и открыть запись без лишних шагов."
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <MobileCard
+              title="Салоны рядом"
+              subtitle="Подберите удобный город и быстро откройте доступные салоны."
+            >
+              <MobileBadge tone="primary">Рядом</MobileBadge>
+            </MobileCard>
+            <MobileCard
+              title="Запись без звонка"
+              subtitle="Переходите к записи прямо из мобильной витрины и экономьте время."
+            >
+              <MobileBadge tone="success">Без звонка</MobileBadge>
+            </MobileCard>
+            <MobileCard
+              title="Напоминания и уведомления"
+              subtitle="TOTEM подсказывает важные события, чтобы запись не терялась."
+            >
+              <MobileBadge tone="warning">Напоминания</MobileBadge>
+            </MobileCard>
+          </div>
+        </MobileSection>
+
+        <div id="cities">
+          <MobileSection
+            title="Активные страны"
+            subtitle="Выберите страну, чтобы открыть доступные города и запись."
+            action={<MobilePill tone="primary">{countries.length} стран</MobilePill>}
+          >
+            {countries.length ? (
+              <div style={{ display: "grid", gap: 12 }}>
+                {countries.map((country) => {
+                  const countryCode = String(country?.code || "").trim().toUpperCase();
+                  const countryName = formatLabel(country?.name_ru || country?.name_en || countryCode);
+                  const countryCities = homeCitiesByCountry.get(countryCode) || [];
+                  const firstCity = countryCities[0] || null;
+                  const firstCitySlug = String(firstCity?.slug || "").trim().toLowerCase();
+                  const countryCityHref = firstCity
+                    ? `#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(firstCitySlug)}`
+                    : "#cities";
+
+                  return (
+                    <MobileCard
+                      key={`home-country-${countryCode}`}
+                      title={countryName}
+                      subtitle={`${countryCode} · ${countryCities.length} городов`}
+                      footer={
+                        <div style={{ display: "grid", gap: 12 }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            <MobilePill tone="primary">{countryCode}</MobilePill>
+                            <MobilePill tone="neutral">{countryCities.length} городов</MobilePill>
+                          </div>
+                          {countryCities.length ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                              {countryCities.slice(0, 4).map((city) => {
+                                const citySlug = String(city?.slug || "").trim().toLowerCase();
+                                const cityName = formatLabel(city?.name_ru || city?.name_en || citySlug);
+                                return (
+                                  <MobilePill key={`home-country-city-${countryCode}-${citySlug}`} tone="neutral">
+                                    {cityName}
+                                  </MobilePill>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <MobileEmptyState
+                              title="Города пока не подключены"
+                              description="Когда данные появятся, они сразу отобразятся в этом блоке."
+                              style={{ textAlign: "left", padding: 14 }}
+                            />
+                          )}
+                          {firstCity ? (
+                            <MobileButton tone="secondary" href={countryCityHref}>
+                              Открыть город
+                            </MobileButton>
+                          ) : null}
+                        </div>
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <MobileEmptyState
+                title="Страны пока не загружены"
+                description="Как только мобильная витрина получит данные, здесь появятся активные страны и города."
+              />
+            )}
+          </MobileSection>
+        </div>
+
+        <MobileSection
+          title="Активные города"
+          subtitle="Быстрый вход в нужный город и городскую витрину."
+          action={<MobilePill tone="neutral">{cities.length} городов</MobilePill>}
+        >
+          {cities.length ? (
+            <div style={{ display: "grid", gap: 12 }}>
+              {cities.map((city) => {
+                const countryCode = String(city?.country_code || "").trim().toUpperCase();
+                const citySlug = String(city?.slug || "").trim().toLowerCase();
+                const cityName = formatLabel(city?.name_ru || city?.name_en || citySlug);
+
+                return (
+                  <MobileCard
+                    key={`home-city-${countryCode}-${citySlug}`}
+                    title={cityName}
+                    subtitle={`${countryCode} · ${citySlug}`}
+                    footer={
+                      <div style={{ display: "grid", gap: 12 }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          <MobilePill tone="primary">{countryCode}</MobilePill>
+                          <MobilePill tone="neutral">{formatLabel(city?.timezone, "timezone не указан")}</MobilePill>
+                        </div>
+                        <MobileButton href={`#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(citySlug)}`}>
+                          Открыть город
+                        </MobileButton>
+                      </div>
+                    }
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <MobileEmptyState
+              title="Города пока не загружены"
+              description="После подключения данных здесь появятся активные города для записи."
+            />
+          )}
+        </MobileSection>
+
+        <div id="booking">
+          <MobileSection
+            title="Быстрая запись"
+            subtitle="Если хотите сразу открыть запись, используйте публичный маршрут."
+          >
+            <MobileCard
+              title="Открыть запись"
+              subtitle="Переход в публичную запись TOTEM для быстрого старта."
+              footer={
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                  <MobileButton href={bookingHref}>Открыть запись</MobileButton>
+                  <MobileButton tone="secondary" href={cityNavHref}>
+                    Сначала выбрать город
+                  </MobileButton>
+                </div>
+              }
+            >
+              <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
+                Откройте запись в пару касаний. Сначала можно выбрать город, а затем перейти к публичной записи салона.
+              </div>
+            </MobileCard>
+          </MobileSection>
+        </div>
+
+        <AnnouncementsBlock announcements={announcements} onMarkRead={onMarkRead} markingUid={markingUid} />
+
+        <ReferralBlock referral={referral} />
+
+        <div id="help">
+          <HelpBlock countryCode={helpCountryCode} citySlug={helpCitySlug} />
+        </div>
+
+        <PwaPromptBlock
+          mobilePwaEnabled={mobilePwaEnabled}
+          installPromptVisible={installPromptVisible}
+          pwaUpdateAvailable={pwaUpdateAvailable}
+          pwaStatusMessage={pwaStatusMessage}
+          onInstall={onInstall}
+          onUpdate={onUpdate}
+          onDismiss={onDismiss}
+        />
+
+        <MobileBottomNav
+          items={[
+            { key: "home", label: "Главная", href: "#/mobile" },
+            { key: "city", label: "Город", href: cityNavHref },
+            { key: "booking", label: "Запись", href: bookingHref },
+            { key: "help", label: "Помощь", href: "#help" },
+          ]}
+          activeKey="home"
+        />
+      </div>
+    </MobileShell>
   );
 }
 
