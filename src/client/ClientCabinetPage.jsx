@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getClientNotifications, markClientNotificationRead } from "../api/client.js";
+import { postMobileEvent } from "../api/publicApi.js";
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE ||
@@ -395,6 +396,26 @@ export default function ClientCabinetPage() {
     if (token) {
       params.set("token", String(token));
     }
+
+    void postMobileEvent({
+      event_type: "repeat_booking_open",
+      source: "mobile",
+      target_type: "booking",
+      target_id: booking?.id ? String(booking.id) : null,
+      owner_type: booking?.salon_slug ? "salon" : null,
+      owner_slug: booking?.salon_slug || null,
+      route: "#/booking",
+      payload_json: {
+        source: "client_cabinet",
+        client_id: String(clientId || ""),
+        booking_id: booking?.id ? String(booking.id) : null,
+        salon_slug: booking?.salon_slug || null,
+        master_id: booking?.master_id ? String(booking.master_id) : null,
+        service_id: booking?.service_id ? String(booking.service_id) : null
+      }
+    }).catch((error) => {
+      console.warn("CLIENT_REPEAT_BOOKING_EVENT_FAILED", String(error?.message || error || ""));
+    });
 
     window.location.hash = `#/booking?${params.toString()}`;
   }
