@@ -1721,6 +1721,10 @@ function PwaPromptBlock({
           </div>
         ) : null}
 
+        <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+          Уведомления через браузер пока недоступны.
+        </div>
+
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           {installPromptVisible ? (
             <button
