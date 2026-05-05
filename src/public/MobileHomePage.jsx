@@ -1030,113 +1030,26 @@ export default function MobileHomePage() {
     const masters = Array.isArray(home?.masters) ? home.masters : [];
 
     return (
-      <div style={shellStyle}>
-        <div style={heroStyle}>
-          <EntityBadge>
-            {formatLabel(home?.country?.code || route.countryCode)} · {formatLabel(home?.city?.slug || route.citySlug)}
-          </EntityBadge>
-          <h1 style={heroTitleStyle}>
-            {formatLabel(home?.city?.name_ru || home?.city?.name_en || "Город")}
-          </h1>
-          <div style={heroTextStyle}>
-            {formatLabel(home?.country?.name_ru || home?.country?.name_en || "Страна")} ·{" "}
-            {formatLabel(home?.city?.timezone || home?.country?.timezone || "Без часового пояса")}
-          </div>
-        </div>
-
-        <Card>
-          <SectionTitle subtitle="Запись начинается с выбора салона. Мастер и услуга выбираются уже на экране записи.">
-            Быстрая запись
-          </SectionTitle>
-          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
-            Выберите салон ниже и нажмите "Записаться в салон". На следующем экране можно выбрать мастера, услугу и удобное время.
-          </div>
-        </Card>
-
-        <AnnouncementsBlock
-          announcements={announcements}
-          onMarkRead={handleNotificationMarkRead}
-          markingUid={notificationMarkingUid}
-        />
-
-        <ReferralBlock referral={referral} />
-
-        <HelpBlock countryCode={route.countryCode} citySlug={route.citySlug} />
-
-        <PwaPromptBlock
-          mobilePwaEnabled={mobilePwaEnabled}
-          installPromptVisible={installPromptVisible}
-          pwaUpdateAvailable={pwaUpdateAvailable}
-          pwaStatusMessage={pwaStatusMessage}
-          onInstall={handleInstallApp}
-          onUpdate={handleReloadForUpdate}
-          onDismiss={handleDismissPwaPrompt}
-        />
-
-        <Card>
-          <SectionTitle subtitle="Доступные салоны в этом городе.">Салоны</SectionTitle>
-          {salons.length ? (
-            <div style={gridStyle}>
-              {salons.map((salon) => (
-                <SalonCard
-                  key={`salon-${salon.id}`}
-                  salon={salon}
-                  catalogState={catalogBySlug[String(salon.slug || "").trim()] || null}
-                  onToggleCatalog={toggleSalonCatalog}
-                  countryCode={route.countryCode}
-                  citySlug={route.citySlug}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState text="В этом городе пока нет активных салонов." />
-          )}
-        </Card>
-
-        <Card>
-          <SectionTitle subtitle="Доступные мастера в этом городе.">Мастера</SectionTitle>
-          {masters.length ? (
-            <div style={gridStyle}>
-              {masters.map((master) => (
-                <Card key={`master-${master.id}`} style={{ padding: 14, borderRadius: 14 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>
-                    {formatLabel(master.name)}
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-                    @{formatLabel(master.slug)}
-                  </div>
-                  <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    <EntityBadge>active: {String(Boolean(master.active))}</EntityBadge>
-                  </div>
-                  <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    <a
-                      href={buildAbsoluteOwnerUrl(`/master/${encodeURIComponent(String(master.slug || "").trim())}`)}
-                      onClick={() => trackMobileEvent({
-                        event_type: "master_card_open",
-                        target_type: "master",
-                        owner_type: "master",
-                        owner_slug: String(master.slug || "").trim(),
-                        country_code: route.countryCode,
-                        city_slug: route.citySlug,
-                        route: `/master/${encodeURIComponent(String(master.slug || "").trim())}`,
-                        session_key: getMobileAnalyticsSessionKey(),
-                        payload_json: {
-                          entry: "mobile_city_master_card",
-                        },
-                      })}
-                      style={secondaryLinkStyle}
-                    >
-                      Открыть мастера
-                    </a>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <EmptyState text="В этом городе пока нет активных мастеров." />
-          )}
-        </Card>
-      </div>
+      <CitySurface
+        home={home}
+        salons={salons}
+        masters={masters}
+        announcements={announcements}
+        onMarkRead={handleNotificationMarkRead}
+        markingUid={notificationMarkingUid}
+        referral={referral}
+        mobilePwaEnabled={mobilePwaEnabled}
+        installPromptVisible={installPromptVisible}
+        pwaUpdateAvailable={pwaUpdateAvailable}
+        pwaStatusMessage={pwaStatusMessage}
+        onInstall={handleInstallApp}
+        onUpdate={handleReloadForUpdate}
+        onDismiss={handleDismissPwaPrompt}
+        routeCountryCode={route.countryCode}
+        routeCitySlug={route.citySlug}
+        catalogBySlug={catalogBySlug}
+        onToggleCatalog={toggleSalonCatalog}
+      />
     );
   }
 
@@ -2178,6 +2091,241 @@ function HomeSurface({
             { key: "help", label: "Помощь", href: "#help" },
           ]}
           activeKey="home"
+        />
+      </div>
+    </MobileShell>
+  );
+}
+
+function CitySurface({
+  home,
+  salons,
+  masters,
+  announcements,
+  onMarkRead,
+  markingUid,
+  referral,
+  mobilePwaEnabled,
+  installPromptVisible,
+  pwaUpdateAvailable,
+  pwaStatusMessage,
+  onInstall,
+  onUpdate,
+  onDismiss,
+  routeCountryCode,
+  routeCitySlug,
+  catalogBySlug,
+  onToggleCatalog,
+}) {
+  const countryCode = String(home?.country?.code || routeCountryCode || "").trim().toUpperCase();
+  const citySlug = String(home?.city?.slug || routeCitySlug || "").trim().toLowerCase();
+  const cityName = formatLabel(home?.city?.name_ru || home?.city?.name_en || "Город");
+  const countryName = formatLabel(home?.country?.name_ru || home?.country?.name_en || "Страна");
+  const cityHref = `#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(citySlug)}`;
+  const bookingHref = buildPublicBookingUrl(salons[0]?.slug || "totem-demo-salon");
+
+  return (
+    <MobileShell>
+      <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+        <MobileTopBar
+          title="TOTEM"
+          subtitle={`${cityName} · городская витрина`}
+          right={<MobileBadge tone="primary">городская витрина</MobileBadge>}
+        />
+
+        <MobileHero
+          eyebrow="TOTEM City"
+          title={`${cityName} — салоны и мастера рядом`}
+          subtitle={`${countryName} · ${formatLabel(home?.city?.timezone || home?.country?.timezone || "Без часового пояса")}`}
+          actions={
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <MobileButton href="#salons">Выбрать салон</MobileButton>
+              <MobileButton tone="secondary" href="#/mobile">
+                На главную
+              </MobileButton>
+            </div>
+          }
+        />
+
+        <MobileSection title="В городе доступно" subtitle="Короткая сводка по текущей городской витрине.">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <MobileStatCard label="Салоны" value={salons.length} note="Готовы к записи" tone="primary" />
+            <MobileStatCard label="Мастера" value={masters.length} note="Доступные специалисты" tone="success" />
+            <MobileStatCard
+              label="Регион"
+              value={countryCode || "—"}
+              note={formatLabel(home?.city?.timezone || home?.country?.timezone || "timezone не указан")}
+              tone="warning"
+            />
+          </div>
+        </MobileSection>
+
+        <MobileSection title="Как записаться" subtitle="Простой путь к визиту без звонка и лишних шагов.">
+          <div style={{ display: "grid", gap: 12 }}>
+            <MobileCard title="1. Выберите салон" subtitle="Откройте карточку салона, который подходит вам по локации и времени." />
+            <MobileCard title="2. Нажмите «Записаться»" subtitle="Публичная запись откроется в пару касаний." />
+            <MobileCard title="3. Выберите мастера, услугу и время" subtitle="На следующем экране выбираются все детали визита." />
+          </div>
+        </MobileSection>
+
+        <div id="salons">
+          <MobileSection title="Салоны" subtitle="Красивые карточки с быстрыми действиями и каталогом.">
+            {salons.length ? (
+              <div style={{ display: "grid", gap: 12 }}>
+                {salons.map((salon) => {
+                  const slug = String(salon?.slug || "").trim();
+                  const salonCatalogState = catalogBySlug[slug] || null;
+                  const openSalonHref = buildAbsoluteOwnerUrl(`/salon/${encodeURIComponent(slug)}`);
+                  const bookingLinkHref = buildHashPath(`/booking?salon=${encodeURIComponent(slug)}`);
+
+                  return (
+                    <MobileCard
+                      key={`city-salon-${salon.id}`}
+                      title={formatLabel(salon?.name, "Салон")}
+                      subtitle={`${slug} · ${formatLabel(salon?.city, cityName)}`}
+                      footer={
+                        <div style={{ display: "grid", gap: 10 }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            <MobilePill tone="primary">{slug || "slug не указан"}</MobilePill>
+                            <MobilePill tone="neutral">{formatLabel(salon?.city, cityName)}</MobilePill>
+                            <MobileBadge tone={salon?.enabled ? "success" : "neutral"}>
+                              {salon?.enabled ? "Активен" : "Неактивен"}
+                            </MobileBadge>
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                            <MobileButton href={openSalonHref}>Открыть салон</MobileButton>
+                            <MobileButton
+                              tone="secondary"
+                              onClick={() => {
+                                trackMobileEvent({
+                                  event_type: "booking_entry_open",
+                                  target_type: "booking",
+                                  owner_type: "salon",
+                                  owner_slug: slug,
+                                  country_code: routeCountryCode,
+                                  city_slug: routeCitySlug,
+                                  route: "#/booking",
+                                  session_key: getMobileAnalyticsSessionKey(),
+                                  payload_json: {
+                                    entry: "salon_card",
+                                  },
+                                });
+                                window.location.hash = bookingLinkHref;
+                              }}
+                            >
+                              Записаться
+                            </MobileButton>
+                            <MobileButton tone="soft" onClick={() => onToggleCatalog(slug)}>
+                              Каталог
+                            </MobileButton>
+                            <MobileButton
+                              tone="secondary"
+                              onClick={async () => {
+                                const bookingUrl = buildPublicBookingUrl(slug);
+                                try {
+                                  if (window.navigator?.clipboard?.writeText) {
+                                    await window.navigator.clipboard.writeText(bookingUrl);
+                                  }
+                                } catch {
+                                  /* no-op */
+                                }
+                              }}
+                            >
+                              Скопировать ссылку
+                            </MobileButton>
+                          </div>
+                        </div>
+                      }
+                    >
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          <MobilePill tone="neutral">город: {cityName}</MobilePill>
+                          <MobilePill tone="neutral">slug: {slug || "—"}</MobilePill>
+                        </div>
+                        <SalonCard
+                          salon={salon}
+                          catalogState={salonCatalogState}
+                          onToggleCatalog={onToggleCatalog}
+                          countryCode={routeCountryCode}
+                          citySlug={routeCitySlug}
+                        />
+                      </div>
+                    </MobileCard>
+                  );
+                })}
+              </div>
+            ) : (
+              <MobileEmptyState
+                title="Салоны пока не загружены"
+                description="Когда данные появятся, здесь будут красивые карточки салонов с записью и каталогом."
+              />
+            )}
+          </MobileSection>
+        </div>
+
+        <MobileSection title="Мастера" subtitle="Дружелюбные карточки специалистов в этом городе.">
+          {masters.length ? (
+            <div style={{ display: "grid", gap: 12 }}>
+              {masters.map((master) => (
+                <MobileCard
+                  key={`city-master-${master.id}`}
+                  title={formatLabel(master.name)}
+                  subtitle={`@${formatLabel(master.slug)} · ${cityName}`}
+                  footer={
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      <MobileButton
+                        href={buildAbsoluteOwnerUrl(`/master/${encodeURIComponent(String(master.slug || "").trim())}`)}
+                      >
+                        Открыть мастера
+                      </MobileButton>
+                      <MobilePill tone="neutral">active: {String(Boolean(master.active))}</MobilePill>
+                    </div>
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <MobileEmptyState
+              title="Мастера пока не загружены"
+              description="Когда в городе появятся активные мастера, они будут показаны здесь."
+            />
+          )}
+        </MobileSection>
+
+        <AnnouncementsBlock
+          announcements={announcements}
+          onMarkRead={onMarkRead}
+          markingUid={markingUid}
+        />
+
+        <ReferralBlock referral={referral} />
+
+        <HelpBlock countryCode={routeCountryCode} citySlug={routeCitySlug} />
+
+        <PwaPromptBlock
+          mobilePwaEnabled={mobilePwaEnabled}
+          installPromptVisible={installPromptVisible}
+          pwaUpdateAvailable={pwaUpdateAvailable}
+          pwaStatusMessage={pwaStatusMessage}
+          onInstall={onInstall}
+          onUpdate={onUpdate}
+          onDismiss={onDismiss}
+        />
+
+        <MobileBottomNav
+          items={[
+            { key: "home", label: "Главная", href: "#/mobile" },
+            { key: "city", label: "Город", href: cityHref },
+            { key: "booking", label: "Запись", href: bookingHref },
+            { key: "help", label: "Помощь", href: "#help" },
+          ]}
+          activeKey="city"
         />
       </div>
     </MobileShell>
