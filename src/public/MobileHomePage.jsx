@@ -1612,15 +1612,22 @@ function HelpBlock({ countryCode, citySlug }) {
           <div style={helpItemTextStyle}>TOTEM Mobile V1, версия 1.0.0.</div>
         </div>
 
-        <div style={helpItemStyle}>
-          <div style={helpItemTitleStyle}>Политика конфиденциальности</div>
-          <div style={helpItemTextStyle}>Документ будет доступен перед публичным запуском.</div>
-        </div>
+          <div style={helpItemStyle}>
+            <div style={helpItemTitleStyle}>Политика конфиденциальности</div>
+            <div style={helpItemTextStyle}>
+              Мы используем данные, которые вы вводите в TOTEM, для записи к салонам и мастерам, работы
+              уведомлений, обратной связи и обработки запросов по данным. Не публикуйте в сообщениях лишние
+              персональные данные.
+            </div>
+          </div>
 
-        <div style={helpItemStyle}>
-          <div style={helpItemTitleStyle}>Условия использования</div>
-          <div style={helpItemTextStyle}>Документ будет доступен перед публичным запуском.</div>
-        </div>
+          <div style={helpItemStyle}>
+            <div style={helpItemTitleStyle}>Условия использования</div>
+            <div style={helpItemTextStyle}>
+              Используя TOTEM Mobile, вы соглашаетесь указывать корректные данные для записи и не использовать
+              сервис для спама, ложных заявок или действий, нарушающих работу салонов, мастеров и платформы.
+            </div>
+          </div>
 
         <div style={helpFormCardStyle}>
           <div style={helpFormTitleStyle}>Обратная связь</div>
@@ -1650,6 +1657,10 @@ function HelpBlock({ countryCode, citySlug }) {
 
         <div style={helpFormCardStyle}>
           <div style={helpFormTitleStyle}>Запрос по данным</div>
+          <div style={{ marginBottom: 12, fontSize: 14, lineHeight: 1.5, color: "#4b5563" }}>
+            Через эту форму можно запросить доступ, исправление или удаление данных, связанных с вашими
+            обращениями и записями.
+          </div>
           <form onSubmit={handleDataRequestSubmit} style={helpFormGridStyle}>
             <label style={helpFieldStyle}>
               <span style={helpLabelStyle}>Email для ответа</span>
@@ -1677,7 +1688,7 @@ function HelpBlock({ countryCode, citySlug }) {
                 rows={4}
                 required
                 style={helpTextareaStyle}
-                placeholder="Опишите запрос по данным"
+                placeholder="Например: прошу удалить мои данные или прислать информацию, связанную с моими обращениями."
               />
             </label>
 
