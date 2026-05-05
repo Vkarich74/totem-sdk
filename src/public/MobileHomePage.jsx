@@ -1351,10 +1351,31 @@ function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
   const loading = Boolean(announcements?.loading);
   const error = String(announcements?.error || "").trim();
   const disabled = Boolean(announcements?.disabled);
+  const unreadCount = items.reduce((count, item) => count + (item?.is_read === true ? 0 : 1), 0);
 
   return (
     <Card>
-      <SectionTitle subtitle="Актуальные сообщения и акционные объявления.">Уведомления</SectionTitle>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <SectionTitle subtitle="Актуальные сообщения и акционные объявления.">Уведомления</SectionTitle>
+        {unreadCount > 0 ? (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: "#ecfdf3",
+              color: "#027a48",
+              fontSize: 12,
+              fontWeight: 700,
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Новых: {unreadCount}
+          </span>
+        ) : null}
+      </div>
 
       {disabled ? (
         <div style={emptyNoteStyle}>Уведомления скоро появятся.</div>
