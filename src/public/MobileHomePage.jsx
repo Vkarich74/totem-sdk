@@ -1113,21 +1113,7 @@ export default function MobileHomePage() {
 }
 
 function EmptyState({ text }) {
-  return (
-    <div
-      style={{
-        padding: 14,
-        borderRadius: 14,
-        background: "#f9fafb",
-        border: "1px dashed #d1d5db",
-        color: "#6b7280",
-        fontSize: 14,
-        lineHeight: 1.5,
-      }}
-    >
-      {text}
-    </div>
-  );
+  return <MobileEmptyState title={text} description="" style={{ textAlign: "left" }} />;
 }
 
 function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
@@ -1162,11 +1148,28 @@ function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
       </div>
 
       {disabled ? (
-        <div style={emptyNoteStyle}>Уведомления скоро появятся.</div>
+        <MobileEmptyState
+          title="Уведомления скоро появятся"
+          description="Сейчас этот блок готовится к запуску."
+          style={{ textAlign: "left" }}
+        />
       ) : loading ? (
-        <div style={emptyNoteStyle}>Загрузка уведомлений…</div>
+        <MobileEmptyState
+          title="Загрузка уведомлений"
+          description="Подтягиваем свежие сообщения и объявления."
+          style={{ textAlign: "left" }}
+        />
       ) : error ? (
-        <div style={emptyNoteStyle}>Уведомления временно недоступны.</div>
+        <MobileEmptyState
+          title="Не удалось загрузить уведомления"
+          description="Обновите страницу и попробуйте ещё раз."
+          action={
+            <MobileButton onClick={() => window.location.reload()} tone="secondary">
+              Обновить
+            </MobileButton>
+          }
+          style={{ textAlign: "left" }}
+        />
       ) : items.length ? (
         <div style={gridStyle}>
           {items.map((item) => (
@@ -1179,7 +1182,11 @@ function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
           ))}
         </div>
       ) : (
-        <div style={emptyNoteStyle}>Уведомлений пока нет.</div>
+        <MobileEmptyState
+          title="Уведомлений пока нет"
+          description="Когда появятся новые сообщения или акции, они сразу отобразятся здесь."
+          style={{ textAlign: "left" }}
+        />
       )}
     </Card>
   );
@@ -1227,13 +1234,29 @@ function ReferralBlock({ referral }) {
       <SectionTitle subtitle="Персональная ссылка для приглашения друзей.">Реферальная программа</SectionTitle>
 
       {loading ? (
-        <div style={emptyNoteStyle}>Загрузка реферальной программы…</div>
+        <MobileEmptyState
+          title="Загрузка реферальной программы"
+          description="Подготавливаем персональную ссылку."
+          style={{ textAlign: "left" }}
+        />
       ) : error ? (
-        <div style={emptyNoteStyle}>Реферальная программа скоро появится.</div>
+        <MobileEmptyState
+          title="Реферальная программа недоступна"
+          description="Скоро здесь появится персональная ссылка."
+          style={{ textAlign: "left" }}
+        />
       ) : !enabled ? (
-        <div style={emptyNoteStyle}>Реферальная программа скоро появится.</div>
+        <MobileEmptyState
+          title="Реферальная программа недоступна"
+          description="Скоро здесь появится персональная ссылка."
+          style={{ textAlign: "left" }}
+        />
       ) : !available ? (
-        <div style={emptyNoteStyle}>Сейчас нет активной реферальной ссылки.</div>
+        <MobileEmptyState
+          title="Ссылка пока недоступна"
+          description="Проверьте позже, когда программа станет активной."
+          style={{ textAlign: "left" }}
+        />
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
@@ -1494,8 +1517,11 @@ function PwaPromptBlock({
   }
 
   return (
-    <Card style={{ borderColor: "#dbeafe", background: "#f8fbff" }}>
-      <SectionTitle subtitle="Установка и обновление мобильной витрины.">Приложение TOTEM</SectionTitle>
+    <MobileCard
+      title="Приложение TOTEM"
+      subtitle="Установка и обновление мобильной витрины."
+      style={{ borderColor: "#dbeafe", background: "#f8fbff" }}
+    >
 
       <div style={{ display: "grid", gap: 12 }}>
         {installPromptVisible ? (
@@ -1577,7 +1603,7 @@ function PwaPromptBlock({
           </button>
         </div>
       </div>
-    </Card>
+    </MobileCard>
   );
 }
 
@@ -1758,13 +1784,19 @@ function SalonCard({ salon, catalogState, onToggleCatalog, countryCode, citySlug
       ) : null}
 
       {catalogOpen && catalogLoading ? (
-        <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>Загрузка каталога…</div>
+        <MobileEmptyState
+          title="Загрузка каталога"
+          description="Подтягиваем услуги и мастеров этого салона."
+          style={{ marginTop: 12, textAlign: "left" }}
+        />
       ) : null}
 
       {catalogOpen && catalogError ? (
-        <div style={{ marginTop: 12, fontSize: 13, color: "#991b1b" }}>
-          Каталог временно недоступен.
-        </div>
+        <MobileEmptyState
+          title="Каталог временно недоступен"
+          description="Попробуйте открыть каталог ещё раз чуть позже."
+          style={{ marginTop: 12, textAlign: "left" }}
+        />
       ) : null}
 
       {catalogOpen && catalogData ? (
@@ -1787,7 +1819,11 @@ function SalonCard({ salon, catalogState, onToggleCatalog, countryCode, citySlug
                 ))}
               </div>
             ) : (
-              <div style={catalogEmptyStyle}>Услуги пока не опубликованы.</div>
+              <MobileEmptyState
+                title="Услуги пока не опубликованы"
+                description="Когда салон добавит услуги, они появятся здесь."
+                style={{ marginTop: 8, textAlign: "left" }}
+              />
             )}
           </div>
 
@@ -1808,7 +1844,11 @@ function SalonCard({ salon, catalogState, onToggleCatalog, countryCode, citySlug
                 ))}
               </div>
             ) : (
-              <div style={catalogEmptyStyle}>Мастера пока не опубликованы.</div>
+              <MobileEmptyState
+                title="Мастера пока не опубликованы"
+                description="Когда появятся доступные мастера, они отобразятся здесь."
+                style={{ marginTop: 8, textAlign: "left" }}
+              />
             )}
           </div>
         </div>
@@ -2484,26 +2524,6 @@ const catalogItemStyle = {
   borderRadius: 14,
   background: "#f9fafb",
   border: "1px solid #e5e7eb",
-};
-
-const catalogEmptyStyle = {
-  padding: "12px 14px",
-  borderRadius: 14,
-  background: "#f9fafb",
-  border: "1px dashed #d1d5db",
-  color: "#6b7280",
-  fontSize: 14,
-  lineHeight: 1.5,
-};
-
-const emptyNoteStyle = {
-  padding: "12px 14px",
-  borderRadius: 14,
-  background: "#f9fafb",
-  border: "1px dashed #d1d5db",
-  color: "#6b7280",
-  fontSize: 14,
-  lineHeight: 1.5,
 };
 
 const announcementItemStyle = {
