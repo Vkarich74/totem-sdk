@@ -32,7 +32,6 @@ function MobileAdminCard({ title, subtitle, href, actionLabel = "Открыть"
           {title}
         </div>
         <div style={{ fontSize: 18, fontWeight: 800, color: "#111827", lineHeight: 1.2 }}>{subtitle}</div>
-        <div style={{ fontSize: 13, color: "#4b5563", lineHeight: 1.45, wordBreak: "break-word" }}>{href}</div>
       </div>
       <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: tone.accent }}>{actionLabel}</div>
     </a>
