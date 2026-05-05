@@ -257,6 +257,10 @@ function sanitizeRewardStatus(value) {
   return ["none", "pending", "approved", "rejected", "cancelled"].includes(raw) ? raw : "none";
 }
 
+function getMobileEventTarget(row) {
+  return textValue(row?.target_slug || row?.target_id);
+}
+
 export default function AdminMobilePage() {
   const token = getAuthToken();
   const [loading, setLoading] = useState(Boolean(token));
@@ -267,6 +271,7 @@ export default function AdminMobilePage() {
   const [dataRequestItems, setDataRequestItems] = useState([]);
   const [referralLinks, setReferralLinks] = useState([]);
   const [referralEvents, setReferralEvents] = useState([]);
+  const [mobileEvents, setMobileEvents] = useState([]);
   const [flags, setFlags] = useState([]);
   const [feedbackDrafts, setFeedbackDrafts] = useState({});
   const [dataRequestDrafts, setDataRequestDrafts] = useState({});
@@ -290,6 +295,7 @@ export default function AdminMobilePage() {
       fetchJson("/internal/admin/mobile/data-requests?limit=50&offset=0"),
       fetchJson("/internal/admin/mobile/referrals?limit=50&offset=0"),
       fetchJson("/internal/admin/mobile/referral-events?limit=50&offset=0"),
+      fetchJson("/internal/admin/mobile/events?limit=50&offset=0"),
       fetchJson("/internal/admin/mobile/flags"),
     ]);
 
@@ -344,7 +350,14 @@ export default function AdminMobilePage() {
       failures.push(String(referralEventsRes.reason?.message || referralEventsRes.reason || "ADMIN_MOBILE_REFERRAL_EVENTS_FAILED"));
     }
 
-    const flagsRes = responses[5];
+    const mobileEventsRes = responses[5];
+    if (mobileEventsRes.status === "fulfilled") {
+      setMobileEvents(Array.isArray(mobileEventsRes.value?.data?.items) ? mobileEventsRes.value.data.items : []);
+    } else {
+      failures.push(String(mobileEventsRes.reason?.message || mobileEventsRes.reason || "ADMIN_MOBILE_EVENTS_FAILED"));
+    }
+
+    const flagsRes = responses[6];
     if (flagsRes.status === "fulfilled") {
       const items = Array.isArray(flagsRes.value?.data?.items) ? flagsRes.value.data.items : [];
       setFlags(items);
@@ -783,6 +796,28 @@ export default function AdminMobilePage() {
     [loadAll, rewardDrafts, savingRewardEventId],
   );
 
+  const mobileEventColumns = useMemo(
+    () => [
+      { key: "id", title: "ID", dataIndex: "id", minWidth: 80 },
+      { key: "event_type", title: "Тип события", dataIndex: "event_type", minWidth: 150, render: (value) => statusLabel(value) },
+      { key: "source", title: "Источник", dataIndex: "source", minWidth: 130, render: (value) => textValue(value) },
+      { key: "country_code", title: "Страна", dataIndex: "country_code", minWidth: 110, render: (value) => textValue(value) },
+      { key: "city_slug", title: "Город", dataIndex: "city_slug", minWidth: 120, render: (value) => textValue(value) },
+      { key: "target_type", title: "Тип цели", dataIndex: "target_type", minWidth: 120, render: (value) => textValue(value) },
+      { key: "target", title: "Цель", dataIndex: "target_id", minWidth: 170, render: (_, row) => getMobileEventTarget(row) },
+      { key: "route", title: "Маршрут", dataIndex: "route", minWidth: 240, render: (value) => <span style={{ wordBreak: "break-word" }}>{textValue(value)}</span> },
+      {
+        key: "status",
+        title: "Статус",
+        dataIndex: "status",
+        minWidth: 110,
+        render: (value) => <Pill tone={String(value || "").toLowerCase() === "sent" ? "green" : "neutral"}>{textValue(value)}</Pill>,
+      },
+      { key: "created_at", title: "Создано", dataIndex: "created_at", minWidth: 160, render: (value) => formatDateTime(value) },
+    ],
+    [],
+  );
+
   const flagColumns = useMemo(
     () => [
       { key: "flag_key", title: "flag_key", dataIndex: "flag_key", minWidth: 220 },
@@ -991,6 +1026,11 @@ export default function AdminMobilePage() {
 
       <SectionCard title="Referral events">
         <DataTable columns={referralEventColumns} rows={referralEvents} />
+      </SectionCard>
+
+      <SectionCard title="Mobile events">
+        <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 12 }}>Read-only события мобильной витрины из public.mobile_events.</div>
+        <DataTable columns={mobileEventColumns} rows={mobileEvents} />
       </SectionCard>
 
       <SectionCard title="Feedback">
