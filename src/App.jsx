@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import ErrorBoundary from "./core/ErrorBoundary";
 
 import PublicSalonPage from "./public/PublicSalonPage";
 import PublicMasterPage from "./public/PublicMasterPage";
 import MobileHomePage from "./public/MobileHomePage.jsx";
+import MobileLiteAdminPage from "./mobile/MobileLiteAdminPage.jsx";
 
 import BookingPage from "./room/BookingPage";
 import SalonBookingsPage from "./room/SalonBookingsPage";
@@ -254,6 +255,11 @@ function getSlugFromPath() {
     getStoredMasterSlug() ||
     null
   );
+}
+
+function MobileLiteAdminRoute({ roleType }) {
+  const { slug } = useParams();
+  return <MobileLiteAdminPage roleType={roleType} slug={slug} />;
 }
 
 function getPublicRouteFromPathname() {
@@ -616,6 +622,8 @@ function CabinetRouter() {
       <Route path="booking" element={<BookingPage slug={slug} />} />
       <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
       <Route path="client/:clientId/:token" element={<ClientCabinetPage />} />
+      <Route path="mobile/admin/master/:slug" element={<MobileLiteAdminRoute roleType="master" />} />
+      <Route path="mobile/admin/salon/:slug" element={<MobileLiteAdminRoute roleType="salon" />} />
 
       <Route path="salon" element={<SalonLayout />}>
         <Route index element={<DashboardPage />} />
