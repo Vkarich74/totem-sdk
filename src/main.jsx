@@ -88,6 +88,13 @@ function resolveContext() {
     };
   }
 
+  if (parts.length >= 1 && parts[0] === "m") {
+    return {
+      mode: parts[1] === "booking" ? "booking" : "mobile",
+      slug: null
+    };
+  }
+
   if (parts.length >= 1 && parts[0] === "booking") {
     return {
       mode: "booking",
