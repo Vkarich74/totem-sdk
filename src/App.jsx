@@ -271,6 +271,20 @@ function getPublicRouteFromPathname() {
   const pathParts = getPathParts();
   const hashParts = getHashParts();
 
+  if (pathParts[0] === "m") {
+    if (pathParts[1] === "booking") {
+      return { type: "booking" };
+    }
+
+    if (pathParts[1] === "app") {
+      return { type: "mobile" };
+    }
+
+    if (pathParts[1] === "city" && pathParts[2] && pathParts[3]) {
+      return { type: "mobile" };
+    }
+  }
+
   if (pathParts[0] === "master" && pathParts[1] && !MASTER_STATIC_SEGMENTS.has(pathParts[1])) {
     return { type: "master", slug: pathParts[1] };
   }
