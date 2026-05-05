@@ -1,4 +1,4 @@
-const CACHE_NAME = "totem-mobile-pwa-v1";
+const CACHE_NAME = "totem-mobile-pwa-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -34,6 +34,10 @@ function isStaticAssetRequest(request) {
   return /\/(?:assets|icons)\//.test(new URL(request.url).pathname) || /\.(?:js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|woff2?|ttf|map|json|webmanifest)$/.test(new URL(request.url).pathname);
 }
 
+function isAppEntryAssetRequest(request) {
+  return new URL(request.url).pathname === "/assets/index.js";
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
@@ -54,6 +58,30 @@ self.addEventListener("fetch", (event) => {
           return await fetch(request);
         } catch (error) {
           return fetch("/");
+        }
+      })()
+    );
+    return;
+  }
+
+  if (isAppEntryAssetRequest(request)) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match(request);
+
+        try {
+          const response = await fetch(request);
+          if (response && response.ok) {
+            await cache.put(request, response.clone());
+          }
+          return response;
+        } catch (error) {
+          if (cached) {
+            return cached;
+          }
+
+          return fetch(request);
         }
       })()
     );
