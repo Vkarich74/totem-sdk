@@ -13,6 +13,17 @@ import {
 } from "../api/publicApi";
 
 function parseMobileRoute() {
+  const pathname = String(window.location.pathname || "").replace(/\/+$/, "");
+  const pathParts = pathname.split("/").filter(Boolean);
+
+  if (pathParts[0] === "m" && pathParts[1] === "city" && pathParts[2] && pathParts[3]) {
+    return {
+      mode: "city",
+      countryCode: pathParts[2],
+      citySlug: pathParts[3],
+    };
+  }
+
   const hash = String(window.location.hash || "").replace(/^#\/?/, "");
   const parts = hash.split("?")[0].split("/").filter(Boolean);
 
