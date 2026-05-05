@@ -117,6 +117,26 @@ export async function getMobileReferral(options = {}) {
   return json;
 }
 
+export async function getPublicPushConfig() {
+  const res = await fetch(`${API}/public/push/config`);
+
+  try {
+    const json = await res.json();
+
+    if (!res.ok) {
+      return json;
+    }
+
+    return json;
+  } catch (error) {
+    if (!res.ok) {
+      throw new Error("PUBLIC_PUSH_CONFIG_REQUEST_FAILED");
+    }
+
+    throw error;
+  }
+}
+
 export async function getMobileNotifications(options = {}) {
   const params = new URLSearchParams();
   const country = String(options.country || "").trim();
@@ -300,6 +320,59 @@ export async function postMobileNotificationRead(notificationUid, payload = {}) 
   } catch (error) {
     if (!res.ok) {
       throw new Error("PUBLIC_MOBILE_NOTIFICATION_READ_REQUEST_FAILED");
+    }
+
+    throw error;
+  }
+}
+
+export async function postMobilePushSubscription(payload = {}) {
+  const res = await fetch(`${API}/public/mobile/push-subscriptions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  try {
+    const json = await res.json();
+
+    if (!res.ok) {
+      return json;
+    }
+
+    return json;
+  } catch (error) {
+    if (!res.ok) {
+      throw new Error("PUBLIC_MOBILE_PUSH_SUBSCRIPTION_SAVE_REQUEST_FAILED");
+    }
+
+    throw error;
+  }
+}
+
+export async function deleteMobilePushSubscription(deviceId, payload = {}) {
+  const safeDeviceId = encodeURIComponent(String(deviceId || "").trim());
+  const res = await fetch(`${API}/public/mobile/push-subscriptions/${safeDeviceId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  try {
+    const json = await res.json();
+
+    if (!res.ok) {
+      return json;
+    }
+
+    return json;
+  } catch (error) {
+    if (!res.ok) {
+      throw new Error("PUBLIC_MOBILE_PUSH_SUBSCRIPTION_REVOKE_REQUEST_FAILED");
     }
 
     throw error;
