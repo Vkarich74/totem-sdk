@@ -1,3 +1,5 @@
+import { clearAuthAccessToken } from "../api/internal.js";
+
 export default function AdminNavigation(){
   function navigate(hash){
     window.location.hash = hash;
@@ -5,7 +7,7 @@ export default function AdminNavigation(){
   }
 
   function handleLogout(){
-    localStorage.removeItem("TOTEM_AUTH_TOKEN");
+    clearAuthAccessToken();
     window.location.hash = "#/admin/login";
     window.location.reload();
   }

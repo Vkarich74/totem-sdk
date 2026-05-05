@@ -51,15 +51,23 @@ export function setAuthAccessToken(token){
       window.TOTEM_AUTH_TOKEN = normalized;
       window.TOTEM_ACCESS_TOKEN = normalized;
     }else{
-      window.localStorage.removeItem("TOTEM_AUTH_TOKEN");
-      window.localStorage.removeItem("TOTEM_ACCESS_TOKEN");
+      for(const key of AUTH_TOKEN_STORAGE_KEYS){
+        window.localStorage.removeItem(key);
+      }
       window.TOTEM_AUTH_TOKEN = "";
       window.TOTEM_ACCESS_TOKEN = "";
+      window.TOTEM_INTERNAL_TOKEN = "";
     }
   }catch(e){
     try{
-      window.TOTEM_AUTH_TOKEN = normalized;
-      window.TOTEM_ACCESS_TOKEN = normalized;
+      if(normalized){
+        window.TOTEM_AUTH_TOKEN = normalized;
+        window.TOTEM_ACCESS_TOKEN = normalized;
+      }else{
+        window.TOTEM_AUTH_TOKEN = "";
+        window.TOTEM_ACCESS_TOKEN = "";
+        window.TOTEM_INTERNAL_TOKEN = "";
+      }
     }catch(innerError){
       /* no-op */
     }
