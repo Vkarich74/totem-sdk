@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import {
+  MobileShell,
+  MobileTopBar,
+  MobileHero,
+  MobileSection,
+  MobileCard,
+  MobileButton,
+  MobileBadge,
+  MobilePill,
+  MobileEmptyState,
+  MobileStepper,
+  MobileStatCard
+} from "../mobile/MobileUi.jsx";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const BOOKING_PAYMENT_STATE_PREFIX = "TOTEM_BOOKING_PAYMENT_STATE";
@@ -118,6 +131,12 @@ function getQrTransactionIdFromData(paymentData) {
     paymentData?.status?.qr_transaction_id ||
     ""
   );
+}
+
+function getBookingStepIndex(step, hasSuccessState) {
+  if (hasSuccessState) return 4;
+  if (step === "preview") return 4;
+  return 0;
 }
 
 export default function BookingPage() {
@@ -292,6 +311,27 @@ export default function BookingPage() {
     const min = roundUpToStepHHMM(currentTimeHHMM(), 15);
     return options.filter((t) => t >= min);
   }, [date]);
+
+  const bookingProgressIndex = useMemo(() => {
+    if (successData) return 4;
+    if (step === "preview") return 4;
+    if (time) return 3;
+    if (date) return 3;
+    if (selectedService) return 2;
+    if (selectedMaster) return 1;
+    return 0;
+  }, [date, selectedMaster, selectedService, step, successData, time]);
+
+  const bookingSteps = useMemo(
+    () => [
+      { key: "data", label: "Данные", description: "Имя и телефон" },
+      { key: "master", label: "Мастер", description: "Кто будет принимать" },
+      { key: "service", label: "Услуга", description: "Что вы хотите" },
+      { key: "time", label: "Время", description: "Дата и слот" },
+      { key: "confirm", label: "Подтверждение", description: "Проверка и оплата" }
+    ],
+    []
+  );
 
   useEffect(() => {
     if (!time) return;
@@ -482,9 +522,26 @@ export default function BookingPage() {
 
   if (initLoading) {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>Загрузка...</div>
-      </div>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar
+            title="TOTEM"
+            subtitle={`Запись · ${slug || "салон не выбран"}`}
+            right={<MobileBadge tone="neutral">загрузка</MobileBadge>}
+          />
+          <MobileHero
+            eyebrow="Запись"
+            title="Запись в салон"
+            subtitle="Выберите мастера, услугу, дату и время"
+          />
+          <MobileCard title="Загрузка записи" subtitle="Подтягиваем мастеров и услуги салона.">
+            <MobileEmptyState
+              title="Скоро откроется форма записи"
+              description="Пожалуйста, подождите несколько секунд, пока TOTEM загружает данные салона."
+            />
+          </MobileCard>
+        </div>
+      </MobileShell>
     );
   }
 
@@ -496,210 +553,325 @@ export default function BookingPage() {
     const isPaymentConfirmed = String(paymentStatus || "").toLowerCase() === "confirmed";
 
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h2>Запись подтверждена</h2>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar
+            title="TOTEM"
+            subtitle={`Запись · ${slug || "салон не выбран"}`}
+            right={<MobileBadge tone="success">запись создана</MobileBadge>}
+          />
 
-          <div style={styles.successBlock}>
-            <div><strong>Клиент:</strong> {successData.clientName}</div>
-            <div><strong>Салон:</strong> {slug}</div>
-            <div><strong>Мастер:</strong> {successData.masterName}</div>
-            <div><strong>Дата:</strong> {formatDateRu(successData.date)}</div>
-            <div><strong>Время:</strong> {successData.time}</div>
-          </div>
+          <MobileHero
+            eyebrow="Подтверждение"
+            title="Запись создана"
+            subtitle="Сохраните номер записи и проверьте оплату, если она нужна."
+          />
 
-          <div style={styles.bookingNumber}>
-            № {formatBookingNumber(successData.bookingId)}
-          </div>
+          <MobileSection title="Маршрут" subtitle="Вы прошли шаги записи и находитесь на финальном экране.">
+            <MobileStepper steps={bookingSteps} activeIndex={4} />
+          </MobileSection>
 
-          {successData.clientCabinetUrl ? (
-            <a href={successData.clientCabinetUrl} style={styles.clientCabinetLink}>
-              Перейти в кабинет клиента
-            </a>
-          ) : null}
-
-          {successData.clientCabinetUrl ? (
-            <div style={styles.clientCabinetHint}>
-              <div style={styles.clientCabinetHintTitle}>Мой кабинет клиента</div>
-              <div style={styles.clientCabinetHintText}>
-                Сохраните персональную ссылку. По ней можно открыть историю записей, повторить запись и обновить данные клиента.
-              </div>
-            </div>
-          ) : null}
-
-          <div style={styles.paymentBlock}>
-            <h3 style={styles.paymentTitle}>Оплата</h3>
-
-            {!paymentData ? (
-              <button onClick={startPayment} disabled={paymentLoading} style={styles.button}>
-                {paymentLoading ? "Создаём оплату..." : "Оплатить через XPAY"}
-              </button>
-            ) : (
-              <>
-                <div style={isPaymentConfirmed ? styles.paymentStatusConfirmed : styles.paymentStatus}>
-                  {getPaymentStatusLabel(paymentStatus)}
+          <MobileCard
+            title="Проверьте запись"
+            subtitle="Все данные уже сохранены. Ниже - краткое подтверждение."
+            footer={
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+                  <MobileStatCard label="Клиент" value={successData.clientName} tone="primary" />
+                  <MobileStatCard label="Салон" value={slug} tone="neutral" />
+                  <MobileStatCard label="Мастер" value={successData.masterName || "—"} tone="success" />
+                  <MobileStatCard label="Дата" value={formatDateRu(successData.date)} tone="warning" />
                 </div>
+                <MobileButton tone="secondary" onClick={resetForm}>
+                  Создать ещё запись
+                </MobileButton>
+              </div>
+            }
+          >
+            <div style={{ display: "grid", gap: 10 }}>
+              <MobilePill tone="primary">№ {formatBookingNumber(successData.bookingId)}</MobilePill>
+              {successData.clientCabinetUrl ? (
+                <a href={successData.clientCabinetUrl} style={styles.clientCabinetLink}>
+                  Перейти в кабинет клиента
+                </a>
+              ) : null}
 
-                {paymentId ? (
-                  <div style={styles.paymentMeta}>
-                    Платёж № {paymentId}
+              {successData.clientCabinetUrl ? (
+                <div style={styles.clientCabinetHint}>
+                  <div style={styles.clientCabinetHintTitle}>Мой кабинет клиента</div>
+                  <div style={styles.clientCabinetHintText}>
+                    Сохраните персональную ссылку. По ней можно открыть историю записей, повторить запись и обновить данные клиента.
                   </div>
-                ) : null}
+                </div>
+              ) : null}
+            </div>
+          </MobileCard>
 
-                {qrImage && !isPaymentConfirmed ? (
-                  <img src={qrImage} alt="XPAY QR" style={styles.qrImage} />
-                ) : null}
+          <MobileCard title="Оплата" subtitle="Платёж и QR сохраняются в том же потоке, что и раньше.">
+            <div style={{ display: "grid", gap: 12 }}>
+              {!paymentData ? (
+                <MobileButton onClick={startPayment} disabled={paymentLoading}>
+                  {paymentLoading ? "Создаём оплату..." : "Оплатить через XPAY"}
+                </MobileButton>
+              ) : (
+                <>
+                  <MobileBadge tone={isPaymentConfirmed ? "success" : "warning"}>
+                    {getPaymentStatusLabel(paymentStatus)}
+                  </MobileBadge>
 
-                {qrCode && !isPaymentConfirmed ? (
-                  <a href={qrCode} target="_blank" rel="noreferrer" style={styles.payLink}>
-                    Открыть страницу оплаты
-                  </a>
-                ) : null}
+                  {paymentId ? <MobilePill tone="neutral">Платёж № {paymentId}</MobilePill> : null}
 
-                <button onClick={() => checkPaymentStatus()} disabled={paymentStatusLoading} style={styles.secondaryButton}>
-                  {paymentStatusLoading ? "Проверяем..." : isPaymentConfirmed ? "Обновить статус оплаты" : "Проверить оплату"}
-                </button>
-              </>
-            )}
+                  {qrImage && !isPaymentConfirmed ? <img src={qrImage} alt="XPAY QR" style={styles.qrImage} /> : null}
 
-            {paymentError && <div style={styles.error}>{paymentError}</div>}
-          </div>
+                  {qrCode && !isPaymentConfirmed ? (
+                    <a href={qrCode} target="_blank" rel="noreferrer" style={styles.payLink}>
+                      Открыть страницу оплаты
+                    </a>
+                  ) : null}
 
-          <button onClick={resetForm} style={styles.secondaryButton}>
-            Создать ещё запись
-          </button>
+                  <MobileButton tone="secondary" onClick={() => checkPaymentStatus()} disabled={paymentStatusLoading}>
+                    {paymentStatusLoading ? "Проверяем..." : isPaymentConfirmed ? "Обновить статус оплаты" : "Проверить оплату"}
+                  </MobileButton>
+                </>
+              )}
+
+              {paymentError ? <div style={styles.error}>{paymentError}</div> : null}
+            </div>
+          </MobileCard>
         </div>
-      </div>
+      </MobileShell>
     );
   }
 
   if (step === "preview") {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h2>Подтвердите запись</h2>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar
+            title="TOTEM"
+            subtitle={`Запись · ${slug || "салон не выбран"}`}
+            right={<MobileBadge tone="warning">проверка</MobileBadge>}
+          />
 
-          <div style={styles.successBlock}>
-            <div><strong>Клиент:</strong> {clientName}</div>
-            <div><strong>Телефон:</strong> {clientPhone}</div>
-            <div><strong>Салон:</strong> {slug}</div>
-            <div><strong>Мастер:</strong> {selectedMasterName}</div>
-            <div><strong>Дата:</strong> {formatDateRu(date)}</div>
-            <div><strong>Время:</strong> {time}</div>
-          </div>
+          <MobileHero
+            eyebrow="Проверка"
+            title="Проверьте запись"
+            subtitle="Сверьте данные перед созданием записи."
+          />
 
-          <button onClick={confirmBooking} style={styles.button}>
-            Подтвердить
-          </button>
+          <MobileSection title="Этап" subtitle="Вы на шаге подтверждения записи.">
+            <MobileStepper steps={bookingSteps} activeIndex={4} />
+          </MobileSection>
 
-          <button onClick={() => setStep("form")} style={styles.secondaryButton}>
-            Назад
-          </button>
+          <MobileCard
+            title="Проверьте запись"
+            subtitle="Подтвердите данные перед отправкой."
+            footer={
+              <div style={{ display: "grid", gap: 10 }}>
+                <MobileButton onClick={confirmBooking} disabled={loading}>
+                  Подтвердить
+                </MobileButton>
+                <MobileButton tone="secondary" onClick={() => setStep("form")}>
+                  Назад
+                </MobileButton>
+              </div>
+            }
+          >
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+                <MobileStatCard label="Клиент" value={clientName} tone="primary" />
+                <MobileStatCard label="Телефон" value={clientPhone} tone="neutral" />
+                <MobileStatCard label="Салон" value={slug} tone="success" />
+                <MobileStatCard label="Мастер" value={selectedMasterName || "—"} tone="warning" />
+              </div>
+              <div style={styles.successBlock}>
+                <div><strong>Дата:</strong> {formatDateRu(date)}</div>
+                <div><strong>Время:</strong> {time}</div>
+              </div>
+            </div>
+          </MobileCard>
 
-          {error && <div style={styles.error}>{error}</div>}
+          {error ? <MobileEmptyState title="Есть ошибка" description={error} /> : null}
         </div>
-      </div>
+      </MobileShell>
     );
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h2>Запись на приём</h2>
+    <MobileShell>
+      <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+        <MobileTopBar
+          title="TOTEM"
+          subtitle={`Запись · ${slug || "салон не выбран"}`}
+          right={<MobileBadge tone="primary">запись</MobileBadge>}
+        />
 
-        <form onSubmit={goToPreview} style={styles.form}>
-          <input
-            type="text"
-            name="client_name"
-            aria-label="Имя клиента"
-            placeholder="Ваше имя"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            style={styles.input}
-          />
+        <MobileHero
+          eyebrow="Запись"
+          title="Запись в салон"
+          subtitle="Выберите мастера, услугу, дату и время"
+          actions={
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              <MobilePill tone="neutral">{slug || "slug не найден"}</MobilePill>
+              <MobilePill tone="primary">24h запись</MobilePill>
+            </div>
+          }
+        />
 
-          <input
-            type="tel"
-            name="client_phone"
-            aria-label="Телефон клиента"
-            placeholder="Телефон"
-            value={clientPhone}
-            onChange={(e) => setClientPhone(e.target.value)}
-            style={styles.input}
-          />
+        <MobileSection title="Путь записи" subtitle="Двигаемся по шагам без лишних кликов.">
+          <MobileStepper steps={bookingSteps} activeIndex={bookingProgressIndex} />
+        </MobileSection>
 
-          <select
-            name="master_id"
-            aria-label="Выбор мастера"
-            value={selectedMaster}
-            onChange={(e) => {
-              const id = e.target.value;
-              setSelectedMaster(id);
-              const master = masters.find((m) => String(m.id) === id);
-              setSelectedMasterName(master?.name || "");
-              setSelectedService("");
-            }}
-            style={styles.input}
-          >
-            <option value="">Выберите мастера</option>
-            {masters.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+        <form onSubmit={goToPreview} style={{ display: "grid", gap: 16 }}>
+          <MobileSection title="Ваши данные" subtitle="Нужны для подтверждения записи.">
+            <MobileCard>
+              <div style={{ display: "grid", gap: 12 }}>
+                <input
+                  type="text"
+                  name="client_name"
+                  aria-label="Имя клиента"
+                  placeholder="Ваше имя"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  style={styles.input}
+                />
 
-          <select
-            name="service_id"
-            aria-label="Выбор услуги"
-            value={selectedService}
-            onChange={(e) => setSelectedService(e.target.value)}
-            style={styles.input}
-          >
-            <option value="">Выберите услугу</option>
-            {filteredServices.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} — {s.price}сом
-              </option>
-            ))}
-          </select>
+                <input
+                  type="tel"
+                  name="client_phone"
+                  aria-label="Телефон клиента"
+                  placeholder="Телефон"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+            </MobileCard>
+          </MobileSection>
 
-          <input
-            type="date"
-            name="booking_date"
-            aria-label="Дата записи"
-            min={todayISO()}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            style={styles.input}
-          />
+          <MobileSection title="Мастер и услуга" subtitle="Сначала мастер, потом подходящая услуга.">
+            <MobileCard
+              footer={
+                <MobilePill tone="neutral">
+                  {selectedMaster ? "Мастер выбран" : "Сначала выберите мастера"}
+                </MobilePill>
+              }
+            >
+              <div style={{ display: "grid", gap: 12 }}>
+                <select
+                  name="master_id"
+                  aria-label="Выбор мастера"
+                  value={selectedMaster}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedMaster(id);
+                    const master = masters.find((m) => String(m.id) === id);
+                    setSelectedMasterName(master?.name || "");
+                    setSelectedService("");
+                  }}
+                  style={styles.input}
+                >
+                  <option value="">Выберите мастера</option>
+                  {masters.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
 
-          <select
-            name="booking_time"
-            aria-label="Выбор времени"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            style={styles.input}
-            disabled={!date}
-          >
-            <option value="">
-              {date ? "Выберите время" : "Сначала выберите дату"}
-            </option>
-            {timeOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+                <select
+                  name="service_id"
+                  aria-label="Выбор услуги"
+                  value={selectedService}
+                  onChange={(e) => setSelectedService(e.target.value)}
+                  style={styles.input}
+                >
+                  <option value="">Выберите услугу</option>
+                  {filteredServices.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — {s.price}сом
+                    </option>
+                  ))}
+                </select>
 
-          <button type="submit" style={styles.button}>
-            Продолжить
-          </button>
+                {masters.length ? null : (
+                  <MobileEmptyState
+                    title="Мастера пока не найдены"
+                    description="Как только салон опубликует специалистов, они появятся здесь."
+                  />
+                )}
+              </div>
+            </MobileCard>
+          </MobileSection>
 
-          {error && <div style={styles.error}>{error}</div>}
+          <MobileSection title="Дата и время" subtitle="Выберите удобный день и доступный слот.">
+            <MobileCard
+              footer={<MobilePill tone="warning">{date ? `Дата: ${formatDateRu(date)}` : "Сначала выберите дату"}</MobilePill>}
+            >
+              <div style={{ display: "grid", gap: 12 }}>
+                <input
+                  type="date"
+                  name="booking_date"
+                  aria-label="Дата записи"
+                  min={todayISO()}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  style={styles.input}
+                />
+
+                <select
+                  name="booking_time"
+                  aria-label="Выбор времени"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  style={styles.input}
+                  disabled={!date}
+                >
+                  <option value="">
+                    {date ? "Выберите время" : "Сначала выберите дату"}
+                  </option>
+                  {timeOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </MobileCard>
+          </MobileSection>
+
+          <MobileSection title="Проверка" subtitle="Перед подтверждением вы увидите краткий preview.">
+            <MobileCard
+              title="Проверка записи"
+              subtitle="Если всё верно, продолжайте к подтверждению."
+              footer={
+                <MobileButton type="submit" disabled={loading}>
+                  Продолжить
+                </MobileButton>
+              }
+            >
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+                  <MobileStatCard label="Мастер" value={selectedMasterName || "—"} tone="primary" />
+                  <MobileStatCard label="Услуга" value={selectedService ? "Выбрана" : "Не выбрана"} tone="success" />
+                  <MobileStatCard label="Дата" value={date ? formatDateRu(date) : "—"} tone="warning" />
+                  <MobileStatCard label="Время" value={time || "—"} tone="neutral" />
+                </div>
+
+                {filteredServices.length ? null : (
+                  <MobileEmptyState
+                    title="Услуги пока не найдены"
+                    description="После выбора мастера здесь появятся доступные услуги."
+                  />
+                )}
+              </div>
+            </MobileCard>
+          </MobileSection>
+
+          {error ? <MobileEmptyState title="Ошибка" description={error} /> : null}
         </form>
       </div>
-    </div>
+    </MobileShell>
   );
 }
 
