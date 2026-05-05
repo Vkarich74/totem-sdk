@@ -92,6 +92,12 @@ export default function MobileAdminTemplate({
               );
             })}
           </section>
+        ) : safeSubtitle ? (
+          <section style={errorStyle}>
+            <div style={errorTitleStyle}>Раздел временно недоступен</div>
+            <div style={errorTextStyle}>{safeSubtitle}</div>
+            <div style={errorHintStyle}>Проверьте ссылку или вернитесь назад.</div>
+          </section>
         ) : (
           <section style={emptyStyle}>Нет доступных разделов.</section>
         )}
@@ -190,6 +196,33 @@ const emptyStyle = {
   color: "#64748b",
   background: "#fff",
   fontSize: 14,
+};
+
+const errorStyle = {
+  border: "1px solid #fecaca",
+  borderRadius: 18,
+  padding: 20,
+  color: "#991b1b",
+  background: "#fef2f2",
+  display: "grid",
+  gap: 8,
+};
+
+const errorTitleStyle = {
+  fontSize: 18,
+  fontWeight: 800,
+  lineHeight: 1.2,
+};
+
+const errorTextStyle = {
+  fontSize: 15,
+  lineHeight: 1.55,
+};
+
+const errorHintStyle = {
+  fontSize: 13,
+  lineHeight: 1.45,
+  color: "#b91c1c",
 };
 
 const cardStyle = {
