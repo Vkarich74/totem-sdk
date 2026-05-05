@@ -1,40 +1,102 @@
-import MobileBottomNav from "./MobileBottomNav.jsx";
+import { useMemo } from "react";
+import {
+  MobileShell,
+  MobileTopBar,
+  MobileHero,
+  MobileSection,
+  MobileCard,
+  MobileButton,
+  MobileBadge,
+  MobilePill,
+  MobileBottomNav,
+  MobileStatCard,
+  MobileEmptyState,
+} from "./MobileUi.jsx";
 
-function getCardTone(key) {
-  if (key === "booking") return { background: "#eff6ff", border: "#bfdbfe", accent: "#1d4ed8" };
-  if (key === "calendar") return { background: "#ecfeff", border: "#a5f3fc", accent: "#0f766e" };
-  if (key === "finance") return { background: "#fefce8", border: "#fde68a", accent: "#a16207" };
-  return { background: "#f5f3ff", border: "#ddd6fe", accent: "#7c3aed" };
+function getToneMeta(key) {
+  if (key === "booking") {
+    return {
+      cardStyle: {
+        background: "linear-gradient(180deg, #eff6ff 0%, #ffffff 100%)",
+        borderColor: "#bfdbfe",
+      },
+      badgeTone: "primary",
+      buttonTone: "primary",
+      accentLabel: "Записи",
+    };
+  }
+
+  if (key === "calendar") {
+    return {
+      cardStyle: {
+        background: "linear-gradient(180deg, #ecfeff 0%, #ffffff 100%)",
+        borderColor: "#a5f3fc",
+      },
+      badgeTone: "success",
+      buttonTone: "secondary",
+      accentLabel: "Календарь",
+    };
+  }
+
+  if (key === "finance") {
+    return {
+      cardStyle: {
+        background: "linear-gradient(180deg, #fefce8 0%, #ffffff 100%)",
+        borderColor: "#fde68a",
+      },
+      badgeTone: "warning",
+      buttonTone: "soft",
+      accentLabel: "Финансы",
+    };
+  }
+
+  return {
+    cardStyle: {
+      background: "linear-gradient(180deg, #f5f3ff 0%, #ffffff 100%)",
+      borderColor: "#ddd6fe",
+    },
+    badgeTone: "danger",
+    buttonTone: "primary",
+    accentLabel: "Статистика",
+  };
 }
 
-function MobileAdminCard({ title, subtitle, href, actionLabel = "Открыть", toneKey = "stats" }) {
-  const tone = getCardTone(toneKey);
+function getNavLabel(item) {
+  const key = String(item?.key || "").trim();
+  const fallback = String(item?.label || "").trim();
+
+  if (key === "overview" || key === "home") return "Обзор";
+  if (key === "booking" || key === "bookings") return "Записи";
+  if (key === "calendar") return "Календарь";
+  if (key === "finance") return "Финансы";
+  if (key === "stats") return "Статистика";
+
+  return fallback || key || "Пункт";
+}
+
+function MobileAdminActionCard({ title, subtitle, href, actionLabel = "Открыть", toneKey = "stats" }) {
+  const tone = getToneMeta(toneKey);
 
   return (
-    <a
-      href={href}
+    <MobileCard
+      title={title}
+      subtitle={subtitle}
       style={{
-        ...cardStyle,
-        background: tone.background,
-        borderColor: tone.border,
+        minHeight: 168,
+        ...tone.cardStyle,
       }}
-    >
-      <div style={{ display: "grid", gap: 8 }}>
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            color: tone.accent,
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
-          }}
-        >
-          {title}
+      footer={
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <MobileBadge tone={tone.badgeTone}>{tone.accentLabel}</MobileBadge>
+            <MobilePill tone="neutral">{String(toneKey || "stats")}</MobilePill>
+          </div>
+          <MobileButton href={href} tone={tone.buttonTone}>
+            {actionLabel}
+          </MobileButton>
         </div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: "#111827", lineHeight: 1.2 }}>{subtitle}</div>
-      </div>
-      <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: tone.accent }}>{actionLabel}</div>
-    </a>
+      }
+    />
   );
 }
 
@@ -53,187 +115,137 @@ export default function MobileAdminTemplate({
   const safeIdentityLabel = String(identityLabel || "").trim();
   const hasCards = Array.isArray(cards) && cards.length > 0;
 
+  const todayStats = useMemo(() => {
+    const stats = {
+      booking: 0,
+      calendar: 0,
+      finance: 0,
+      stats: 0,
+    };
+
+    for (const card of Array.isArray(cards) ? cards : []) {
+      const key = String(card?.toneKey || card?.key || "").trim();
+      if (key === "booking") stats.booking += 1;
+      else if (key === "calendar") stats.calendar += 1;
+      else if (key === "finance") stats.finance += 1;
+      else if (key === "stats") stats.stats += 1;
+    }
+
+    return stats;
+  }, [cards]);
+
+  const navItems = useMemo(
+    () =>
+      Array.isArray(bottomNavItems)
+        ? bottomNavItems.map((item) => ({
+            ...item,
+            label: getNavLabel(item),
+          }))
+        : [],
+    [bottomNavItems]
+  );
+
   return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        <header style={headerStyle}>
-          <div style={badgeRowStyle}>
-            <span style={badgeStyle}>{safeTitle}</span>
-            {safeRoleLabel ? <span style={roleBadgeStyle}>{safeRoleLabel}</span> : null}
+    <MobileShell>
+      <div style={{ maxWidth: 720, margin: "0 auto", display: "grid", gap: 16 }}>
+        <MobileTopBar
+          title="TOTEM"
+          subtitle="Кабинет"
+          right={<MobileBadge tone="primary">{safeRoleLabel || "кабинет"}</MobileBadge>}
+        />
+
+        <MobileHero
+          eyebrow="Мобильный кабинет"
+          title="Мобильный кабинет"
+          subtitle={safeSubtitle || "Быстрый доступ к разделам кабинета мастера и салона."}
+          actions={
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {safeIdentityLabel ? <MobilePill tone="neutral">{safeIdentityLabel}</MobilePill> : null}
+              {safeRoleLabel ? <MobilePill tone="primary">{safeRoleLabel}</MobilePill> : null}
+            </div>
+          }
+        />
+
+        <MobileSection title="Сегодня" subtitle="Короткий обзор ключевых разделов кабинета.">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <MobileStatCard
+              label="Записи"
+              value={todayStats.booking || 0}
+              note="Быстрый доступ к записи"
+              tone="primary"
+            />
+            <MobileStatCard
+              label="Календарь"
+              value={todayStats.calendar || 0}
+              note="Планирование и слоты"
+              tone="success"
+            />
+            <MobileStatCard
+              label="Финансы"
+              value={todayStats.finance || 0}
+              note="Платежи и состояние"
+              tone="warning"
+            />
+            <MobileStatCard
+              label="Статистика"
+              value={todayStats.stats || 0}
+              note="Показатели кабинета"
+              tone="danger"
+            />
           </div>
-          <h1 style={titleStyle}>{safeTitle}</h1>
-          {safeSubtitle ? <p style={subtitleStyle}>{safeSubtitle}</p> : null}
-          {safeIdentityLabel ? <div style={slugPillStyle}>{safeIdentityLabel}</div> : null}
-        </header>
+        </MobileSection>
 
         {hasCards ? (
-          <section style={gridStyle}>
-            {cards.map((card) => {
-              const key = String(card?.key || "").trim();
-              const href = String(card?.href || "").trim();
-              const cardTitle = String(card?.title || "").trim();
-              const cardSubtitle = String(card?.subtitle || "").trim();
-              const actionLabel = String(card?.actionLabel || "Открыть").trim();
-              const toneKey = String(card?.toneKey || key || "stats").trim();
+          <MobileSection title="Разделы кабинета" subtitle="Быстрые крупные карточки действий.">
+            <div style={{ display: "grid", gap: 12 }}>
+              {cards.map((card) => {
+                const key = String(card?.key || "").trim();
+                const href = String(card?.href || "").trim();
+                const cardTitle = String(card?.title || "").trim();
+                const cardSubtitle = String(card?.subtitle || "").trim();
+                const actionLabel = String(card?.actionLabel || "Открыть").trim();
+                const toneKey = String(card?.toneKey || key || "stats").trim();
 
-              if (!key || !href || !cardTitle || !cardSubtitle) {
-                return null;
-              }
+                if (!key || !href || !cardTitle || !cardSubtitle) {
+                  return null;
+                }
 
-              return (
-                <MobileAdminCard
-                  key={key}
-                  title={cardTitle}
-                  subtitle={cardSubtitle}
-                  href={href}
-                  actionLabel={actionLabel}
-                  toneKey={toneKey}
-                />
-              );
-            })}
-          </section>
+                return (
+                  <MobileAdminActionCard
+                    key={key}
+                    title={cardTitle}
+                    subtitle={cardSubtitle}
+                    href={href}
+                    actionLabel={actionLabel}
+                    toneKey={toneKey}
+                  />
+                );
+              })}
+            </div>
+          </MobileSection>
         ) : safeSubtitle ? (
-          <section style={errorStyle}>
-            <div style={errorTitleStyle}>Раздел временно недоступен</div>
-            <div style={errorTextStyle}>{safeSubtitle}</div>
-            <div style={errorHintStyle}>Проверьте ссылку или вернитесь назад.</div>
-          </section>
+          <MobileEmptyState
+            title="Раздел временно недоступен"
+            description={safeSubtitle}
+            action={<MobilePill tone="warning">Проверьте ссылку или вернитесь назад.</MobilePill>}
+          />
         ) : (
-          <section style={emptyStyle}>Нет доступных разделов.</section>
+          <MobileEmptyState
+            title="Нет доступных разделов"
+            description="Проверьте конфигурацию кабинета или вернитесь назад."
+          />
         )}
       </div>
 
-      <MobileBottomNav items={bottomNavItems} activeKey={activeKey} />
-    </div>
+      {navItems.length ? (
+        <MobileBottomNav items={navItems} activeKey={activeKey} />
+      ) : null}
+    </MobileShell>
   );
 }
-
-const pageStyle = {
-  minHeight: "100vh",
-  background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)",
-  padding: "20px 16px 96px",
-  boxSizing: "border-box",
-};
-
-const containerStyle = {
-  maxWidth: 720,
-  margin: "0 auto",
-  display: "grid",
-  gap: 16,
-};
-
-const headerStyle = {
-  display: "grid",
-  gap: 10,
-  padding: 20,
-  borderRadius: 20,
-  background: "#ffffff",
-  border: "1px solid #e5e7eb",
-  boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
-};
-
-const badgeRowStyle = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 8,
-  alignItems: "center",
-};
-
-const badgeStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "6px 10px",
-  borderRadius: 999,
-  background: "#dbeafe",
-  color: "#1d4ed8",
-  fontSize: 12,
-  fontWeight: 800,
-};
-
-const roleBadgeStyle = {
-  ...badgeStyle,
-  background: "#ede9fe",
-  color: "#6d28d9",
-};
-
-const slugPillStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  width: "fit-content",
-  padding: "6px 10px",
-  borderRadius: 999,
-  background: "#f3f4f6",
-  color: "#374151",
-  fontSize: 12,
-  fontWeight: 700,
-};
-
-const titleStyle = {
-  margin: 0,
-  fontSize: 28,
-  lineHeight: 1.1,
-  color: "#111827",
-};
-
-const subtitleStyle = {
-  margin: 0,
-  color: "#4b5563",
-  fontSize: 15,
-  lineHeight: 1.55,
-};
-
-const gridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-  gap: 12,
-};
-
-const emptyStyle = {
-  border: "1px dashed #cbd5e1",
-  borderRadius: 18,
-  padding: 20,
-  color: "#64748b",
-  background: "#fff",
-  fontSize: 14,
-};
-
-const errorStyle = {
-  border: "1px solid #fecaca",
-  borderRadius: 18,
-  padding: 20,
-  color: "#991b1b",
-  background: "#fef2f2",
-  display: "grid",
-  gap: 8,
-};
-
-const errorTitleStyle = {
-  fontSize: 18,
-  fontWeight: 800,
-  lineHeight: 1.2,
-};
-
-const errorTextStyle = {
-  fontSize: 15,
-  lineHeight: 1.55,
-};
-
-const errorHintStyle = {
-  fontSize: 13,
-  lineHeight: 1.45,
-  color: "#b91c1c",
-};
-
-const cardStyle = {
-  minHeight: 160,
-  padding: 18,
-  borderRadius: 18,
-  border: "1px solid transparent",
-  textDecoration: "none",
-  boxSizing: "border-box",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
-};
