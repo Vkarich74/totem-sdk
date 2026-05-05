@@ -535,6 +535,9 @@ export default function ClientCabinetPage() {
             {notificationItems.map((notification) => {
               const notificationUid = getNotificationUid(notification);
               const isRead = Boolean(notification?.read_at || notification?.is_read);
+              const actionUrl = String(notification?.action_url || "").trim();
+              const hasAction = Boolean(actionUrl);
+              const isExternal = /^https?:\/\//i.test(actionUrl);
 
               return (
                 <div key={notificationUid || notification.id} style={styles.notificationItem}>
@@ -546,6 +549,18 @@ export default function ClientCabinetPage() {
                       <span style={styles.notificationPill}>{String(notification.priority || "normal")}</span>
                       <span style={styles.notificationTime}>{formatDateTime(notification.created_at)}</span>
                     </div>
+                    {hasAction ? (
+                      <div style={{ marginTop: 8 }}>
+                        <a
+                          href={actionUrl}
+                          target={isExternal ? "_blank" : undefined}
+                          rel={isExternal ? "noreferrer" : undefined}
+                          style={getActionLinkStyle(styles.secondaryButton, isMobile)}
+                        >
+                          Открыть
+                        </a>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div style={styles.notificationRight}>
