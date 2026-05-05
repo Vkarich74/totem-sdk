@@ -836,61 +836,80 @@ export default function MobileHomePage() {
 
   if (config.loading) {
     return (
-      <div style={shellStyle}>
-        <Card>
-          <SectionTitle subtitle="Мобильная витрина загружается.">Мобильная витрина</SectionTitle>
-          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
-            Загрузка мобильной витрины…
-          </div>
-        </Card>
-      </div>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar title="TOTEM" subtitle="Мобильная витрина" right={<MobileBadge tone="neutral">загрузка</MobileBadge>} />
+          <MobileHero
+            eyebrow="TOTEM Mobile"
+            title="Мобильная витрина загружается"
+            subtitle="Подтягиваем данные стран, городов и доступных разделов."
+          />
+          <MobileEmptyState
+            title="Скоро всё откроется"
+            description="Пожалуйста, подождите несколько секунд, пока TOTEM готовит мобильную витрину."
+          />
+        </div>
+      </MobileShell>
     );
   }
 
   if (config.error) {
     return (
-      <div style={shellStyle}>
-        <Card>
-          <SectionTitle subtitle="Не удалось загрузить конфигурацию мобильной витрины.">
-            Мобильная витрина
-          </SectionTitle>
-          <div style={{ fontSize: 14, color: "#991b1b", lineHeight: 1.55 }}>
-            Мобильная витрина временно недоступна.
-          </div>
-        </Card>
-      </div>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar title="TOTEM" subtitle="Мобильная витрина" right={<MobileBadge tone="danger">ошибка</MobileBadge>} />
+          <MobileHero
+            eyebrow="TOTEM Mobile"
+            title="Не удалось загрузить мобильную витрину"
+            subtitle="Проверьте соединение и попробуйте снова."
+          />
+          <MobileEmptyState
+            title="Мобильная витрина временно недоступна"
+            description="Обновите страницу, чтобы попробовать ещё раз."
+            action={<MobileButton onClick={() => window.location.reload()}>Обновить</MobileButton>}
+          />
+        </div>
+      </MobileShell>
     );
   }
 
   if (!mobileV1Enabled) {
     return (
-      <div style={shellStyle}>
-        <Card>
-          <SectionTitle subtitle="Раздел открыт только для внутренней проверки.">Мобильная витрина</SectionTitle>
-          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
-            Мобильная витрина скоро появится.
-          </div>
-          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-            Сейчас раздел открыт только для внутренней проверки.
-          </div>
-        </Card>
-      </div>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar title="TOTEM" subtitle="Мобильная витрина" right={<MobileBadge tone="neutral">закрыто</MobileBadge>} />
+          <MobileHero
+            eyebrow="TOTEM Mobile"
+            title="Мобильная витрина скоро появится"
+            subtitle="Сейчас раздел открыт только для внутренней проверки."
+          />
+          <MobileEmptyState
+            title="Раздел открыт только для внутренней проверки"
+            description="Мы готовим мобильную витрину к запуску. Возвращайтесь чуть позже."
+            action={<MobileButton onClick={() => window.location.reload()}>Обновить</MobileButton>}
+          />
+        </div>
+      </MobileShell>
     );
   }
 
   if (route.mode === "city" && !mobileCityHomeEnabled) {
     return (
-      <div style={shellStyle}>
-        <Card>
-          <SectionTitle subtitle="Раздел открыт только для внутренней проверки.">Мобильная витрина</SectionTitle>
-          <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
-            Городская витрина скоро появится.
-          </div>
-          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-            Сейчас городская витрина открыта только для внутренней проверки.
-          </div>
-        </Card>
-      </div>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar title="TOTEM" subtitle="Городская витрина" right={<MobileBadge tone="neutral">закрыто</MobileBadge>} />
+          <MobileHero
+            eyebrow="TOTEM City"
+            title="Городская витрина скоро появится"
+            subtitle="Сейчас этот город открыт только для внутренней проверки."
+          />
+          <MobileEmptyState
+            title="Городская витрина пока недоступна"
+            description="Обновите страницу или вернитесь на главную витрину."
+            action={<MobileButton href="#/mobile">На главную</MobileButton>}
+          />
+        </div>
+      </MobileShell>
     );
   }
 
@@ -984,24 +1003,40 @@ export default function MobileHomePage() {
 
   if (state.loading) {
     return (
-      <div style={shellStyle}>
-        <div style={loaderStyle}>Загрузка мобильного раздела…</div>
-      </div>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar title="TOTEM" subtitle="Мобильный раздел" right={<MobileBadge tone="neutral">загрузка</MobileBadge>} />
+          <MobileHero
+            eyebrow="TOTEM Mobile"
+            title="Загрузка мобильного раздела"
+            subtitle="Собираем данные страны и города."
+          />
+          <MobileEmptyState
+            title="Идёт загрузка"
+            description="Секундочку, мы уже подгружаем данные мобильного раздела."
+          />
+        </div>
+      </MobileShell>
     );
   }
 
   if (state.error) {
     return (
-      <div style={shellStyle}>
-        <Card>
-          <SectionTitle subtitle="Не удалось загрузить данные мобильного раздела.">
-            Ошибка загрузки
-          </SectionTitle>
-          <div style={{ color: "#991b1b", fontSize: 14, lineHeight: 1.5 }}>
-            {state.error}
-          </div>
-        </Card>
-      </div>
+      <MobileShell>
+        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+          <MobileTopBar title="TOTEM" subtitle="Мобильный раздел" right={<MobileBadge tone="danger">ошибка</MobileBadge>} />
+          <MobileHero
+            eyebrow="TOTEM Mobile"
+            title="Не удалось загрузить данные"
+            subtitle="Проверьте соединение и попробуйте обновить страницу."
+          />
+          <MobileEmptyState
+            title="Ошибка загрузки"
+            description={state.error}
+            action={<MobileButton onClick={() => window.location.reload()}>Обновить</MobileButton>}
+          />
+        </div>
+      </MobileShell>
     );
   }
 
@@ -1010,19 +1045,21 @@ export default function MobileHomePage() {
 
     if (home?.empty) {
       return (
-        <div style={shellStyle}>
-          <Card>
-            <SectionTitle subtitle="Город не найден или пока не подключён к мобильной витрине.">
-              Город не найден
-            </SectionTitle>
-            <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.5 }}>
-              Проверьте ссылку или вернитесь в мобильный список городов.
-            </div>
-            <a href="#/mobile" style={primaryLinkStyle}>
-              Вернуться к списку
-            </a>
-          </Card>
-        </div>
+        <MobileShell>
+          <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+            <MobileTopBar title="TOTEM" subtitle="Городская витрина" right={<MobileBadge tone="warning">город не найден</MobileBadge>} />
+            <MobileHero
+              eyebrow="TOTEM City"
+              title="Город не найден"
+              subtitle="Проверьте ссылку или вернитесь к списку городов."
+            />
+            <MobileEmptyState
+              title="Город пока не подключён"
+              description="Вернитесь на главную витрину и выберите другой город."
+              action={<MobileButton href="#/mobile">На главную</MobileButton>}
+            />
+          </div>
+        </MobileShell>
       );
     }
 
