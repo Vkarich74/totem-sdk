@@ -14,9 +14,29 @@ function getActiveKeyFromHash() {
   return "stats";
 }
 
+function getRouteContextFromHash() {
+  if (typeof window === "undefined") {
+    return { roleType: "", slug: "" };
+  }
+
+  const hash = String(window.location.hash || "").replace(/^#\/?/, "");
+  const parts = hash.split("?")[0].split("/").filter(Boolean);
+  const roleType = String(parts[2] || "").trim().toLowerCase();
+  const slug = String(parts[3] || "").trim();
+
+  if ((roleType === "master" || roleType === "salon") && slug) {
+    return { roleType, slug };
+  }
+
+  return { roleType: "", slug: "" };
+}
+
 export default function MobileLiteAdminPage({ roleType = "", slug = "" }) {
   const activeKey = getActiveKeyFromHash();
-  const config = useMemo(() => getMobileAdminConfig(roleType, slug), [roleType, slug]);
+  const routeContext = getRouteContextFromHash();
+  const resolvedRoleType = String(roleType || routeContext.roleType || "").trim().toLowerCase();
+  const resolvedSlug = String(slug || routeContext.slug || "").trim();
+  const config = useMemo(() => getMobileAdminConfig(resolvedRoleType, resolvedSlug), [resolvedRoleType, resolvedSlug]);
 
   if (!config) {
     return (

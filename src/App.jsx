@@ -278,6 +278,10 @@ function getPublicRouteFromPathname() {
     return { type: "mobile" };
   }
 
+  if (hashParts[0] === "mobile" && hashParts[1] === "admin") {
+    return null;
+  }
+
   if (hashParts[0] === "mobile") {
     return { type: "mobile" };
   }
