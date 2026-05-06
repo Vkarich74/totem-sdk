@@ -195,16 +195,18 @@ function getQrTransactionIdFromData(paymentData) {
 
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
+  const nativeSearchParams = new URLSearchParams(window.location.search || "");
+  const getQueryParam = (key) => searchParams.get(key) || nativeSearchParams.get(key) || "";
 
   const slug =
-    searchParams.get("salon") ||
+    getQueryParam("salon") ||
     window.SALON_SLUG ||
     null;
 
-  const repeatMasterId = searchParams.get("master") || "";
-  const repeatServiceId = searchParams.get("service") || "";
-  const repeatClientId = searchParams.get("client") || "";
-  const repeatClientToken = searchParams.get("token") || searchParams.get("client_token") || "";
+  const repeatMasterId = getQueryParam("master");
+  const repeatServiceId = getQueryParam("service");
+  const repeatClientId = getQueryParam("client");
+  const repeatClientToken = getQueryParam("token") || getQueryParam("client_token");
 
   const [masters, setMasters] = useState([]);
   const [services, setServices] = useState([]);
