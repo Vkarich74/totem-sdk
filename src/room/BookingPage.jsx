@@ -63,6 +63,13 @@ function formatDateRu(dateStr) {
   return new Date(dateStr).toLocaleDateString("ru-RU");
 }
 
+function formatSalonDisplayName(salonName, slug) {
+  const normalizedName = normalizeClientName(salonName);
+  if (normalizedName) return normalizedName;
+  if (String(slug || "").trim()) return "Выбранный салон";
+  return "Салон не выбран";
+}
+
 function normalizeClientName(value) {
   return String(value || "")
     .replace(/\s+/g, " ")
@@ -573,7 +580,7 @@ export default function BookingPage() {
         <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
           <MobileTopBar
             title="TOTEM"
-            subtitle={`Запись · ${slug || "салон не выбран"}`}
+            subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
             right={<MobileBadge tone="neutral">загрузка</MobileBadge>}
           />
           <MobileHero
@@ -604,7 +611,7 @@ export default function BookingPage() {
         <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
           <MobileTopBar
             title="TOTEM"
-            subtitle={`Запись · ${slug || "салон не выбран"}`}
+            subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
             right={<MobileBadge tone="success">запись создана</MobileBadge>}
           />
 
@@ -621,7 +628,7 @@ export default function BookingPage() {
               <div style={{ display: "grid", gap: 10 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
                   <MobileStatCard label="Клиент" value={successData.clientName} tone="primary" />
-                  <MobileStatCard label="Салон" value={slug} tone="neutral" />
+                  <MobileStatCard label="Салон" value={formatSalonDisplayName(successData?.salonName, slug)} tone="neutral" />
                   <MobileStatCard label="Мастер" value={successData.masterName || "—"} tone="success" />
                   <MobileStatCard label="Дата" value={formatDateRu(successData.date)} tone="warning" />
                 </div>
@@ -691,17 +698,17 @@ export default function BookingPage() {
       <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
         <MobileTopBar
           title="TOTEM"
-          subtitle={`Запись · ${slug || "салон не выбран"}`}
+          subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
           right={<MobileBadge tone="primary">запись</MobileBadge>}
         />
 
-        <MobileHero
-          eyebrow="Запись"
-          title="Запись в салон"
-          subtitle="Выберите мастера, услугу, дату и время"
-          actions={
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              <MobilePill tone="neutral">{slug || "slug не найден"}</MobilePill>
+          <MobileHero
+            eyebrow="Запись"
+            title="Запись в салон"
+            subtitle="Выберите мастера, услугу, дату и время"
+            actions={
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              <MobilePill tone="neutral">{formatSalonDisplayName(null, slug)}</MobilePill>
               <MobilePill tone="primary">24h запись</MobilePill>
             </div>
           }
