@@ -10,7 +10,6 @@ import {
   MobileBadge,
   MobilePill,
   MobileEmptyState,
-  MobileStepper,
   MobileStatCard
 } from "../mobile/MobileUi.jsx";
 
@@ -131,12 +130,6 @@ function getQrTransactionIdFromData(paymentData) {
     paymentData?.status?.qr_transaction_id ||
     ""
   );
-}
-
-function getBookingStepIndex(step, hasSuccessState) {
-  if (hasSuccessState) return 4;
-  if (step === "preview") return 4;
-  return 0;
 }
 
 export default function BookingPage() {
@@ -312,33 +305,12 @@ export default function BookingPage() {
     return options.filter((t) => t >= min);
   }, [date]);
 
-  const bookingProgressIndex = useMemo(() => {
-    if (successData) return 4;
-    if (step === "preview") return 4;
-    if (time) return 3;
-    if (date) return 3;
-    if (selectedService) return 2;
-    if (selectedMaster) return 1;
-    return 0;
-  }, [date, selectedMaster, selectedService, step, successData, time]);
-
-  const bookingSteps = useMemo(
-    () => [
-      { key: "data", label: "Данные", description: "Имя и телефон" },
-      { key: "master", label: "Мастер", description: "Кто будет принимать" },
-      { key: "service", label: "Услуга", description: "Что вы хотите" },
-      { key: "time", label: "Время", description: "Дата и слот" },
-      { key: "confirm", label: "Подтверждение", description: "Проверка и оплата" }
-    ],
-    []
-  );
-
   useEffect(() => {
     if (!time) return;
     if (!timeOptions.includes(time)) setTime("");
   }, [time, timeOptions]);
 
-  function goToPreview(e) {
+  function handleBookingSubmit(e) {
     e.preventDefault();
     if (!selectedMaster || !selectedService || !date || !time || !clientName || !clientPhone) {
       setError("Заполните все поля");
@@ -349,7 +321,7 @@ export default function BookingPage() {
       return;
     }
     setError("");
-    setStep("preview");
+    confirmBooking();
   }
 
   async function confirmBooking() {
@@ -567,10 +539,6 @@ export default function BookingPage() {
             subtitle="Сохраните номер записи и проверьте оплату, если она нужна."
           />
 
-          <MobileSection title="Маршрут" subtitle="Вы прошли шаги записи и находитесь на финальном экране.">
-            <MobileStepper steps={bookingSteps} activeIndex={4} />
-          </MobileSection>
-
           <MobileCard
             title="Проверьте запись"
             subtitle="Все данные уже сохранены. Ниже - краткое подтверждение."
@@ -643,60 +611,6 @@ export default function BookingPage() {
     );
   }
 
-  if (step === "preview") {
-    return (
-      <MobileShell>
-        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
-          <MobileTopBar
-            title="TOTEM"
-            subtitle={`Запись · ${slug || "салон не выбран"}`}
-            right={<MobileBadge tone="warning">проверка</MobileBadge>}
-          />
-
-          <MobileHero
-            eyebrow="Проверка"
-            title="Проверьте запись"
-            subtitle="Сверьте данные перед созданием записи."
-          />
-
-          <MobileSection title="Этап" subtitle="Вы на шаге подтверждения записи.">
-            <MobileStepper steps={bookingSteps} activeIndex={4} />
-          </MobileSection>
-
-          <MobileCard
-            title="Проверьте запись"
-            subtitle="Подтвердите данные перед отправкой."
-            footer={
-              <div style={{ display: "grid", gap: 10 }}>
-                <MobileButton onClick={confirmBooking} disabled={loading}>
-                  Подтвердить
-                </MobileButton>
-                <MobileButton tone="secondary" onClick={() => setStep("form")}>
-                  Назад
-                </MobileButton>
-              </div>
-            }
-          >
-            <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-                <MobileStatCard label="Клиент" value={clientName} tone="primary" />
-                <MobileStatCard label="Телефон" value={clientPhone} tone="neutral" />
-                <MobileStatCard label="Салон" value={slug} tone="success" />
-                <MobileStatCard label="Мастер" value={selectedMasterName || "—"} tone="warning" />
-              </div>
-              <div style={styles.successBlock}>
-                <div><strong>Дата:</strong> {formatDateRu(date)}</div>
-                <div><strong>Время:</strong> {time}</div>
-              </div>
-            </div>
-          </MobileCard>
-
-          {error ? <MobileEmptyState title="Есть ошибка" description={error} /> : null}
-        </div>
-      </MobileShell>
-    );
-  }
-
   return (
     <MobileShell>
       <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
@@ -718,11 +632,18 @@ export default function BookingPage() {
           }
         />
 
-        <MobileSection title="Путь записи" subtitle="Двигаемся по шагам без лишних кликов.">
-          <MobileStepper steps={bookingSteps} activeIndex={bookingProgressIndex} />
+        <MobileSection title="Запись в один шаг" subtitle="Выберите услугу, время и подтвердите запись.">
+          <MobileCard>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <MobilePill tone="primary">Услуга</MobilePill>
+              <MobilePill tone="neutral">Время</MobilePill>
+              <MobilePill tone="neutral">Контакты</MobilePill>
+              <MobilePill tone="success">Подтверждение</MobilePill>
+            </div>
+          </MobileCard>
         </MobileSection>
 
-        <form onSubmit={goToPreview} style={{ display: "grid", gap: 16 }}>
+        <form onSubmit={handleBookingSubmit} style={{ display: "grid", gap: 16 }}>
           <MobileSection title="Ваши данные" subtitle="Нужны для подтверждения записи.">
             <MobileCard>
               <div style={{ display: "grid", gap: 12 }}>
@@ -840,13 +761,13 @@ export default function BookingPage() {
             </MobileCard>
           </MobileSection>
 
-          <MobileSection title="Проверка" subtitle="Перед подтверждением вы увидите краткий preview.">
+          <MobileSection title="Итог записи" subtitle="Проверьте данные и подтвердите запись.">
             <MobileCard
-              title="Проверка записи"
-              subtitle="Если всё верно, продолжайте к подтверждению."
+              title="Итог записи"
+              subtitle="Если всё верно, подтвердите запись."
               footer={
                 <MobileButton type="submit" disabled={loading}>
-                  Продолжить
+                  Подтвердить запись
                 </MobileButton>
               }
             >
