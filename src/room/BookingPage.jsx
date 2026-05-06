@@ -15,6 +15,7 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const BOOKING_PAYMENT_STATE_PREFIX = "TOTEM_BOOKING_PAYMENT_STATE";
+const BOOKING_PAYMENT_STATE_VERSION = "v2";
 
 function generateKey() {
   return crypto.randomUUID();
@@ -139,6 +140,10 @@ function readBookingPaymentState(slug) {
 
     const parsed = JSON.parse(raw);
     if (!parsed?.successData?.bookingId) return null;
+    if (parsed.version !== BOOKING_PAYMENT_STATE_VERSION) {
+      clearBookingPaymentState(slug);
+      return null;
+    }
 
     return parsed;
   } catch {
@@ -153,6 +158,7 @@ function writeBookingPaymentState(slug, successData, paymentData) {
     window.sessionStorage.setItem(
       getBookingPaymentStateKey(slug),
       JSON.stringify({
+        version: BOOKING_PAYMENT_STATE_VERSION,
         successData,
         paymentData: paymentData || null,
         savedAt: Date.now()
