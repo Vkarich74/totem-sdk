@@ -239,6 +239,8 @@ export default function AdminFinancePage() {
   const [exceptions, setExceptions] = useState([]);
   const [moneyReceipts, setMoneyReceipts] = useState([]);
   const [moneyAuditEvents, setMoneyAuditEvents] = useState([]);
+  const [paymentsSummary, setPaymentsSummary] = useState(null);
+  const [paymentsSummaryRows, setPaymentsSummaryRows] = useState([]);
 
   const loadAll = useCallback(async () => {
     const token = getAuthToken();
@@ -263,6 +265,7 @@ export default function AdminFinancePage() {
         exceptionsPayload,
         receiptsPayload,
         auditEventsPayload,
+        paymentsSummaryPayload,
       ] = await Promise.all([
         fetchJson("/internal/money-core/admin/overview"),
         fetchJson("/internal/money-core/admin/provider-events?limit=5&offset=0"),
@@ -274,6 +277,7 @@ export default function AdminFinancePage() {
         fetchJson("/internal/money-core/admin/exceptions?limit=5&offset=0"),
         fetchJson("/internal/money-core/admin/receipts?limit=5&offset=0"),
         fetchJson("/internal/money-core/admin/audit-events?limit=5&offset=0"),
+        fetchJson("/internal/reports/payments-summary?limit=20"),
       ]);
 
       setOverview(overviewPayload?.data || null);
@@ -286,6 +290,8 @@ export default function AdminFinancePage() {
       setExceptions(Array.isArray(exceptionsPayload?.data) ? exceptionsPayload.data : []);
       setMoneyReceipts(Array.isArray(receiptsPayload?.data) ? receiptsPayload.data : []);
       setMoneyAuditEvents(Array.isArray(auditEventsPayload?.data) ? auditEventsPayload.data : []);
+      setPaymentsSummary(paymentsSummaryPayload || null);
+      setPaymentsSummaryRows(Array.isArray(paymentsSummaryPayload?.rows) ? paymentsSummaryPayload.rows : []);
     } catch (e) {
       setError(e?.message || "Не удалось загрузить финансовый центр.");
     } finally {
@@ -359,6 +365,24 @@ export default function AdminFinancePage() {
     { title: "Exceptions", value: overviewData.reconciliation_mismatches?.total_count ?? "—", hint: "Исключения" },
     { title: "Money receipts", value: overviewData.money_receipts?.total_count ?? "—", hint: "Квитанции" },
     { title: "Money audit events", value: overviewData.money_audit_events?.total_count ?? "—", hint: "Аудит" },
+  ];
+
+  const paymentsSummaryData = paymentsSummary || {};
+  const paymentsSummarySummary = paymentsSummaryData.summary || {};
+  const paymentsSummaryIntegrity = paymentsSummaryData.integrity || {};
+  const paymentsSummaryIssueCounts = Array.isArray(paymentsSummaryIntegrity.counts) ? paymentsSummaryIntegrity.counts : [];
+  const paymentsSummaryRowsColumns = [
+    { key: "payment_id", title: "payment_id", dataIndex: "payment_id" },
+    { key: "booking_id", title: "booking_id", dataIndex: "booking_id" },
+    { key: "provider", title: "provider", dataIndex: "provider" },
+    { key: "payment_status", title: "payment_status", dataIndex: "payment_status", render: (value) => <Pill tone="blue">{statusLabel(value)}</Pill> },
+    { key: "payout_status", title: "payout_status", dataIndex: "payout_status", render: (value) => <Pill tone="amber">{statusLabel(value)}</Pill> },
+    { key: "booking_status", title: "booking_status", dataIndex: "booking_status", render: (value) => <Pill tone="neutral">{statusLabel(value)}</Pill> },
+    { key: "payment_amount", title: "payment_amount", dataIndex: "payment_amount", render: (value) => formatNumber(value) },
+    { key: "platform_fee", title: "platform_fee", dataIndex: "platform_fee", render: (value) => formatNumber(value) },
+    { key: "provider_amount", title: "provider_amount", dataIndex: "provider_amount", render: (value) => formatNumber(value) },
+    { key: "take_rate_bps", title: "take_rate_bps", dataIndex: "take_rate_bps", render: (value) => formatNumber(value) },
+    { key: "payment_created_at", title: "payment_created_at", dataIndex: "payment_created_at", render: (value) => formatDate(value) },
   ];
 
   const providerEventsColumns = [
@@ -503,6 +527,46 @@ export default function AdminFinancePage() {
           {overviewTiles.map((tile) => (
             <SummaryTile key={tile.title} title={tile.title} value={tile.value} hint={tile.hint} />
           ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Legacy payments / наличные и XPAY">
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ color: "#b45309", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 12, padding: 12 }}>
+            Read-only отчёт по legacy payments/payouts. Money Core не изменяется.
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <SummaryTile title="Подтверждено всего" value={formatNumber(paymentsSummarySummary.gross_confirmed)} hint="gross_confirmed" />
+            <SummaryTile title="Наличные / direct" value={formatNumber(paymentsSummarySummary.direct_gross)} hint="direct_gross" />
+            <SummaryTile title="XPAY подтверждено" value={formatNumber(paymentsSummarySummary.xpay_confirmed_gross)} hint="xpay_confirmed_gross" />
+            <SummaryTile title="Ожидает оплаты" value={formatNumber(paymentsSummarySummary.pending_gross)} hint="pending_gross" />
+            <SummaryTile title="Комиссия платформы" value={formatNumber(paymentsSummarySummary.platform_fee)} hint="platform_fee" />
+            <SummaryTile title="Сумма владельцев" value={formatNumber(paymentsSummarySummary.owner_amount)} hint="owner_amount" />
+            <SummaryTile title="Остаток наличных" value={formatNumber(paymentsSummarySummary.direct_remaining)} hint="direct_remaining" />
+            <SummaryTile title="Accounting warnings" value={formatNumber(paymentsSummarySummary.accounting_warning_count)} hint="accounting_warning_count" />
+          </div>
+
+          {paymentsSummaryIssueCounts.length ? (
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Integrity issues</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {paymentsSummaryIssueCounts.map((item, index) => (
+                  <Pill key={`${item.issue_type || "issue"}-${index}`} tone="amber">
+                    {String(item.issue_type || "unknown")} · {formatNumber(item.count)}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <DataTable columns={paymentsSummaryRowsColumns} rows={paymentsSummaryRows} />
         </div>
       </SectionCard>
 
