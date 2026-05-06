@@ -62,6 +62,61 @@ function formatDateRu(dateStr) {
   return new Date(dateStr).toLocaleDateString("ru-RU");
 }
 
+function normalizeClientName(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getKgPhoneDigits(value) {
+  const cleaned = String(value || "").replace(/\D/g, "");
+
+  if (!cleaned) return "";
+  if (cleaned.startsWith("996") && cleaned.length >= 12) return `996${cleaned.slice(3, 12)}`;
+  if (cleaned.startsWith("0") && cleaned.length >= 10) return `996${cleaned.slice(-9)}`;
+  if (cleaned.length === 9) return `996${cleaned}`;
+
+  return cleaned;
+}
+
+function formatKgPhoneDigits(digits) {
+  const normalized = String(digits || "").replace(/\D/g, "");
+  if (!normalized) return "";
+
+  let body = normalized;
+
+  if (body.startsWith("996")) {
+    body = body.slice(3);
+  } else if (body.startsWith("0")) {
+    body = body.slice(1);
+  }
+
+  body = body.slice(0, 9);
+
+  const groups = [];
+  for (let index = 0; index < body.length; index += 3) {
+    groups.push(body.slice(index, index + 3));
+  }
+
+  return groups.length ? `+996 ${groups.join(" ")}`.trim() : "";
+}
+
+function normalizeKgPhone(value) {
+  const digits = getKgPhoneDigits(value);
+
+  if (digits.length === 12 && digits.startsWith("996")) {
+    return `+996 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9, 12)}`;
+  }
+
+  if (!digits) return "";
+
+  if (digits.startsWith("996")) {
+    return formatKgPhoneDigits(digits);
+  }
+
+  return formatKgPhoneDigits(`996${digits}`);
+}
+
 function getPaymentStatusLabel(status) {
   const normalized = String(status || "").toLowerCase();
 
@@ -286,7 +341,8 @@ export default function BookingPage() {
   }, [paymentData?.payment_id, paymentData?.status, paymentData?.payment?.status]);
 
   function validatePhone(phone) {
-    return /^[0-9+\-\s()]{6,20}$/.test(phone);
+    const digits = getKgPhoneDigits(phone);
+    return digits.length === 12 && digits.startsWith("996");
   }
 
   const filteredServices = useMemo(() => {
@@ -312,15 +368,24 @@ export default function BookingPage() {
 
   function handleBookingSubmit(e) {
     e.preventDefault();
+    const normalizedName = normalizeClientName(clientName);
+    const normalizedPhone = normalizeKgPhone(clientPhone);
+
+    if (normalizedName.length < 2) {
+      setError("Укажите имя, чтобы мастер понял, к кому запись.");
+      return;
+    }
+    if (!validatePhone(normalizedPhone)) {
+      setError("Введите номер в формате +996 XXX XXX XXX");
+      return;
+    }
     if (!selectedMaster || !selectedService || !date || !time || !clientName || !clientPhone) {
       setError("Заполните все поля");
       return;
     }
-    if (!validatePhone(clientPhone)) {
-      setError("Введите корректный номер телефона");
-      return;
-    }
     setError("");
+    setClientName(normalizedName);
+    setClientPhone(normalizedPhone);
     confirmBooking();
   }
 
@@ -333,13 +398,15 @@ export default function BookingPage() {
 
     try {
       const startAt = `${date}T${time}:00`;
+      const normalizedName = normalizeClientName(clientName);
+      const normalizedPhone = normalizeKgPhone(clientPhone);
 
       const bookingPayload = {
         master_id: Number(selectedMaster),
         service_id: Number(selectedService), // ← ВАЖНО
         start_at: startAt,
-        client_name: clientName,
-        phone: clientPhone
+        client_name: normalizedName,
+        phone: normalizedPhone
       };
 
       const res = await fetch(`${API_BASE}/public/salons/${slug}/bookings`, {
@@ -361,7 +428,7 @@ export default function BookingPage() {
         masterName: selectedMasterName,
         date,
         time,
-        clientName,
+        clientName: normalizedName,
         client: data?.client || null,
         clientCabinetUrl: data?.client_cabinet?.url || ""
       };
@@ -653,7 +720,8 @@ export default function BookingPage() {
                   aria-label="Имя клиента"
                   placeholder="Ваше имя"
                   value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
+                  autoComplete="name"
+                  onChange={(e) => setClientName(normalizeClientName(e.target.value))}
                   style={styles.input}
                 />
 
@@ -661,9 +729,12 @@ export default function BookingPage() {
                   type="tel"
                   name="client_phone"
                   aria-label="Телефон клиента"
-                  placeholder="Телефон"
+                  placeholder="+996 ___ ___ ___"
                   value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={16}
+                  onChange={(e) => setClientPhone(normalizeKgPhone(e.target.value))}
                   style={styles.input}
                 />
               </div>
@@ -773,6 +844,8 @@ export default function BookingPage() {
             >
               <div style={{ display: "grid", gap: 10 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+                  <MobileStatCard label="Клиент" value={normalizeClientName(clientName) || "—"} tone="accent" />
+                  <MobileStatCard label="Телефон" value={normalizeKgPhone(clientPhone) || "—"} tone="neutral" />
                   <MobileStatCard label="Мастер" value={selectedMasterName || "—"} tone="primary" />
                   <MobileStatCard label="Услуга" value={selectedService ? "Выбрана" : "Не выбрана"} tone="success" />
                   <MobileStatCard label="Дата" value={date ? formatDateRu(date) : "—"} tone="warning" />
