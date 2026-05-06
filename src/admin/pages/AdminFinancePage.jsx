@@ -102,6 +102,79 @@ function statusLabel(status) {
   return map[value] || status;
 }
 
+function formatProviderLabel(value) {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "direct") return "Наличные / direct";
+  if (normalized === "xpay") return "XPAY";
+  if (normalized === "internal") return "Internal";
+  return value || "—";
+}
+
+function formatPaymentStatusLabel(value) {
+  const normalized = String(value || "").toLowerCase();
+  const map = {
+    pending: "Ожидает",
+    confirmed: "Подтверждено",
+    failed: "Сбой",
+    refunded: "Возврат",
+  };
+  return map[normalized] || value || "—";
+}
+
+function formatPayoutStatusLabel(value) {
+  const normalized = String(value || "").toLowerCase();
+  if (!normalized || normalized === "no_payout") return "Нет payout";
+  const map = {
+    created: "Создано",
+    processing: "В обработке",
+    completed: "Завершено",
+    paid: "Выплачено",
+    failed: "Сбой",
+    canceled: "Отменено",
+  };
+  return map[normalized] || value || "—";
+}
+
+function formatBookingStatusLabel(value) {
+  const normalized = String(value || "").toLowerCase();
+  const map = {
+    reserved: "Забронировано",
+    confirmed: "Подтверждено",
+    completed: "Завершено",
+    canceled: "Отменено",
+    cancelled: "Отменено",
+  };
+  return map[normalized] || value || "—";
+}
+
+function buildPaymentsSummaryPath(filters) {
+  const params = new URLSearchParams();
+  params.set("limit", "20");
+
+  const appendIfAllowed = (key, value) => {
+    const normalized = String(value || "").trim();
+    if (!normalized) return;
+    if (normalized.toLowerCase() === "all") return;
+    params.set(key, normalized);
+  };
+
+  appendIfAllowed("provider", filters?.provider);
+  appendIfAllowed("payment_status", filters?.payment_status);
+  appendIfAllowed("payout_status", filters?.payout_status);
+  appendIfAllowed("booking_status", filters?.booking_status);
+  appendIfAllowed("date_from", filters?.date_from);
+  appendIfAllowed("date_to", filters?.date_to);
+
+  const numericOnly = (value) => /^\d+$/.test(String(value || "").trim()) ? String(value).trim() : "";
+  const salonId = numericOnly(filters?.salon_id);
+  const masterId = numericOnly(filters?.master_id);
+
+  if (salonId) params.set("salon_id", salonId);
+  if (masterId) params.set("master_id", masterId);
+
+  return `/internal/reports/payments-summary?${params.toString()}`;
+}
+
 function Pill({ children, tone = "neutral" }) {
   const palette = {
     neutral: { background: "#f3f4f6", color: "#374151" },
@@ -241,6 +314,16 @@ export default function AdminFinancePage() {
   const [moneyAuditEvents, setMoneyAuditEvents] = useState([]);
   const [paymentsSummary, setPaymentsSummary] = useState(null);
   const [paymentsSummaryRows, setPaymentsSummaryRows] = useState([]);
+  const [paymentsSummaryFilters, setPaymentsSummaryFilters] = useState({
+    provider: "all",
+    payment_status: "all",
+    payout_status: "all",
+    booking_status: "all",
+    date_from: "",
+    date_to: "",
+    salon_id: "",
+    master_id: "",
+  });
 
   const loadAll = useCallback(async () => {
     const token = getAuthToken();
@@ -277,7 +360,7 @@ export default function AdminFinancePage() {
         fetchJson("/internal/money-core/admin/exceptions?limit=5&offset=0"),
         fetchJson("/internal/money-core/admin/receipts?limit=5&offset=0"),
         fetchJson("/internal/money-core/admin/audit-events?limit=5&offset=0"),
-        fetchJson("/internal/reports/payments-summary?limit=20"),
+        fetchJson(buildPaymentsSummaryPath(paymentsSummaryFilters)),
       ]);
 
       setOverview(overviewPayload?.data || null);
@@ -297,7 +380,7 @@ export default function AdminFinancePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [paymentsSummaryFilters]);
 
   useEffect(() => {
     void loadAll();
@@ -374,16 +457,36 @@ export default function AdminFinancePage() {
   const paymentsSummaryRowsColumns = [
     { key: "payment_id", title: "payment_id", dataIndex: "payment_id" },
     { key: "booking_id", title: "booking_id", dataIndex: "booking_id" },
-    { key: "provider", title: "provider", dataIndex: "provider" },
-    { key: "payment_status", title: "payment_status", dataIndex: "payment_status", render: (value) => <Pill tone="blue">{statusLabel(value)}</Pill> },
-    { key: "payout_status", title: "payout_status", dataIndex: "payout_status", render: (value) => <Pill tone="amber">{statusLabel(value)}</Pill> },
-    { key: "booking_status", title: "booking_status", dataIndex: "booking_status", render: (value) => <Pill tone="neutral">{statusLabel(value)}</Pill> },
+    { key: "provider", title: "provider", dataIndex: "provider", render: (value) => formatProviderLabel(value) },
+    { key: "payment_status", title: "payment_status", dataIndex: "payment_status", render: (value) => <Pill tone="blue">{formatPaymentStatusLabel(value)}</Pill> },
+    { key: "payout_status", title: "payout_status", dataIndex: "payout_status", render: (value) => <Pill tone="amber">{formatPayoutStatusLabel(value)}</Pill> },
+    { key: "booking_status", title: "booking_status", dataIndex: "booking_status", render: (value) => <Pill tone="neutral">{formatBookingStatusLabel(value)}</Pill> },
     { key: "payment_amount", title: "payment_amount", dataIndex: "payment_amount", render: (value) => formatNumber(value) },
     { key: "platform_fee", title: "platform_fee", dataIndex: "platform_fee", render: (value) => formatNumber(value) },
     { key: "provider_amount", title: "provider_amount", dataIndex: "provider_amount", render: (value) => formatNumber(value) },
     { key: "take_rate_bps", title: "take_rate_bps", dataIndex: "take_rate_bps", render: (value) => formatNumber(value) },
     { key: "payment_created_at", title: "payment_created_at", dataIndex: "payment_created_at", render: (value) => formatDate(value) },
   ];
+
+  const handlePaymentsSummaryFilterChange = (key, value) => {
+    setPaymentsSummaryFilters((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  };
+
+  const resetPaymentsSummaryFilters = () => {
+    setPaymentsSummaryFilters({
+      provider: "all",
+      payment_status: "all",
+      payout_status: "all",
+      booking_status: "all",
+      date_from: "",
+      date_to: "",
+      salon_id: "",
+      master_id: "",
+    });
+  };
 
   const providerEventsColumns = [
     { key: "id", title: "ID", dataIndex: "id" },
@@ -534,6 +637,129 @@ export default function AdminFinancePage() {
         <div style={{ display: "grid", gap: 12 }}>
           <div style={{ color: "#b45309", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 12, padding: 12 }}>
             Read-only отчёт по legacy payments/payouts. Money Core не изменяется.
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>provider</span>
+              <select
+                value={paymentsSummaryFilters.provider}
+                onChange={(event) => handlePaymentsSummaryFilterChange("provider", event.target.value)}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db" }}
+              >
+                <option value="all">all</option>
+                <option value="direct">direct</option>
+                <option value="xpay">xpay</option>
+                <option value="internal">internal</option>
+              </select>
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>payment_status</span>
+              <select
+                value={paymentsSummaryFilters.payment_status}
+                onChange={(event) => handlePaymentsSummaryFilterChange("payment_status", event.target.value)}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db" }}
+              >
+                <option value="all">all</option>
+                <option value="pending">pending</option>
+                <option value="confirmed">confirmed</option>
+                <option value="failed">failed</option>
+                <option value="refunded">refunded</option>
+              </select>
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>payout_status</span>
+              <select
+                value={paymentsSummaryFilters.payout_status}
+                onChange={(event) => handlePaymentsSummaryFilterChange("payout_status", event.target.value)}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db" }}
+              >
+                <option value="all">all</option>
+                <option value="no_payout">no_payout</option>
+                <option value="created">created</option>
+                <option value="processing">processing</option>
+                <option value="completed">completed</option>
+                <option value="paid">paid</option>
+                <option value="failed">failed</option>
+                <option value="canceled">canceled</option>
+              </select>
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>booking_status</span>
+              <select
+                value={paymentsSummaryFilters.booking_status}
+                onChange={(event) => handlePaymentsSummaryFilterChange("booking_status", event.target.value)}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db" }}
+              >
+                <option value="all">all</option>
+                <option value="reserved">reserved</option>
+                <option value="confirmed">confirmed</option>
+                <option value="completed">completed</option>
+                <option value="canceled">canceled</option>
+              </select>
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>date_from</span>
+              <input
+                type="date"
+                value={paymentsSummaryFilters.date_from}
+                onChange={(event) => handlePaymentsSummaryFilterChange("date_from", event.target.value)}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db" }}
+              />
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>date_to</span>
+              <input
+                type="date"
+                value={paymentsSummaryFilters.date_to}
+                onChange={(event) => handlePaymentsSummaryFilterChange("date_to", event.target.value)}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db" }}
+              />
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>salon_id</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="salon_id"
+                value={paymentsSummaryFilters.salon_id}
+                onChange={(event) => handlePaymentsSummaryFilterChange("salon_id", event.target.value.replace(/\D/g, ""))}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db" }}
+              />
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>master_id</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="master_id"
+                value={paymentsSummaryFilters.master_id}
+                onChange={(event) => handlePaymentsSummaryFilterChange("master_id", event.target.value.replace(/\D/g, ""))}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid #d1d5db" }}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            <button type="button" onClick={loadAll}>
+              Применить
+            </button>
+            <button type="button" onClick={resetPaymentsSummaryFilters}>
+              Сбросить
+            </button>
           </div>
 
           <div
