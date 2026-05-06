@@ -1924,7 +1924,6 @@ function HomeSurface({
   const featuredCityHref = featuredLocation?.city
     ? `#/mobile/city/${encodeURIComponent(featuredCountryCode)}/${encodeURIComponent(featuredCitySlug)}`
     : "#cities";
-  const bookingHref = buildPublicBookingUrl("totem-demo-salon");
   const totalAnnouncements = Array.isArray(announcements?.items) ? announcements.items.length : 0;
   const unreadAnnouncements = Array.isArray(announcements?.items)
     ? announcements.items.reduce((count, item) => count + (item?.is_read === true ? 0 : 1), 0)
@@ -1938,7 +1937,9 @@ function HomeSurface({
     { key: "makeup", label: "Макияж" },
     { key: "spa", label: "SPA" },
   ];
-  const homeCabinetHref = "#/mobile/admin/master/totem-demo-master";
+  const ownerEntryHref = "#owner-entry";
+  const masterLoginHref = "#/auth/login?role=master";
+  const salonLoginHref = "#/auth/login?role=salon_admin";
   const totalNotifications = totalAnnouncements;
   const pwaStatusLabel = mobilePwaEnabled
     ? pwaUpdateAvailable
@@ -1948,6 +1949,36 @@ function HomeSurface({
       : "Готово"
     : "Веб-режим";
   const pwaStatusNote = pwaStatusMessage || "Мобильная витрина";
+  const quickActions = [
+    {
+      key: "find-salon",
+      title: "Найти салон",
+      subtitle: "Подключённые салоны рядом",
+      href: cityNavHref,
+      accent: "S",
+    },
+    {
+      key: "find-master",
+      title: "Найти мастера",
+      subtitle: "Специалисты в вашем городе",
+      href: cityNavHref,
+      accent: "M",
+    },
+    {
+      key: "choose-service",
+      title: "Выбрать услугу",
+      subtitle: "Быстро открыть каталог",
+      href: cityNavHref,
+      accent: "U",
+    },
+    {
+      key: "my-bookings",
+      title: "Мои записи",
+      subtitle: "Открыть раздел записей",
+      href: "#booking",
+      accent: "B",
+    },
+  ];
 
   return (
     <TotemAppFrame>
@@ -1965,18 +1996,17 @@ function HomeSurface({
 
         <TotemHeroBanner
           eyebrow="TOTEM Mobile"
-          title="Красота рядом"
-          subtitle="Выберите город, салон и время записи."
+          title="TOTEM — запись и управление beauty-сервисами"
+          subtitle="Клиенты находят салон и бронируют время. Мастера и салоны управляют записями, календарём и финансами."
           style={{ padding: 18 }}
           actions={
             <>
-              <MobileButton href={bookingHref}>Записаться</MobileButton>
-              <MobileButton tone="secondary" href={cityNavHref}>
-                Выбрать город
+              <MobileButton href={cityNavHref}>Записаться сейчас</MobileButton>
+              <MobileButton tone="secondary" href={ownerEntryHref}>
+                Я мастер или салон
               </MobileButton>
             </>
           }
-          highlights={<TotemTrustStrip />}
         />
 
         <div id="search">
@@ -1991,7 +2021,7 @@ function HomeSurface({
         <div id="categories">
           <MobileSection
             title="Категории"
-            subtitle="Быстрый вход в нужный раздел без фильтрации данных."
+            subtitle="Быстрый вход в популярные категории без фильтрации данных."
             action={<MobilePill tone="neutral">{homeCategoryItems.length} категорий</MobilePill>}
           >
             <TotemCategoryRail items={homeCategoryItems} activeKey="all" />
@@ -2007,29 +2037,43 @@ function HomeSurface({
                 gap: 12,
               }}
             >
-              <MobileCard
-                title="Записаться"
-                subtitle="Открыть публичную запись"
-                footer={<MobileButton href={bookingHref}>Записаться</MobileButton>}
-              />
-              <MobileCard
-                title="Открыть город"
-                subtitle="Перейти в ближайшую витрину"
-                footer={<MobileButton href={cityNavHref}>Открыть город</MobileButton>}
-              />
-              <MobileCard
-                title="Уведомления"
-                subtitle="Посмотреть важные сообщения"
-                footer={<MobileButton tone="secondary" href="#notifications">Открыть</MobileButton>}
-              />
-              <MobileCard
-                title="Помощь"
-                subtitle="Обратная связь и запросы по данным"
-                footer={<MobileButton tone="secondary" href="#help">Открыть</MobileButton>}
-              />
+              {quickActions.map((item) => (
+                <MobileCard
+                  key={item.key}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  footer={<MobileButton href={item.href}>Открыть</MobileButton>}
+                  actions={
+                    <MobileBadge tone="primary" style={{ width: 32, height: 32, padding: 0, justifyContent: "center" }}>
+                      {item.accent}
+                    </MobileBadge>
+                  }
+                />
+              ))}
             </div>
           </MobileSection>
         </div>
+
+        <MobileSection title="Свободные окна сегодня" subtitle="Быстрый взгляд на доступность и переход к записи.">
+          <MobileCard
+            title="Посмотреть ближайшие окна"
+            subtitle="Откройте городскую витрину и выберите удобное время."
+            actions={
+              <>
+                <MobileBadge tone="success">Сегодня</MobileBadge>
+                <MobileBadge tone="accent">Подключённые города</MobileBadge>
+              </>
+            }
+            footer={
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                <MobileButton href={cityNavHref}>Смотреть рядом</MobileButton>
+                <MobileButton tone="secondary" href="#booking">
+                  К записи
+                </MobileButton>
+              </div>
+            }
+          />
+        </MobileSection>
 
         <MobileSection title="Сегодня в TOTEM" subtitle="Короткий обзор доступного прямо сейчас.">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
@@ -2040,29 +2084,71 @@ function HomeSurface({
           </div>
         </MobileSection>
 
+        <div id="owner-entry">
+          <MobileSection title="Для мастеров и салонов" subtitle="Календарь, записи, финансы и отчёты в одном месте.">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <MobileCard title="Календарь" subtitle="Планирование визитов и слотов" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
+            <MobileCard title="Записи" subtitle="Список и статусы записей" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
+            <MobileCard title="Финансы" subtitle="Деньги и выплаты" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
+            <MobileCard title="Отчёты" subtitle="Динамика и статистика" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
+            <MobileButton href={masterLoginHref}>Войти как мастер</MobileButton>
+            <MobileButton tone="secondary" href={salonLoginHref}>
+              Войти как салон
+            </MobileButton>
+          </div>
+        </MobileSection>
+        </div>
+
+        <MobileSection title="Доверие и удобство" subtitle="Онлайн-запись, календарь, финансы и уведомления.">
+          <TotemTrustStrip
+            items={[
+              { label: "Онлайн-запись", tone: "primary" },
+              { label: "Календарь", tone: "accent" },
+              { label: "Финансы", tone: "success" },
+              { label: "Уведомления", tone: "warning" },
+            ]}
+          />
+        </MobileSection>
+
         <div id="cities">
           <MobileSection
-            title="Рядом с вами"
-            subtitle="Главный блок для выбора города и входа в запись."
+            title="Популярное рядом"
+            subtitle="Города и направления, которые уже подключены к TOTEM."
             action={<MobilePill tone="primary">{cities.length} городов</MobilePill>}
           >
-          {cities.length ? (
+            {cities.length ? (
             <div style={{ display: "grid", gap: 12 }}>
               {cities.map((city) => {
                 const countryCode = String(city?.country_code || "").trim().toUpperCase();
                 const citySlug = String(city?.slug || "").trim().toLowerCase();
                 const cityName = formatLabel(city?.name_ru || city?.name_en || citySlug);
                 const cityHref = `#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(citySlug)}`;
+                const initials = String(cityName || citySlug || countryCode || "C")
+                  .trim()
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join("")
+                  .toUpperCase();
 
                 return (
                   <MobileCard
                     key={`home-city-${countryCode}-${citySlug}`}
+                    eyebrow="Город"
                     title={cityName}
                     subtitle={`${countryCode} · ${formatLabel(city?.timezone, "timezone не указан")}`}
                     actions={
                       <>
-                        <MobileBadge tone="primary">{countryCode}</MobileBadge>
-                        <MobileBadge tone="neutral">{citySlug || "—"}</MobileBadge>
+                        <MobileBadge tone="primary">{initials || "TO"}</MobileBadge>
+                        <MobileBadge tone="neutral">{countryCode}</MobileBadge>
                         <MobileBadge tone="success">{formatLabel(city?.timezone, "timezone не указан")}</MobileBadge>
                       </>
                     }
@@ -2151,10 +2237,10 @@ function HomeSurface({
                 })}
               </div>
             ) : (
-              <MobileEmptyState
-                title="Страны пока не загружены"
-                description="Как только мобильная витрина получит данные, здесь появятся активные страны и города."
-              />
+                <MobileEmptyState
+                  title="Страны пока не загружены"
+                  description="Как только мобильная витрина получит данные, здесь появятся активные страны и города."
+                />
             )}
         </MobileSection>
 
@@ -2168,7 +2254,7 @@ function HomeSurface({
               subtitle="Переход в публичную запись TOTEM для быстрого старта."
               footer={
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                  <MobileButton href={bookingHref}>Открыть запись</MobileButton>
+                  <MobileButton href={cityNavHref}>Открыть запись</MobileButton>
                   <MobileButton tone="secondary" href={cityNavHref}>
                     Сначала выбрать город
                   </MobileButton>
@@ -2205,10 +2291,9 @@ function HomeSurface({
         <TotemBottomTabs
           items={[
             { key: "home", label: "Главная", href: "#/mobile" },
-            { key: "city", label: "Город", href: cityNavHref },
-            { key: "booking", label: "Запись", href: bookingHref },
-            { key: "cabinet", label: "Кабинет", href: homeCabinetHref },
-            { key: "help", label: "Помощь", href: "#help" },
+            { key: "search", label: "Поиск", href: "#search" },
+            { key: "booking", label: "Записи", href: "#booking" },
+            { key: "profile", label: "Профиль", href: "#help" },
           ]}
           activeKey="home"
         />
