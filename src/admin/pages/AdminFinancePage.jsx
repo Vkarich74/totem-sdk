@@ -454,6 +454,18 @@ export default function AdminFinancePage() {
   const paymentsSummarySummary = paymentsSummaryData.summary || {};
   const paymentsSummaryIntegrity = paymentsSummaryData.integrity || {};
   const paymentsSummaryIssueCounts = Array.isArray(paymentsSummaryIntegrity.counts) ? paymentsSummaryIntegrity.counts : [];
+  const platformRevenueAccrued =
+    paymentsSummarySummary.platform_revenue_accrued ?? paymentsSummarySummary.platform_fee ?? 0;
+  const directPlatformReceivable =
+    paymentsSummarySummary.direct_platform_receivable ??
+    paymentsSummarySummary.direct_remaining ??
+    paymentsSummarySummary.direct_gross ??
+    0;
+  const xpayPlatformPendingOrRetained =
+    paymentsSummarySummary.xpay_platform_pending_or_retained ?? paymentsSummarySummary.xpay_confirmed_gross ?? 0;
+  const platformCollectedActualProven = paymentsSummarySummary.platform_collected_actual_proven ?? 0;
+  const ownerProviderPayable =
+    paymentsSummarySummary.owner_provider_payable ?? paymentsSummarySummary.owner_amount ?? 0;
   const paymentsSummaryRowsColumns = [
     { key: "payment_id", title: "payment_id", dataIndex: "payment_id" },
     { key: "booking_id", title: "booking_id", dataIndex: "booking_id" },
@@ -638,6 +650,9 @@ export default function AdminFinancePage() {
           <div style={{ color: "#b45309", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 12, padding: 12 }}>
             Read-only отчёт по legacy payments/payouts. Money Core не изменяется.
           </div>
+          <div style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.5 }}>
+            Комиссия платформы — начисленная выручка. Фактически получено подтверждается ledger; сейчас ledger не подтверждает поступление.
+          </div>
 
           <div
             style={{
@@ -769,14 +784,28 @@ export default function AdminFinancePage() {
               gap: 12,
             }}
           >
-            <SummaryTile title="Подтверждено всего" value={formatNumber(paymentsSummarySummary.gross_confirmed)} hint="gross_confirmed" />
-            <SummaryTile title="Наличные / direct" value={formatNumber(paymentsSummarySummary.direct_gross)} hint="direct_gross" />
-            <SummaryTile title="XPAY подтверждено" value={formatNumber(paymentsSummarySummary.xpay_confirmed_gross)} hint="xpay_confirmed_gross" />
+            <SummaryTile title="Оборот / подтверждено" value={formatNumber(paymentsSummarySummary.gross_confirmed)} hint="gross_confirmed" />
+            <SummaryTile title="Начисленная комиссия платформы" value={formatNumber(platformRevenueAccrued)} hint="platform_revenue_accrued" />
+            <SummaryTile title="К получению по наличным/direct" value={formatNumber(directPlatformReceivable)} hint="direct_platform_receivable" />
+            <SummaryTile title="XPAY ожидает / удержано" value={formatNumber(xpayPlatformPendingOrRetained)} hint="xpay_platform_pending_or_retained" />
+            <SummaryTile title="Фактически получено" value={formatNumber(platformCollectedActualProven)} hint="не подтверждено ledger" />
+            <SummaryTile title="К выплате владельцам" value={formatNumber(ownerProviderPayable)} hint="owner_provider_payable" />
             <SummaryTile title="Ожидает оплаты" value={formatNumber(paymentsSummarySummary.pending_gross)} hint="pending_gross" />
-            <SummaryTile title="Комиссия платформы" value={formatNumber(paymentsSummarySummary.platform_fee)} hint="platform_fee" />
-            <SummaryTile title="Сумма владельцев" value={formatNumber(paymentsSummarySummary.owner_amount)} hint="owner_amount" />
-            <SummaryTile title="Остаток наличных" value={formatNumber(paymentsSummarySummary.direct_remaining)} hint="direct_remaining" />
             <SummaryTile title="Accounting warnings" value={formatNumber(paymentsSummarySummary.accounting_warning_count)} hint="accounting_warning_count" />
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <SummaryTile title="Наличные / direct оборот" value={formatNumber(paymentsSummarySummary.direct_gross)} hint="direct_gross" />
+            <SummaryTile title="XPAY подтверждено оборот" value={formatNumber(paymentsSummarySummary.xpay_confirmed_gross)} hint="xpay_confirmed_gross" />
+            <SummaryTile title="Legacy platform_fee начислено" value={formatNumber(paymentsSummarySummary.platform_fee)} hint="platform_fee" />
+            <SummaryTile title="Legacy owner_amount" value={formatNumber(paymentsSummarySummary.owner_amount)} hint="owner_amount" />
+            <SummaryTile title="Direct remaining legacy" value={formatNumber(paymentsSummarySummary.direct_remaining)} hint="direct_remaining" />
           </div>
 
           {paymentsSummaryIssueCounts.length ? (
