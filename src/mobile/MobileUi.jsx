@@ -270,7 +270,7 @@ export function TotemHeader({ title = "TOTEM", subtitle = "", location = "", sta
                 {subtitle}
               </span>
             ) : null}
-            {location ? <MobileLocationPill>{location}</MobileLocationPill> : null}
+            {location ? <TotemLocationPill>{location}</TotemLocationPill> : null}
             {status ? <MobileBadge tone="primary">{status}</MobileBadge> : null}
           </div>
         </div>
