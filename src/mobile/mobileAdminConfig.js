@@ -7,6 +7,24 @@ function normalizeSlug(slug) {
   return String(slug || "").trim();
 }
 
+function formatOwnerDisplayName(ownerName, ownerType) {
+  const normalizedName = String(ownerName || "").trim();
+  if (normalizedName) {
+    return normalizedName;
+  }
+
+  const normalizedOwnerType = normalizeRoleType(ownerType);
+  if (normalizedOwnerType === "master") {
+    return "Кабинет мастера";
+  }
+
+  if (normalizedOwnerType === "salon") {
+    return "Кабинет салона";
+  }
+
+  return "Кабинет";
+}
+
 const MOBILE_ADMIN_NAV_LABELS = {
   booking: "Букинг",
   calendar: "Календарь",
@@ -60,7 +78,7 @@ export function getMobileAdminConfig(roleType, slug) {
     roleType: normalizedRoleType,
     slug: normalizedSlug,
     roleLabel: normalizedRoleType === "master" ? "Мастер" : "Салон",
-    identityLabel: `slug: ${normalizedSlug}`,
+    identityLabel: formatOwnerDisplayName("", normalizedRoleType),
     cards,
     bottomNavItems: buildBottomNavItems(cards),
   };
