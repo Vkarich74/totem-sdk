@@ -2327,30 +2327,51 @@ function CitySurface({
   const cityName = formatLabel(home?.city?.name_ru || home?.city?.name_en || "Город");
   const countryName = formatLabel(home?.country?.name_ru || home?.country?.name_en || "Страна");
   const cityHref = `#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(citySlug)}`;
-  const bookingHref = buildPublicBookingUrl(salons[0]?.slug || "totem-demo-salon");
+  const cityBookingHref = (slug) => buildHashPath(`/booking?salon=${encodeURIComponent(String(slug || "").trim())}`);
+  const cityFilterItems = [
+    { key: "all", label: "Все" },
+    { key: "salons", label: "Салоны" },
+    { key: "masters", label: "Мастера" },
+    { key: "services", label: "Услуги" },
+  ];
 
   return (
     <MobileShell>
       <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
         <MobileTopBar
           title="TOTEM"
-          subtitle={`${cityName} · городская витрина`}
+          subtitle={`${cityName} / ${countryCode}`}
           right={<MobileBadge tone="primary">городская витрина</MobileBadge>}
         />
 
         <MobileHero
           eyebrow="TOTEM City"
-          title={`${cityName} — салоны и мастера рядом`}
+          title={`${cityName} — выберите салон, мастера или услугу`}
           subtitle={`${countryName} · ${formatLabel(home?.city?.timezone || home?.country?.timezone || "Без часового пояса")}`}
           actions={
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-              <MobileButton href="#salons">Выбрать салон</MobileButton>
+              <MobileButton href="#salons">Найти салон</MobileButton>
               <MobileButton tone="secondary" href="#/mobile">
                 На главную
               </MobileButton>
             </div>
           }
         />
+
+        <div id="search">
+          <MobileSection title="Поиск" subtitle="Салон, мастер или услуга.">
+            <TotemSearchBar
+              placeholder="Салон, мастер или услуга"
+              onSubmit={(event) => {
+                event.preventDefault();
+              }}
+            />
+          </MobileSection>
+        </div>
+
+        <MobileSection title="Фильтры" subtitle="Быстрый вход в каталог без новой логики.">
+          <TotemCategoryRail items={cityFilterItems} activeKey="all" />
+        </MobileSection>
 
         <MobileSection title="В городе доступно" subtitle="Короткая сводка по текущей городской витрине.">
           <div
@@ -2371,42 +2392,39 @@ function CitySurface({
           </div>
         </MobileSection>
 
-        <MobileSection title="Как записаться" subtitle="Простой путь к визиту без звонка и лишних шагов.">
-          <div style={{ display: "grid", gap: 12 }}>
-            <MobileCard title="1. Выберите салон" subtitle="Откройте карточку салона, который подходит вам по локации и времени." />
-            <MobileCard title="2. Нажмите «Записаться»" subtitle="Публичная запись откроется в пару касаний." />
-            <MobileCard title="3. Выберите мастера, услугу и время" subtitle="На следующем экране выбираются все детали визита." />
-          </div>
-        </MobileSection>
+        <div id="booking-entry">
+          <MobileSection title="Быстрый путь к записи" subtitle="Один короткий шаг до записи.">
+            <MobileCard title="Выберите карточку и нажмите «Записаться»." subtitle="После этого откроется публичная запись выбранного салона." />
+          </MobileSection>
+        </div>
 
         <div id="salons">
-          <MobileSection title="Салоны" subtitle="Красивые карточки с быстрыми действиями и каталогом.">
+          <MobileSection title="Салоны" subtitle="Выберите салон и перейдите к записи.">
             {salons.length ? (
               <div style={{ display: "grid", gap: 12 }}>
                 {salons.map((salon) => {
                   const slug = String(salon?.slug || "").trim();
                   const salonCatalogState = catalogBySlug[slug] || null;
                   const openSalonHref = buildAbsoluteOwnerUrl(`/salon/${encodeURIComponent(slug)}`);
-                  const bookingLinkHref = buildHashPath(`/booking?salon=${encodeURIComponent(slug)}`);
+                  const bookingLinkHref = cityBookingHref(slug);
 
                   return (
                     <MobileCard
                       key={`city-salon-${salon.id}`}
+                      eyebrow="Салон"
                       title={formatLabel(salon?.name, "Салон")}
-                      subtitle={`${slug} · ${formatLabel(salon?.city, cityName)}`}
+                      subtitle={formatLabel(salon?.city, cityName)}
                       footer={
                         <div style={{ display: "grid", gap: 10 }}>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                            <MobilePill tone="primary">{slug || "slug не указан"}</MobilePill>
-                            <MobilePill tone="neutral">{formatLabel(salon?.city, cityName)}</MobilePill>
+                            <MobilePill tone="primary">{formatLabel(salon?.city, cityName)}</MobilePill>
                             <MobileBadge tone={salon?.enabled ? "success" : "neutral"}>
                               {salon?.enabled ? "Активен" : "Неактивен"}
                             </MobileBadge>
                           </div>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                            <MobileButton href={openSalonHref}>Открыть салон</MobileButton>
                             <MobileButton
-                              tone="secondary"
+                              href={bookingLinkHref}
                               onClick={() => {
                                 trackMobileEvent({
                                   event_type: "booking_entry_open",
@@ -2425,6 +2443,9 @@ function CitySurface({
                               }}
                             >
                               Записаться
+                            </MobileButton>
+                            <MobileButton tone="secondary" href={openSalonHref}>
+                              Открыть салон
                             </MobileButton>
                             <MobileButton tone="soft" onClick={() => onToggleCatalog(slug)}>
                               Каталог
@@ -2451,7 +2472,6 @@ function CitySurface({
                       <div style={{ display: "grid", gap: 10 }}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                           <MobilePill tone="neutral">город: {cityName}</MobilePill>
-                          <MobilePill tone="neutral">slug: {slug || "—"}</MobilePill>
                         </div>
                         <SalonCard
                           salon={salon}
@@ -2480,8 +2500,9 @@ function CitySurface({
               {masters.map((master) => (
                 <MobileCard
                   key={`city-master-${master.id}`}
+                  eyebrow="Мастер"
                   title={formatLabel(master.name)}
-                  subtitle={`@${formatLabel(master.slug)} · ${cityName}`}
+                  subtitle={cityName}
                   footer={
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                       <MobileButton
@@ -2489,7 +2510,9 @@ function CitySurface({
                       >
                         Открыть мастера
                       </MobileButton>
-                      <MobilePill tone="neutral">active: {String(Boolean(master.active))}</MobilePill>
+                      <MobileButton tone="secondary" href="#salons">
+                        К салонам
+                      </MobileButton>
                     </div>
                   }
                 />
@@ -2526,11 +2549,11 @@ function CitySurface({
         <MobileBottomNav
           items={[
             { key: "home", label: "Главная", href: "#/mobile" },
-            { key: "city", label: "Город", href: cityHref },
-            { key: "booking", label: "Запись", href: bookingHref },
-            { key: "help", label: "Помощь", href: "#help" },
+            { key: "search", label: "Поиск", href: "#search" },
+            { key: "booking", label: "Записи", href: "#booking-entry" },
+            { key: "profile", label: "Профиль", href: "#help" },
           ]}
-          activeKey="city"
+          activeKey="search"
         />
       </div>
     </MobileShell>
