@@ -454,18 +454,12 @@ export default function AdminFinancePage() {
   const paymentsSummarySummary = paymentsSummaryData.summary || {};
   const paymentsSummaryIntegrity = paymentsSummaryData.integrity || {};
   const paymentsSummaryIssueCounts = Array.isArray(paymentsSummaryIntegrity.counts) ? paymentsSummaryIntegrity.counts : [];
-  const platformRevenueAccrued =
-    paymentsSummarySummary.platform_revenue_accrued ?? paymentsSummarySummary.platform_fee ?? 0;
-  const directPlatformReceivable =
-    paymentsSummarySummary.direct_platform_receivable ??
-    paymentsSummarySummary.direct_remaining ??
-    paymentsSummarySummary.direct_gross ??
-    0;
-  const xpayPlatformPendingOrRetained =
-    paymentsSummarySummary.xpay_platform_pending_or_retained ?? paymentsSummarySummary.xpay_confirmed_gross ?? 0;
+  // payouts.amount is not report truth; use backend summary contract fields only.
+  const platformRevenueAccrued = paymentsSummarySummary.platform_revenue_accrued ?? 0;
+  const directPlatformReceivable = paymentsSummarySummary.direct_platform_receivable ?? 0;
+  const xpayPlatformPendingOrRetained = paymentsSummarySummary.xpay_platform_pending_or_retained ?? 0;
   const platformCollectedActualProven = paymentsSummarySummary.platform_collected_actual_proven ?? 0;
-  const ownerProviderPayable =
-    paymentsSummarySummary.owner_provider_payable ?? paymentsSummarySummary.owner_amount ?? 0;
+  const ownerProviderPayable = paymentsSummarySummary.owner_provider_payable ?? 0;
   const paymentsSummaryRowsColumns = [
     { key: "payment_id", title: "payment_id", dataIndex: "payment_id" },
     { key: "booking_id", title: "booking_id", dataIndex: "booking_id" },
