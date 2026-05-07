@@ -413,21 +413,21 @@ export default function PublicSalonPage({ slug }) {
     : [];
 
   const palette = {
-    bg: "#F8F5F1",
+    bg: "#F4F7FB",
     card: "#FFFFFF",
-    textMain: "#23201C",
-    textSecondary: "#706860",
-    border: "#EAE2D8",
-    accent: "#C8A97E",
-    accentSoft: "#F6EBDD",
-    button: "#4A4038",
+    textMain: "#101828",
+    textSecondary: "#667085",
+    border: "#E4E7EC",
+    accent: "#4F46E5",
+    accentSoft: "#EEF2FF",
+    button: "linear-gradient(135deg, #111827 0%, #1D4ED8 55%, #7C3AED 100%)",
     buttonText: "#FFFFFF",
-    avatarBg: "#EFE7DE",
+    avatarBg: "#EEF2FF",
     star: "#D39B36",
-    promo: "#FFF6EB",
-    review: "#FFFDF9",
+    promo: "#F8FAFF",
+    review: "#FDFDFF",
     heroOverlay:
-      "linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(35,32,28,0.04) 100%)",
+      "linear-gradient(180deg, rgba(17,24,39,0.02) 0%, rgba(79,70,229,0.08) 48%, rgba(124,58,237,0.08) 100%)",
   };
 
   const pagePaddingBottom = isMobile ? 88 : 32;
@@ -444,7 +444,7 @@ export default function PublicSalonPage({ slug }) {
     margin: 0,
     fontSize: isMobile ? 21 : 30,
     lineHeight: 1.18,
-    fontWeight: 600,
+    fontWeight: 700,
     letterSpacing: "-0.2px",
     color: palette.textMain,
   };
@@ -458,35 +458,36 @@ export default function PublicSalonPage({ slug }) {
 
   const primaryButton = {
     width: isMobile ? "100%" : "auto",
-    minHeight: 46,
+    minHeight: 50,
     padding: isMobile ? "13px 18px" : "13px 20px",
-    borderRadius: 12,
+    borderRadius: 14,
     border: "none",
     background: palette.button,
     color: palette.buttonText,
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: "pointer",
+    boxShadow: "0 12px 28px rgba(17,24,39,0.18)",
   };
 
   const secondaryButton = {
     width: isMobile ? "100%" : "auto",
-    minHeight: 46,
+    minHeight: 50,
     padding: isMobile ? "13px 18px" : "13px 20px",
-    borderRadius: 12,
+    borderRadius: 14,
     border: `1px solid ${palette.border}`,
     background: palette.card,
     color: palette.textMain,
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: "pointer",
   };
 
   const cardStyle = {
     background: palette.card,
     border: `1px solid ${palette.border}`,
-    borderRadius: 16,
-    boxShadow: "0 2px 8px rgba(35,32,28,0.04)",
+    borderRadius: 20,
+    boxShadow: "0 12px 36px rgba(15,23,42,0.06)",
     boxSizing: "border-box",
   };
 
@@ -544,7 +545,9 @@ export default function PublicSalonPage({ slug }) {
       style={{
         fontFamily:
           'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        background: palette.bg,
+        background:
+          "radial-gradient(circle at top left, rgba(79,70,229,0.08), transparent 28%), radial-gradient(circle at top right, rgba(124,58,237,0.08), transparent 24%), " +
+          palette.bg,
         color: palette.textMain,
         paddingBottom: pagePaddingBottom,
       }}
@@ -594,8 +597,8 @@ export default function PublicSalonPage({ slug }) {
             style={{
               ...cardStyle,
               background:
-                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
-              padding: isMobile ? 18 : 30,
+                "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,255,0.98) 100%)",
+              padding: isMobile ? 18 : 32,
             }}
           >
             <div
@@ -625,7 +628,7 @@ export default function PublicSalonPage({ slug }) {
                     background: palette.accentSoft,
                     color: palette.textMain,
                     fontSize: 12,
-                    fontWeight: 600,
+                    fontWeight: 700,
                   }}
                 >
                   {heroBadge}
@@ -637,7 +640,7 @@ export default function PublicSalonPage({ slug }) {
                       margin: 0,
                       fontSize: isMobile ? 28 : 42,
                       lineHeight: 1.08,
-                      fontWeight: 600,
+                      fontWeight: 700,
                       letterSpacing: "-0.25px",
                       color: palette.textMain,
                     }}
@@ -650,7 +653,7 @@ export default function PublicSalonPage({ slug }) {
                       fontSize: isMobile ? 16 : 18,
                       lineHeight: 1.45,
                       color: palette.textMain,
-                      fontWeight: 500,
+                      fontWeight: 600,
                     }}
                   >
                     {slogan}
@@ -691,7 +694,7 @@ export default function PublicSalonPage({ slug }) {
                         border: `1px solid ${palette.border}`,
                         fontSize: 12,
                         color: palette.textMain,
-                        fontWeight: 500,
+                        fontWeight: 600,
                       }}
                     >
                       {item}
@@ -722,7 +725,7 @@ export default function PublicSalonPage({ slug }) {
                         marginTop: 4,
                         fontSize: 14,
                         lineHeight: 1.55,
-                        fontWeight: 600,
+                        fontWeight: 700,
                         color: palette.textMain,
                       }}
                     >
@@ -768,7 +771,7 @@ export default function PublicSalonPage({ slug }) {
                         <div
                           style={{
                             fontSize: 20,
-                            fontWeight: 700,
+                            fontWeight: 800,
                             color: palette.textMain,
                           }}
                         >
@@ -835,9 +838,9 @@ export default function PublicSalonPage({ slug }) {
                   style={{
                     position: "relative",
                     minHeight: isMobile ? 280 : 560,
-                    borderRadius: 20,
+                    borderRadius: 24,
                     overflow: "hidden",
-                    background: "#ECE4DB",
+                    background: "#EEF2FF",
                   }}
                 >
                   <img
