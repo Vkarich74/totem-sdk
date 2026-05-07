@@ -576,19 +576,22 @@ export default function BookingPage() {
 
   if (initLoading) {
     return (
-      <MobileShell>
-        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+      <MobileShell style={bookingPageStyle}>
+        <div style={bookingStackStyle}>
           <MobileTopBar
             title="TOTEM"
             subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+            style={bookingTopBarStyle}
             right={<MobileBadge tone="neutral">загрузка</MobileBadge>}
           />
           <MobileHero
             eyebrow="Запись"
             title="Запись в салон"
             subtitle="Выберите мастера, услугу, дату и время"
+            style={bookingHeroStyle}
+            highlights={bookingHeroChips}
           />
-          <MobileCard title="Загрузка записи" subtitle="Подтягиваем мастеров и услуги салона.">
+          <MobileCard title="Загрузка записи" subtitle="Подтягиваем мастеров и услуги салона." style={bookingCardStyle}>
             <MobileEmptyState
               title="Скоро откроется форма записи"
               description="Пожалуйста, подождите несколько секунд, пока TOTEM загружает данные салона."
@@ -607,11 +610,12 @@ export default function BookingPage() {
     const isPaymentConfirmed = String(paymentStatus || "").toLowerCase() === "confirmed";
 
     return (
-      <MobileShell>
-        <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+      <MobileShell style={bookingPageStyle}>
+        <div style={bookingStackStyle}>
           <MobileTopBar
             title="TOTEM"
             subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+            style={bookingTopBarStyle}
             right={<MobileBadge tone="success">запись создана</MobileBadge>}
           />
 
@@ -619,11 +623,21 @@ export default function BookingPage() {
             eyebrow="Подтверждение"
             title="Запись создана"
             subtitle="Сохраните номер записи и проверьте оплату, если она нужна."
+            style={bookingHeroStyle}
+            actions={
+              <div style={bookingHeroChipsStyle}>
+                <MobilePill tone="primary" style={bookingChipStyle}>Услуга</MobilePill>
+                <MobilePill tone="neutral" style={bookingChipStyle}>Время</MobilePill>
+                <MobilePill tone="neutral" style={bookingChipStyle}>Контакты</MobilePill>
+                <MobilePill tone="success" style={bookingChipStyle}>Подтверждение</MobilePill>
+              </div>
+            }
           />
 
           <MobileCard
             title="Проверьте запись"
             subtitle="Все данные уже сохранены. Ниже - краткое подтверждение."
+            style={bookingCardStyle}
             footer={
               <div style={{ display: "grid", gap: 10 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
@@ -657,10 +671,14 @@ export default function BookingPage() {
             </div>
           </MobileCard>
 
-          <MobileCard title="Оплата" subtitle="Платёж и QR сохраняются в том же потоке, что и раньше.">
+          <MobileCard
+            title="Оплата"
+            subtitle="Платёж и QR сохраняются в том же потоке, что и раньше."
+            style={bookingCardStyle}
+          >
             <div style={{ display: "grid", gap: 12 }}>
               {!paymentData ? (
-                <MobileButton onClick={startPayment} disabled={paymentLoading}>
+                <MobileButton onClick={startPayment} disabled={paymentLoading} style={bookingPrimaryButtonStyle}>
                   {paymentLoading ? "Создаём оплату..." : "Оплатить через XPAY"}
                 </MobileButton>
               ) : (
@@ -694,11 +712,12 @@ export default function BookingPage() {
   }
 
   return (
-    <MobileShell>
-      <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+    <MobileShell style={bookingPageStyle}>
+      <div style={bookingStackStyle}>
         <MobileTopBar
           title="TOTEM"
           subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+          style={bookingTopBarStyle}
           right={<MobileBadge tone="primary">запись</MobileBadge>}
         />
 
@@ -706,28 +725,31 @@ export default function BookingPage() {
             eyebrow="Запись"
             title="Запись в салон"
             subtitle="Выберите мастера, услугу, дату и время"
+            style={bookingHeroStyle}
             actions={
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              <MobilePill tone="neutral">{formatSalonDisplayName(null, slug)}</MobilePill>
-              <MobilePill tone="primary">24h запись</MobilePill>
-            </div>
-          }
+              <div style={bookingHeroChipsStyle}>
+                <MobilePill tone="neutral" style={bookingChipStyle}>{formatSalonDisplayName(null, slug)}</MobilePill>
+                <MobilePill tone="primary" style={bookingChipStyle}>24h запись</MobilePill>
+                <MobilePill tone="neutral" style={bookingChipStyle}>Контакты</MobilePill>
+                <MobilePill tone="success" style={bookingChipStyle}>Подтверждение</MobilePill>
+              </div>
+            }
         />
 
-        <MobileSection title="Запись в один шаг" subtitle="Выберите услугу, время и подтвердите запись.">
-          <MobileCard>
+        <MobileSection title="Запись в один шаг" subtitle="Выберите услугу, время и подтвердите запись." style={bookingSectionStyle}>
+          <MobileCard style={bookingCardStyle}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <MobilePill tone="primary">Услуга</MobilePill>
-              <MobilePill tone="neutral">Время</MobilePill>
-              <MobilePill tone="neutral">Контакты</MobilePill>
-              <MobilePill tone="success">Подтверждение</MobilePill>
+              <MobilePill tone="primary" style={bookingChipStyle}>Услуга</MobilePill>
+              <MobilePill tone="neutral" style={bookingChipStyle}>Время</MobilePill>
+              <MobilePill tone="neutral" style={bookingChipStyle}>Контакты</MobilePill>
+              <MobilePill tone="success" style={bookingChipStyle}>Подтверждение</MobilePill>
             </div>
           </MobileCard>
         </MobileSection>
 
         <form onSubmit={handleBookingSubmit} style={{ display: "grid", gap: 16 }}>
-          <MobileSection title="Ваши данные" subtitle="Нужны для подтверждения записи.">
-            <MobileCard>
+          <MobileSection title="Ваши данные" subtitle="Нужны для подтверждения записи." style={bookingSectionStyle}>
+            <MobileCard style={bookingCardStyle}>
               <div style={{ display: "grid", gap: 12 }}>
                 <input
                   type="text"
@@ -756,8 +778,9 @@ export default function BookingPage() {
             </MobileCard>
           </MobileSection>
 
-          <MobileSection title="Мастер и услуга" subtitle="Сначала мастер, потом подходящая услуга.">
+          <MobileSection title="Мастер и услуга" subtitle="Сначала мастер, потом подходящая услуга." style={bookingSectionStyle}>
             <MobileCard
+              style={bookingCardStyle}
               footer={
                 <MobilePill tone="neutral">
                   {selectedMaster ? "Мастер выбран" : "Сначала выберите мастера"}
@@ -811,8 +834,9 @@ export default function BookingPage() {
             </MobileCard>
           </MobileSection>
 
-          <MobileSection title="Дата и время" subtitle="Выберите удобный день и доступный слот.">
+          <MobileSection title="Дата и время" subtitle="Выберите удобный день и доступный слот." style={bookingSectionStyle}>
             <MobileCard
+              style={bookingCardStyle}
               footer={<MobilePill tone="warning">{date ? `Дата: ${formatDateRu(date)}` : "Сначала выберите дату"}</MobilePill>}
             >
               <div style={{ display: "grid", gap: 12 }}>
@@ -847,12 +871,13 @@ export default function BookingPage() {
             </MobileCard>
           </MobileSection>
 
-          <MobileSection title="Итог записи" subtitle="Проверьте данные и подтвердите запись.">
+          <MobileSection title="Итог записи" subtitle="Проверьте данные и подтвердите запись." style={bookingSectionStyle}>
             <MobileCard
               title="Итог записи"
               subtitle="Если всё верно, подтвердите запись."
+              style={bookingCardStyle}
               footer={
-                <MobileButton type="submit" disabled={loading}>
+                <MobileButton type="submit" disabled={loading} style={bookingPrimaryButtonStyle}>
                   Подтвердить запись
                 </MobileButton>
               }
@@ -884,6 +909,78 @@ export default function BookingPage() {
   );
 }
 
+const bookingPageStyle = {
+  background:
+    "radial-gradient(circle at top, rgba(29,78,216,0.08) 0%, rgba(29,78,216,0.02) 28%, rgba(255,255,255,0) 60%), linear-gradient(180deg, #f8fafc 0%, #eef2ff 52%, #ffffff 100%)",
+};
+
+const bookingStackStyle = {
+  width: "100%",
+  maxWidth: 560,
+  margin: "0 auto",
+  padding: "14px 0 28px",
+  display: "grid",
+  gap: 14,
+  boxSizing: "border-box",
+};
+
+const bookingTopBarStyle = {
+  padding: 14,
+  borderRadius: 24,
+  background: "rgba(255,255,255,0.9)",
+  border: "1px solid rgba(226,232,240,0.92)",
+  boxShadow: "0 14px 34px rgba(15,23,42,0.06)",
+  backdropFilter: "blur(16px)",
+};
+
+const bookingHeroStyle = {
+  padding: 20,
+  borderRadius: 30,
+  background: "linear-gradient(135deg, #0f172a 0%, #1d4ed8 46%, #0ea5e9 100%)",
+  boxShadow: "0 26px 60px rgba(29,78,216,0.20)",
+  overflow: "hidden",
+};
+
+const bookingHeroChipsStyle = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 8,
+};
+
+const bookingSectionStyle = {
+  marginTop: 0,
+  padding: 18,
+  borderRadius: 24,
+  background: "rgba(255,255,255,0.96)",
+  border: "1px solid rgba(226,232,240,0.92)",
+  boxShadow: "0 16px 40px rgba(15,23,42,0.07)",
+};
+
+const bookingCardStyle = {
+  padding: 16,
+  borderRadius: 22,
+  background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))",
+  border: "1px solid rgba(226,232,240,0.94)",
+  boxShadow: "0 14px 34px rgba(15,23,42,0.06)",
+};
+
+const bookingChipStyle = {
+  padding: "8px 11px",
+};
+
+const bookingPrimaryButtonStyle = {
+  width: "100%",
+  padding: "14px 16px",
+  borderRadius: 16,
+  background: "linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%)",
+  boxShadow: "0 14px 26px rgba(29,78,216,0.22)",
+};
+
+const bookingStatStyle = {
+  borderRadius: 18,
+  boxShadow: "0 12px 26px rgba(15,23,42,0.05)",
+};
+
 const styles = {
   page: {
     minHeight: "100vh",
@@ -891,7 +988,7 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    padding: 16
+    padding: 16,
   },
   card: {
     width: "100%",
@@ -899,87 +996,94 @@ const styles = {
     background: "#fff",
     borderRadius: 16,
     padding: 24,
-    boxShadow: "0 10px 25px rgba(0,0,0,0.08)"
+    boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
   },
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: 14
+    gap: 14,
   },
   input: {
-    padding: 12,
-    borderRadius: 10,
-    border: "1px solid #ddd"
+    padding: "14px 14px",
+    borderRadius: 16,
+    border: "1px solid rgba(203,213,225,0.98)",
+    background: "#fff",
+    color: "#111827",
+    fontSize: 14,
+    lineHeight: 1.5,
+    boxShadow: "0 6px 16px rgba(15,23,42,0.04)",
+    outline: "none",
   },
   button: {
-    padding: 14,
-    borderRadius: 12,
+    padding: "14px 16px",
+    borderRadius: 16,
     border: "none",
-    background: "#111",
+    background: "linear-gradient(135deg, #111827 0%, #1d4ed8 100%)",
     color: "#fff",
-    fontWeight: 600
+    fontWeight: 700,
+    boxShadow: "0 14px 24px rgba(15,23,42,0.18)",
   },
   secondaryButton: {
     marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
+    padding: "12px 14px",
+    borderRadius: 16,
     border: "1px solid #111",
     background: "#fff",
-    fontWeight: 600
+    fontWeight: 600,
   },
   successBlock: {
     marginBottom: 20,
-    lineHeight: "1.8"
+    lineHeight: "1.8",
   },
   bookingNumber: {
     padding: 12,
     background: "#111",
     color: "#fff",
     textAlign: "center",
-    borderRadius: 12,
+    borderRadius: 14,
     fontWeight: 600,
-    marginBottom: 16
+    marginBottom: 16,
   },
   clientCabinetLink: {
     display: "block",
     textAlign: "center",
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     background: "#fff",
     color: "#111",
     border: "1px solid #111",
     textDecoration: "none",
     fontWeight: 600,
-    marginBottom: 16
+    marginBottom: 16,
   },
   clientCabinetHint: {
     marginBottom: 16,
     padding: 14,
     borderRadius: 14,
     border: "1px solid #e5e7eb",
-    background: "#f9fafb"
+    background: "#f9fafb",
   },
   clientCabinetHintTitle: {
     fontSize: 16,
     fontWeight: 700,
     marginBottom: 6,
-    color: "#111827"
+    color: "#111827",
   },
   clientCabinetHintText: {
     fontSize: 14,
     lineHeight: "1.6",
-    color: "#4b5563"
+    color: "#4b5563",
   },
   paymentBlock: {
     marginBottom: 16,
     padding: 14,
     border: "1px solid #e5e7eb",
     borderRadius: 14,
-    background: "#fafafa"
+    background: "#fafafa",
   },
   paymentTitle: {
     margin: "0 0 10px 0",
-    fontSize: 18
+    fontSize: 18,
   },
   paymentStatus: {
     padding: 10,
@@ -988,7 +1092,7 @@ const styles = {
     color: "#fff",
     textAlign: "center",
     fontWeight: 600,
-    marginBottom: 10
+    marginBottom: 10,
   },
   paymentStatusConfirmed: {
     padding: 10,
@@ -997,36 +1101,36 @@ const styles = {
     color: "#fff",
     textAlign: "center",
     fontWeight: 600,
-    marginBottom: 10
+    marginBottom: 10,
   },
   paymentMeta: {
     fontSize: 13,
     color: "#555",
     textAlign: "center",
-    marginBottom: 10
+    marginBottom: 10,
   },
   qrImage: {
     display: "block",
     width: "100%",
     maxWidth: 240,
     margin: "10px auto",
-    borderRadius: 12
+    borderRadius: 12,
   },
   payLink: {
     display: "block",
     textAlign: "center",
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     background: "#fff",
     color: "#111",
     border: "1px solid #111",
     textDecoration: "none",
     fontWeight: 600,
-    marginTop: 10
+    marginTop: 10,
   },
   error: {
     color: "#d32f2f",
     marginTop: 10,
-    textAlign: "center"
-  }
+    textAlign: "center",
+  },
 };
