@@ -1982,7 +1982,7 @@ function HomeSurface({
 
   return (
     <TotemAppFrame>
-      <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 14 }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", display: "grid", gap: 14 }}>
         <TotemHeader
           title="TOTEM"
           location={featuredLocation ? `${featuredCityName} / ${featuredCountryCode}` : "Выберите город"}
@@ -2008,6 +2008,41 @@ function HomeSurface({
             </>
           }
         />
+
+        <MobileSection title="Кому подходит TOTEM" subtitle="Одна мобильная витрина для клиентов, мастеров и салонов.">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+            <MobileCard
+              title="Клиентам"
+              subtitle="Поиск, запись, уведомления и история визитов."
+              actions={
+                <>
+                  <MobileBadge tone="primary">Запись</MobileBadge>
+                  <MobileBadge tone="success">Напоминания</MobileBadge>
+                </>
+              }
+            />
+            <MobileCard
+              title="Мастерам"
+              subtitle="Календарь, записи, доход и быстрый вывод средств."
+              actions={
+                <>
+                  <MobileBadge tone="accent">Календарь</MobileBadge>
+                  <MobileBadge tone="warning">Доход</MobileBadge>
+                </>
+              }
+            />
+            <MobileCard
+              title="Салонам"
+              subtitle="Команда, расписание, финансы и отчёты без лишней навигации."
+              actions={
+                <>
+                  <MobileBadge tone="neutral">Команда</MobileBadge>
+                  <MobileBadge tone="primary">Отчёты</MobileBadge>
+                </>
+              }
+            />
+          </div>
+        </MobileSection>
 
         <div id="search">
           <TotemSearchBar
@@ -2081,6 +2116,39 @@ function HomeSurface({
             <MobileStatCard label="Города" value={cities.length} note="Готовы к записи" tone="success" />
             <MobileStatCard label="Сообщения" value={totalNotifications} note={unreadAnnouncements > 0 ? `Новых: ${unreadAnnouncements}` : "Все прочитано"} tone="warning" />
             <MobileStatCard label="Витрина" value={pwaStatusLabel} note={pwaStatusNote} tone="accent" />
+          </div>
+        </MobileSection>
+
+        <MobileSection
+          title="Навигация в приложении"
+          subtitle="Preview клиентского и owner-потока без смены маршрутов."
+        >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+            <MobileCard
+              title="Клиентский nav"
+              subtitle="Главная → Поиск → Записи → Профиль"
+              actions={
+                <>
+                  <MobilePill tone="primary">Главная</MobilePill>
+                  <MobilePill tone="neutral">Поиск</MobilePill>
+                  <MobilePill tone="neutral">Записи</MobilePill>
+                  <MobilePill tone="neutral">Профиль</MobilePill>
+                </>
+              }
+            />
+            <MobileCard
+              title="Owner nav"
+              subtitle="Главная → Календарь → Записи → Финансы → Ещё"
+              actions={
+                <>
+                  <MobilePill tone="primary">Главная</MobilePill>
+                  <MobilePill tone="neutral">Календарь</MobilePill>
+                  <MobilePill tone="neutral">Записи</MobilePill>
+                  <MobilePill tone="neutral">Финансы</MobilePill>
+                  <MobilePill tone="neutral">Ещё</MobilePill>
+                </>
+              }
+            />
           </div>
         </MobileSection>
 
