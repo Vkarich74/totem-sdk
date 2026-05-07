@@ -37,6 +37,12 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function pickFirstString(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
 
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
