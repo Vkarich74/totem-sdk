@@ -274,13 +274,30 @@ export async function postMobileDataRequest(payload = {}) {
 }
 
 export async function postMobileEvent(payload = {}) {
-  const res = await fetch(`${API}/public/mobile/events`, {
+  const body = JSON.stringify(payload || {});
+  const url = `${API}/public/mobile/events`;
+
+  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+    try {
+      const beaconBody =
+        typeof Blob !== "undefined" ? new Blob([body], { type: "application/json" }) : body;
+      const queued = navigator.sendBeacon(url, beaconBody);
+
+      if (queued) {
+        return { ok: true, queued: true, transport: "sendBeacon" };
+      }
+    } catch {
+      /* fall through to fetch */
+    }
+  }
+
+  const res = await fetch(url, {
     method: "POST",
     keepalive: true,
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload || {}),
+    body,
   });
 
   try {
