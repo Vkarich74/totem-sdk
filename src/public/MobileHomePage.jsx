@@ -1968,8 +1968,8 @@ function HomeSurface({
     { key: "spa", label: "SPA" },
   ];
   const ownerEntryHref = "#owner-entry";
-  const masterLoginHref = "#/auth/login?role=master";
-  const salonLoginHref = "#/auth/login?role=salon_admin";
+  const masterLoginHref = "https://app.totemv.com/#/auth/login?role=master";
+  const salonLoginHref = "https://app.totemv.com/#/auth/login?role=salon_admin";
   const totalNotifications = totalAnnouncements;
   const pwaStatusLabel = mobilePwaEnabled
     ? pwaUpdateAvailable
