@@ -276,6 +276,7 @@ export async function postMobileDataRequest(payload = {}) {
 export async function postMobileEvent(payload = {}) {
   const res = await fetch(`${API}/public/mobile/events`, {
     method: "POST",
+    keepalive: true,
     headers: {
       "Content-Type": "application/json",
     },
