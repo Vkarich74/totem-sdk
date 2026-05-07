@@ -18,6 +18,7 @@ function getAdminTargetHash(returnTo){
     "#/admin/leads",
     "#/admin/cases",
     "#/admin/mobile",
+    "#/admin/finance",
   ])
 
   return allowedTargets.has(normalized) ? normalized : "#/admin"
