@@ -132,6 +132,73 @@ function buildMobileBookingHref(salonSlug) {
   return buildHashPath(`/booking?salon=${encodedSlug}`);
 }
 
+function toNumber(value) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : null;
+}
+
+function getCityCoordinates(city) {
+  if (!city || typeof city !== "object") {
+    return null;
+  }
+
+  const lat = toNumber(city.lat ?? city.latitude ?? city.lat_deg ?? city.latitude_deg);
+  const lng = toNumber(city.lng ?? city.lon ?? city.longitude ?? city.long ?? city.longitude_deg);
+
+  if (lat == null || lng == null) {
+    return null;
+  }
+
+  return { lat, lng };
+}
+
+function getDistanceKm(fromLat, fromLng, toLat, toLng) {
+  const radiusKm = 6371;
+  const dLat = ((toLat - fromLat) * Math.PI) / 180;
+  const dLng = ((toLng - fromLng) * Math.PI) / 180;
+  const lat1 = (fromLat * Math.PI) / 180;
+  const lat2 = (toLat * Math.PI) / 180;
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const a = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng;
+  return 2 * radiusKm * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+function findNearestKnownCity(cities, lat, lng) {
+  const candidates = Array.isArray(cities)
+    ? cities
+        .map((city) => {
+          const coords = getCityCoordinates(city);
+          if (!coords) {
+            return null;
+          }
+
+          return {
+            city,
+            distance: getDistanceKm(lat, lng, coords.lat, coords.lng),
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  if (candidates.length) {
+    candidates.sort((a, b) => a.distance - b.distance);
+    return candidates[0].city;
+  }
+
+  if (!Array.isArray(cities)) {
+    return null;
+  }
+
+  return (
+    cities.find((city) => {
+      const countryCode = String(city?.country_code || city?.countryCode || "").trim().toUpperCase();
+      const citySlug = String(city?.slug || "").trim().toLowerCase();
+      return countryCode === "KG" && citySlug === "bishkek";
+    }) || null
+  );
+}
+
 function getMobileAnalyticsSessionKey() {
   const storageKey = "TOTEM_MOBILE_ANALYTICS_SESSION";
 
@@ -2097,6 +2164,94 @@ function HomeSurface({
       accent: "B",
     },
   ];
+  const [geoLocationState, setGeoLocationState] = useState({
+    status: "idle",
+    message: "",
+    city: null,
+    href: "",
+  });
+  const detectedCityName = formatLabel(
+    geoLocationState.city?.name_ru ||
+      geoLocationState.city?.name_en ||
+      geoLocationState.city?.slug ||
+      "—"
+  );
+  const detectedCityHref = geoLocationState.href || "#cities";
+  const isDetectingCity = geoLocationState.status === "loading";
+  const handleDetectCity = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoLocationState({
+        status: "error",
+        message: "Не удалось определить город. Выберите город вручную.",
+        city: null,
+        href: "",
+      });
+      return;
+    }
+
+    setGeoLocationState({
+      status: "loading",
+      message: "",
+      city: null,
+      href: "",
+    });
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = toNumber(position?.coords?.latitude);
+        const longitude = toNumber(position?.coords?.longitude);
+
+        if (latitude == null || longitude == null) {
+          setGeoLocationState({
+            status: "error",
+            message: "Не удалось определить город. Выберите город вручную.",
+            city: null,
+            href: "",
+          });
+          return;
+        }
+
+        const matchedCity = findNearestKnownCity(cities, latitude, longitude);
+
+        if (!matchedCity) {
+          setGeoLocationState({
+            status: "error",
+            message: "Не удалось определить город. Выберите город вручную.",
+            city: null,
+            href: "",
+          });
+          return;
+        }
+
+        let countryCode = String(matchedCity?.country_code || matchedCity?.countryCode || "").trim().toUpperCase();
+        const citySlug = String(matchedCity?.slug || "").trim().toLowerCase();
+        if (!countryCode && citySlug === "bishkek") {
+          countryCode = "KG";
+        }
+        const cityHref = countryCode && citySlug ? buildMobileCityHref(countryCode, citySlug) : "#cities";
+
+        setGeoLocationState({
+          status: "success",
+          message: `Город найден: ${formatLabel(matchedCity?.name_ru || matchedCity?.name_en || citySlug)}`,
+          city: matchedCity,
+          href: cityHref,
+        });
+      },
+      () => {
+        setGeoLocationState({
+          status: "error",
+          message: "Не удалось определить город. Выберите город вручную.",
+          city: null,
+          href: "",
+        });
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000,
+      }
+    );
+  };
 
   return (
     <TotemAppFrame style={appPageStyle}>
@@ -2311,6 +2466,61 @@ function HomeSurface({
               { label: "Финансы", tone: "success" },
               { label: "Уведомления", tone: "warning" },
             ]}
+          />
+        </PremiumSection>
+
+        <PremiumSection
+          title="Определить город"
+          subtitle="Разрешите браузеру один раз определить город. Если доступ запрещён, выберите город вручную."
+        >
+          <PremiumCard
+            title="Определить город"
+            subtitle="Разрешите браузеру один раз определить город. Если доступ запрещён, выберите город вручную."
+            actions={
+              <>
+                <MobileBadge tone="accent">Только по нажатию</MobileBadge>
+                <MobileBadge tone="neutral">Без отправки координат</MobileBadge>
+              </>
+            }
+            footer={
+              <div style={{ display: "grid", gap: 12 }}>
+                <div style={{ fontSize: 14, lineHeight: 1.55, color: "#64748B" }}>
+                  {geoLocationState.status === "success"
+                    ? geoLocationState.message
+                    : geoLocationState.message || "Определите город, а если доступ запрещён, выберите его вручную."}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                  <MobileButton onClick={handleDetectCity} disabled={isDetectingCity}>
+                    {isDetectingCity ? "Определяем…" : "Определить город"}
+                  </MobileButton>
+                  <MobileButton tone="secondary" href="#cities">
+                    Выбрать город вручную
+                  </MobileButton>
+                  {geoLocationState.status === "success" && geoLocationState.city ? (
+                    <MobileButton href={detectedCityHref}>Открыть город</MobileButton>
+                  ) : null}
+                </div>
+                {geoLocationState.status === "success" && geoLocationState.city ? (
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      padding: "12px 14px",
+                      borderRadius: 18,
+                      background: "rgba(59,130,246,0.08)",
+                      border: "1px solid rgba(59,130,246,0.16)",
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A" }}>
+                      Город найден: {detectedCityName}
+                    </div>
+                    <div style={{ fontSize: 12, lineHeight: 1.5, color: "#64748B" }}>
+                      Нажмите «Открыть город», чтобы перейти к найденной городской витрине.
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            }
           />
         </PremiumSection>
 
