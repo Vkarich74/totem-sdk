@@ -589,7 +589,14 @@ export default function BookingPage() {
             title="Запись в салон"
             subtitle="Выберите мастера, услугу, дату и время"
             style={bookingHeroStyle}
-            highlights={bookingHeroChips}
+            actions={
+              <div style={bookingHeroChipsStyle}>
+                <MobilePill tone="primary" style={bookingChipStyle}>Услуга</MobilePill>
+                <MobilePill tone="neutral" style={bookingChipStyle}>Время</MobilePill>
+                <MobilePill tone="neutral" style={bookingChipStyle}>Контакты</MobilePill>
+                <MobilePill tone="success" style={bookingChipStyle}>Подтверждение</MobilePill>
+              </div>
+            }
           />
           <MobileCard title="Загрузка записи" subtitle="Подтягиваем мастеров и услуги салона." style={bookingCardStyle}>
             <MobileEmptyState
