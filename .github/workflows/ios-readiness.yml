@@ -1,0 +1,33 @@
+name: iOS Readiness
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios-readiness:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: List Xcode project
+        run: xcodebuild -list -project ios/App/App.xcodeproj
+
+      - name: Show Xcode build settings
+        run: xcodebuild -showBuildSettings -project ios/App/App.xcodeproj -scheme App
