@@ -1779,11 +1779,11 @@ function SalonCard({ salon, catalogState, onToggleCatalog, countryCode, citySlug
         >
           Открыть салон
         </a>
-        <a
-          href={buildHashPath(`/booking?salon=${encodeURIComponent(slug)}`)}
-          onClick={() => trackMobileEvent({
-            event_type: "booking_entry_open",
-            target_type: "booking",
+          <a
+            href={buildMobileBookingHref(slug)}
+            onClick={() => trackMobileEvent({
+              event_type: "booking_entry_open",
+              target_type: "booking",
             owner_type: "salon",
             owner_slug: slug,
             country_code: countryCode,
