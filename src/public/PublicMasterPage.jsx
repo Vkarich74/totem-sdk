@@ -285,8 +285,8 @@ export default function PublicMasterPage({ slug }) {
   const stats = normalizeStats(view.stats);
   const bookingBand = normalizeBookingBand(view.bookingBand);
   const bookingUrl = view.bookingUrl;
-  const bookingLabel = view.bookingLabel;
-  const servicesLabel = view.servicesLabel;
+  const bookingLabel = pickFirstString(view.bookingLabel, "Записаться к мастеру");
+  const servicesLabel = pickFirstString(view.servicesLabel, "Смотреть услуги");
   const servicesAnchor = view.servicesAnchor;
   const mapLabel = view.mapLabel;
   const stickyLabel = view.stickyLabel;
@@ -334,18 +334,19 @@ export default function PublicMasterPage({ slug }) {
   const hasStickyBlock = hasAnyText([masterName, profession, stickySubline, stickyLabel, bookingUrl]);
 
   const palette = {
-    bg: "#F8F5F1",
+    bg: "#F4F7FB",
     card: "#FFFFFF",
-    textMain: "#23201C",
-    textSecondary: "#706860",
-    border: "#EAE2D8",
-    accent: "#C8A97E",
-    accentSoft: "#F6EBDD",
-    button: "#4A4038",
+    textMain: "#101828",
+    textSecondary: "#667085",
+    border: "#E4E7EC",
+    accent: "#4F46E5",
+    accentSoft: "#EEF2FF",
+    button: "linear-gradient(135deg, #111827 0%, #1D4ED8 55%, #7C3AED 100%)",
     buttonText: "#FFFFFF",
     star: "#D39B36",
-    review: "#FFFDF9",
-    heroOverlay: "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(35,32,28,0.05) 100%)",
+    review: "#FDFDFF",
+    heroOverlay:
+      "linear-gradient(180deg, rgba(17,24,39,0.02) 0%, rgba(79,70,229,0.08) 48%, rgba(124,58,237,0.08) 100%)",
   };
 
   const shellStyle = {
@@ -370,7 +371,7 @@ export default function PublicMasterPage({ slug }) {
     margin: 0,
     fontSize: "clamp(22px, 3.2vw, 30px)",
     lineHeight: 1.18,
-    fontWeight: 600,
+    fontWeight: 700,
     letterSpacing: "-0.2px",
     color: palette.textMain,
   };
@@ -393,8 +394,8 @@ export default function PublicMasterPage({ slug }) {
   const cardStyle = {
     background: palette.card,
     border: `1px solid ${palette.border}`,
-    borderRadius: "16px",
-    boxShadow: "0 2px 8px rgba(35,32,28,0.04)",
+    borderRadius: "20px",
+    boxShadow: "0 12px 36px rgba(15,23,42,0.06)",
     boxSizing: "border-box",
   };
 
@@ -402,28 +403,29 @@ export default function PublicMasterPage({ slug }) {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: "46px",
+    minHeight: "50px",
     padding: "13px 20px",
-    borderRadius: "12px",
+    borderRadius: "14px",
     background: palette.button,
     color: palette.buttonText,
     textDecoration: "none",
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: "14px",
     border: "none",
+    boxShadow: "0 12px 28px rgba(17,24,39,0.18)",
   };
 
   const secondaryButtonStyle = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: "46px",
+    minHeight: "50px",
     padding: "13px 20px",
-    borderRadius: "12px",
+    borderRadius: "14px",
     background: palette.card,
     color: palette.textMain,
     textDecoration: "none",
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: "14px",
     border: `1px solid ${palette.border}`,
   };
@@ -451,7 +453,7 @@ export default function PublicMasterPage({ slug }) {
               style={{
                 ...cardStyle,
                 background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
+                  "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,255,0.98) 100%)",
                 padding: "18px",
                 display: "flex",
                 flexWrap: "wrap",
@@ -507,8 +509,8 @@ export default function PublicMasterPage({ slug }) {
               style={{
                 ...cardStyle,
                 background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,245,239,0.98) 100%)",
-                padding: "30px",
+                  "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,255,0.98) 100%)",
+                padding: "32px",
               }}
             >
               <div
@@ -538,7 +540,7 @@ export default function PublicMasterPage({ slug }) {
                         background: palette.accentSoft,
                         color: palette.textMain,
                         fontSize: "12px",
-                        fontWeight: 600,
+                        fontWeight: 700,
                       }}
                     >
                       {heroBadge}
@@ -552,7 +554,7 @@ export default function PublicMasterPage({ slug }) {
                           margin: 0,
                           fontSize: "clamp(34px, 5vw, 48px)",
                           lineHeight: 1.04,
-                          fontWeight: 600,
+                          fontWeight: 700,
                           letterSpacing: "-0.25px",
                           color: palette.textMain,
                         }}
@@ -567,7 +569,7 @@ export default function PublicMasterPage({ slug }) {
                           fontSize: "18px",
                           lineHeight: 1.45,
                           color: palette.textMain,
-                          fontWeight: 500,
+                          fontWeight: 600,
                         }}
                       >
                         {professionLine}
@@ -603,7 +605,7 @@ export default function PublicMasterPage({ slug }) {
                             border: `1px solid ${palette.border}`,
                             color: palette.textMain,
                             fontSize: "12px",
-                            fontWeight: 500,
+                            fontWeight: 600,
                           }}
                         >
                           {badge}
@@ -630,7 +632,7 @@ export default function PublicMasterPage({ slug }) {
                                 marginTop: "4px",
                                 fontSize: "14px",
                                 lineHeight: 1.55,
-                                fontWeight: 600,
+                                fontWeight: 700,
                                 color: palette.textMain,
                               }}
                             >
@@ -675,7 +677,7 @@ export default function PublicMasterPage({ slug }) {
                               }}
                             >
                               {hasText(ratingValue) ? (
-                                <div style={{ fontSize: "20px", fontWeight: 700, color: palette.textMain }}>
+                                <div style={{ fontSize: "20px", fontWeight: 800, color: palette.textMain }}>
                                   {ratingValue}
                                 </div>
                               ) : null}
@@ -710,9 +712,9 @@ export default function PublicMasterPage({ slug }) {
                   style={{
                     position: "relative",
                     minHeight: "560px",
-                    borderRadius: "20px",
+                    borderRadius: "24px",
                     overflow: "hidden",
-                    background: heroImage ? "#ECE4DB" : "transparent",
+                    background: heroImage ? "#EEF2FF" : "transparent",
                   }}
                 >
                   {heroVisual}
