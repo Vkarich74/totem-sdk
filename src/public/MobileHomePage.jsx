@@ -188,11 +188,11 @@ function Card({ children, style }) {
   return (
     <div
       style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: 18,
-        background: "#fff",
-        boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-        padding: 16,
+        border: "1px solid rgba(226,232,240,0.88)",
+        borderRadius: 26,
+        background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.94) 100%)",
+        boxShadow: "0 18px 46px rgba(15,23,42,0.08)",
+        padding: 18,
         ...style,
       }}
     >
@@ -204,11 +204,11 @@ function Card({ children, style }) {
 function SectionTitle({ children, subtitle }) {
   return (
     <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: "#111827", lineHeight: 1.15 }}>
+      <div style={{ fontSize: 20, fontWeight: 900, color: "#0f172a", lineHeight: 1.12, letterSpacing: "-0.03em" }}>
         {children}
       </div>
       {subtitle ? (
-        <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+        <div style={{ marginTop: 6, fontSize: 13, color: "#64748b", lineHeight: 1.45 }}>
           {subtitle}
         </div>
       ) : null}
@@ -223,17 +223,101 @@ function EntityBadge({ children }) {
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        padding: "6px 10px",
+        padding: "7px 11px",
         borderRadius: 999,
-        background: "#f3f4f6",
-        color: "#374151",
+        background: "linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)",
+        color: "#1d4ed8",
+        border: "1px solid rgba(59,130,246,0.16)",
         fontSize: 12,
         fontWeight: 700,
+        boxShadow: "0 8px 18px rgba(29,78,216,0.08)",
       }}
     >
       {children}
     </span>
   );
+}
+
+const appPageStyle = {
+  background:
+    "radial-gradient(circle at top, rgba(37,99,235,0.08) 0%, rgba(37,99,235,0.02) 30%, rgba(255,255,255,0) 62%), linear-gradient(180deg, #f8fafc 0%, #eef2ff 52%, #ffffff 100%)",
+};
+
+const appStackStyle = {
+  width: "100%",
+  maxWidth: 480,
+  margin: "0 auto",
+  padding: "14px 0 28px",
+  display: "grid",
+  gap: 14,
+  boxSizing: "border-box",
+};
+
+const cityStackStyle = {
+  ...appStackStyle,
+  maxWidth: 560,
+};
+
+const premiumHeroStyle = {
+  padding: 20,
+  borderRadius: 30,
+  background: "linear-gradient(135deg, #0f172a 0%, #1d4ed8 46%, #0ea5e9 100%)",
+  boxShadow: "0 26px 60px rgba(29,78,216,0.20)",
+  overflow: "hidden",
+};
+
+const premiumSectionStyle = {
+  marginTop: 0,
+  padding: 18,
+  borderRadius: 24,
+  background: "rgba(255,255,255,0.94)",
+  border: "1px solid rgba(226,232,240,0.92)",
+  boxShadow: "0 16px 40px rgba(15,23,42,0.07)",
+};
+
+const premiumCardStyle = {
+  padding: 16,
+  borderRadius: 22,
+  background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))",
+  border: "1px solid rgba(226,232,240,0.94)",
+  boxShadow: "0 14px 34px rgba(15,23,42,0.06)",
+};
+
+const premiumStatStyle = {
+  padding: 16,
+  borderRadius: 22,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.94)",
+  boxShadow: "0 12px 28px rgba(15,23,42,0.05)",
+};
+
+const premiumPanelStyle = {
+  padding: 16,
+  borderRadius: 24,
+  background: "rgba(255,255,255,0.94)",
+  border: "1px solid rgba(226,232,240,0.92)",
+  boxShadow: "0 16px 40px rgba(15,23,42,0.07)",
+};
+
+const topChromeStyle = {
+  padding: 14,
+  borderRadius: 24,
+  background: "rgba(255,255,255,0.9)",
+  border: "1px solid rgba(226,232,240,0.92)",
+  boxShadow: "0 14px 34px rgba(15,23,42,0.06)",
+  backdropFilter: "blur(16px)",
+};
+
+function PremiumSection({ style, ...props }) {
+  return <MobileSection style={{ ...premiumSectionStyle, ...style }} {...props} />;
+}
+
+function PremiumCard({ style, ...props }) {
+  return <MobileCard style={{ ...premiumCardStyle, ...style }} {...props} />;
+}
+
+function PremiumStatCard({ style, ...props }) {
+  return <MobileStatCard style={{ ...premiumStatStyle, ...style }} {...props} />;
 }
 
 export default function MobileHomePage() {
@@ -1162,7 +1246,7 @@ function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
   const unreadCount = items.reduce((count, item) => count + (item?.is_read === true ? 0 : 1), 0);
 
   return (
-    <Card>
+    <Card style={premiumPanelStyle}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <SectionTitle subtitle="Актуальные сообщения и акционные объявления.">Уведомления</SectionTitle>
         {unreadCount > 0 ? (
@@ -1268,7 +1352,7 @@ function ReferralBlock({ referral }) {
   }
 
   return (
-    <Card>
+    <Card style={premiumPanelStyle}>
       <SectionTitle subtitle="Персональная ссылка для приглашения друзей.">Реферальная программа</SectionTitle>
 
       {loading ? (
@@ -1427,7 +1511,7 @@ function HelpBlock({ countryCode, citySlug }) {
   }
 
   return (
-    <Card>
+    <Card style={premiumPanelStyle}>
       <SectionTitle subtitle="Дополнительные способы связи, версии и юридической информации.">Помощь, версия и документы</SectionTitle>
 
       <div style={helpGridStyle}>
@@ -1555,10 +1639,14 @@ function PwaPromptBlock({
   }
 
   return (
-    <MobileCard
+    <PremiumCard
       title="Приложение TOTEM"
       subtitle="Установка и обновление мобильной витрины."
-      style={{ borderColor: "#dbeafe", background: "#f8fbff" }}
+      style={{
+        borderColor: "rgba(191,219,254,0.95)",
+        background: "linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%)",
+        boxShadow: "0 16px 40px rgba(15,23,42,0.07)",
+      }}
     >
 
       <div style={{ display: "grid", gap: 12 }}>
@@ -1641,7 +1729,7 @@ function PwaPromptBlock({
           </button>
         </div>
       </div>
-    </MobileCard>
+    </PremiumCard>
   );
 }
 
@@ -2011,12 +2099,13 @@ function HomeSurface({
   ];
 
   return (
-    <TotemAppFrame>
-      <div style={{ maxWidth: 480, margin: "0 auto", display: "grid", gap: 14 }}>
+    <TotemAppFrame style={appPageStyle}>
+      <div style={appStackStyle}>
         <TotemHeader
           title="TOTEM"
           location={featuredLocation ? `${featuredCityName} / ${featuredCountryCode}` : "Выберите город"}
           status="мобильная витрина"
+          style={topChromeStyle}
           right={
             <MobileButton tone="secondary" href="#notifications">
               Уведомления
@@ -2028,7 +2117,14 @@ function HomeSurface({
           eyebrow="TOTEM Mobile"
           title="TOTEM — запись и управление beauty-сервисами"
           subtitle="Клиенты находят салон и бронируют время. Мастера и салоны управляют записями, календарём и финансами."
-          style={{ padding: 18 }}
+          style={premiumHeroStyle}
+          highlights={
+            <>
+              <MobileBadge tone="primary">Клиентам</MobileBadge>
+              <MobileBadge tone="accent">Мастерам</MobileBadge>
+              <MobileBadge tone="success">Салонам</MobileBadge>
+            </>
+          }
           actions={
             <>
               <MobileButton href={cityNavHref}>Записаться сейчас</MobileButton>
@@ -2039,9 +2135,9 @@ function HomeSurface({
           }
         />
 
-        <MobileSection title="Кому подходит TOTEM" subtitle="Одна мобильная витрина для клиентов, мастеров и салонов.">
+        <PremiumSection title="Кому подходит TOTEM" subtitle="Одна мобильная витрина для клиентов, мастеров и салонов.">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
-            <MobileCard
+            <PremiumCard
               title="Клиентам"
               subtitle="Поиск, запись, уведомления и история визитов."
               actions={
@@ -2051,7 +2147,7 @@ function HomeSurface({
                 </>
               }
             />
-            <MobileCard
+            <PremiumCard
               title="Мастерам"
               subtitle="Календарь, записи, доход и быстрый вывод средств."
               actions={
@@ -2061,7 +2157,7 @@ function HomeSurface({
                 </>
               }
             />
-            <MobileCard
+            <PremiumCard
               title="Салонам"
               subtitle="Команда, расписание, финансы и отчёты без лишней навигации."
               actions={
@@ -2072,29 +2168,31 @@ function HomeSurface({
               }
             />
           </div>
-        </MobileSection>
+        </PremiumSection>
 
         <div id="search">
-          <TotemSearchBar
-            placeholder="Салон, мастер или услуга"
-            onSubmit={(event) => {
-              event.preventDefault();
-            }}
-          />
+          <PremiumSection title="Найти" subtitle="Салон, мастер или услуга.">
+            <TotemSearchBar
+              placeholder="Салон, мастер или услуга"
+              onSubmit={(event) => {
+                event.preventDefault();
+              }}
+            />
+          </PremiumSection>
         </div>
 
         <div id="categories">
-          <MobileSection
+          <PremiumSection
             title="Категории"
             subtitle="Быстрый вход в популярные категории без фильтрации данных."
             action={<MobilePill tone="neutral">{homeCategoryItems.length} категорий</MobilePill>}
           >
             <TotemCategoryRail items={homeCategoryItems} activeKey="all" />
-          </MobileSection>
+          </PremiumSection>
         </div>
 
         <div id="quick-actions">
-          <MobileSection title="Быстрые действия" subtitle="Главные переходы в один тап.">
+          <PremiumSection title="Быстрые действия" subtitle="Главные переходы в один тап.">
             <div
               style={{
                 display: "grid",
@@ -2103,7 +2201,7 @@ function HomeSurface({
               }}
             >
               {quickActions.map((item) => (
-                <MobileCard
+                <PremiumCard
                   key={item.key}
                   title={item.title}
                   subtitle={item.subtitle}
@@ -2116,11 +2214,11 @@ function HomeSurface({
                 />
               ))}
             </div>
-          </MobileSection>
+          </PremiumSection>
         </div>
 
-        <MobileSection title="Свободные окна сегодня" subtitle="Быстрый взгляд на доступность и переход к записи.">
-          <MobileCard
+        <PremiumSection title="Свободные окна сегодня" subtitle="Быстрый взгляд на доступность и переход к записи.">
+          <PremiumCard
             title="Посмотреть ближайшие окна"
             subtitle="Откройте городскую витрину и выберите удобное время."
             actions={
@@ -2138,23 +2236,23 @@ function HomeSurface({
               </div>
             }
           />
-        </MobileSection>
+        </PremiumSection>
 
-        <MobileSection title="Сегодня в TOTEM" subtitle="Короткий обзор доступного прямо сейчас.">
+        <PremiumSection title="Сегодня в TOTEM" subtitle="Короткий обзор доступного прямо сейчас.">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
-            <MobileStatCard label="Страны" value={countries.length} note="Активные направления" tone="primary" />
-            <MobileStatCard label="Города" value={cities.length} note="Готовы к записи" tone="success" />
-            <MobileStatCard label="Сообщения" value={totalNotifications} note={unreadAnnouncements > 0 ? `Новых: ${unreadAnnouncements}` : "Все прочитано"} tone="warning" />
-            <MobileStatCard label="Витрина" value={pwaStatusLabel} note={pwaStatusNote} tone="accent" />
+            <PremiumStatCard label="Страны" value={countries.length} note="Активные направления" tone="primary" />
+            <PremiumStatCard label="Города" value={cities.length} note="Готовы к записи" tone="success" />
+            <PremiumStatCard label="Сообщения" value={totalNotifications} note={unreadAnnouncements > 0 ? `Новых: ${unreadAnnouncements}` : "Все прочитано"} tone="warning" />
+            <PremiumStatCard label="Витрина" value={pwaStatusLabel} note={pwaStatusNote} tone="accent" />
           </div>
-        </MobileSection>
+        </PremiumSection>
 
-        <MobileSection
+        <PremiumSection
           title="Навигация в приложении"
           subtitle="Preview клиентского и owner-потока без смены маршрутов."
         >
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-            <MobileCard
+            <PremiumCard
               title="Клиентский nav"
               subtitle="Главная → Поиск → Записи → Профиль"
               actions={
@@ -2166,7 +2264,7 @@ function HomeSurface({
                 </>
               }
             />
-            <MobileCard
+            <PremiumCard
               title="Owner nav"
               subtitle="Главная → Календарь → Записи → Финансы → Ещё"
               actions={
@@ -2180,10 +2278,10 @@ function HomeSurface({
               }
             />
           </div>
-        </MobileSection>
+        </PremiumSection>
 
         <div id="owner-entry">
-          <MobileSection title="Для мастеров и салонов" subtitle="Календарь, записи, финансы и отчёты в одном месте.">
+          <PremiumSection title="Для мастеров и салонов" subtitle="Календарь, записи, финансы и отчёты в одном месте.">
           <div
             style={{
               display: "grid",
@@ -2191,10 +2289,10 @@ function HomeSurface({
               gap: 12,
             }}
           >
-            <MobileCard title="Календарь" subtitle="Планирование визитов и слотов" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
-            <MobileCard title="Записи" subtitle="Список и статусы записей" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
-            <MobileCard title="Финансы" subtitle="Деньги и выплаты" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
-            <MobileCard title="Отчёты" subtitle="Динамика и статистика" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
+            <PremiumCard title="Календарь" subtitle="Планирование визитов и слотов" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
+            <PremiumCard title="Записи" subtitle="Список и статусы записей" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
+            <PremiumCard title="Финансы" subtitle="Деньги и выплаты" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
+            <PremiumCard title="Отчёты" subtitle="Динамика и статистика" footer={<MobileButton href={ownerEntryHref}>Открыть кабинет</MobileButton>} />
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
             <MobileButton href={masterLoginHref}>Войти как мастер</MobileButton>
@@ -2202,10 +2300,10 @@ function HomeSurface({
               Войти как салон
             </MobileButton>
           </div>
-        </MobileSection>
+          </PremiumSection>
         </div>
 
-        <MobileSection title="Доверие и удобство" subtitle="Онлайн-запись, календарь, финансы и уведомления.">
+        <PremiumSection title="Доверие и удобство" subtitle="Онлайн-запись, календарь, финансы и уведомления.">
           <TotemTrustStrip
             items={[
               { label: "Онлайн-запись", tone: "primary" },
@@ -2214,10 +2312,10 @@ function HomeSurface({
               { label: "Уведомления", tone: "warning" },
             ]}
           />
-        </MobileSection>
+        </PremiumSection>
 
         <div id="cities">
-          <MobileSection
+          <PremiumSection
             title="Популярное рядом"
             subtitle="Города и направления, которые уже подключены к TOTEM."
             action={<MobilePill tone="primary">{cities.length} городов</MobilePill>}
@@ -2238,7 +2336,7 @@ function HomeSurface({
                   .toUpperCase();
 
                 return (
-                  <MobileCard
+                  <PremiumCard
                     key={`home-city-${countryCode}-${citySlug}`}
                     eyebrow="Город"
                     title={cityName}
@@ -2273,10 +2371,10 @@ function HomeSurface({
               description="После подключения данных здесь появятся активные города для записи."
             />
           )}
-          </MobileSection>
+          </PremiumSection>
         </div>
 
-        <MobileSection
+        <PremiumSection
           title="Активные страны"
           subtitle="Выберите страну, чтобы открыть доступные города и запись."
           action={<MobilePill tone="primary">{countries.length} стран</MobilePill>}
@@ -2294,7 +2392,7 @@ function HomeSurface({
                     : "#cities";
 
                   return (
-                    <MobileCard
+                    <PremiumCard
                       key={`home-country-${countryCode}`}
                       title={countryName}
                       subtitle={`${countryCode} · ${countryCities.length} городов`}
@@ -2340,14 +2438,14 @@ function HomeSurface({
                   description="Как только мобильная витрина получит данные, здесь появятся активные страны и города."
                 />
             )}
-        </MobileSection>
+        </PremiumSection>
 
         <div id="booking">
-          <MobileSection
+          <PremiumSection
             title="Быстрая запись"
             subtitle="Если хотите сразу открыть запись, используйте публичный маршрут."
           >
-            <MobileCard
+            <PremiumCard
               title="Открыть запись"
               subtitle="Переход в публичную запись TOTEM для быстрого старта."
               footer={
@@ -2362,8 +2460,8 @@ function HomeSurface({
               <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55 }}>
                 Откройте запись в пару касаний. Сначала можно выбрать город, а затем перейти к публичной записи салона.
               </div>
-            </MobileCard>
-          </MobileSection>
+            </PremiumCard>
+          </PremiumSection>
         </div>
 
         <div id="notifications">
@@ -2387,6 +2485,7 @@ function HomeSurface({
         />
 
         <TotemBottomTabs
+          style={{ marginTop: 2 }}
           items={[
             { key: "home", label: "Главная", href: "#/mobile" },
             { key: "search", label: "Поиск", href: "#search" },
@@ -2434,11 +2533,12 @@ function CitySurface({
   ];
 
   return (
-    <MobileShell>
-      <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 16 }}>
+    <MobileShell style={appPageStyle}>
+      <div style={cityStackStyle}>
         <MobileTopBar
           title="TOTEM"
           subtitle={`${cityName} / ${countryCode}`}
+          style={topChromeStyle}
           right={<MobileBadge tone="primary">городская витрина</MobileBadge>}
         />
 
@@ -2446,6 +2546,7 @@ function CitySurface({
           eyebrow="TOTEM City"
           title={`${cityName} — выберите салон, мастера или услугу`}
           subtitle={`${countryName} · ${formatLabel(home?.city?.timezone || home?.country?.timezone || "Без часового пояса")}`}
+          style={premiumHeroStyle}
           actions={
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               <MobileButton href="#salons">Найти салон</MobileButton>
@@ -2457,21 +2558,21 @@ function CitySurface({
         />
 
         <div id="search">
-          <MobileSection title="Поиск" subtitle="Салон, мастер или услуга.">
+          <PremiumSection title="Поиск" subtitle="Салон, мастер или услуга.">
             <TotemSearchBar
               placeholder="Салон, мастер или услуга"
               onSubmit={(event) => {
                 event.preventDefault();
               }}
             />
-          </MobileSection>
+          </PremiumSection>
         </div>
 
-        <MobileSection title="Фильтры" subtitle="Быстрый вход в каталог без новой логики.">
+        <PremiumSection title="Фильтры" subtitle="Быстрый вход в каталог без новой логики.">
           <TotemCategoryRail items={cityFilterItems} activeKey="all" />
-        </MobileSection>
+        </PremiumSection>
 
-        <MobileSection title="В городе доступно" subtitle="Короткая сводка по текущей городской витрине.">
+        <PremiumSection title="В городе доступно" subtitle="Короткая сводка по текущей городской витрине.">
           <div
             style={{
               display: "grid",
@@ -2479,25 +2580,25 @@ function CitySurface({
               gap: 12,
             }}
           >
-            <MobileStatCard label="Салоны" value={salons.length} note="Готовы к записи" tone="primary" />
-            <MobileStatCard label="Мастера" value={masters.length} note="Доступные специалисты" tone="success" />
-            <MobileStatCard
+            <PremiumStatCard label="Салоны" value={salons.length} note="Готовы к записи" tone="primary" />
+            <PremiumStatCard label="Мастера" value={masters.length} note="Доступные специалисты" tone="success" />
+            <PremiumStatCard
               label="Регион"
               value={countryCode || "—"}
               note={formatLabel(home?.city?.timezone || home?.country?.timezone || "timezone не указан")}
               tone="warning"
             />
           </div>
-        </MobileSection>
+        </PremiumSection>
 
         <div id="booking-entry">
-          <MobileSection title="Быстрый путь к записи" subtitle="Один короткий шаг до записи.">
-            <MobileCard title="Выберите карточку и нажмите «Записаться»." subtitle="После этого откроется публичная запись выбранного салона." />
-          </MobileSection>
+          <PremiumSection title="Быстрый путь к записи" subtitle="Один короткий шаг до записи.">
+            <PremiumCard title="Выберите карточку и нажмите «Записаться»." subtitle="После этого откроется публичная запись выбранного салона." />
+          </PremiumSection>
         </div>
 
         <div id="salons">
-          <MobileSection title="Салоны" subtitle="Выберите салон и перейдите к записи.">
+          <PremiumSection title="Салоны" subtitle="Выберите салон и перейдите к записи.">
             {salons.length ? (
               <div style={{ display: "grid", gap: 12 }}>
                 {salons.map((salon) => {
@@ -2507,7 +2608,7 @@ function CitySurface({
                   const bookingLinkHref = cityBookingHref(slug);
 
                   return (
-                    <MobileCard
+                    <PremiumCard
                       key={`city-salon-${salon.id}`}
                       eyebrow="Салон"
                       title={formatLabel(salon?.name, "Салон")}
@@ -2579,7 +2680,7 @@ function CitySurface({
                           citySlug={routeCitySlug}
                         />
                       </div>
-                    </MobileCard>
+                    </PremiumCard>
                   );
                 })}
               </div>
@@ -2589,14 +2690,14 @@ function CitySurface({
                 description="Когда данные появятся, здесь будут красивые карточки салонов с записью и каталогом."
               />
             )}
-          </MobileSection>
+          </PremiumSection>
         </div>
 
-        <MobileSection title="Мастера" subtitle="Дружелюбные карточки специалистов в этом городе.">
+        <PremiumSection title="Мастера" subtitle="Дружелюбные карточки специалистов в этом городе.">
           {masters.length ? (
             <div style={{ display: "grid", gap: 12 }}>
               {masters.map((master) => (
-                <MobileCard
+                <PremiumCard
                   key={`city-master-${master.id}`}
                   eyebrow="Мастер"
                   title={formatLabel(master.name)}
@@ -2622,7 +2723,7 @@ function CitySurface({
               description="Когда в городе появятся активные мастера, они будут показаны здесь."
             />
           )}
-        </MobileSection>
+        </PremiumSection>
 
         <AnnouncementsBlock
           announcements={announcements}
@@ -2645,6 +2746,7 @@ function CitySurface({
         />
 
         <MobileBottomNav
+          style={{ marginTop: 2 }}
           items={[
             { key: "home", label: "Главная", href: "#/mobile" },
             { key: "search", label: "Поиск", href: "#search" },
@@ -2662,14 +2764,14 @@ const shellStyle = {
   width: "100%",
   maxWidth: 480,
   margin: "0 auto",
-  padding: "20px 16px 32px",
+  padding: "16px 16px 32px",
   display: "grid",
   gap: 16,
   boxSizing: "border-box",
 };
 
 const heroStyle = {
-  padding: "8px 2px 2px",
+  padding: "6px 2px 2px",
 };
 
 const heroTitleStyle = {
@@ -2682,7 +2784,7 @@ const heroTitleStyle = {
 
 const heroTextStyle = {
   marginTop: 10,
-  color: "#4b5563",
+  color: "#475569",
   fontSize: 14,
   lineHeight: 1.5,
 };
@@ -2714,22 +2816,24 @@ const primaryLinkStyle = {
   justifyContent: "center",
   marginTop: 12,
   padding: "12px 14px",
-  borderRadius: 14,
-  background: "#111827",
+  borderRadius: 16,
+  background: "linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%)",
   color: "#fff",
   textDecoration: "none",
   fontWeight: 800,
   fontSize: 14,
+  boxShadow: "0 14px 26px rgba(29,78,216,0.22)",
 };
 
 const cityLinkStyle = {
   display: "block",
   padding: "12px 14px",
-  borderRadius: 14,
-  background: "#f9fafb",
-  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.92)",
   textDecoration: "none",
   color: "#111827",
+  boxShadow: "0 12px 26px rgba(15,23,42,0.06)",
 };
 
 const secondaryLinkStyle = {
@@ -2737,13 +2841,14 @@ const secondaryLinkStyle = {
   alignItems: "center",
   justifyContent: "center",
   padding: "11px 14px",
-  borderRadius: 14,
-  background: "#f3f4f6",
-  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.94)",
   color: "#111827",
   textDecoration: "none",
   fontWeight: 800,
   fontSize: 14,
+  boxShadow: "0 12px 24px rgba(15,23,42,0.05)",
 };
 
 const catalogButtonStyle = {
@@ -2752,13 +2857,14 @@ const catalogButtonStyle = {
   alignItems: "center",
   justifyContent: "center",
   padding: "11px 14px",
-  borderRadius: 14,
-  background: "#fff",
-  border: "1px solid #d1d5db",
+  borderRadius: 16,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.96)",
   color: "#111827",
   fontWeight: 800,
   fontSize: 14,
   cursor: "pointer",
+  boxShadow: "0 12px 24px rgba(15,23,42,0.05)",
 };
 
 const catalogSectionTitleStyle = {
@@ -2770,16 +2876,16 @@ const catalogSectionTitleStyle = {
 
 const catalogItemStyle = {
   padding: "12px 14px",
-  borderRadius: 14,
-  background: "#f9fafb",
-  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.92)",
 };
 
 const announcementItemStyle = {
   padding: "12px 14px",
-  borderRadius: 14,
-  background: "#f9fafb",
-  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.92)",
 };
 
 const announcementTitleStyle = {
@@ -2811,19 +2917,20 @@ const announcementActionStyle = {
   alignItems: "center",
   justifyContent: "center",
   padding: "10px 12px",
-  borderRadius: 12,
-  background: "#111827",
+  borderRadius: 14,
+  background: "linear-gradient(135deg, #111827 0%, #1d4ed8 100%)",
   color: "#fff",
   textDecoration: "none",
   fontWeight: 800,
   fontSize: 13,
+  boxShadow: "0 12px 22px rgba(15,23,42,0.18)",
 };
 
 const referralUrlBoxStyle = {
   padding: "12px 14px",
-  borderRadius: 14,
-  background: "#f9fafb",
-  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.92)",
   color: "#111827",
   fontSize: 13,
   lineHeight: 1.5,
@@ -2835,13 +2942,14 @@ const referralCopyButtonStyle = {
   alignItems: "center",
   justifyContent: "center",
   padding: "11px 14px",
-  borderRadius: 14,
-  background: "#111827",
+  borderRadius: 16,
+  background: "linear-gradient(135deg, #111827 0%, #1d4ed8 100%)",
   color: "#fff",
   border: "none",
   fontWeight: 800,
   fontSize: 14,
   cursor: "pointer",
+  boxShadow: "0 12px 24px rgba(15,23,42,0.18)",
 };
 
 const helpGridStyle = {
@@ -2851,9 +2959,9 @@ const helpGridStyle = {
 
 const helpItemStyle = {
   padding: "12px 14px",
-  borderRadius: 14,
-  background: "#f9fafb",
-  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.92)",
 };
 
 const helpItemTitleStyle = {
@@ -2871,9 +2979,9 @@ const helpItemTextStyle = {
 
 const helpFormCardStyle = {
   padding: "12px 14px",
-  borderRadius: 14,
-  background: "#f9fafb",
-  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  border: "1px solid rgba(226,232,240,0.92)",
 };
 
 const helpFormTitleStyle = {
@@ -2904,21 +3012,23 @@ const helpTextareaStyle = {
   boxSizing: "border-box",
   minHeight: 104,
   padding: "12px 13px",
-  border: "1px solid #d1d5db",
-  borderRadius: 12,
+  border: "1px solid rgba(203,213,225,0.98)",
+  borderRadius: 14,
   fontSize: 14,
   fontFamily: "inherit",
   resize: "vertical",
+  background: "#fff",
 };
 
 const helpInputStyle = {
   width: "100%",
   boxSizing: "border-box",
   padding: "12px 13px",
-  border: "1px solid #d1d5db",
-  borderRadius: 12,
+  border: "1px solid rgba(203,213,225,0.98)",
+  borderRadius: 14,
   fontSize: 14,
   fontFamily: "inherit",
+  background: "#fff",
 };
 
 const helpSubmitButtonStyle = {
@@ -2926,17 +3036,18 @@ const helpSubmitButtonStyle = {
   alignItems: "center",
   justifyContent: "center",
   padding: "11px 14px",
-  borderRadius: 12,
-  background: "#111827",
+  borderRadius: 14,
+  background: "linear-gradient(135deg, #111827 0%, #1d4ed8 100%)",
   color: "#fff",
   border: "none",
   fontWeight: 800,
   fontSize: 14,
   cursor: "pointer",
+  boxShadow: "0 12px 24px rgba(15,23,42,0.18)",
 };
 
 const helpStatusStyle = {
   fontSize: 13,
-  color: "#4b5563",
+  color: "#475569",
   lineHeight: 1.45,
 };
