@@ -255,7 +255,7 @@ function MasterLayoutInner(){
             <CabinetHeader slug={slug} onLogout={logout} />
             <div style={{
               minHeight: "100vh",
-              background: "#f9fafb",
+              background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 46%, #f8fafc 100%)",
               padding: "16px 12px 104px",
               boxSizing: "border-box"
             }}>
@@ -298,7 +298,16 @@ function MasterLayoutInner(){
           <CabinetLayout
             header={<CabinetHeader slug={slug} onLogout={logout} />}
             sidebar={<MasterSidebar slug={slug} />}
-            page={<Outlet />}
+            page={
+              <div style={{
+                background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 46%, #f8fafc 100%)",
+                minHeight: "100%",
+                padding: "12px 12px 16px",
+                borderRadius: "24px"
+              }}>
+                <Outlet />
+              </div>
+            }
             odoo={null}
           />
         ) : null}

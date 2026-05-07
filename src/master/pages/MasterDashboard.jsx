@@ -378,18 +378,40 @@ export default function MasterDashboard() {
     ()=>getBillingUi(billingAccess, billingBlockReason),
     [billingAccess, billingBlockReason]
   )
+  const roleLabel = "Мастер"
+  const masterSlugLabel = String(slug || "").trim() || "slug не найден"
 
   if (error) {
     return (
-      <div style={{ padding: "20px" }}>
-        <h2>Панель мастера</h2>
+      <div style={{
+        padding: "20px",
+        background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 46%, #f8fafc 100%)",
+        minHeight: "100vh"
+      }}>
         <div style={{
+          maxWidth: 1240,
+          margin: "0 auto",
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 24,
+          padding: 20,
+          boxShadow: "0 14px 32px rgba(15, 23, 42, 0.08)"
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6b7280" }}>
+            Кабинет мастера
+          </div>
+          <h2 style={{ margin: "8px 0 0", fontSize: 28, color: "#111827" }}>Не удалось загрузить dashboard</h2>
+          <p style={{ margin: "10px 0 0", color: "#475569", lineHeight: 1.5 }}>
+            Проверьте доступ к кабинету и обновите страницу. Логика сессии и маршруты сохранены.
+          </p>
+        </div>
+        <div style={{
+          marginTop: 14,
           border: "1px solid #f5c2c7",
           background: "#fff5f5",
           color: "#b42318",
-          borderRadius: "10px",
-          padding: "12px",
-          marginTop: "10px"
+          borderRadius: "16px",
+          padding: "16px",
         }}>
           Ошибка загрузки метрик
         </div>
@@ -404,28 +426,121 @@ export default function MasterDashboard() {
 
   if (loading) {
     return (
-      <div style={{ padding: "20px" }}>
-        <h2>Панель мастера</h2>
-        <p>Загрузка...</p>
+      <div style={{
+        padding: "20px",
+        background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 46%, #f8fafc 100%)",
+        minHeight: "100vh"
+      }}>
+        <div style={{
+          maxWidth: 1240,
+          margin: "0 auto",
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 24,
+          padding: 20,
+          boxShadow: "0 14px 32px rgba(15, 23, 42, 0.08)"
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6b7280" }}>
+            Кабинет мастера
+          </div>
+          <h2 style={{ margin: "8px 0 0", fontSize: 28, color: "#111827" }}>Загрузка dashboard</h2>
+          <p style={{ margin: "10px 0 0", color: "#475569", lineHeight: 1.5 }}>
+            Собираем данные по записям, финансам и уведомлениям.
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>
-        Панель мастера
-        {masterName ? ` — ${masterName}` : ""}
-      </h2>
+    <div style={{
+      padding: "20px",
+      background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 46%, #f8fafc 100%)",
+      minHeight: "100vh"
+    }}>
+      <div style={{
+        maxWidth: 1240,
+        margin: "0 auto",
+        display: "grid",
+        gap: 16
+      }}>
+      <section style={{
+        background: "linear-gradient(135deg, #111827 0%, #1d4ed8 50%, #6366f1 100%)",
+        color: "#fff",
+        borderRadius: 28,
+        padding: 24,
+        boxShadow: "0 20px 45px rgba(15, 23, 42, 0.18)"
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", opacity: 0.82 }}>
+              Кабинет мастера
+            </div>
+            <h2 style={{ margin: "10px 0 8px", fontSize: 34, lineHeight: 1.05 }}>
+              Кабинет мастера{masterName ? ` — ${masterName}` : ""}
+            </h2>
+            <div style={{ fontSize: 15, lineHeight: 1.6, color: "rgba(255,255,255,0.92)", maxWidth: 760 }}>
+              Быстрый доступ к расписанию, записям и финансам мастера. Сегодняшний фокус, уведомления и QR для записи собраны в одном месте.
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: 32,
+              padding: "0 12px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.16)",
+              fontSize: 12,
+              fontWeight: 700
+            }}>
+              {roleLabel}
+            </span>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: 32,
+              padding: "0 12px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.16)",
+              fontSize: 12,
+              fontWeight: 700
+            }}>
+              {masterSlugLabel}
+            </span>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: 32,
+              padding: "0 12px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.16)",
+              fontSize: 12,
+              fontWeight: 700
+            }}>
+              Сегодня
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}>Записи</span>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}>Календарь</span>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}>Финансы</span>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}>Статистика</span>
+        </div>
+      </section>
 
       <PageSection>
         <div style={{
           border: `1px solid ${billingUi.border}`,
           background: billingUi.bg,
           color: billingUi.tone,
-          borderRadius: "14px",
-          padding: "16px",
-          marginBottom: "16px"
+          borderRadius: "18px",
+          padding: "18px",
+          marginBottom: "16px",
+          boxShadow: "0 8px 20px rgba(15, 23, 42, 0.06)"
         }}>
           <div style={{ fontSize: "15px", fontWeight: 800, marginBottom: "6px" }}>{billingUi.label}</div>
           <div style={{ fontSize: "13px", lineHeight: 1.45 }}>{billingUi.note}</div>
@@ -434,13 +549,17 @@ export default function MasterDashboard() {
           </div>
         </div>
 
-        <StatGrid>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "12px"
+        }}>
           <StatCard title="Записей сегодня" value={safeMetrics.bookings_today || 0} />
           <StatCard title="Записей за неделю" value={safeMetrics.bookings_week || 0} />
           <StatCard title="Клиентов всего" value={safeMetrics.clients_total || 0} />
           <StatCard title="Доход сегодня" value={money(safeMetrics.revenue_today)} />
           <StatCard title="Доход за месяц" value={money(safeMetrics.revenue_month)} />
-        </StatGrid>
+        </div>
       </PageSection>
 
       <PageSection title="Быстрые действия">
@@ -685,6 +804,7 @@ export default function MasterDashboard() {
           </div>
         </PageSection>
       ) : null}
+      </div>
     </div>
   )
 }
