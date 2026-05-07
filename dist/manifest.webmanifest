@@ -2,7 +2,7 @@
   "name": "TOTEM — мобильная витрина",
   "short_name": "TOTEM",
   "description": "Мобильная витрина TOTEM для записи в салоны и к мастерам.",
-  "start_url": "/#/mobile",
+  "start_url": "/m/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#111827",
