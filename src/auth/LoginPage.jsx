@@ -113,6 +113,20 @@ function resolveOwnerSlugFromAuthResponse(result){
   return ""
 }
 
+function getLoginSubtitle(role){
+  const normalizedRole = String(role || "").trim().toLowerCase()
+
+  if(normalizedRole === "master"){
+    return "Вход в кабинет мастера"
+  }
+
+  if(normalizedRole === "salon_admin"){
+    return "Вход в кабинет салона"
+  }
+
+  return "Вход в кабинет"
+}
+
 export default function LoginPage(){
   const navigate = useNavigate()
   const location = useLocation()
@@ -127,6 +141,7 @@ export default function LoginPage(){
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const loginSubtitle = getLoginSubtitle(effectiveRole)
 
   function buildForgotPasswordHref(){
     if(!effectiveRole || !effectiveSlug){
@@ -335,61 +350,262 @@ export default function LoginPage(){
   return (
     <div style={{
       minHeight: "100vh",
+      padding: "20px 16px 32px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "#f9fafb"
+      background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 52%, #f8fafc 100%)",
+      color: "#111827"
     }}>
       <div style={{
-        width: "360px",
-        padding: "24px",
-        background: "#fff",
-        borderRadius: "16px",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.1)"
+        width: "100%",
+        maxWidth: "420px",
+        display: "grid",
+        gap: "14px"
       }}>
-        <h2 style={{ marginBottom: "16px" }}>Вход</h2>
+        <div style={{
+          borderRadius: "24px",
+          padding: "20px",
+          background: "linear-gradient(135deg, #111827 0%, #1d4ed8 52%, #3b82f6 100%)",
+          color: "#fff",
+          boxShadow: "0 18px 40px rgba(15, 23, 42, 0.18)"
+        }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "12px",
+            alignItems: "flex-start",
+            marginBottom: "18px"
+          }}>
+            <div>
+              <div style={{ fontSize: "13px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 700 }}>
+                TOTEM Auth
+              </div>
+              <h1 style={{ margin: "10px 0 8px", fontSize: "28px", lineHeight: 1.05 }}>
+                Вход
+              </h1>
+              <div style={{ fontSize: "14px", lineHeight: 1.5, color: "rgba(255,255,255,0.9)" }}>
+                {loginSubtitle}
+              </div>
+            </div>
+            <a
+              href="/"
+              style={{
+                textDecoration: "none",
+                color: "#fff",
+                fontSize: "13px",
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+                padding: "8px 12px",
+                borderRadius: "999px",
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.18)"
+              }}
+            >
+              На главную
+            </a>
+          </div>
 
-        <div style={{ marginBottom: "16px" }}>
-          <button onClick={() => setMode("password")}>Пароль</button>
-          <button onClick={() => setMode("otp")} style={{ marginLeft: "10px" }}>Код</button>
+          <div style={{
+            display: "flex",
+            gap: "8px",
+            flexWrap: "wrap"
+          }}>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "6px 10px",
+              borderRadius: "999px",
+              background: "rgba(255,255,255,0.14)",
+              fontSize: "12px",
+              fontWeight: 700
+            }}>
+              Безопасный вход
+            </span>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "6px 10px",
+              borderRadius: "999px",
+              background: "rgba(255,255,255,0.14)",
+              fontSize: "12px",
+              fontWeight: 700
+            }}>
+              Кабинет по роли
+            </span>
+          </div>
         </div>
 
-        <form onSubmit={mode === "password" ? handlePasswordLogin : handleOtpStart}>
-          <input
-            type="text"
-            placeholder="Email или телефон"
-            value={login}
-            onChange={e => setLogin(e.target.value)}
-            style={{ width: "100%", marginBottom: "12px" }}
-          />
+        <div style={{
+          background: "#fff",
+          borderRadius: "24px",
+          padding: "18px",
+          boxShadow: "0 12px 28px rgba(15, 23, 42, 0.08)",
+          border: "1px solid rgba(226,232,240,0.9)"
+        }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "8px",
+            marginBottom: "16px",
+            background: "#f8fafc",
+            padding: "6px",
+            borderRadius: "18px"
+          }}>
+            <button
+              type="button"
+              onClick={() => setMode("password")}
+              aria-pressed={mode === "password"}
+              style={{
+                minHeight: "48px",
+                border: "none",
+                borderRadius: "14px",
+                background: mode === "password" ? "#111827" : "transparent",
+                color: mode === "password" ? "#fff" : "#334155",
+                fontSize: "15px",
+                fontWeight: 800,
+                cursor: "pointer",
+                boxShadow: mode === "password" ? "0 8px 18px rgba(17,24,39,0.18)" : "none"
+              }}
+            >
+              Пароль
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("otp")}
+              aria-pressed={mode === "otp"}
+              style={{
+                minHeight: "48px",
+                border: "none",
+                borderRadius: "14px",
+                background: mode === "otp" ? "#111827" : "transparent",
+                color: mode === "otp" ? "#fff" : "#334155",
+                fontSize: "15px",
+                fontWeight: 800,
+                cursor: "pointer",
+                boxShadow: mode === "otp" ? "0 8px 18px rgba(17,24,39,0.18)" : "none"
+              }}
+            >
+              Код
+            </button>
+          </div>
 
-          {mode === "password" && (
+          <div style={{
+            fontSize: "13px",
+            lineHeight: 1.5,
+            color: "#475569",
+            marginBottom: "14px"
+          }}>
+            Вход защищён. После подтверждения доступа вы перейдёте в кабинет вашей роли.
+          </div>
+
+          <form onSubmit={mode === "password" ? handlePasswordLogin : handleOtpStart}>
             <input
-              type="password"
-              placeholder="Пароль"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              style={{ width: "100%", marginBottom: "12px" }}
+              type="text"
+              placeholder="Email или телефон"
+              value={login}
+              onChange={e => setLogin(e.target.value)}
+              autoComplete="username"
+              style={{
+                width: "100%",
+                minHeight: "52px",
+                marginBottom: "12px",
+                borderRadius: "16px",
+                border: "1px solid #dbe3ee",
+                padding: "0 14px",
+                fontSize: "16px",
+                outline: "none",
+                background: "#fff",
+                color: "#111827"
+              }}
             />
-          )}
 
-          {error && (
-            <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>
-          )}
+            {mode === "password" && (
+              <input
+                type="password"
+                placeholder="Пароль"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                style={{
+                  width: "100%",
+                  minHeight: "52px",
+                  marginBottom: "12px",
+                  borderRadius: "16px",
+                  border: "1px solid #dbe3ee",
+                  padding: "0 14px",
+                  fontSize: "16px",
+                  outline: "none",
+                  background: "#fff",
+                  color: "#111827"
+                }}
+              />
+            )}
 
-          <button type="submit" disabled={loading} style={{ width: "100%" }}>
-            {loading ? "Загрузка..." : "Войти"}
-          </button>
-        </form>
+            {error && (
+              <div style={{
+                marginBottom: "12px",
+                padding: "12px 14px",
+                borderRadius: "16px",
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                color: "#991b1b",
+                fontSize: "14px",
+                lineHeight: 1.45
+              }}>
+                {error}
+              </div>
+            )}
 
-        <div style={{ marginTop: "12px", textAlign: "right" }}>
-          <a
-            href={buildForgotPasswordHref() || "#"}
-            onClick={handleForgotPasswordClick}
-            style={{ fontSize: "14px" }}
-          >
-            Забыли пароль?
-          </a>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: "100%",
+                minHeight: "52px",
+                border: "none",
+                borderRadius: "16px",
+                background: loading ? "#93c5fd" : "linear-gradient(135deg, #1d4ed8 0%, #111827 100%)",
+                color: "#fff",
+                fontSize: "16px",
+                fontWeight: 800,
+                cursor: loading ? "wait" : "pointer",
+                boxShadow: "0 14px 24px rgba(29,78,216,0.22)"
+              }}
+            >
+              {loading ? "Загрузка..." : "Войти"}
+            </button>
+          </form>
+
+          <div style={{
+            marginTop: "14px",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "12px",
+            alignItems: "center"
+          }}>
+            <div style={{
+              fontSize: "12px",
+              lineHeight: 1.45,
+              color: "#64748b",
+              maxWidth: "220px"
+            }}>
+              Доступ открыт только для вашей роли и кабинета. Если ссылка кабинета потеряна, используйте восстановление.
+            </div>
+            <a
+              href={buildForgotPasswordHref() || "#"}
+              onClick={handleForgotPasswordClick}
+              style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#1d4ed8",
+                textDecoration: "none",
+                whiteSpace: "nowrap"
+              }}
+            >
+              Забыли пароль?
+            </a>
+          </div>
         </div>
       </div>
     </div>
