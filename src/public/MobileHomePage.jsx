@@ -102,6 +102,36 @@ function buildPublicBookingUrl(salonSlug) {
   return `https://app.totemv.com/#/booking?salon=${encodeURIComponent(String(salonSlug || "").trim())}`;
 }
 
+function isNormalMobilePath() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const pathname = String(window.location.pathname || "").replace(/\/+$/, "");
+  return pathname === "/m" || pathname.startsWith("/m/");
+}
+
+function buildMobileCityHref(countryCode, citySlug) {
+  const normalizedCountryCode = encodeURIComponent(String(countryCode || "").trim().toUpperCase());
+  const normalizedCitySlug = encodeURIComponent(String(citySlug || "").trim().toLowerCase());
+
+  if (isNormalMobilePath()) {
+    return `/m/city/${normalizedCountryCode}/${normalizedCitySlug}`;
+  }
+
+  return `#/mobile/city/${normalizedCountryCode}/${normalizedCitySlug}`;
+}
+
+function buildMobileBookingHref(salonSlug) {
+  const encodedSlug = encodeURIComponent(String(salonSlug || "").trim());
+
+  if (isNormalMobilePath()) {
+    return `/m/booking?salon=${encodedSlug}`;
+  }
+
+  return buildHashPath(`/booking?salon=${encodedSlug}`);
+}
+
 function getMobileAnalyticsSessionKey() {
   const storageKey = "TOTEM_MOBILE_ANALYTICS_SESSION";
 
@@ -1922,7 +1952,7 @@ function HomeSurface({
     ? `${featuredCountryName} · ${featuredCityName}`
     : "Выберите город и начните запись";
   const featuredCityHref = featuredLocation?.city
-    ? `#/mobile/city/${encodeURIComponent(featuredCountryCode)}/${encodeURIComponent(featuredCitySlug)}`
+    ? buildMobileCityHref(featuredCountryCode, featuredCitySlug)
     : "#cities";
   const totalAnnouncements = Array.isArray(announcements?.items) ? announcements.items.length : 0;
   const unreadAnnouncements = Array.isArray(announcements?.items)
@@ -2198,7 +2228,7 @@ function HomeSurface({
                 const countryCode = String(city?.country_code || "").trim().toUpperCase();
                 const citySlug = String(city?.slug || "").trim().toLowerCase();
                 const cityName = formatLabel(city?.name_ru || city?.name_en || citySlug);
-                const cityHref = `#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(citySlug)}`;
+                const cityHref = buildMobileCityHref(countryCode, citySlug);
                 const initials = String(cityName || citySlug || countryCode || "C")
                   .trim()
                   .split(/\s+/)
@@ -2260,7 +2290,7 @@ function HomeSurface({
                   const firstCity = countryCities[0] || null;
                   const firstCitySlug = String(firstCity?.slug || "").trim().toLowerCase();
                   const countryCityHref = firstCity
-                    ? `#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(firstCitySlug)}`
+                    ? buildMobileCityHref(countryCode, firstCitySlug)
                     : "#cities";
 
                   return (
@@ -2394,8 +2424,8 @@ function CitySurface({
   const citySlug = String(home?.city?.slug || routeCitySlug || "").trim().toLowerCase();
   const cityName = formatLabel(home?.city?.name_ru || home?.city?.name_en || "Город");
   const countryName = formatLabel(home?.country?.name_ru || home?.country?.name_en || "Страна");
-  const cityHref = `#/mobile/city/${encodeURIComponent(countryCode)}/${encodeURIComponent(citySlug)}`;
-  const cityBookingHref = (slug) => buildHashPath(`/booking?salon=${encodeURIComponent(String(slug || "").trim())}`);
+  const cityHref = buildMobileCityHref(countryCode, citySlug);
+  const cityBookingHref = (slug) => buildMobileBookingHref(slug);
   const cityFilterItems = [
     { key: "all", label: "Все" },
     { key: "salons", label: "Салоны" },
