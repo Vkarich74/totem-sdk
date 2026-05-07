@@ -25,6 +25,20 @@ function formatOwnerDisplayName(ownerName, ownerType) {
   return "Кабинет";
 }
 
+function getRoleSubtitle(roleType) {
+  const normalizedRoleType = normalizeRoleType(roleType);
+
+  if (normalizedRoleType === "master") {
+    return "Быстрый доступ к расписанию, записям и финансам мастера.";
+  }
+
+  if (normalizedRoleType === "salon") {
+    return "Быстрый доступ к команде, расписанию, записям и финансам салона.";
+  }
+
+  return "Быстрый доступ к ключевым разделам кабинета.";
+}
+
 const MOBILE_ADMIN_NAV_LABELS = {
   booking: "Букинг",
   calendar: "Календарь",
@@ -78,6 +92,7 @@ export function getMobileAdminConfig(roleType, slug) {
     roleType: normalizedRoleType,
     slug: normalizedSlug,
     roleLabel: normalizedRoleType === "master" ? "Мастер" : "Салон",
+    subtitle: getRoleSubtitle(normalizedRoleType),
     identityLabel: formatOwnerDisplayName("", normalizedRoleType),
     cards,
     bottomNavItems: buildBottomNavItems(cards),

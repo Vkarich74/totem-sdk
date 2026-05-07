@@ -54,10 +54,11 @@ export default function MobileLiteAdminPage({ roleType = "", slug = "" }) {
 
   return (
     <MobileAdminTemplate
-      title="Мобильная админка"
-      subtitle="Быстрый доступ к ключевым разделам кабинета без лишней навигации."
+      title="Мобильный кабинет"
+      subtitle={config.subtitle}
       roleLabel={config.roleLabel}
       identityLabel={config.identityLabel}
+      contextLabel={resolvedSlug}
       cards={config.cards}
       bottomNavItems={config.bottomNavItems}
       activeKey={activeKey}

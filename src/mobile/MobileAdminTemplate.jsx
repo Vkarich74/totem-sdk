@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import {
   MobileShell,
   MobileTopBar,
-  MobileHero,
   MobileSection,
   MobileCard,
   MobileButton,
@@ -65,7 +64,7 @@ function getNavLabel(item) {
   const key = String(item?.key || "").trim();
   const fallback = String(item?.label || "").trim();
 
-  if (key === "overview" || key === "home") return "Обзор";
+  if (key === "overview" || key === "home") return "Главная";
   if (key === "booking" || key === "bookings") return "Записи";
   if (key === "calendar") return "Календарь";
   if (key === "finance") return "Финансы";
@@ -82,7 +81,7 @@ function MobileAdminActionCard({ title, subtitle, href, actionLabel = "Откр�
       title={title}
       subtitle={subtitle}
       style={{
-        minHeight: 168,
+        minHeight: 176,
         ...tone.cardStyle,
       }}
       footer={
@@ -105,6 +104,7 @@ export default function MobileAdminTemplate({
   subtitle,
   roleLabel,
   identityLabel,
+  contextLabel = "",
   cards = [],
   bottomNavItems = [],
   activeKey = "",
@@ -113,6 +113,7 @@ export default function MobileAdminTemplate({
   const safeSubtitle = String(subtitle || "").trim();
   const safeRoleLabel = String(roleLabel || "").trim();
   const safeIdentityLabel = String(identityLabel || "").trim();
+  const safeContextLabel = String(contextLabel || "").trim();
   const hasCards = Array.isArray(cards) && cards.length > 0;
 
   const todayStats = useMemo(() => {
@@ -147,33 +148,105 @@ export default function MobileAdminTemplate({
 
   return (
     <MobileShell>
-      <div style={{ maxWidth: 720, margin: "0 auto", display: "grid", gap: 16 }}>
+      <div style={{
+        maxWidth: 720,
+        margin: "0 auto",
+        display: "grid",
+        gap: 16,
+        paddingBottom: 24
+      }}>
         <MobileTopBar
           title="TOTEM"
           subtitle="Кабинет"
           right={<MobileBadge tone="primary">{safeRoleLabel || "кабинет"}</MobileBadge>}
         />
 
-        <MobileHero
-          eyebrow="Мобильный кабинет"
-          title="Мобильный кабинет"
-          subtitle={safeSubtitle || "Быстрый доступ к разделам кабинета мастера и салона."}
-          actions={
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {safeIdentityLabel ? <MobilePill tone="neutral">{safeIdentityLabel}</MobilePill> : null}
-              {safeRoleLabel ? <MobilePill tone="primary">{safeRoleLabel}</MobilePill> : null}
+        <section style={{
+          borderRadius: 28,
+          padding: 20,
+          background: "linear-gradient(135deg, #111827 0%, #1d4ed8 52%, #6366f1 100%)",
+          color: "#fff",
+          boxShadow: "0 20px 45px rgba(15, 23, 42, 0.18)"
+        }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            alignItems: "flex-start",
+            marginBottom: 16
+          }}>
+            <div>
+              <div style={{
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                opacity: 0.82
+              }}>
+                Мобильный кабинет
+              </div>
+              <h1 style={{ margin: "8px 0 8px", fontSize: 28, lineHeight: 1.05 }}>
+                {safeTitle}
+              </h1>
+              <div style={{ fontSize: 14, lineHeight: 1.5, color: "rgba(255,255,255,0.92)" }}>
+                {safeSubtitle || "Быстрый доступ к разделам кабинета мастера и салона."}
+              </div>
             </div>
-          }
-        />
+
+            <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+              {safeRoleLabel ? <MobileBadge tone="primary">{safeRoleLabel}</MobileBadge> : null}
+              {safeContextLabel ? <MobilePill tone="neutral">{safeContextLabel}</MobilePill> : null}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: 32,
+              padding: "0 12px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.16)",
+              fontSize: 12,
+              fontWeight: 700
+            }}>
+              Кабинет по роли
+            </span>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: 32,
+              padding: "0 12px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.16)",
+              fontSize: 12,
+              fontWeight: 700
+            }}>
+              Быстрый доступ
+            </span>
+            {safeIdentityLabel ? (
+              <span style={{
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: 32,
+                padding: "0 12px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.16)",
+                fontSize: 12,
+                fontWeight: 700
+              }}>
+                {safeIdentityLabel}
+              </span>
+            ) : null}
+          </div>
+        </section>
 
         <MobileSection title="Сегодня" subtitle="Короткий обзор ключевых разделов кабинета.">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 12,
-            }}
-          >
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 12,
+          }}>
             <MobileStatCard
               label="Записи"
               value={todayStats.booking || 0}
@@ -203,7 +276,11 @@ export default function MobileAdminTemplate({
 
         {hasCards ? (
           <MobileSection title="Разделы кабинета" subtitle="Быстрые крупные карточки действий.">
-            <div style={{ display: "grid", gap: 12 }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 12,
+            }}>
               {cards.map((card) => {
                 const key = String(card?.key || "").trim();
                 const href = String(card?.href || "").trim();
@@ -244,7 +321,9 @@ export default function MobileAdminTemplate({
       </div>
 
       {navItems.length ? (
-        <MobileBottomNav items={navItems} activeKey={activeKey} />
+        <div style={{ maxWidth: 720, margin: "0 auto" }}>
+          <MobileBottomNav items={navItems} activeKey={activeKey} />
+        </div>
       ) : null}
     </MobileShell>
   );
