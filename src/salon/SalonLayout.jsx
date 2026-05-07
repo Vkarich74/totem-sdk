@@ -248,7 +248,12 @@ function SalonLayoutInner(){
 
   return (
     <SessionGate slug={slug}>
-      <div style={{ position: "relative", height: "100%" }}>
+      <div style={{
+        position: "relative",
+        minHeight: "100vh",
+        background: "linear-gradient(180deg, #f8fafc 0%, #f9fafb 30%, #eef2ff 100%)",
+        color: "#111827"
+      }}>
         <BillingBanner
           billingAccess={billingAccess}
           billingBlockReason={billingBlockReason}
@@ -261,7 +266,7 @@ function SalonLayoutInner(){
             <CabinetHeader slug={slug} onLogout={logout} />
             <div style={{
               minHeight: "100vh",
-              background: "#f9fafb",
+              background: "transparent",
               padding: "16px 12px 104px",
               boxSizing: "border-box"
             }}>

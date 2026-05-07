@@ -186,6 +186,99 @@ function formatNotificationDate(value){
   }).format(date)
 }
 
+function SurfaceCard({ children, style }){
+  return (
+    <div style={{
+      border: "1px solid #e5e7eb",
+      borderRadius: "24px",
+      background: "#ffffff",
+      boxShadow: "0 18px 50px rgba(15, 23, 42, 0.06)",
+      overflow: "hidden",
+      ...style
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function HeroPill({ children, tone = "default" }){
+  const palette = {
+    default: { bg: "#eef2ff", color: "#4338ca" },
+    neutral: { bg: "#f3f4f6", color: "#374151" },
+    success: { bg: "#ecfdf3", color: "#027a48" },
+    accent: { bg: "#fff7ed", color: "#c2410c" }
+  }[tone] || { bg: "#eef2ff", color: "#4338ca" }
+
+  return (
+    <span style={{
+      display: "inline-flex",
+      alignItems: "center",
+      minHeight: "28px",
+      padding: "0 12px",
+      borderRadius: "999px",
+      background: palette.bg,
+      color: palette.color,
+      fontSize: "12px",
+      fontWeight: 800,
+      letterSpacing: "0.01em"
+    }}>
+      {children}
+    </span>
+  )
+}
+
+function HeroMetric({ title, value, note }){
+  return (
+    <div style={{
+      border: "1px solid rgba(255,255,255,0.14)",
+      borderRadius: "18px",
+      background: "rgba(255,255,255,0.14)",
+      backdropFilter: "blur(10px)",
+      padding: "14px"
+    }}>
+      <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.82)", marginBottom: "8px" }}>{title}</div>
+      <div style={{ fontSize: "24px", fontWeight: 800, color: "#fff", lineHeight: 1.1 }}>{value}</div>
+      {note ? (
+        <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.78)", marginTop: "6px", lineHeight: 1.35 }}>
+          {note}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function CompactMetric({ title, value, note }){
+  return (
+    <div style={{
+      border: "1px solid #e5e7eb",
+      borderRadius: "18px",
+      background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+      padding: "16px",
+      minHeight: "120px"
+    }}>
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px", fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", lineHeight: 1.1 }}>{value}</div>
+      {note ? (
+        <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "8px", lineHeight: 1.45 }}>{note}</div>
+      ) : null}
+    </div>
+  )
+}
+
+function SectionFrame({ children }){
+  return (
+    <div style={{
+      border: "1px solid #e5e7eb",
+      borderRadius: "24px",
+      background: "#fff",
+      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
+      overflow: "hidden"
+    }}>
+      <div style={{ padding: "18px" }}>{children}</div>
+    </div>
+  )
+}
+
 export default function DashboardPage(){
   const { slug: routeSlug } = useParams()
   const slug = resolveSalonSlug(routeSlug)
@@ -408,20 +501,84 @@ export default function DashboardPage(){
   }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>
-        Панель салона
-        {salonName ? ` — ${salonName}` : ""}
-      </h2>
+    <div style={{
+      maxWidth: "1240px",
+      margin: "0 auto",
+      display: "grid",
+      gap: "16px",
+      padding: "4px 0 24px"
+    }}>
+      <SurfaceCard style={{
+        background: "linear-gradient(135deg, #0f172a 0%, #1d4ed8 48%, #7c3aed 100%)",
+        color: "#fff"
+      }}>
+        <div style={{
+          display: "grid",
+          gap: "18px",
+          padding: "22px"
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap"
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.72, fontWeight: 800 }}>
+                TOTEM Salon
+              </div>
+              <h2 style={{ margin: "8px 0 0", fontSize: "30px", lineHeight: 1.08, letterSpacing: "-0.03em" }}>
+                Кабинет салона
+              </h2>
+              <div style={{ marginTop: "10px", fontSize: "15px", lineHeight: 1.6, maxWidth: "760px", color: "rgba(255,255,255,0.88)" }}>
+                Быстрый доступ к команде, расписанию, записям и финансам салона.
+              </div>
+            </div>
 
-      <PageSection>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "flex-end" }}>
+              <HeroPill tone="default">Салон</HeroPill>
+              <HeroPill tone="neutral">{slug || "slug"}</HeroPill>
+              <HeroPill tone="success">{billingUi.label}</HeroPill>
+            </div>
+          </div>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "12px"
+          }}>
+            <HeroMetric
+              title="Сегодня"
+              value={safeMetrics.bookings_today || 0}
+              note="Главный операционный фокус дня"
+            />
+            <HeroMetric
+              title="Финансы"
+              value={money(safeMetrics.revenue_today)}
+              note={canWithdraw ? "Выплаты доступны" : "Выплаты ограничены"}
+            />
+            <HeroMetric
+              title="Команда"
+              value={safeMetrics.masters_active || 0}
+              note="Активные мастера в салоне"
+            />
+            <HeroMetric
+              title="Статистика"
+              value={safeMetrics.clients_total || 0}
+              note="Клиенты и операционный охват"
+            />
+          </div>
+        </div>
+      </SurfaceCard>
+
+      <SectionFrame>
         <div style={{
           border: `1px solid ${billingUi.border}`,
           background: billingUi.bg,
           color: billingUi.tone,
-          borderRadius: "14px",
-          padding: "16px",
-          marginBottom: "16px"
+          borderRadius: "20px",
+          padding: "18px"
         }}>
           <div style={{ fontSize: "15px", fontWeight: 800, marginBottom: "6px" }}>{billingUi.label}</div>
           <div style={{ fontSize: "13px", lineHeight: 1.45 }}>{billingUi.note}</div>
@@ -429,27 +586,29 @@ export default function DashboardPage(){
             Запись: <strong>{canWrite ? "доступна" : "ограничена"}</strong> · Выплаты: <strong>{canWithdraw ? "доступны" : "ограничены"}</strong>
           </div>
         </div>
+      </SectionFrame>
 
+      <PageSection title="Сегодня">
         <StatGrid>
-          <StatCard title="Записей сегодня" value={safeMetrics.bookings_today || 0} />
-          <StatCard title="Записей за неделю" value={safeMetrics.bookings_week || 0} />
-          <StatCard title="Клиентов всего" value={safeMetrics.clients_total || 0} />
-          <StatCard title="Активных мастеров" value={safeMetrics.masters_active || 0} />
-          <StatCard title="Доход сегодня" value={money(safeMetrics.revenue_today)} />
-          <StatCard title="Доход за месяц" value={money(safeMetrics.revenue_month)} />
+          <CompactMetric title="Записей сегодня" value={safeMetrics.bookings_today || 0} note="Текущая загрузка дня" />
+          <CompactMetric title="Записей за неделю" value={safeMetrics.bookings_week || 0} note="Динамика за 7 дней" />
+          <CompactMetric title="Клиентов всего" value={safeMetrics.clients_total || 0} note="Накопленная клиентская база" />
+          <CompactMetric title="Активных мастеров" value={safeMetrics.masters_active || 0} note="Команда в рабочем режиме" />
+          <CompactMetric title="Доход сегодня" value={money(safeMetrics.revenue_today)} note="Быстрый финансовый обзор" />
+          <CompactMetric title="Доход за месяц" value={money(safeMetrics.revenue_month)} note="Общая monthly динамика" />
         </StatGrid>
       </PageSection>
 
-      <PageSection title="Быстрые действия">
+      <PageSection title="Быстрый доступ">
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: "12px"
         }}>
-          <QuickAction to={buildSalonPath(slug, "bookings")} title="Открыть записи" note="Список записей, статусы и переход к деталям." />
-          <QuickAction to={buildSalonPath(slug, "calendar")} title="Открыть расписание" note="Управление загрузкой салона и быстрый переход по времени." />
-          <QuickAction to={buildSalonPath(slug, "masters")} title="Открыть мастеров" note="Состав команды, статусы и операционные действия по мастерам." />
-          <QuickAction to={buildSalonPath(slug, "finance")} title="Открыть финансы" note="Обзор денег, баланса и переход к расчётам и контрактам." />
+          <QuickAction to={buildSalonPath(slug, "bookings")} title="Записи" note="Список записей, статусы и переход к деталям." />
+          <QuickAction to={buildSalonPath(slug, "calendar")} title="Календарь" note="Управление загрузкой салона и быстрый переход по времени." />
+          <QuickAction to={buildSalonPath(slug, "masters")} title="Команда" note="Состав команды, статусы и операционные действия по мастерам." />
+          <QuickAction to={buildSalonPath(slug, "finance")} title="Финансы" note="Обзор денег, баланса и переход к расчётам и контрактам." />
         </div>
       </PageSection>
 
@@ -638,10 +797,10 @@ export default function DashboardPage(){
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: "12px"
         }}>
-          <RouteCard to={buildSalonPath(slug, "bookings")} title="Кто записан" note="Открой поток записей, фильтруй статусы и работай с операционкой дня." />
-          <RouteCard to={buildSalonPath(slug, "calendar")} title="Когда загрузка" note="Перейди в time-based view, если нужно быстро понять окна и плотность расписания." />
-          <RouteCard to={buildSalonPath(slug, "money")} title="Сколько заработал" note="Смотри деньги сейчас без тяжёлого ledger на стартовом экране." tone="finance" />
-          <RouteCard to={buildSalonPath(slug, "contracts")} title="Какие контракты" note="Переход прямо к договорному модулю салона и связке с мастерами." tone="finance" />
+          <RouteCard to={buildSalonPath(slug, "bookings")} title="Записи" note="Открой поток записей, фильтруй статусы и работай с операционкой дня." />
+          <RouteCard to={buildSalonPath(slug, "calendar")} title="Календарь" note="Перейди в time-based view, если нужно быстро понять окна и плотность расписания." />
+          <RouteCard to={buildSalonPath(slug, "money")} title="Финансы" note="Смотри деньги сейчас без тяжёлого ledger на стартовом экране." tone="finance" />
+          <RouteCard to={buildSalonPath(slug, "contracts")} title="Команда / договоры" note="Переход прямо к договорному модулю салона и связке с мастерами." tone="finance" />
         </div>
       </PageSection>
 
@@ -657,7 +816,7 @@ export default function DashboardPage(){
             note="Главный операционный ориентир — сегодняшние записи. Контроль времени вынесен в раздел «Расписание»."
           />
           <SummaryCard
-            title="Мастера в работе"
+            title="Команда в работе"
             value={safeMetrics.masters_active || 0}
             note="На dashboard только обзор. Полное управление командой живёт на отдельной странице и не перегружает стартовый экран."
           />
