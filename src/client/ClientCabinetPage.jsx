@@ -36,6 +36,26 @@ function getBookingStatusLabel(status) {
   return status || "—";
 }
 
+function getPaymentLabelRu(booking) {
+  const explicitLabel = String(booking?.payment_label_ru || "").trim();
+
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  const provider = String(booking?.payment_provider || "").toLowerCase();
+  const status = String(booking?.payment_status || "").toLowerCase();
+
+  if (status === "failed") return "Оплата не прошла";
+  if (status === "refunded") return "Оплата возвращена";
+  if (provider === "direct" && status === "pending") return "Наличные ожидают подтверждения";
+  if (provider === "direct" && status === "confirmed") return "Оплата наличными подтверждена";
+  if (provider === "xpay" && status === "pending") return "Ожидаем оплату XPAY";
+  if (provider === "xpay" && status === "confirmed") return "Оплата получена";
+
+  return "Оплата не выбрана";
+}
+
 function formatMoney(value) {
   const amount = Number(value || 0);
 
@@ -633,6 +653,7 @@ export default function ClientCabinetPage() {
 
                 <div style={getHistoryRightStyle(isMobile)}>
                   <span style={styles.badge}>{getBookingStatusLabel(booking.status)}</span>
+                  <span style={styles.paymentBadge}>{getPaymentLabelRu(booking)}</span>
                   <span>{formatMoney(booking.price_snapshot)}</span>
                 </div>
               </div>
@@ -862,6 +883,17 @@ const styles = {
     color: "#1d4ed8",
     fontSize: "12px",
     fontWeight: 800
+  },
+  paymentBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "5px 9px",
+    borderRadius: "999px",
+    background: "#f8fafc",
+    color: "#475569",
+    fontSize: "12px",
+    lineHeight: 1.3,
+    border: "1px solid #e2e8f0"
   },
   historyRow: {
     display: "flex",
