@@ -200,6 +200,17 @@ function getQrTransactionIdFromData(paymentData) {
   );
 }
 
+function getSelectedServicePrice(services, selectedService) {
+  const service = Array.isArray(services)
+    ? services.find((item) => String(item?.id) === String(selectedService))
+    : null;
+
+  const rawPrice = service?.price ?? service?.service_price ?? service?.servicePrice;
+  const price = Number(String(rawPrice ?? "").replace(",", ".").trim());
+
+  return Number.isFinite(price) && price > 0 ? price : null;
+}
+
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
   const nativeSearchParams = new URLSearchParams(window.location.search || "");
@@ -238,6 +249,7 @@ export default function BookingPage() {
   const [paymentStatusLoading, setPaymentStatusLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paymentData, setPaymentData] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
 
   const submitLockRef = useRef(false);
   const paymentLockRef = useRef(false);
@@ -253,6 +265,7 @@ export default function BookingPage() {
 
     setSuccessData(restored.successData);
     setPaymentData(restored.paymentData || null);
+    setPaymentMethod(restored.paymentData?.provider === "direct" ? "cash" : restored.paymentData ? "xpay" : "cash");
     setPaymentError("");
   }, [slug]);
 
@@ -345,6 +358,7 @@ export default function BookingPage() {
   }, [repeatClientId, repeatClientToken]);
 
   useEffect(() => {
+    if (paymentMethod !== "xpay" || paymentData?.provider === "direct") return;
     if (!paymentData?.payment_id) return;
     if (String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase() === "confirmed") return;
 
@@ -353,7 +367,7 @@ export default function BookingPage() {
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [paymentData?.payment_id, paymentData?.status, paymentData?.payment?.status]);
+  }, [paymentMethod, paymentData?.payment_id, paymentData?.status, paymentData?.payment?.status]);
 
   function validatePhone(phone) {
     const digits = getKgPhoneDigits(phone);
@@ -449,9 +463,36 @@ export default function BookingPage() {
       };
 
       setSuccessData(nextSuccessData);
-      setPaymentData(null);
       setPaymentError("");
-      writeBookingPaymentState(slug, nextSuccessData, null);
+      if (paymentMethod === "cash") {
+        const selectedServicePrice = getSelectedServicePrice(services, selectedService);
+
+        if (selectedServicePrice == null) {
+          setPaymentData(null);
+          setPaymentMethod("cash");
+          setPaymentError("Не удалось определить цену услуги для оплаты наличными. Выберите услугу с ценой.");
+          writeBookingPaymentState(slug, nextSuccessData, null);
+          return;
+        }
+
+        try {
+          const nextPaymentData = await createDirectPayment(nextSuccessData.bookingId, selectedServicePrice);
+
+          setPaymentData(nextPaymentData);
+          setPaymentMethod("cash");
+          setPaymentError("");
+          writeBookingPaymentState(slug, nextSuccessData, nextPaymentData);
+        } catch (err) {
+          setPaymentData(null);
+          setPaymentMethod("cash");
+          setPaymentError(err.message);
+          writeBookingPaymentState(slug, nextSuccessData, null);
+        }
+      } else {
+        setPaymentData(null);
+        setPaymentMethod("xpay");
+        writeBookingPaymentState(slug, nextSuccessData, null);
+      }
 
     } catch (err) {
       setError(err.message);
@@ -462,7 +503,12 @@ export default function BookingPage() {
   }
 
   async function startPayment() {
-    if (!successData?.bookingId || paymentLoading || paymentLockRef.current) return;
+    if (paymentMethod !== "xpay" || !successData?.bookingId || paymentLoading || paymentLockRef.current) return;
+
+    if (paymentData?.provider === "direct") {
+      setPaymentError("Активная оплата уже создана наличными.");
+      return;
+    }
 
     paymentLockRef.current = true;
     setPaymentLoading(true);
@@ -500,6 +546,38 @@ export default function BookingPage() {
       setPaymentLoading(false);
       paymentLockRef.current = false;
     }
+  }
+
+  async function createDirectPayment(bookingId, servicePrice) {
+    const price = Number(servicePrice);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new Error("Не удалось определить цену услуги для оплаты наличными. Выберите услугу с ценой.");
+    }
+
+    const res = await fetch(`${API_BASE}/internal/payments/flow`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        booking_id: bookingId,
+        service_price: price
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data?.ok) {
+      throw new Error(data?.error || data?.message || "Не удалось создать оплату наличными");
+    }
+
+    return {
+      ...data,
+      payment_id: data.payment_id || data?.payment?.id || "",
+      provider: data.provider || data?.payment?.provider || "direct",
+      status: data.status || data?.payment?.status || "confirmed"
+    };
   }
 
   async function checkPaymentStatus(options = {}) {
@@ -562,6 +640,7 @@ export default function BookingPage() {
     clearBookingPaymentState(slug);
     setSuccessData(null);
     setPaymentData(null);
+    setPaymentMethod("cash");
     setPaymentError("");
     setStep("form");
     setDate("");
@@ -610,6 +689,10 @@ export default function BookingPage() {
   }
 
   if (successData) {
+    const isCashPayment = paymentMethod === "cash";
+    const isXpayPayment = paymentMethod === "xpay";
+    const isDirectPayment = paymentData?.provider === "direct";
+    const isCashPaymentConfirmed = isCashPayment && isDirectPayment && String(paymentData?.status || "").toLowerCase() === "confirmed";
     const paymentStatus = paymentData?.status || paymentData?.payment?.status || "";
     const qrImage = paymentData?.qr_image || paymentData?.payment?.qr_image || "";
     const qrCode = paymentData?.qr_code || paymentData?.payment?.qr_code || "";
@@ -680,11 +763,135 @@ export default function BookingPage() {
 
           <MobileCard
             title="Оплата"
-            subtitle="Платёж и QR сохраняются в том же потоке, что и раньше."
+            subtitle={isCashPayment ? "Оплата наличными создаётся как direct payment row." : "Платёж и QR сохраняются в том же потоке, что и раньше."}
             style={bookingCardStyle}
           >
             <div style={{ display: "grid", gap: 12 }}>
-              {!paymentData ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+                <MobileButton
+                  onClick={() => {
+                    setPaymentMethod("cash");
+                    setPaymentError("");
+                    setPaymentLoading(false);
+                    setPaymentStatusLoading(false);
+                    if (paymentData?.provider !== "direct") {
+                      setPaymentData(null);
+                    }
+                  }}
+                  style={{
+                    minHeight: 88,
+                    alignItems: "flex-start",
+                    justifyContent: "flex-start",
+                    textAlign: "left",
+                    whiteSpace: "normal",
+                    borderRadius: 18,
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                  tone={isCashPayment ? "primary" : "secondary"}
+                >
+                  <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Оплата наличными / на месте</span>
+                  <span style={{ fontSize: 13, lineHeight: 1.45, color: isCashPayment ? "rgba(255,255,255,0.88)" : "#64748B" }}>
+                    Вы оплатите услугу на месте после визита.
+                  </span>
+                </MobileButton>
+                <MobileButton
+                  onClick={() => {
+                    if (paymentData?.provider === "direct" && String(paymentData?.status || "").toLowerCase() === "confirmed") {
+                      setPaymentMethod("cash");
+                      setPaymentError("Активная оплата уже создана наличными.");
+                      return;
+                    }
+
+                    setPaymentMethod("xpay");
+                    setPaymentError("");
+                  }}
+                  style={{
+                    minHeight: 88,
+                    alignItems: "flex-start",
+                    justifyContent: "flex-start",
+                    textAlign: "left",
+                    whiteSpace: "normal",
+                    borderRadius: 18,
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                  tone={isXpayPayment ? "primary" : "secondary"}
+                >
+                  <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Оплатить через XPAY</span>
+                  <span style={{ fontSize: 13, lineHeight: 1.45, color: isXpayPayment ? "rgba(255,255,255,0.88)" : "#64748B" }}>
+                    Показать QR и продолжить онлайн-оплату.
+                  </span>
+                </MobileButton>
+              </div>
+
+              {isCashPayment ? (
+                <div style={{ display: "grid", gap: 12 }}>
+                  {isCashPaymentConfirmed ? (
+                    <>
+                      <MobileBadge tone="success">Оплата наличными создана</MobileBadge>
+                      <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
+                        Оплата будет проведена на месте. Запись и direct payment сохранены в системе.
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gap: 8,
+                          padding: 14,
+                          borderRadius: 16,
+                          background: "#f0fdf4",
+                          border: "1px solid #bbf7d0",
+                        }}
+                      >
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#166534" }}>Запись создана</div>
+                        <div style={{ fontSize: 13, lineHeight: 1.55, color: "#166534" }}>
+                          Онлайн-оплата не требуется. Вы сможете рассчитаться после визита.
+                        </div>
+                        {paymentId ? <MobilePill tone="neutral">Платёж № {paymentId}</MobilePill> : null}
+                      </div>
+                      <MobileButton
+                        tone="secondary"
+                        onClick={() => {
+                          if (paymentData?.provider === "direct") {
+                            setPaymentError("Активная оплата уже создана наличными.");
+                            return;
+                          }
+
+                          setPaymentMethod("xpay");
+                        }}
+                      >
+                        Перейти к XPAY
+                      </MobileButton>
+                    </>
+                  ) : (
+                    <>
+                      <MobileBadge tone="success">Оплата на месте</MobileBadge>
+                      <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
+                        Вы оплатите услугу на месте после визита.
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gap: 8,
+                          padding: 14,
+                          borderRadius: 16,
+                          background: "#f0fdf4",
+                          border: "1px solid #bbf7d0",
+                        }}
+                      >
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#166534" }}>Запись создана</div>
+                        <div style={{ fontSize: 13, lineHeight: 1.55, color: "#166534" }}>
+                          Онлайн-оплата не требуется. Вы сможете рассчитаться после визита.
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : !paymentData ? (
                 <MobileButton onClick={startPayment} disabled={paymentLoading} style={bookingPrimaryButtonStyle}>
                   {paymentLoading ? "Создаём оплату..." : "Оплатить через XPAY"}
                 </MobileButton>
@@ -874,6 +1081,79 @@ export default function BookingPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+            </MobileCard>
+          </MobileSection>
+
+          <MobileSection title="Оплата" subtitle="Выберите способ оплаты до подтверждения." style={bookingSectionStyle}>
+            <MobileCard style={bookingCardStyle}>
+              <div style={{ display: "grid", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+                  <MobileButton
+                    onClick={() => {
+                      setPaymentMethod("cash");
+                      setPaymentError("");
+                      setPaymentLoading(false);
+                      setPaymentStatusLoading(false);
+                      if (paymentData?.provider !== "direct") {
+                        setPaymentData(null);
+                      }
+                    }}
+                    style={{
+                      minHeight: 88,
+                      alignItems: "flex-start",
+                      justifyContent: "flex-start",
+                      textAlign: "left",
+                      whiteSpace: "normal",
+                      borderRadius: 18,
+                      padding: 16,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                    tone={paymentMethod === "cash" ? "primary" : "secondary"}
+                  >
+                    <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Оплата наличными / на месте</span>
+                    <span style={{ fontSize: 13, lineHeight: 1.45, color: paymentMethod === "cash" ? "rgba(255,255,255,0.88)" : "#64748B" }}>
+                      Вы оплатите услугу на месте после визита.
+                    </span>
+                  </MobileButton>
+                  <MobileButton
+                    onClick={() => {
+                      if (paymentData?.provider === "direct" && String(paymentData?.status || "").toLowerCase() === "confirmed") {
+                        setPaymentMethod("cash");
+                        setPaymentError("Активная оплата уже создана наличными.");
+                        return;
+                      }
+
+                      setPaymentMethod("xpay");
+                      setPaymentError("");
+                    }}
+                    style={{
+                      minHeight: 88,
+                      alignItems: "flex-start",
+                      justifyContent: "flex-start",
+                      textAlign: "left",
+                      whiteSpace: "normal",
+                      borderRadius: 18,
+                      padding: 16,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                    tone={paymentMethod === "xpay" ? "primary" : "secondary"}
+                  >
+                    <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Оплатить через XPAY</span>
+                    <span style={{ fontSize: 13, lineHeight: 1.45, color: paymentMethod === "xpay" ? "rgba(255,255,255,0.88)" : "#64748B" }}>
+                      Показать QR и продолжить онлайн-оплату.
+                    </span>
+                  </MobileButton>
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
+                  {paymentMethod === "cash"
+                    ? "Вы оплатите услугу на месте после визита."
+                    : "Показать QR и продолжить онлайн-оплату через XPAY."}
+                </div>
               </div>
             </MobileCard>
           </MobileSection>
