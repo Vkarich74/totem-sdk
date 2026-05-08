@@ -503,10 +503,24 @@ export default function BookingPage() {
   }
 
   async function startPayment() {
-    if (paymentMethod !== "xpay" || !successData?.bookingId || paymentLoading || paymentLockRef.current) return;
+    const currentProvider = String(paymentData?.provider || paymentData?.payment?.provider || "").toLowerCase();
+    const currentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
+    const replacePending = currentProvider === "direct" && currentStatus === "pending";
 
-    if (paymentData?.provider === "direct") {
-      setPaymentError("Активная оплата уже создана наличными.");
+    if (!successData?.bookingId || paymentLoading || paymentLockRef.current) return;
+    if (paymentMethod !== "xpay" && !replacePending) return;
+
+    if (currentProvider === "direct" && currentStatus === "confirmed") {
+      setPaymentError("Оплата наличными подтверждена. Способ оплаты изменить нельзя.");
+      return;
+    }
+
+    if (currentProvider === "xpay" && currentStatus === "confirmed") {
+      setPaymentError("Оплата уже подтверждена. Способ оплаты изменить нельзя.");
+      return;
+    }
+
+    if (currentProvider === "xpay" && currentStatus === "pending") {
       return;
     }
 
@@ -521,7 +535,8 @@ export default function BookingPage() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          booking_id: successData.bookingId
+          booking_id: successData.bookingId,
+          replace_pending: replacePending
         })
       });
 
@@ -804,19 +819,32 @@ export default function BookingPage() {
                 </MobileButton>
                 <MobileButton
                   onClick={() => {
-                    if (paymentData?.provider === "direct") {
-                      const currentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
+                    const currentProvider = String(paymentData?.provider || paymentData?.payment?.provider || "").toLowerCase();
+                    const currentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
+
+                    if (currentProvider === "direct" && currentStatus === "confirmed") {
                       setPaymentMethod("cash");
-                      setPaymentError(
-                        currentStatus === "confirmed"
-                          ? "Оплата наличными подтверждена."
-                          : "Оплата наличными уже ожидает подтверждения."
-                      );
+                      setPaymentError("Оплата наличными подтверждена. Способ оплаты изменить нельзя.");
+                      return;
+                    }
+
+                    if (currentProvider === "xpay" && currentStatus === "pending") {
+                      setPaymentMethod("xpay");
+                      setPaymentError("XPAY QR уже создан. Для перехода на наличные нужна отмена QR.");
+                      return;
+                    }
+
+                    if (currentProvider === "xpay" && currentStatus === "confirmed") {
+                      setPaymentMethod("xpay");
+                      setPaymentError("Оплата уже подтверждена. Способ оплаты изменить нельзя.");
                       return;
                     }
 
                     setPaymentMethod("xpay");
                     setPaymentError("");
+                    if (currentProvider === "direct" && currentStatus === "pending") {
+                      void startPayment();
+                    }
                   }}
                   style={{
                     minHeight: 88,
@@ -846,6 +874,9 @@ export default function BookingPage() {
                       <MobileBadge tone="warning">Оплата наличными ожидает подтверждения</MobileBadge>
                       <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
                         Запись сохранена. Оплата будет подтверждена салоном или мастером после получения наличных.
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: "#0F766E" }}>
+                        Можно перейти на XPAY до подтверждения наличных.
                       </div>
                       <div
                         style={{
@@ -1140,14 +1171,24 @@ export default function BookingPage() {
                   </MobileButton>
                   <MobileButton
                     onClick={() => {
-                      if (paymentData?.provider === "direct") {
-                        const currentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
+                      const currentProvider = String(paymentData?.provider || paymentData?.payment?.provider || "").toLowerCase();
+                      const currentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
+
+                      if (currentProvider === "direct" && currentStatus === "confirmed") {
                         setPaymentMethod("cash");
-                        setPaymentError(
-                          currentStatus === "confirmed"
-                            ? "Оплата наличными подтверждена."
-                            : "Оплата наличными уже ожидает подтверждения."
-                        );
+                        setPaymentError("Оплата наличными подтверждена. Способ оплаты изменить нельзя.");
+                        return;
+                      }
+
+                      if (currentProvider === "xpay" && currentStatus === "pending") {
+                        setPaymentMethod("xpay");
+                        setPaymentError("XPAY QR уже создан. Для перехода на наличные нужна отмена QR.");
+                        return;
+                      }
+
+                      if (currentProvider === "xpay" && currentStatus === "confirmed") {
+                        setPaymentMethod("xpay");
+                        setPaymentError("Оплата уже подтверждена. Способ оплаты изменить нельзя.");
                         return;
                       }
 
