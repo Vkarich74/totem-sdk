@@ -476,7 +476,7 @@ export default function BookingPage() {
         }
 
         try {
-          const nextPaymentData = await createDirectPayment(nextSuccessData.bookingId, selectedServicePrice);
+          const nextPaymentData = await createPendingDirectPayment(nextSuccessData.bookingId, selectedServicePrice);
 
           setPaymentData(nextPaymentData);
           setPaymentMethod("cash");
@@ -548,14 +548,14 @@ export default function BookingPage() {
     }
   }
 
-  async function createDirectPayment(bookingId, servicePrice) {
+  async function createPendingDirectPayment(bookingId, servicePrice) {
     const price = Number(servicePrice);
 
     if (!Number.isFinite(price) || price <= 0) {
       throw new Error("Не удалось определить цену услуги для оплаты наличными. Выберите услугу с ценой.");
     }
 
-    const res = await fetch(`${API_BASE}/internal/payments/flow`, {
+    const res = await fetch(`${API_BASE}/internal/payments/direct/pending`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -576,7 +576,7 @@ export default function BookingPage() {
       ...data,
       payment_id: data.payment_id || data?.payment?.id || "",
       provider: data.provider || data?.payment?.provider || "direct",
-      status: data.status || data?.payment?.status || "confirmed"
+      status: data.status || data?.payment?.status || "pending"
     };
   }
 
@@ -692,12 +692,13 @@ export default function BookingPage() {
     const isCashPayment = paymentMethod === "cash";
     const isXpayPayment = paymentMethod === "xpay";
     const isDirectPayment = paymentData?.provider === "direct";
-    const isCashPaymentConfirmed = isCashPayment && isDirectPayment && String(paymentData?.status || "").toLowerCase() === "confirmed";
-    const paymentStatus = paymentData?.status || paymentData?.payment?.status || "";
+    const paymentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
+    const isCashPaymentPending = isCashPayment && isDirectPayment && paymentStatus === "pending";
+    const isCashPaymentConfirmed = isCashPayment && isDirectPayment && paymentStatus === "confirmed";
     const qrImage = paymentData?.qr_image || paymentData?.payment?.qr_image || "";
     const qrCode = paymentData?.qr_code || paymentData?.payment?.qr_code || "";
     const paymentId = getPaymentIdFromData(paymentData);
-    const isPaymentConfirmed = String(paymentStatus || "").toLowerCase() === "confirmed";
+    const isPaymentConfirmed = paymentStatus === "confirmed";
 
     return (
       <MobileShell style={bookingPageStyle}>
@@ -763,7 +764,11 @@ export default function BookingPage() {
 
           <MobileCard
             title="Оплата"
-            subtitle={isCashPayment ? "Оплата наличными создаётся как direct payment row." : "Платёж и QR сохраняются в том же потоке, что и раньше."}
+            subtitle={
+              isCashPayment
+                ? "Оплата наличными ожидает подтверждения после создания записи."
+                : "Платёж и QR сохраняются в том же потоке, что и раньше."
+            }
             style={bookingCardStyle}
           >
             <div style={{ display: "grid", gap: 12 }}>
@@ -799,9 +804,14 @@ export default function BookingPage() {
                 </MobileButton>
                 <MobileButton
                   onClick={() => {
-                    if (paymentData?.provider === "direct" && String(paymentData?.status || "").toLowerCase() === "confirmed") {
+                    if (paymentData?.provider === "direct") {
+                      const currentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
                       setPaymentMethod("cash");
-                      setPaymentError("Активная оплата уже создана наличными.");
+                      setPaymentError(
+                        currentStatus === "confirmed"
+                          ? "Оплата наличными подтверждена."
+                          : "Оплата наличными уже ожидает подтверждения."
+                      );
                       return;
                     }
 
@@ -831,11 +841,34 @@ export default function BookingPage() {
 
               {isCashPayment ? (
                 <div style={{ display: "grid", gap: 12 }}>
-                  {isCashPaymentConfirmed ? (
+                  {isCashPaymentPending ? (
                     <>
-                      <MobileBadge tone="success">Оплата наличными создана</MobileBadge>
+                      <MobileBadge tone="warning">Оплата наличными ожидает подтверждения</MobileBadge>
                       <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
-                        Оплата будет проведена на месте. Запись и direct payment сохранены в системе.
+                        Запись сохранена. Оплата будет подтверждена салоном или мастером после получения наличных.
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gap: 8,
+                          padding: 14,
+                          borderRadius: 16,
+                          background: "#fff7ed",
+                          border: "1px solid #fed7aa",
+                        }}
+                      >
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#9a3412" }}>Запись создана</div>
+                        <div style={{ fontSize: 13, lineHeight: 1.55, color: "#9a3412" }}>
+                          Онлайновая оплата не требуется. Оплата будет подтверждена после передачи наличных.
+                        </div>
+                        {paymentId ? <MobilePill tone="neutral">Платёж № {paymentId}</MobilePill> : null}
+                      </div>
+                    </>
+                  ) : isCashPaymentConfirmed ? (
+                    <>
+                      <MobileBadge tone="success">Оплата наличными подтверждена</MobileBadge>
+                      <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
+                        Оплата подтверждена. Запись и direct payment сохранены в системе.
                       </div>
                       <div
                         style={{
@@ -849,23 +882,10 @@ export default function BookingPage() {
                       >
                         <div style={{ fontSize: 14, fontWeight: 700, color: "#166534" }}>Запись создана</div>
                         <div style={{ fontSize: 13, lineHeight: 1.55, color: "#166534" }}>
-                          Онлайн-оплата не требуется. Вы сможете рассчитаться после визита.
+                          Оплата уже подтверждена салоном или мастером.
                         </div>
                         {paymentId ? <MobilePill tone="neutral">Платёж № {paymentId}</MobilePill> : null}
                       </div>
-                      <MobileButton
-                        tone="secondary"
-                        onClick={() => {
-                          if (paymentData?.provider === "direct") {
-                            setPaymentError("Активная оплата уже создана наличными.");
-                            return;
-                          }
-
-                          setPaymentMethod("xpay");
-                        }}
-                      >
-                        Перейти к XPAY
-                      </MobileButton>
                     </>
                   ) : (
                     <>
@@ -1120,9 +1140,14 @@ export default function BookingPage() {
                   </MobileButton>
                   <MobileButton
                     onClick={() => {
-                      if (paymentData?.provider === "direct" && String(paymentData?.status || "").toLowerCase() === "confirmed") {
+                      if (paymentData?.provider === "direct") {
+                        const currentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
                         setPaymentMethod("cash");
-                        setPaymentError("Активная оплата уже создана наличными.");
+                        setPaymentError(
+                          currentStatus === "confirmed"
+                            ? "Оплата наличными подтверждена."
+                            : "Оплата наличными уже ожидает подтверждения."
+                        );
                         return;
                       }
 
