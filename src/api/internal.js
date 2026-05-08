@@ -875,6 +875,28 @@ export async function getMasterBookings(masterSlug = getMasterSlug()){
   return { ok:true, bookings: j.bookings || [] };
 }
 
+export async function confirmSalonCashPayment(payload = {}){
+  const r = await safeInternalJson(`/payments/direct/salon/confirm-cash`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"SALON_CASH_CONFIRM_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_CASH_CONFIRM_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
+export async function confirmMasterCashPayment(payload = {}){
+  const r = await safeInternalJson(`/payments/direct/master/confirm-cash`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"MASTER_CASH_CONFIRM_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_CASH_CONFIRM_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
 export async function getMasterClients(masterSlug = getMasterSlug()){
   const r = await safeInternalJson(`/masters/${masterSlug}/clients`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTER_CLIENTS_FETCH_FAILED", detail:r };

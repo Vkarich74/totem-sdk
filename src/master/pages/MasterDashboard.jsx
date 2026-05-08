@@ -4,8 +4,8 @@ import PageSection from "../../cabinet/PageSection"
 import StatCard from "../../cabinet/StatCard"
 import StatGrid from "../../cabinet/StatGrid"
 import { useMaster } from "../MasterContext"
-import { getMasterMetrics } from "../../api/internal"
-import { getMasterNotifications, markMasterNotificationRead } from "../../api/master.js"
+import { confirmMasterCashPayment, getMasterMetrics } from "../../api/internal"
+import { getMasterBookings, getMasterNotifications, markMasterNotificationRead } from "../../api/master.js"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 
 function money(n){
@@ -170,6 +170,46 @@ function formatNotificationDate(value){
   }).format(date)
 }
 
+function getSafeBookingList(payload){
+  if(Array.isArray(payload)) return payload
+  if(Array.isArray(payload?.bookings)) return payload.bookings
+  if(Array.isArray(payload?.data?.bookings)) return payload.data.bookings
+  if(Array.isArray(payload?.items)) return payload.items
+  return []
+}
+
+function isPendingCashBooking(booking){
+  const provider = String(booking?.payment_provider || "").toLowerCase()
+  const status = String(booking?.payment_status || "").toLowerCase()
+
+  return Boolean(
+    booking?.cash_pending_alert ||
+    (provider === "direct" && status === "pending" && Boolean(booking?.payment_is_active))
+  )
+}
+
+function getPaymentLabelRu(booking){
+  const explicitLabel = String(booking?.payment_label_ru || "").trim()
+  if(explicitLabel) return explicitLabel
+
+  const provider = String(booking?.payment_provider || "").toLowerCase()
+  const status = String(booking?.payment_status || "").toLowerCase()
+
+  if(status === "failed") return "Оплата не прошла"
+  if(status === "refunded") return "Оплата возвращена"
+  if(provider === "direct" && status === "pending") return "Наличные ожидают подтверждения"
+  if(provider === "direct" && status === "confirmed") return "Оплата наличными подтверждена"
+  if(provider === "xpay" && status === "pending") return "Ожидаем оплату XPAY"
+  if(provider === "xpay" && status === "confirmed") return "Оплата получена"
+  return "Оплата не выбрана"
+}
+
+function getBookingAmount(booking){
+  const value = booking?.payment_amount ?? booking?.price_snapshot ?? booking?.price ?? 0
+  const amount = Number(value || 0)
+  return Number.isFinite(amount) ? amount : 0
+}
+
 export default function MasterDashboard() {
   const {
     loading: masterLoading,
@@ -186,6 +226,10 @@ export default function MasterDashboard() {
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState("")
   const [empty, setEmpty] = useState(false)
+  const [pendingCashBookings, setPendingCashBookings] = useState([])
+  const [pendingCashLoading, setPendingCashLoading] = useState(false)
+  const [pendingCashError, setPendingCashError] = useState("")
+  const [confirmingCashKey, setConfirmingCashKey] = useState("")
   const [notifications, setNotifications] = useState([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationsError, setNotificationsError] = useState("")
@@ -269,6 +313,52 @@ export default function MasterDashboard() {
   useEffect(()=>{
     let cancelled = false
 
+    async function loadPendingCashBookings(){
+      if(!slug){
+        if(!cancelled){
+          setPendingCashBookings([])
+          setPendingCashLoading(false)
+          setPendingCashError("")
+        }
+        return
+      }
+
+      try{
+        if(!cancelled){
+          setPendingCashLoading(true)
+          setPendingCashError("")
+        }
+
+        const result = await getMasterBookings(slug)
+        const bookings = getSafeBookingList(result).filter(isPendingCashBooking)
+
+        if(!cancelled){
+          setPendingCashBookings(bookings)
+        }
+      }catch(error){
+        console.error("MASTER DASHBOARD PENDING CASH LOAD ERROR", error)
+
+        if(!cancelled){
+          setPendingCashBookings([])
+          setPendingCashError(error?.message || "MASTER_PENDING_CASH_LOAD_FAILED")
+        }
+      }finally{
+        if(!cancelled){
+          setPendingCashLoading(false)
+        }
+      }
+    }
+
+    loadPendingCashBookings()
+
+    return ()=>{
+      cancelled = true
+    }
+  },[slug])
+
+  useEffect(()=>{
+    let cancelled = false
+
     async function loadMasterNotificationsEffect(){
       if(!slug){
         if(!cancelled){
@@ -314,6 +404,36 @@ export default function MasterDashboard() {
       cancelled = true
     }
   },[slug])
+
+  async function confirmCashBooking(booking){
+    const bookingId = booking?.id
+    if(!bookingId || confirmingCashKey){
+      return
+    }
+
+    const key = String(bookingId)
+    setConfirmingCashKey(key)
+    setPendingCashError("")
+
+    try{
+      const result = await confirmMasterCashPayment({
+        booking_id: bookingId,
+        payment_id: booking?.payment_id || undefined,
+        master_slug: slug
+      })
+
+      if(!result?.ok){
+        const message = result?.detail?.message_ru || result?.detail?.error || result?.error || "MASTER_CASH_CONFIRM_FAILED"
+        throw new Error(message)
+      }
+
+      setPendingCashBookings((prev) => prev.filter((item) => String(item?.id || "") !== key))
+    }catch(error){
+      setPendingCashError(error?.message || "MASTER_CASH_CONFIRM_FAILED")
+    }finally{
+      setConfirmingCashKey("")
+    }
+  }
 
   async function loadMasterNotifications(){
     if(!slug){
@@ -559,6 +679,167 @@ export default function MasterDashboard() {
           <StatCard title="Клиентов всего" value={safeMetrics.clients_total || 0} />
           <StatCard title="Доход сегодня" value={money(safeMetrics.revenue_today)} />
           <StatCard title="Доход за месяц" value={money(safeMetrics.revenue_month)} />
+        </div>
+
+        <div style={{
+          marginTop: "16px",
+          border: "1px solid #fecaca",
+          borderRadius: "18px",
+          background: "#fff1f2",
+          padding: "16px"
+        }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap",
+            alignItems: "center",
+            marginBottom: "10px"
+          }}>
+            <div>
+              <div style={{ fontSize: "14px", fontWeight: 800, color: "#991b1b", marginBottom: "4px" }}>
+                Наличные ожидают подтверждения
+              </div>
+              <div style={{ fontSize: "12px", color: "#7f1d1d", lineHeight: 1.45 }}>
+                Мастер может подтвердить cash вручную без изменения booking lifecycle.
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <span style={{
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: "28px",
+                padding: "0 12px",
+                borderRadius: "999px",
+                background: "#fff7ed",
+                color: "#c2410c",
+                fontSize: "12px",
+                fontWeight: 800
+              }}>
+                {Number(safeMetrics.cash_pending_exposure_count || 0)} записей
+              </span>
+              <span style={{
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: "28px",
+                padding: "0 12px",
+                borderRadius: "999px",
+                background: "#f8fafc",
+                color: "#374151",
+                fontSize: "12px",
+                fontWeight: 800
+              }}>
+                {money(safeMetrics.cash_pending_exposure_amount || 0)}
+              </span>
+            </div>
+          </div>
+
+          {pendingCashError ? (
+            <div style={{
+              border: "1px solid #fca5a5",
+              borderRadius: "14px",
+              background: "#fff",
+              color: "#b91c1c",
+              padding: "12px",
+              fontSize: "13px",
+              marginBottom: "12px"
+            }}>
+              {pendingCashError}
+            </div>
+          ) : null}
+
+          {pendingCashLoading ? (
+            <div style={{ fontSize: "13px", color: "#7f1d1d" }}>
+              Загружаем pending cash…
+            </div>
+          ) : pendingCashBookings.length ? (
+            <div style={{ display: "grid", gap: "10px" }}>
+              {pendingCashBookings.slice(0, 5).map((booking) => {
+                const amount = getBookingAmount(booking)
+                const key = String(booking?.id || "")
+                const isConfirming = confirmingCashKey === key
+
+                return (
+                  <div
+                    key={key || `${booking?.service_name || "booking"}-${booking?.start_at || ""}`}
+                    style={{
+                      display: "grid",
+                      gap: "10px",
+                      padding: "12px",
+                      borderRadius: "14px",
+                      background: "#ffffff",
+                      border: "1px solid #fecaca"
+                    }}
+                  >
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "10px",
+                      flexWrap: "wrap",
+                      alignItems: "flex-start"
+                    }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+                          {booking?.service_name || "Услуга"}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#7f1d1d", marginTop: "4px" }}>
+                          {booking?.start_at ? formatNotificationDate(booking.start_at) : "—"}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#7f1d1d", marginTop: "4px" }}>
+                          {booking?.salon_name || "Салон"}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
+                        <span style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          padding: "5px 9px",
+                          borderRadius: "999px",
+                          background: "#fef2f2",
+                          color: "#991b1b",
+                          fontSize: "12px",
+                          fontWeight: 800,
+                          border: "1px solid #fecaca"
+                        }}>
+                          {getPaymentLabelRu(booking)}
+                        </span>
+                        <span style={{ fontSize: "13px", fontWeight: 800, color: "#7f1d1d" }}>
+                          {amount > 0 ? money(amount) : money(booking?.price_snapshot)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        type="button"
+                        onClick={() => confirmCashBooking(booking)}
+                        disabled={isConfirming}
+                        style={{
+                          minHeight: "40px",
+                          padding: "0 14px",
+                          borderRadius: "10px",
+                          border: "1px solid #dc2626",
+                          background: isConfirming ? "#fee2e2" : "#dc2626",
+                          color: "#fff",
+                          fontSize: "13px",
+                          fontWeight: 800,
+                          cursor: isConfirming ? "default" : "pointer"
+                        }}
+                      >
+                        {isConfirming ? "Подтверждаем…" : "Подтвердить наличные"}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div style={{ fontSize: "13px", color: "#7f1d1d" }}>
+              Pending cash записей нет.
+            </div>
+          )}
         </div>
       </PageSection>
 
