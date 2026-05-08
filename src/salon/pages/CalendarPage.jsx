@@ -174,6 +174,28 @@ function SummaryCard({ label, value, hint }){
   )
 }
 
+function isPendingCashBooking(booking){
+  const provider = String(booking?.payment_provider || "").toLowerCase()
+  const status = String(booking?.payment_status || "").toLowerCase()
+
+  return Boolean(
+    booking?.cash_pending_alert === true ||
+    (provider === "direct" && status === "pending" && Boolean(booking?.payment_is_active))
+  )
+}
+
+function getPaymentLabelRu(booking){
+  const explicit = String(booking?.payment_label_ru || "").trim()
+  if(explicit) return explicit
+
+  return isPendingCashBooking(booking) ? "Наличные ожидают подтверждения" : "Оплата не выбрана"
+}
+
+function formatCurrency(value){
+  const amount = Number(value || 0)
+  return Number.isFinite(amount) ? new Intl.NumberFormat("ru-RU").format(amount) + " сом" : "0 сом"
+}
+
 export default function CalendarPage(){
   const { slug: routeSlug } = useParams()
   const salonSlug = resolveSalonSlug(routeSlug)
@@ -185,6 +207,7 @@ export default function CalendarPage(){
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [actionLoading, setActionLoading] = useState("")
+  const [showPendingCashOnly, setShowPendingCashOnly] = useState(false)
 
   async function load(){
     if(!salonSlug){
@@ -268,6 +291,21 @@ export default function CalendarPage(){
       .sort((left, right) => new Date(getBookingStartAt(left)) - new Date(getBookingStartAt(right)))
   }, [bookings, selectedDay])
 
+  const pendingCashDayBookings = useMemo(() => {
+    return dayBookings.filter(isPendingCashBooking)
+  }, [dayBookings])
+
+  const visibleDayBookings = useMemo(() => {
+    return showPendingCashOnly ? pendingCashDayBookings : dayBookings
+  }, [dayBookings, pendingCashDayBookings, showPendingCashOnly])
+
+  const dailyPendingCashCount = pendingCashDayBookings.length
+  const dailyPendingCashAmount = pendingCashDayBookings.reduce((sum, booking) => {
+    const amount = Number(booking?.payment_amount || booking?.price_snapshot || 0)
+    return sum + (Number.isFinite(amount) ? amount : 0)
+  }, 0)
+  const pendingCashEmptyState = showPendingCashOnly && visibleDayBookings.length === 0
+
   async function createBooking(master, time){
     if(isPastSlot(selectedDay, time)){
       return
@@ -320,7 +358,9 @@ export default function CalendarPage(){
     masters: masters.length,
     bookings: dayBookings.length,
     confirmed: dayBookings.filter((booking) => booking.status === "confirmed").length,
-    pending: dayBookings.filter((booking) => booking.status === "reserved").length
+    pending: dayBookings.filter((booking) => booking.status === "reserved").length,
+    cash_pending_count: dailyPendingCashCount,
+    cash_pending_amount: dailyPendingCashAmount
   }
 
   if(loading){
@@ -375,15 +415,39 @@ export default function CalendarPage(){
             ))}
           </select>
         </div>
+
+        <label style={styles.filterPill}>
+          <input
+            type="checkbox"
+            checked={showPendingCashOnly}
+            onChange={(event) => setShowPendingCashOnly(event.target.checked)}
+          />
+          <span>Незакрытые наличные</span>
+        </label>
       </div>
 
-      {isMobile ? (
-        dayBookings.length === 0 ? (
-          <EmptyState title="На этот день записей нет" description="Выберите другой день или создайте запись из свободного слота." />
+      {(dailyPendingCashCount > 0 || showPendingCashOnly) ? (
+        <div style={styles.pendingCashSummary}>
+          Незакрытые наличные: {dailyPendingCashCount} / {formatCurrency(dailyPendingCashAmount)}
+        </div>
+      ) : null}
+
+      {pendingCashEmptyState ? (
+        <EmptyState
+          title="Незакрытых наличных за выбранный день нет."
+          description="Снимите фильтр или выберите другой день."
+        />
+      ) : isMobile ? (
+        visibleDayBookings.length === 0 ? (
+          <EmptyState
+            title="На этот день записей нет"
+            description="Выберите другой день или создайте запись из свободного слота."
+          />
         ) : (
           <div style={styles.mobileList}>
-            {dayBookings.map((booking) => {
+            {visibleDayBookings.map((booking) => {
               const color = statusColor(booking.status)
+              const pendingCash = isPendingCashBooking(booking)
               return (
                 <button
                   key={booking.id}
@@ -396,13 +460,19 @@ export default function CalendarPage(){
                       <div style={styles.mobileTitle}>{booking.client_name}</div>
                       <div style={styles.mobileMeta}>{booking.master_name}</div>
                     </div>
-                    <span style={{ ...styles.statusBadge, background: `${color}18`, color }}>{statusText(booking.status)}</span>
+                    <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
+                      <span style={{ ...styles.statusBadge, background: `${color}18`, color }}>{statusText(booking.status)}</span>
+                      {pendingCash ? (
+                        <span style={styles.pendingCashBadge}>Наличные ожидают подтверждения</span>
+                      ) : null}
+                    </div>
                   </div>
                   <div style={styles.mobileMetaRow}>
                     <span>{formatTimeLabel(getBookingStartAt(booking))}</span>
                     <span>{formatDateLabel(getBookingStartAt(booking))}</span>
                   </div>
                   {booking.service_name ? <div style={styles.mobileService}>{booking.service_name}</div> : null}
+                  {pendingCash ? <div style={styles.mobilePaymentLabel}>{getPaymentLabelRu(booking)}</div> : null}
                   {booking.phone ? <div style={styles.mobilePhone}>{booking.phone}</div> : null}
                 </button>
               )
@@ -454,6 +524,9 @@ export default function CalendarPage(){
                         <div style={styles.bookingCell}>
                           <div style={styles.bookingClient}>{booking.client_name}</div>
                           <div style={styles.bookingMeta}>{statusText(booking.status)}</div>
+                          {isPendingCashBooking(booking) ? (
+                            <div style={styles.bookingCashMeta}>{getPaymentLabelRu(booking)}</div>
+                          ) : null}
                         </div>
                       ) : (
                         <div style={styles.emptySlot}>+</div>
@@ -511,6 +584,31 @@ const styles = {
     gap: 12,
     flexWrap: "wrap",
     marginBottom: 16
+  },
+  filterPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 38,
+    padding: "0 12px",
+    borderRadius: 999,
+    border: "1px solid #fecaca",
+    background: "#fff1f2",
+    color: "#991b1b",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    userSelect: "none"
+  },
+  pendingCashSummary: {
+    marginBottom: 12,
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #fecaca",
+    background: "#fff1f2",
+    color: "#991b1b",
+    fontSize: 13,
+    fontWeight: 700
   },
   fieldGroup: {
     display: "flex",
@@ -628,6 +726,11 @@ const styles = {
     fontSize: 11,
     color: "#6b7280"
   },
+  bookingCashMeta: {
+    fontSize: 11,
+    color: "#991b1b",
+    fontWeight: 700
+  },
   emptySlot: {
     color: "#9ca3af",
     fontSize: 20,
@@ -678,6 +781,11 @@ const styles = {
     fontSize: 13,
     color: "#6b7280"
   },
+  mobilePaymentLabel: {
+    fontSize: 12,
+    color: "#991b1b",
+    fontWeight: 700
+  },
   statusBadge: {
     display: "inline-flex",
     alignItems: "center",
@@ -686,5 +794,16 @@ const styles = {
     fontSize: 12,
     fontWeight: 700,
     whiteSpace: "nowrap"
+  },
+  pendingCashBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "4px 10px",
+    borderRadius: 999,
+    background: "#fff1f2",
+    color: "#991b1b",
+    fontSize: 12,
+    fontWeight: 700,
+    border: "1px solid #fecaca"
   }
 }

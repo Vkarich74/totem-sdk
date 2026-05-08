@@ -199,6 +199,22 @@ if(Number.isNaN(n))return 0
 return n
 }
 
+function isPendingCashBooking(booking){
+const provider=String(booking?.payment_provider || "").toLowerCase()
+const status=String(booking?.payment_status || "").toLowerCase()
+
+return Boolean(
+booking?.cash_pending_alert === true ||
+(provider==="direct" && status==="pending" && Boolean(booking?.payment_is_active))
+)
+}
+
+function getPaymentLabelRu(booking){
+const explicit=String(booking?.payment_label_ru || "").trim()
+if(explicit)return explicit
+return isPendingCashBooking(booking) ? "Наличные ожидают подтверждения" : "Оплата не выбрана"
+}
+
 function serviceLabel(b){
 return (
 b.service_name ||
@@ -309,6 +325,7 @@ const [dateKey,setDateKey]=useState(todayKey())
 const [statusOverrides,setStatusOverrides]=useState({})
 const [actionLoading,setActionLoading]=useState({})
 const [clockTick,setClockTick]=useState(0)
+const [showPendingCashOnly,setShowPendingCashOnly]=useState(false)
 
 useEffect(()=>{
 let cancelled=false
@@ -488,6 +505,29 @@ const dayKpi=useMemo(()=>{
 return getDayKpi(bookings,dateKey)
 },[bookings,dateKey])
 
+const dayBookings=useMemo(()=>{
+return bookings
+.filter((b)=>{
+if(!b.start_at)return false
+return toDateKey(new Date(b.start_at))===dateKey
+})
+.sort((left,right)=>new Date(left.start_at)-new Date(right.start_at))
+},[bookings,dateKey])
+
+const pendingCashBookings=useMemo(()=>{
+return dayBookings.filter(isPendingCashBooking)
+},[dayBookings])
+
+const visibleBookings=useMemo(()=>{
+return showPendingCashOnly ? pendingCashBookings : dayBookings
+},[dayBookings,pendingCashBookings,showPendingCashOnly])
+
+const dailyPendingCashCount=pendingCashBookings.length
+const dailyPendingCashAmount=pendingCashBookings.reduce((sum,b)=>{
+const amount=Number(b?.payment_amount || b?.price_snapshot || 0)
+return sum+(Number.isFinite(amount) ? amount : 0)
+},0)
+
 const nextBookingInfo=useMemo(()=>{
 return getNextBookingInfo(bookings,dateKey)
 },[bookings,dateKey,clockTick])
@@ -497,7 +537,7 @@ const {calendar,skip}=useMemo(()=>{
 const calendar={}
 const skip=new Set()
 
-for(const b of bookings){
+for(const b of visibleBookings){
 
 if(!b.start_at)continue
 
@@ -531,7 +571,7 @@ skip.add(k)
 
 return{calendar,skip}
 
-},[bookings,dateKey,statusOverrides,clockTick])
+},[visibleBookings,dateKey,statusOverrides,clockTick])
 
 const loading=masterLoading || bookingsLoading
 const error=masterError || bookingsError
@@ -615,6 +655,51 @@ background:"#fafafa"
 <div>Записей сегодня: <b>{stats.today}</b></div>
 <div>Вчера: <b>{stats.yesterday}</b></div>
 <div>Завтра: <b>{stats.tomorrow}</b></div>
+
+</div>
+
+<div style={{
+display:"flex",
+flexWrap:"wrap",
+gap:"8px",
+alignItems:"center",
+marginBottom:"12px"
+}}>
+
+<label style={{
+display:"inline-flex",
+alignItems:"center",
+gap:"8px",
+padding:"8px 12px",
+borderRadius:"999px",
+border:"1px solid #fecaca",
+background:"#fff1f2",
+color:"#991b1b",
+fontSize:"13px",
+fontWeight:"700",
+cursor:"pointer"
+}}>
+<input
+type="checkbox"
+checked={showPendingCashOnly}
+onChange={(event)=>setShowPendingCashOnly(event.target.checked)}
+/>
+<span>Незакрытые наличные</span>
+</label>
+
+{(dailyPendingCashCount>0 || showPendingCashOnly) && (
+<div style={{
+padding:"8px 12px",
+borderRadius:"999px",
+border:"1px solid #fecaca",
+background:"#fff1f2",
+color:"#991b1b",
+fontSize:"13px",
+fontWeight:"700"
+}}>
+Незакрытые наличные: {dailyPendingCashCount} / {formatMoney(dailyPendingCashAmount)}
+</div>
+)}
 
 </div>
 
@@ -704,6 +789,24 @@ transition:"width 0.2s ease"
 
 </div>
 
+{showPendingCashOnly && visibleBookings.length===0 ? (
+
+<div style={{
+border:"1px solid #fecaca",
+background:"#fff1f2",
+color:"#991b1b",
+borderRadius:"10px",
+padding:"12px",
+marginBottom:"12px"
+}}>
+<div style={{fontWeight:"700"}}>Незакрытых наличных за выбранный день нет.</div>
+<div style={{marginTop:"4px",fontSize:"13px"}}>Снимите фильтр или выберите другой день.</div>
+</div>
+
+) : (
+
+<>
+
 {slots.map(s=>{
 
 if(skip.has(s))return null
@@ -787,6 +890,23 @@ boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 <span style={{fontSize:"12px"}}>{statusLabel(b._status)}</span>
 </div>
 
+{isPendingCashBooking(b) ? (
+<div style={{
+marginTop:"6px",
+display:"inline-flex",
+alignItems:"center",
+padding:"4px 8px",
+borderRadius:"999px",
+background:"#fff1f2",
+color:"#991b1b",
+fontSize:"12px",
+fontWeight:"700",
+border:"1px solid #fecaca"
+}}>
+{getPaymentLabelRu(b)}
+</div>
+) : null}
+
 {serviceLabel(b) && (
 <div style={{marginTop:"4px",fontWeight:"600"}}>
 {serviceLabel(b)}
@@ -845,9 +965,9 @@ style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",backgro
 
 </div>
 
-)
+</>
 
-})}
+)}
 
 </div>
 
