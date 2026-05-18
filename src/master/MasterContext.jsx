@@ -92,6 +92,17 @@ function deriveBillingBlockReason(billingAccess){
   )
 }
 
+function isForbiddenMasterLoad(result){
+  return Boolean(
+    result &&
+    result.ok === false &&
+    (
+      result?.detail?.status === 403 ||
+      result?.detail?.response?.status === 403
+    )
+  )
+}
+
 export function MasterProvider({ children }){
   const { slug: routeSlug } = useParams()
   const slug = useMemo(() => resolveMasterSlug(routeSlug), [routeSlug])
@@ -121,6 +132,22 @@ export function MasterProvider({ children }){
 
     try{
       const raw = await getMaster(currentSlug)
+
+      if(isForbiddenMasterLoad(raw)){
+        console.warn("MASTER CONTEXT WARN: ROOT_PROFILE_FORBIDDEN", {
+          slug: currentSlug
+        })
+
+        setMaster({
+          slug: currentSlug,
+          hasData: false
+        })
+        setBillingAccess(null)
+        setEmpty(false)
+        setError(null)
+        return
+      }
+
       const normalized = normalizeMasterRoot(raw)
       const masterData = extractMaster(normalized, currentSlug)
       const billing = extractBillingAccess(normalized)
