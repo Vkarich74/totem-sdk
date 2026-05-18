@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
+import OwnerPushOptInCard from "../../components/OwnerPushOptInCard"
 import { confirmSalonCashPayment, getBookings as getSalonBookings, getSalonMetrics } from "../../api/internal"
 import { getSalonNotifications, markSalonNotificationRead } from "../../api/salon.js"
 
@@ -884,6 +885,13 @@ export default function DashboardPage(){
         slug={slug}
         title="QR для записи в салон"
         subtitle="Клиент откроет форму записи салона."
+      />
+
+      <OwnerPushOptInCard
+        ownerType="salon"
+        slug={slug}
+        title="Push-уведомления"
+        subtitle="Браузерные уведомления о записях, деньгах и важных событиях салона."
       />
 
       <PageSection title={(

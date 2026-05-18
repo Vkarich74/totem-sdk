@@ -7,6 +7,7 @@ import { useMaster } from "../MasterContext"
 import { confirmMasterCashPayment, getMasterBookings, getMasterMetrics } from "../../api/internal"
 import { getMasterNotifications, markMasterNotificationRead } from "../../api/master.js"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
+import OwnerPushOptInCard from "../../components/OwnerPushOptInCard"
 
 function money(n){
   return new Intl.NumberFormat("ru-RU").format(Number(n) || 0) + " сом"
@@ -861,6 +862,13 @@ export default function MasterDashboard() {
         slug={slug}
         title="QR для записи к мастеру"
         subtitle="Клиент откроет форму записи с выбранным мастером."
+      />
+
+      <OwnerPushOptInCard
+        ownerType="master"
+        slug={slug}
+        title="Push-уведомления"
+        subtitle="Браузерные уведомления о записях, деньгах и важных событиях мастера."
       />
 
       <PageSection title={(
