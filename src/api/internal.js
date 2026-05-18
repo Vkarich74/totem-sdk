@@ -875,6 +875,30 @@ export async function getMasterBookings(masterSlug = getMasterSlug()){
   return { ok:true, bookings: j.bookings || [] };
 }
 
+export async function postMasterPushSubscription(masterSlug = getMasterSlug(), payload = {}){
+  const safeSlug = encodeURIComponent(String(masterSlug || "").trim());
+  const r = await safeInternalJson(`/masters/${safeSlug}/push-subscriptions`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"MASTER_PUSH_SUBSCRIPTION_SAVE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_PUSH_SUBSCRIPTION_SAVE_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
+export async function deleteMasterPushSubscription(masterSlug = getMasterSlug(), deviceId){
+  const safeSlug = encodeURIComponent(String(masterSlug || "").trim());
+  const safeDeviceId = encodeURIComponent(String(deviceId || "").trim());
+  const r = await safeInternalJson(`/masters/${safeSlug}/push-subscriptions/${safeDeviceId}`, {
+    method: "DELETE"
+  });
+  if(!r.ok) return { ok:false, error:"MASTER_PUSH_SUBSCRIPTION_REVOKE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_PUSH_SUBSCRIPTION_REVOKE_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
 export async function confirmSalonCashPayment(payload = {}){
   const r = await safeInternalJson(`/payments/direct/salon/confirm-cash`, {
     method: "POST",
@@ -934,6 +958,30 @@ export async function attachSalonService(salonSlug = getSalonSlug(), payload = {
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"SALON_SERVICE_ATTACH_API_NOT_OK", detail:j };
   return { ok:true, service: j.service || j.item || j.data || j };
+}
+
+export async function postSalonPushSubscription(salonSlug = getSalonSlug(), payload = {}){
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const r = await safeInternalJson(`/salons/${safeSlug}/push-subscriptions`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"SALON_PUSH_SUBSCRIPTION_SAVE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_PUSH_SUBSCRIPTION_SAVE_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
+export async function deleteSalonPushSubscription(salonSlug = getSalonSlug(), deviceId){
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const safeDeviceId = encodeURIComponent(String(deviceId || "").trim());
+  const r = await safeInternalJson(`/salons/${safeSlug}/push-subscriptions/${safeDeviceId}`, {
+    method: "DELETE"
+  });
+  if(!r.ok) return { ok:false, error:"SALON_PUSH_SUBSCRIPTION_REVOKE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_PUSH_SUBSCRIPTION_REVOKE_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
 }
 
 export async function getMasterWalletBalance(masterSlug = getMasterSlug()){
