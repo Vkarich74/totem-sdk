@@ -2195,7 +2195,7 @@ function PushOptInBlock({
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             <MobileButton
               onClick={onEnablePush}
-              disabled={Boolean(pushState?.busy) || kind === "enabled" || kind === "unsupported"}
+              disabled={Boolean(pushState?.busy) || kind === "enabled"}
             >
               {pushState?.busy ? "Включаем…" : kind === "enabled" ? "Уведомления включены" : "Включить уведомления"}
             </MobileButton>
