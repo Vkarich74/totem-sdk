@@ -875,6 +875,19 @@ export async function getMasterBookings(masterSlug = getMasterSlug()){
   return { ok:true, bookings: j.bookings || [] };
 }
 
+export async function getMasterPendingCashBookings(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/masters/${masterSlug}/pending-cash-bookings`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_PENDING_CASH_BOOKINGS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_PENDING_CASH_BOOKINGS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    bookings: j.bookings || [],
+    count: Number(j.count || 0),
+    amount: j.amount || 0
+  };
+}
+
 export async function postMasterPushSubscription(masterSlug = getMasterSlug(), payload = {}){
   const safeSlug = encodeURIComponent(String(masterSlug || "").trim());
   const r = await safeInternalJson(`/masters/${safeSlug}/push-subscriptions`, {

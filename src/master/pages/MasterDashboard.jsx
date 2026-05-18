@@ -4,7 +4,7 @@ import PageSection from "../../cabinet/PageSection"
 import StatCard from "../../cabinet/StatCard"
 import StatGrid from "../../cabinet/StatGrid"
 import { useMaster } from "../MasterContext"
-import { confirmMasterCashPayment, getMasterBookings, getMasterMetrics } from "../../api/internal"
+import { confirmMasterCashPayment, getMasterMetrics, getMasterPendingCashBookings } from "../../api/internal"
 import { getMasterNotifications, markMasterNotificationRead } from "../../api/master.js"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import OwnerPushOptInCard from "../../components/OwnerPushOptInCard"
@@ -330,11 +330,17 @@ export default function MasterDashboard() {
           setPendingCashError("")
         }
 
-        const result = await getMasterBookings(slug)
-        const bookings = getSafeBookingList(result).filter(isPendingCashBooking)
+        const result = await getMasterPendingCashBookings(slug)
+        const bookings = getSafeBookingList(result)
 
         if(!cancelled){
           setPendingCashBookings(bookings)
+          setMetrics((current) => {
+            const next = current ? { ...current } : {}
+            next.cash_pending_exposure_count = Number.isFinite(Number(result?.count)) ? Number(result.count) : bookings.length
+            next.cash_pending_exposure_amount = Number.isFinite(Number(result?.amount)) ? Number(result.amount) : bookings.reduce((sum, booking) => sum + getBookingAmount(booking), 0)
+            return next
+          })
         }
       }catch(error){
         console.error("MASTER DASHBOARD PENDING CASH LOAD ERROR", error)
