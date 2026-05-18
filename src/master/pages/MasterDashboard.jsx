@@ -4,8 +4,8 @@ import PageSection from "../../cabinet/PageSection"
 import StatCard from "../../cabinet/StatCard"
 import StatGrid from "../../cabinet/StatGrid"
 import { useMaster } from "../MasterContext"
-import { confirmMasterCashPayment, getMasterMetrics } from "../../api/internal"
-import { getMasterBookings, getMasterNotifications, markMasterNotificationRead } from "../../api/master.js"
+import { confirmMasterCashPayment, getMasterBookings, getMasterMetrics } from "../../api/internal"
+import { getMasterNotifications, markMasterNotificationRead } from "../../api/master.js"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 
 function money(n){
