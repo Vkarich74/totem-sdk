@@ -3,11 +3,13 @@ import {
   getMobileConfig,
   getMobileCityHome,
   getMobileLocations,
+  getPublicPushConfig,
   getMobileNotifications,
   getMobileReferral,
   getMobileSalonCatalog,
   postMobileDataRequest,
   postMobileEvent,
+  postMobilePushSubscription,
   postMobileNotificationRead,
   postMobileFeedback
 } from "../api/publicApi";
@@ -251,6 +253,72 @@ function getMobileNotificationReaderId() {
   }
 }
 
+function getMobilePushDeviceId() {
+  const storageKey = "TOTEM_MOBILE_PUSH_DEVICE";
+
+  try {
+    const existing = window.localStorage.getItem(storageKey);
+
+    if (existing) {
+      return existing;
+    }
+
+    const nextValue = `mobile-push-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    window.localStorage.setItem(storageKey, nextValue);
+    return nextValue;
+  } catch {
+    try {
+      const existing = window.sessionStorage.getItem(storageKey);
+
+      if (existing) {
+        return existing;
+      }
+
+      const nextValue = `mobile-push-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      window.sessionStorage.setItem(storageKey, nextValue);
+      return nextValue;
+    } catch {
+      return `mobile-push-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+  }
+}
+
+function decodeBase64UrlToUint8Array(value) {
+  const base64 = String(value || "")
+    .trim()
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  if (!base64) {
+    return null;
+  }
+
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+
+  try {
+    const raw = window.atob(padded);
+    const bytes = new Uint8Array(raw.length);
+
+    for (let index = 0; index < raw.length; index += 1) {
+      bytes[index] = raw.charCodeAt(index);
+    }
+
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+function isPushApiSupported() {
+  return (
+    typeof window !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    "serviceWorker" in navigator &&
+    typeof Notification !== "undefined" &&
+    "PushManager" in window
+  );
+}
+
 function Card({ children, style }) {
   return (
     <div
@@ -411,6 +479,19 @@ export default function MobileHomePage() {
   });
   const [catalogBySlug, setCatalogBySlug] = useState({});
   const [notificationMarkingUid, setNotificationMarkingUid] = useState("");
+  const [pushConfig, setPushConfig] = useState({
+    loading: true,
+    error: "",
+    data: null,
+  });
+  const [pushState, setPushState] = useState({
+    kind: "idle",
+    message: "",
+    permission: typeof Notification !== "undefined" ? Notification.permission : "default",
+    supported: true,
+    enabled: false,
+    busy: false,
+  });
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [installPromptVisible, setInstallPromptVisible] = useState(false);
   const [pwaUpdateAvailable, setPwaUpdateAvailable] = useState(false);
@@ -507,6 +588,137 @@ export default function MobileHomePage() {
     setPwaStatusMessage("");
     setServiceWorkerRegistration(null);
   }, [mobilePwaEnabled]);
+
+  useEffect(() => {
+    if (!mobileV1Enabled || !mobileNotificationsEnabled) {
+      setPushConfig({
+        loading: false,
+        error: "",
+        data: null,
+      });
+      setPushState({
+        kind: "idle",
+        message: "",
+        permission: typeof Notification !== "undefined" ? Notification.permission : "default",
+        supported: true,
+        enabled: false,
+        busy: false,
+      });
+      return;
+    }
+
+    if (!isPushApiSupported()) {
+      setPushConfig({
+        loading: false,
+        error: "",
+        data: null,
+      });
+      setPushState({
+        kind: "unsupported",
+        message: "Push недоступен в этом браузере, уведомления останутся внутри приложения.",
+        permission: "unsupported",
+        supported: false,
+        enabled: false,
+        busy: false,
+      });
+      return;
+    }
+
+    let active = true;
+
+    async function run() {
+      setPushConfig({
+        loading: true,
+        error: "",
+        data: null,
+      });
+
+      try {
+        const result = await getPublicPushConfig();
+
+        if (!active) {
+          return;
+        }
+
+        setPushConfig({
+          loading: false,
+          error: "",
+          data: result || null,
+        });
+
+        if (!result?.ok || !result?.push_enabled || !result?.vapid_public_key) {
+          setPushState({
+            kind: "failed",
+            message: "Push-уведомления пока не настроены.",
+            permission: Notification.permission,
+            supported: true,
+            enabled: false,
+            busy: false,
+          });
+          return;
+        }
+
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+
+          if (!active) {
+            return;
+          }
+
+          if (subscription) {
+            setPushState({
+              kind: "enabled",
+              message: "Push-уведомления включены.",
+              permission: Notification.permission,
+              supported: true,
+              enabled: true,
+              busy: false,
+            });
+            return;
+          }
+        } catch {
+          /* no-op */
+        }
+
+        setPushState({
+          kind: Notification.permission === "denied" ? "permission_denied" : "ready",
+          message:
+            Notification.permission === "denied"
+              ? "Разрешение на push отклонено."
+              : "Нажмите кнопку, чтобы включить push-уведомления.",
+          permission: Notification.permission,
+          supported: true,
+          enabled: false,
+          busy: false,
+        });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setPushConfig({
+          loading: false,
+          error: error?.message || "PUBLIC_PUSH_CONFIG_REQUEST_FAILED",
+          data: null,
+        });
+        setPushState({
+          kind: "failed",
+          message: error?.message || "Не удалось загрузить push-настройки.",
+          permission: Notification.permission,
+          supported: true,
+          enabled: false,
+          busy: false,
+        });
+      }
+    }
+
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [mobileV1Enabled, mobileNotificationsEnabled]);
 
   useEffect(() => {
     if (!mobileV1Enabled || config.loading || state.loading || state.error) {
@@ -901,6 +1113,127 @@ export default function MobileHomePage() {
     };
   }, [mobileV1Enabled, mobilePwaEnabled]);
 
+  async function handleEnablePushNotifications() {
+    if (pushState.busy) {
+      return;
+    }
+
+    if (!isPushApiSupported()) {
+      setPushState({
+        kind: "unsupported",
+        message: "Push недоступен в этом браузере, уведомления останутся внутри приложения.",
+        permission: "unsupported",
+        supported: false,
+        enabled: false,
+        busy: false,
+      });
+      return;
+    }
+
+    setPushState((current) => ({
+      ...current,
+      busy: true,
+      message: "",
+    }));
+
+    try {
+      const configResult = pushConfig.data?.ok ? pushConfig.data : await getPublicPushConfig();
+
+      if (!configResult?.ok || !configResult?.push_enabled || !configResult?.vapid_public_key) {
+        setPushConfig({
+          loading: false,
+          error: configResult?.error || "PUBLIC_PUSH_CONFIG_DISABLED",
+          data: configResult || null,
+        });
+        setPushState({
+          kind: "failed",
+          message: "Push-уведомления пока не настроены.",
+          permission: Notification.permission,
+          supported: true,
+          enabled: false,
+          busy: false,
+        });
+        return;
+      }
+
+      setPushConfig({
+        loading: false,
+        error: "",
+        data: configResult,
+      });
+
+      const permission = await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        setPushState({
+          kind: "permission_denied",
+          message: "Разрешение на push отклонено.",
+          permission,
+          supported: true,
+          enabled: false,
+          busy: false,
+        });
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        const applicationServerKey = decodeBase64UrlToUint8Array(configResult.vapid_public_key);
+
+        if (!applicationServerKey) {
+          throw new Error("PUSH_APPLICATION_SERVER_KEY_INVALID");
+        }
+
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+      }
+
+      const readerId = getMobileNotificationReaderId();
+      const deviceId = getMobilePushDeviceId();
+      const result = await postMobilePushSubscription({
+        reader_id: readerId,
+        device_id: deviceId,
+        platform: "web",
+        subscription: subscription.toJSON ? subscription.toJSON() : subscription,
+        user_agent: navigator.userAgent,
+      });
+
+      if (!result?.ok) {
+        setPushState({
+          kind: "failed",
+          message: result?.error || "PUBLIC_MOBILE_PUSH_SUBSCRIPTION_SAVE_REQUEST_FAILED",
+          permission,
+          supported: true,
+          enabled: false,
+          busy: false,
+        });
+        return;
+      }
+
+      setPushState({
+        kind: "enabled",
+        message: "Push-уведомления включены.",
+        permission,
+        supported: true,
+        enabled: true,
+        busy: false,
+      });
+    } catch (error) {
+      setPushState({
+        kind: "failed",
+        message: error?.message || "Не удалось включить push-уведомления.",
+        permission: Notification.permission,
+        supported: true,
+        enabled: false,
+        busy: false,
+      });
+    }
+  }
+
   useEffect(() => {
     if (!mobileV1Enabled || !mobilePwaEnabled) {
       return;
@@ -1264,7 +1597,10 @@ export default function MobileHomePage() {
         onMarkRead={handleNotificationMarkRead}
         markingUid={notificationMarkingUid}
         referral={referral}
+        mobileNotificationsEnabled={mobileNotificationsEnabled}
         mobilePwaEnabled={mobilePwaEnabled}
+        pushState={pushState}
+        onEnablePush={handleEnablePushNotifications}
         installPromptVisible={installPromptVisible}
         pwaUpdateAvailable={pwaUpdateAvailable}
         pwaStatusMessage={pwaStatusMessage}
@@ -1280,18 +1616,21 @@ export default function MobileHomePage() {
   }
 
   return (
-    <HomeSurface
-      countries={sortedCountries}
-      cities={activeCities}
-      homeCitiesByCountry={homeCitiesByCountry}
-      announcements={announcements}
-      onMarkRead={handleNotificationMarkRead}
-      markingUid={notificationMarkingUid}
-      referral={referral}
-      mobilePwaEnabled={mobilePwaEnabled}
-      installPromptVisible={installPromptVisible}
-      pwaUpdateAvailable={pwaUpdateAvailable}
-      pwaStatusMessage={pwaStatusMessage}
+      <HomeSurface
+        countries={sortedCountries}
+        cities={activeCities}
+        homeCitiesByCountry={homeCitiesByCountry}
+        announcements={announcements}
+        onMarkRead={handleNotificationMarkRead}
+        markingUid={notificationMarkingUid}
+        referral={referral}
+        mobileNotificationsEnabled={mobileNotificationsEnabled}
+        mobilePwaEnabled={mobilePwaEnabled}
+        pushState={pushState}
+        onEnablePush={handleEnablePushNotifications}
+        installPromptVisible={installPromptVisible}
+        pwaUpdateAvailable={pwaUpdateAvailable}
+        pwaStatusMessage={pwaStatusMessage}
       onInstall={handleInstallApp}
       onUpdate={handleReloadForUpdate}
       onDismiss={handleDismissPwaPrompt}
@@ -1800,6 +2139,73 @@ function PwaPromptBlock({
   );
 }
 
+function PushOptInBlock({
+  mobileNotificationsEnabled,
+  pushState,
+  onEnablePush,
+}) {
+  if (!mobileNotificationsEnabled) {
+    return null;
+  }
+
+  const kind = String(pushState?.kind || "idle");
+  const message =
+    String(pushState?.message || "").trim() ||
+    (kind === "enabled"
+      ? "Push-уведомления включены."
+      : kind === "permission_denied"
+        ? "Разрешение на push отклонено."
+        : kind === "unsupported"
+          ? "Push недоступен в этом браузере, уведомления останутся внутри приложения."
+          : "Нажмите кнопку, чтобы включить push-уведомления.");
+  const statusTone =
+    kind === "enabled"
+      ? "success"
+      : kind === "permission_denied"
+        ? "warning"
+        : kind === "unsupported"
+          ? "neutral"
+          : "accent";
+
+  return (
+    <PremiumCard
+      title="Push-уведомления"
+      subtitle="Браузерные уведомления о важных событиях."
+      style={{
+        borderColor: "rgba(196,181,253,0.9)",
+        background: "linear-gradient(180deg, #fcfbff 0%, #f5f3ff 100%)",
+        boxShadow: "0 16px 40px rgba(91,33,182,0.07)",
+      }}
+      actions={
+        <MobileBadge tone={statusTone}>
+          {kind === "enabled"
+            ? "Включено"
+            : kind === "permission_denied"
+              ? "Доступ запрещён"
+              : kind === "unsupported"
+                ? "Недоступно"
+                : "Готово"}
+        </MobileBadge>
+      }
+      footer={
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ fontSize: 14, lineHeight: 1.55, color: "#4b5563" }}>
+            {message}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <MobileButton
+              onClick={onEnablePush}
+              disabled={Boolean(pushState?.busy) || kind === "enabled" || kind === "unsupported"}
+            >
+              {pushState?.busy ? "Включаем…" : kind === "enabled" ? "Уведомления включены" : "Включить уведомления"}
+            </MobileButton>
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
 function AnnouncementItem({ item, onMarkRead, marking }) {
   const actionUrl = String(item?.action_url || "").trim();
   const actionType = String(item?.action_type || "").trim();
@@ -2058,7 +2464,10 @@ function HomeSurface({
   onMarkRead,
   markingUid,
   referral,
+  mobileNotificationsEnabled,
   mobilePwaEnabled,
+  pushState,
+  onEnablePush,
   installPromptVisible,
   pwaUpdateAvailable,
   pwaStatusMessage,
@@ -2694,6 +3103,12 @@ function HomeSurface({
           onDismiss={onDismiss}
         />
 
+        <PushOptInBlock
+          mobileNotificationsEnabled={mobileNotificationsEnabled}
+          pushState={pushState}
+          onEnablePush={onEnablePush}
+        />
+
         <TotemBottomTabs
           style={{ marginTop: 2 }}
           items={[
@@ -2717,7 +3132,10 @@ function CitySurface({
   onMarkRead,
   markingUid,
   referral,
+  mobileNotificationsEnabled,
   mobilePwaEnabled,
+  pushState,
+  onEnablePush,
   installPromptVisible,
   pwaUpdateAvailable,
   pwaStatusMessage,
@@ -2953,6 +3371,12 @@ function CitySurface({
           onInstall={onInstall}
           onUpdate={onUpdate}
           onDismiss={onDismiss}
+        />
+
+        <PushOptInBlock
+          mobileNotificationsEnabled={mobileNotificationsEnabled}
+          pushState={pushState}
+          onEnablePush={onEnablePush}
         />
 
         <MobileBottomNav
