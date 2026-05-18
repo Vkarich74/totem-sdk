@@ -78,6 +78,34 @@ function getOwnerPushOps(ownerType) {
   }
 }
 
+async function ensureOwnerServiceWorkerReady() {
+  if (typeof navigator === "undefined" || !navigator.serviceWorker) {
+    throw new Error("SERVICE_WORKER_UNAVAILABLE")
+  }
+
+  let registration = null
+
+  try {
+    registration = await navigator.serviceWorker.getRegistration("/")
+  } catch {
+    registration = null
+  }
+
+  if (!registration) {
+    registration = await navigator.serviceWorker.register("/sw.js")
+  }
+
+  const timeoutPromise = new Promise((_, reject) => {
+    window.setTimeout(() => {
+      reject(new Error("SERVICE_WORKER_NOT_READY"))
+    }, 15000)
+  })
+
+  await Promise.race([navigator.serviceWorker.ready, timeoutPromise])
+
+  return registration
+}
+
 export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle }) {
   const normalizedOwnerType = useMemo(() => String(ownerType || "").trim().toLowerCase(), [ownerType])
   const ownerSlug = useMemo(() => String(slug || "").trim(), [slug])
@@ -162,7 +190,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
           return
         }
 
-        const registration = await navigator.serviceWorker.ready
+        const registration = await ensureOwnerServiceWorkerReady()
         let subscription = await registration.pushManager.getSubscription()
 
         if (!active) {
@@ -234,7 +262,10 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
         setPushState((current) => ({
           ...current,
           kind: "failed",
-          message: error?.message || "Не удалось загрузить push-настройки.",
+          message:
+            error?.message === "SERVICE_WORKER_NOT_READY"
+              ? "Service worker не готов. Обновите страницу и попробуйте снова."
+              : error?.message || "Не удалось загрузить push-настройки.",
           permission: typeof window !== "undefined" && window.Notification ? window.Notification.permission : "default",
           supported: true,
           enabled: false,
@@ -325,7 +356,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
         return
       }
 
-      const registration = await navigator.serviceWorker.ready
+      const registration = await ensureOwnerServiceWorkerReady()
       let subscription = await registration.pushManager.getSubscription()
 
       if (!subscription) {
@@ -376,7 +407,10 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
       setPushState((current) => ({
         ...current,
         kind: "failed",
-        message: error?.message || "Не удалось включить push-уведомления.",
+        message:
+          error?.message === "SERVICE_WORKER_NOT_READY"
+            ? "Service worker не готов. Обновите страницу и попробуйте снова."
+            : error?.message || "Не удалось включить push-уведомления.",
         permission: typeof window !== "undefined" && window.Notification ? window.Notification.permission : "default",
         supported: true,
         enabled: false,
@@ -408,7 +442,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
     }))
 
     try {
-      const registration = await navigator.serviceWorker.ready
+      const registration = await ensureOwnerServiceWorkerReady()
       const subscription = await registration.pushManager.getSubscription()
       const deviceId = getOwnerPushDeviceId(normalizedOwnerType, ownerSlug)
 
@@ -435,7 +469,10 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
       setPushState((current) => ({
         ...current,
         kind: "failed",
-        message: error?.message || "Не удалось отключить push-уведомления.",
+        message:
+          error?.message === "SERVICE_WORKER_NOT_READY"
+            ? "Service worker не готов. Обновите страницу и попробуйте снова."
+            : error?.message || "Не удалось отключить push-уведомления.",
         supported: true,
         enabled: true,
         busy: false
