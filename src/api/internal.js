@@ -646,6 +646,15 @@ export async function getAdminNotificationDeliveries(options = {}){
   return j;
 }
 
+export async function retryAdminNotificationDelivery(deliveryId){
+  const id = Number.parseInt(String(deliveryId ?? ""), 10);
+  const r = await safeInternalJson(`/admin/notifications/deliveries/${id}/retry`, { method: "POST" });
+  if(!r.ok) return { ok:false, error:"ADMIN_NOTIFICATION_DELIVERY_RETRY_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_NOTIFICATION_DELIVERY_RETRY_API_NOT_OK", detail:j };
+  return j;
+}
+
 export async function getAdminPushSubscriptions(options = {}){
   const suffix = buildQuery({
     user_type: options.user_type,

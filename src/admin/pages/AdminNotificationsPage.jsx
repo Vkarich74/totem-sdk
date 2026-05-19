@@ -4,6 +4,7 @@ import {
   getAdminNotificationDeliveries,
   getAdminNotifications,
   getAdminPushSubscriptions,
+  retryAdminNotificationDelivery,
 } from "../../api/internal.js";
 
 function textValue(value) {
@@ -247,7 +248,16 @@ const notificationsColumns = [
   { key: "created_at", title: "Создано", dataIndex: "created_at", minWidth: 150, render: (_, row) => formatDateTime(row.created_at) },
 ];
 
-const deliveriesColumns = [
+function canRetryDelivery(delivery) {
+  return (
+    String(delivery?.status || "").toLowerCase() === "failed" &&
+    String(delivery?.channel || "").toLowerCase() === "push" &&
+    String(delivery?.provider || "").toLowerCase() === "web-push"
+  );
+}
+
+function buildDeliveriesColumns({ retryingDeliveryId, onRetryDelivery }) {
+  return [
   { key: "id", title: "ID", dataIndex: "id", minWidth: 80 },
   { key: "notification_id", title: "ID уведомления", dataIndex: "notification_id", minWidth: 120 },
   { key: "delivery_uid", title: "UID доставки", dataIndex: "delivery_uid", minWidth: 200, render: (_, row) => shortText(row.delivery_uid, 24) },
@@ -267,7 +277,40 @@ const deliveriesColumns = [
   { key: "delivered_at", title: "Доставлено", dataIndex: "delivered_at", minWidth: 150, render: (_, row) => formatDateTime(row.delivered_at) },
   { key: "failed_at", title: "Сбой", dataIndex: "failed_at", minWidth: 150, render: (_, row) => formatDateTime(row.failed_at) },
   { key: "created_at", title: "Создано", dataIndex: "created_at", minWidth: 150, render: (_, row) => formatDateTime(row.created_at) },
-];
+  {
+    key: "actions",
+    title: "Действия",
+    dataIndex: "_actions",
+    minWidth: 180,
+    render: (_, row) => {
+      if (!canRetryDelivery(row)) {
+        return "—";
+      }
+
+      const isRetrying = retryingDeliveryId === row.id;
+      return (
+        <button
+          type="button"
+          onClick={() => onRetryDelivery(row)}
+          disabled={isRetrying}
+          style={{
+            border: "1px solid #cbd5e1",
+            background: isRetrying ? "#e5e7eb" : "#fff",
+            color: "#0f172a",
+            borderRadius: 10,
+            padding: "8px 12px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: isRetrying ? "not-allowed" : "pointer",
+          }}
+        >
+          {isRetrying ? "Повторяем..." : "Повторить push"}
+        </button>
+      );
+    },
+  },
+  ];
+}
 
 const pushSubscriptionsColumns = [
   { key: "id", title: "ID", dataIndex: "id", minWidth: 80 },
@@ -362,6 +405,83 @@ export default function AdminNotificationsPage() {
     loading: true,
     error: "",
   });
+  const [retryingDeliveryId, setRetryingDeliveryId] = useState(null);
+  const [retryMessage, setRetryMessage] = useState("");
+  const [retryError, setRetryError] = useState("");
+
+  async function loadDeliveries(limit = 50) {
+    setDeliveriesState((prev) => ({ ...prev, loading: true, error: "" }));
+
+    const deliveriesRes = await getAdminNotificationDeliveries({ limit });
+    const applyResult = (result, fallbackError) => {
+      if (result.status === "fulfilled" && result.value?.ok !== false) {
+        const payload = result.value;
+        const items = getItems(payload);
+        const total = getTotalCount(payload, items.length);
+        return { items, total, loading: false, error: "" };
+      }
+
+      const reason = result.status === "rejected" ? result.reason : result.value;
+      const error = reason?.error || reason?.message || fallbackError;
+      return { items: [], total: 0, loading: false, error };
+    };
+
+    setDeliveriesState(applyResult({ status: "fulfilled", value: deliveriesRes }, "ADMIN_NOTIFICATION_DELIVERIES_LOAD_FAILED"));
+  }
+
+  async function handleRetryDelivery(delivery) {
+    if (!canRetryDelivery(delivery)) {
+      setRetryError("Эту доставку нельзя повторить");
+      setRetryMessage("");
+      return;
+    }
+
+    setRetryMessage("");
+    setRetryError("");
+    setRetryingDeliveryId(delivery.id);
+
+    try {
+      const response = await retryAdminNotificationDelivery(delivery.id);
+      if (response?.ok === false) {
+        const errorCode = String(response?.error || "").trim();
+        if (errorCode === "DELIVERY_RETRY_LIMIT_REACHED") {
+          setRetryError("Достигнут лимит повторов");
+        } else if (errorCode === "DELIVERY_NOT_RETRYABLE") {
+          setRetryError("Эту доставку нельзя повторить");
+        } else {
+          setRetryError("Не удалось повторить отправку");
+        }
+        return;
+      }
+
+      const retry = response?.retry || null;
+      if (retry?.status === "sent") {
+        setRetryMessage("Повторная отправка выполнена");
+      } else if (retry?.status === "failed") {
+        const detail = String(retry?.last_error || "").trim();
+        setRetryMessage(
+          detail
+            ? `Повторная попытка записана, push не отправлен. Причина: ${detail}`
+            : "Повторная попытка записана, push не отправлен",
+        );
+      } else {
+        setRetryMessage("Повторная отправка выполнена");
+      }
+
+      await loadDeliveries();
+    } catch (error) {
+      const code = String(error?.error || error?.code || "").trim();
+      if (code === "DELIVERY_RETRY_LIMIT_REACHED") {
+        setRetryError("Достигнут лимит повторов");
+      } else if (code === "DELIVERY_NOT_RETRYABLE") {
+        setRetryError("Эту доставку нельзя повторить");
+      } else {
+        setRetryError("Не удалось повторить отправку");
+      }
+    } finally {
+      setRetryingDeliveryId(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -408,7 +528,10 @@ export default function AdminNotificationsPage() {
   }, []);
 
   const notificationColumns = notificationsColumns;
-  const deliveryColumns = deliveriesColumns;
+  const deliveryColumns = buildDeliveriesColumns({
+    retryingDeliveryId,
+    onRetryDelivery: handleRetryDelivery,
+  });
   const subscriptionColumns = pushSubscriptionsColumns;
 
   return (
@@ -442,6 +565,23 @@ export default function AdminNotificationsPage() {
           subtitle="Список из public.notification_deliveries."
           extra={sectionMeta(deliveriesState.total, 50)}
         >
+          {retryMessage || retryError ? (
+            <div
+              style={{
+                marginBottom: 12,
+                borderRadius: 12,
+                padding: 12,
+                border: retryError ? "1px solid #f5c2c7" : "1px solid #bbf7d0",
+                background: retryError ? "#fff5f5" : "#f0fdf4",
+                color: retryError ? "#b42318" : "#166534",
+                fontSize: 14,
+                lineHeight: 1.5,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {retryError || retryMessage}
+            </div>
+          ) : null}
           {renderSectionBody({
             loading: deliveriesState.loading,
             error: deliveriesState.error,
