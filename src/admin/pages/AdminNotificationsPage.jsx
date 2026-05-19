@@ -7,6 +7,9 @@ import {
   retryAdminNotificationDelivery,
 } from "../../api/internal.js";
 
+const ADMIN_NOTIFICATION_RETRY_UI_ARTIFACT_BUMP =
+  "phase15-retry-ui-artifact-bump-20260519";
+
 function textValue(value) {
   const text = String(value ?? "").trim();
   return text || "—";
@@ -535,7 +538,10 @@ export default function AdminNotificationsPage() {
   const subscriptionColumns = pushSubscriptionsColumns;
 
   return (
-    <div style={{ padding: 24, background: "#f9fafb", minHeight: "100vh" }}>
+    <div
+      style={{ padding: 24, background: "#f9fafb", minHeight: "100vh" }}
+      data-retry-ui-artifact={ADMIN_NOTIFICATION_RETRY_UI_ARTIFACT_BUMP}
+    >
       <AdminNavigation />
 
       <div style={{ maxWidth: 1440, margin: "0 auto", display: "grid", gap: 20 }}>
