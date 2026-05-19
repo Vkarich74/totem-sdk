@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getClientNotifications, markClientNotificationRead } from "../api/client.js";
 import { postMobileEvent } from "../api/publicApi.js";
+import ClientPushOptInCard from "../components/ClientPushOptInCard.jsx";
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE ||
@@ -538,6 +539,8 @@ export default function ClientCabinetPage() {
 
           {copyStatus ? <p style={styles.success}>{copyStatus}</p> : null}
         </section>
+
+        <ClientPushOptInCard clientId={clientId} token={token} />
       </div>
 
       <section style={getCardStyle(isMobile)}>

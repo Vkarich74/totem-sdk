@@ -74,3 +74,86 @@ export async function markClientNotificationRead(clientId, token, notificationUi
 
   return handleJsonResponse(res)
 }
+
+export async function getClientPushSubscriptionStatus(clientId, token, params = {}) {
+  const safeClientId = String(clientId || "").trim()
+  const safeToken = String(token || "").trim()
+
+  if (!safeClientId) {
+    throw new Error("CLIENT_ID_REQUIRED")
+  }
+
+  if (!safeToken) {
+    throw new Error("CLIENT_TOKEN_REQUIRED")
+  }
+
+  const qs = new URLSearchParams()
+  const deviceId = String(params.device_id || params.deviceId || "").trim()
+  if (deviceId) {
+    qs.set("device_id", deviceId)
+  }
+
+  const suffix = qs.toString() ? `?${qs.toString()}` : ""
+  const res = await fetch(
+    `${API_BASE}/public/clients/${encodeURIComponent(safeClientId)}/${encodeURIComponent(safeToken)}/push-subscriptions/status${suffix}`
+  )
+
+  return handleJsonResponse(res)
+}
+
+export async function postClientPushSubscription(clientId, token, payload) {
+  const safeClientId = String(clientId || "").trim()
+  const safeToken = String(token || "").trim()
+
+  if (!safeClientId) {
+    throw new Error("CLIENT_ID_REQUIRED")
+  }
+
+  if (!safeToken) {
+    throw new Error("CLIENT_TOKEN_REQUIRED")
+  }
+
+  const res = await fetch(
+    `${API_BASE}/public/clients/${encodeURIComponent(safeClientId)}/${encodeURIComponent(safeToken)}/push-subscriptions`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload || {}),
+    }
+  )
+
+  return handleJsonResponse(res)
+}
+
+export async function deleteClientPushSubscription(clientId, token, deviceId) {
+  const safeClientId = String(clientId || "").trim()
+  const safeToken = String(token || "").trim()
+  const safeDeviceId = String(deviceId || "").trim()
+
+  if (!safeClientId) {
+    throw new Error("CLIENT_ID_REQUIRED")
+  }
+
+  if (!safeToken) {
+    throw new Error("CLIENT_TOKEN_REQUIRED")
+  }
+
+  if (!safeDeviceId) {
+    throw new Error("PUSH_SUBSCRIPTION_DEVICE_ID_REQUIRED")
+  }
+
+  const res = await fetch(
+    `${API_BASE}/public/clients/${encodeURIComponent(safeClientId)}/${encodeURIComponent(safeToken)}/push-subscriptions/${encodeURIComponent(safeDeviceId)}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    }
+  )
+
+  return handleJsonResponse(res)
+}
