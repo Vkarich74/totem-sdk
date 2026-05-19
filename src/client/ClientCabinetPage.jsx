@@ -204,6 +204,22 @@ function getActionButtonStyle(baseStyle, isMobile) {
   };
 }
 
+function getActionLinkStyle(baseStyle, isMobile) {
+  return {
+    ...baseStyle,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textDecoration: "none",
+    ...(isMobile
+      ? {
+          width: "100%",
+          minHeight: 48
+        }
+      : null)
+  };
+}
+
 export default function ClientCabinetPage() {
   const { clientId, token } = useParams();
 
