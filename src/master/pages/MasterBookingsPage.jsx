@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { getMasterBookings } from "../../api/internal"
+import { getAuthAccessToken, getMasterBookings } from "../../api/internal"
 
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
@@ -105,6 +105,7 @@ export default function MasterBookingsPage() {
   const [serviceId, setServiceId] = useState("1")
   const [bookingDate, setBookingDate] = useState("")
   const [bookingTime, setBookingTime] = useState("")
+  const [createError, setCreateError] = useState("")
 
   const masterSlug = master?.slug || slug
   const isCreateMode = bookingId === "new"
@@ -223,19 +224,21 @@ export default function MasterBookingsPage() {
     if (!masterSlug) return
 
     if (!date || !time || !client.trim()) {
-      alert("Заполните дату, время и имя клиента")
+      setCreateError("Заполните дату, время и имя клиента")
       return
     }
 
     const start = date + "T" + time + ":00+06:00"
+    const token = getAuthAccessToken()
 
     try {
-      await fetch(
+      const response = await fetch(
         API_BASE + "/internal/masters/" + encodeURIComponent(masterSlug) + "/bookings",
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: "Bearer " + token } : {})
           },
           body: JSON.stringify({
             client_name: client,
@@ -245,11 +248,19 @@ export default function MasterBookingsPage() {
           })
         }
       )
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || payload?.ok === false) {
+        throw new Error(payload?.error || "MASTER_BOOKING_CREATE_FAILED")
+      }
+
+      setCreateError("")
+      navigate(`/master/${masterSlug}/schedule`)
+      return
     } catch (e) {
       console.error("createBooking error", e)
+      setCreateError(e?.message || "MASTER_BOOKING_CREATE_FAILED")
     }
-
-    navigate(`/master/${masterSlug}/schedule`)
   }
 
   if (isCreateMode) {
@@ -264,6 +275,12 @@ export default function MasterBookingsPage() {
 
         <PageSection title="Новая запись">
           <div style={styles.createForm}>
+            {createError && (
+              <div style={styles.errorBanner}>
+                {createError}
+              </div>
+            )}
+
             <div style={styles.fieldGroup}>
               <label style={styles.fieldLabel}>Дата</label>
               <input
@@ -622,6 +639,15 @@ const styles = {
   detailStatus: {
     marginBottom: "10px",
     fontWeight: 700
+  },
+  errorBanner: {
+    padding: "10px 12px",
+    borderRadius: "10px",
+    border: "1px solid #ffa8a8",
+    background: "#fff5f5",
+    color: "#c92a2a",
+    fontSize: "13px",
+    fontWeight: 600
   },
   detailRow: {
     marginBottom: "6px"
