@@ -308,28 +308,6 @@ function SalonLayoutInner(){
             header={<CabinetHeader slug={slug} onLogout={logout} />}
             sidebar={<SalonSidebar slug={slug} />}
             page={<Outlet />}
-            odoo={
-              <div
-                id="odoo-content"
-                style={{
-                  width: "30%",
-                  overflow: "auto",
-                  padding: "20px",
-                  minHeight: 0
-                }}
-              >
-                <div style={{
-                  padding: "16px",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "16px",
-                  background: "#fff",
-                  color: "#111827",
-                  font: "14px/1.5 Arial, sans-serif"
-                }}>
-                  Odoo блок отключён в cabinet runtime.
-                </div>
-              </div>
-            }
           />
         )}
 

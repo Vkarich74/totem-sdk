@@ -308,7 +308,6 @@ function MasterLayoutInner(){
                 <Outlet />
               </div>
             }
-            odoo={null}
           />
         ) : null}
 
