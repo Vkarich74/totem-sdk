@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { getAuthAccessToken, getMasterBookings } from "../../api/internal"
+import { getAuthAccessToken, getMasterBookings, getMasterServices } from "../../api/internal"
 
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
@@ -102,10 +102,12 @@ export default function MasterBookingsPage() {
 
   const [client, setClient] = useState("")
   const [phone, setPhone] = useState("")
-  const [serviceId, setServiceId] = useState("1")
+  const [serviceId, setServiceId] = useState("")
   const [bookingDate, setBookingDate] = useState("")
   const [bookingTime, setBookingTime] = useState("")
   const [createError, setCreateError] = useState("")
+  const [serviceOptions, setServiceOptions] = useState([])
+  const [serviceOptionsLoading, setServiceOptionsLoading] = useState(false)
 
   const masterSlug = master?.slug || slug
   const isCreateMode = bookingId === "new"
@@ -116,6 +118,71 @@ export default function MasterBookingsPage() {
     setBookingDate(searchParams.get("date") || "")
     setBookingTime(searchParams.get("time") || "")
   }, [isCreateMode, searchParams])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadServiceOptions(){
+      if(!isCreateMode || !masterSlug){
+        if(!cancelled){
+          setServiceOptions([])
+          setServiceOptionsLoading(false)
+        }
+        return
+      }
+
+      try {
+        setServiceOptionsLoading(true)
+        const result = await getMasterServices(masterSlug)
+
+        if(!result?.ok){
+          const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
+          throw new Error(status ? "MASTER_SERVICES_HTTP_" + status : (result?.error || "MASTER_SERVICES_LOAD_FAILED"))
+        }
+
+        const services = Array.isArray(result?.services) ? result.services : []
+        const activeServices = services.filter((service) => {
+          const normalizedStatus = String(service?.status || "").toLowerCase()
+          if (service?.is_active === false || service?.active === false) return false
+          if (normalizedStatus === "inactive" || normalizedStatus === "disabled") return false
+          return true
+        })
+
+        if(!cancelled){
+          setServiceOptions(activeServices)
+          if(activeServices.length === 0){
+            setServiceId("")
+            setCreateError("Нет активных услуг для создания записи")
+          } else {
+            const currentServiceId = String(serviceId || "")
+            const hasCurrent = activeServices.some((service) => String(service?.id ?? service?.service_id ?? "") === currentServiceId)
+            if(!currentServiceId || !hasCurrent){
+              const nextId = String(activeServices[0]?.id ?? activeServices[0]?.service_id ?? "")
+              setServiceId(nextId)
+            }
+            setCreateError("")
+          }
+        }
+      }catch(error){
+        console.error("MASTER SERVICES LOAD ERROR", error)
+        if(!cancelled){
+          setServiceOptions([])
+          setServiceId("")
+          setCreateError(error?.message || "MASTER_SERVICES_LOAD_FAILED")
+        }
+      }finally{
+        if(!cancelled){
+          setServiceOptionsLoading(false)
+        }
+      }
+    }
+
+    loadServiceOptions()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isCreateMode, masterSlug])
 
   useEffect(()=>{
     let cancelled = false
@@ -324,20 +391,34 @@ export default function MasterBookingsPage() {
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.fieldLabel}>Service ID</label>
-              <input
-                type="number"
+              <label style={styles.fieldLabel}>Услуга</label>
+              <select
                 value={serviceId}
                 onChange={(e) => setServiceId(e.target.value)}
-                min="1"
                 style={styles.fieldInput}
-              />
+                disabled={serviceOptionsLoading || serviceOptions.length === 0}
+              >
+                {serviceOptions.length === 0 ? (
+                  <option value="">Нет активных услуг</option>
+                ) : (
+                  serviceOptions.map((service) => {
+                    const id = String(service?.id ?? service?.service_id ?? "")
+                    const label = service?.name || service?.title || service?.label || `Услуга #${id}`
+                    return (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    )
+                  })
+                )}
+              </select>
             </div>
 
             <div style={styles.createActions}>
               <button
                 onClick={() => createBooking(bookingDate, bookingTime)}
                 style={styles.primaryButton}
+                disabled={serviceOptionsLoading || serviceOptions.length === 0}
               >
                 Создать запись
               </button>
