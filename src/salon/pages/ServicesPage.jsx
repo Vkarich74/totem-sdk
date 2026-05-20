@@ -437,6 +437,8 @@ export default function ServicesPage() {
     });
   }, [masterServices, services]);
 
+  const hasAvailableMasterServices = availableMasterServices.length > 0;
+
   const stats = useMemo(() => {
     const total = services.length;
     const active = services.filter((item) => item?.active).length;
@@ -488,22 +490,27 @@ export default function ServicesPage() {
                 value={selectedServiceId}
                 onChange={(event) => setSelectedServiceId(event.target.value)}
                 style={inputStyle()}
-                disabled={attachLoading || availableMasterServices.length === 0}
+                disabled={attachLoading || !hasAvailableMasterServices}
               >
-                <option value="">Выбери услугу</option>
+                <option value="">{hasAvailableMasterServices ? "Выбери услугу" : "Все услуги уже подключены"}</option>
                 {availableMasterServices.map((service) => (
                   <option key={`${service.master_id || "master"}-${service.id}`} value={service.id}>
                     {getAttachOptionLabel(service)}
                   </option>
                 ))}
               </select>
+              {!hasAvailableMasterServices ? (
+                <div style={{ marginTop: "8px", fontSize: "13px", color: "#667085", lineHeight: 1.5 }}>
+                  Нет доступных услуг для подключения. Все услуги мастеров уже добавлены в салон.
+                </div>
+              ) : null}
             </div>
 
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button
                 onClick={attachService}
-                disabled={attachLoading || availableMasterServices.length === 0}
-                style={buttonStyle("primary", attachLoading || availableMasterServices.length === 0)}
+                disabled={attachLoading || !hasAvailableMasterServices}
+                style={buttonStyle("primary", attachLoading || !hasAvailableMasterServices)}
               >
                 {attachLoading ? "Подключаем..." : "Добавить"}
               </button>
@@ -523,7 +530,7 @@ export default function ServicesPage() {
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <div style={badgeStyle(salonMasters.length > 0)}>Активных мастеров: {salonMasters.length}</div>
-            <div style={badgeStyle(availableMasterServices.length > 0)}>
+            <div style={badgeStyle(hasAvailableMasterServices)}>
               Доступно для подключения: {availableMasterServices.length}
             </div>
           </div>
@@ -532,7 +539,7 @@ export default function ServicesPage() {
             <div style={{ fontSize: "13px", color: "#667085" }}>В салоне нет активных мастеров.</div>
           )}
 
-          {salonMasters.length > 0 && availableMasterServices.length === 0 && (
+          {salonMasters.length > 0 && !hasAvailableMasterServices && (
             <div style={{ fontSize: "13px", color: "#667085" }}>
               Все доступные услуги мастеров уже подключены в салон.
             </div>
