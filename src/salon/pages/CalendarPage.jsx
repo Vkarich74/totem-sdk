@@ -254,7 +254,7 @@ export default function CalendarPage(){
   }, [salonSlug])
 
   const dayOptions = useMemo(() => buildDayOptions(bookings), [bookings])
-  const slots = useMemo(() => generateTimeSlots().slice(0, 16), [])
+  const slots = useMemo(() => generateTimeSlots(), [])
 
   const bookingsByMasterAndTime = useMemo(() => {
     const index = new Map()
@@ -528,8 +528,10 @@ export default function CalendarPage(){
                             <div style={styles.bookingCashMeta}>{getPaymentLabelRu(booking)}</div>
                           ) : null}
                         </div>
+                      ) : pastSlot ? (
+                        <div style={styles.emptySlotPast}>Время прошло</div>
                       ) : (
-                        <div style={styles.emptySlot}>+</div>
+                        <div style={styles.emptySlotAction}>Добавить клиента</div>
                       )}
                     </button>
                   )
@@ -735,6 +737,18 @@ const styles = {
     color: "#9ca3af",
     fontSize: 20,
     lineHeight: 1
+  },
+  emptySlotAction: {
+    color: "#2563eb",
+    fontSize: 13,
+    fontWeight: 700,
+    textAlign: "center",
+    lineHeight: 1.2
+  },
+  emptySlotPast: {
+    color: "#9ca3af",
+    fontSize: 13,
+    lineHeight: 1.2
   },
   mobileList: {
     display: "grid",
