@@ -87,6 +87,14 @@ function parseLocalDateKey(value){
   return date
 }
 
+function isValidLocalDateKey(value){
+  return Boolean(parseLocalDateKey(value))
+}
+
+function getLocalTodayKey(){
+  return toLocalDateKey(new Date())
+}
+
 function buildLocalDateTime(dayKey, time){
   const date = parseLocalDateKey(dayKey)
   if(!date || typeof time !== "string" || !/^\d{2}:\d{2}$/.test(time)){
@@ -203,17 +211,18 @@ export default function CalendarPage(){
 
   const [bookings, setBookings] = useState([])
   const [masters, setMasters] = useState([])
-  const [selectedDay, setSelectedDay] = useState("")
+  const [selectedDay, setSelectedDay] = useState(() => getLocalTodayKey())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [actionLoading, setActionLoading] = useState("")
   const [showPendingCashOnly, setShowPendingCashOnly] = useState(false)
 
   function openBookingForSlot(master, time){
+    const dateKey = isValidLocalDateKey(selectedDay) ? selectedDay : getLocalTodayKey()
     const params = new URLSearchParams()
     params.set("salon", String(salonSlug || "").trim())
     params.set("master", String(master?.id || "").trim())
-    params.set("date", String(selectedDay || "").trim())
+    params.set("date", dateKey)
     params.set("time", String(time || "").trim())
     window.location.hash = `#/booking?${params.toString()}`
   }
@@ -247,7 +256,7 @@ export default function CalendarPage(){
       setMasters(normalizedMasters)
 
       const dayOptions = buildDayOptions(normalizedBookings)
-      setSelectedDay((prev) => (prev && dayOptions.includes(prev) ? prev : dayOptions[0]))
+      setSelectedDay((prev) => (isValidLocalDateKey(prev) ? prev : getLocalTodayKey()))
     }catch(loadError){
       console.error("SALON CALENDAR LOAD ERROR", loadError)
       setBookings([])
@@ -388,7 +397,11 @@ export default function CalendarPage(){
           <label style={styles.label}>День</label>
           <select
             value={selectedDay}
-            onChange={(event) => setSelectedDay(event.target.value)}
+            onChange={(event) => {
+              const value = String(event.target.value || "").trim()
+              if(!isValidLocalDateKey(value)) return
+              setSelectedDay(value)
+            }}
             style={styles.select}
           >
             {dayOptions.map((day) => (
