@@ -434,6 +434,7 @@ action==="cancel" ? "cancelled" :
 "reserved"
 
 const lifecycleAction=
+action==="confirm" ? "confirm" :
 action==="done" ? "complete" :
 action==="cancel" ? "cancel" :
 ""
@@ -452,18 +453,14 @@ return
 }
 
 const response=await fetch(
-lifecycleAction
-? `${API_BASE}/public/salons/`+encodeURIComponent(actionSalonSlug)+"/bookings/"+booking.id+"/lifecycle"
-: `${API_BASE}/public/salons/`+encodeURIComponent(actionSalonSlug)+"/bookings/"+booking.id,
+`${API_BASE}/public/salons/`+encodeURIComponent(actionSalonSlug)+"/bookings/"+booking.id+"/lifecycle",
 {
-method:lifecycleAction ? "POST" : "PATCH",
+method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify(
-lifecycleAction
-? {action:lifecycleAction}
-: {status:nextStatus}
+{action:lifecycleAction}
 )
 }
 )
