@@ -82,6 +82,24 @@ function getInitials(name) {
     .join("");
 }
 
+const SALON_TEMPLATE_PUBLISHED_TIMEOUT_MS = 3000;
+
+function loadSalonTemplatePublishedWithTimeout(slug, timeoutMs = SALON_TEMPLATE_PUBLISHED_TIMEOUT_MS) {
+  let timeoutId;
+
+  const timeoutPromise = new Promise((resolve) => {
+    timeoutId = window.setTimeout(() => {
+      resolve({ ok: false });
+    }, timeoutMs);
+  });
+
+  return Promise.race([getSalonTemplatePublished(slug), timeoutPromise]).finally(() => {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  });
+}
+
 export default function PublicSalonPage({ slug }) {
   const navigate = useNavigate();
 
@@ -113,27 +131,17 @@ export default function PublicSalonPage({ slug }) {
   useEffect(() => {
     if (!slug) return;
 
-    async function load() {
-      setLoading(true);
-      setNotFound(false);
-      setTemplateDiagnostics({
-        metaBuildFailed: false,
-        viewBuildFailed: false,
-      });
+    let cancelled = false;
 
+    async function loadSecondary(salonData) {
       try {
-        const salonData = await getSalon(slug);
-
-        if (!salonData) {
-          setNotFound(true);
-          return;
-        }
-
         const [mastersData, metricsData, publishedData] = await Promise.all([
-          getMasters(slug),
-          getMetrics(slug),
-          getSalonTemplatePublished(slug).catch(() => ({ ok: false })),
+          getMasters(slug).catch(() => []),
+          getMetrics(slug).catch(() => null),
+          loadSalonTemplatePublishedWithTimeout(slug).catch(() => ({ ok: false })),
         ]);
+
+        if (cancelled) return;
 
         const nextMasters = Array.isArray(mastersData) ? mastersData : [];
         const nextMetrics = metricsData || null;
@@ -142,33 +150,40 @@ export default function PublicSalonPage({ slug }) {
             ? publishedData.payload
             : null;
 
-        setSalon(salonData);
         setMasters(nextMasters);
         setMetrics(nextMetrics);
         setPublishedTemplate(nextPublishedTemplate);
 
+        if (!nextPublishedTemplate) {
+          return;
+        }
+
         let metaView = null;
         let metaBuildFailed = false;
 
-        if (nextPublishedTemplate) {
-          try {
-            metaView = buildSalonTemplateViewModel({
-              salon: salonData,
-              masters: nextMasters,
-              metrics: nextMetrics,
-              publishedTemplate: nextPublishedTemplate,
-            });
-          } catch (error) {
-            metaBuildFailed = true;
-            console.error("buildSalonTemplateViewModel meta build failed", error);
-          }
+        try {
+          metaView = buildSalonTemplateViewModel({
+            salon: salonData,
+            masters: nextMasters,
+            metrics: nextMetrics,
+            publishedTemplate: nextPublishedTemplate,
+          });
+        } catch (error) {
+          metaBuildFailed = true;
+          console.error("buildSalonTemplateViewModel meta build failed", error);
         }
+
+        if (cancelled) return;
 
         if (metaBuildFailed) {
           setTemplateDiagnostics((current) => ({
             ...current,
             metaBuildFailed: true,
           }));
+        }
+
+        if (!metaView) {
+          return;
         }
 
         const title = pickFirstString(
@@ -208,14 +223,45 @@ export default function PublicSalonPage({ slug }) {
           image: heroImage || undefined,
         });
       } catch (error) {
+        if (cancelled) return;
+        console.error(error);
+      }
+    }
+
+    async function load() {
+      setLoading(true);
+      setNotFound(false);
+      setTemplateDiagnostics({
+        metaBuildFailed: false,
+        viewBuildFailed: false,
+      });
+
+      try {
+        const salonData = await getSalon(slug);
+
+        if (cancelled) return;
+
+        if (!salonData) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        setSalon(salonData);
+        setLoading(false);
+        void loadSecondary(salonData);
+      } catch (error) {
+        if (cancelled) return;
         console.error(error);
         setNotFound(true);
-      } finally {
         setLoading(false);
       }
     }
 
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   const templateBuild = useMemo(() => {
