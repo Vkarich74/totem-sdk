@@ -181,6 +181,20 @@ return minutes+" мин"
 return hours+" ч "+minutes+" мин"
 }
 
+function canShowMasterActions(status){
+const normalized=normalizeStatus(status)
+
+if(normalized==="reserved" || normalized==="pending" || normalized==="created" || normalized==="new"){
+return true
+}
+
+if(normalized==="confirmed"){
+return true
+}
+
+return false
+}
+
 function formatMoney(value){
 return String(value||0)+" сом"
 }
@@ -406,6 +420,10 @@ if(!routeSlug)return
 window.location.hash=`/master/${routeSlug}/bookings/new?time=${encodeURIComponent(time)}&date=${encodeURIComponent(dateKey)}`
 }
 
+function resolveActionSalonSlug(){
+return salonSlug || master?.salon_slug || master?.salonSlug || ""
+}
+
 async function quickAction(e,booking,action){
 e.stopPropagation()
 
@@ -426,14 +444,17 @@ setActionLoading((prev)=>( {
 }))
 
 try{
-if(!salonSlug){
-throw new Error("SALON_SLUG_NOT_FOUND")
+const actionSalonSlug=resolveActionSalonSlug()
+
+if(!actionSalonSlug){
+alert("Салон для этой записи не определён. Обновите кабинет или войдите заново.")
+return
 }
 
 const response=await fetch(
 lifecycleAction
-? `${API_BASE}/public/salons/`+encodeURIComponent(salonSlug)+"/bookings/"+booking.id+"/lifecycle"
-: `${API_BASE}/public/salons/`+encodeURIComponent(salonSlug)+"/bookings/"+booking.id,
+? `${API_BASE}/public/salons/`+encodeURIComponent(actionSalonSlug)+"/bookings/"+booking.id+"/lifecycle"
+: `${API_BASE}/public/salons/`+encodeURIComponent(actionSalonSlug)+"/bookings/"+booking.id,
 {
 method:lifecycleAction ? "POST" : "PATCH",
 headers:{
@@ -460,7 +481,7 @@ return next
 
 }catch(error){
 if(error && error.message==="SALON_SLUG_NOT_FOUND"){
-alert("У мастера не найден salon slug")
+alert("Салон для этой записи не определён. Обновите кабинет или войдите заново.")
 }else{
 alert("Статус не обновился")
 }
@@ -836,6 +857,10 @@ boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 
 <div style={{marginTop:"8px",display:"flex",gap:"6px",position:"sticky",bottom:0,background:statusColor(b._status),paddingTop:"4px"}}>
 
+{canShowMasterActions(b._status) && (
+<>
+{(["reserved","pending","created","new"].includes(normalizeStatus(b._status))) && (
+<>
 <button
 onClick={(e)=>quickAction(e,b,"confirm")}
 disabled={bookingBusy}
@@ -844,6 +869,18 @@ style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",backgro
 Подтвердить
 </button>
 
+<button
+onClick={(e)=>quickAction(e,b,"cancel")}
+disabled={bookingBusy}
+style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
+>
+Отменить
+</button>
+</>
+)}
+
+{normalizeStatus(b._status)==="confirmed" && (
+<>
 <button
 onClick={(e)=>quickAction(e,b,"done")}
 disabled={bookingBusy}
@@ -859,6 +896,10 @@ style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",backgro
 >
 Отменить
 </button>
+</>
+)}
+</>
+)}
 
 </div>
 
