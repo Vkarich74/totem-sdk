@@ -211,6 +211,14 @@ function getSelectedServicePrice(services, selectedService) {
   return Number.isFinite(price) && price > 0 ? price : null;
 }
 
+function isValidBookingDate(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isValidBookingTime(value) {
+  return typeof value === "string" && /^\d{2}:\d{2}$/.test(value);
+}
+
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
   const nativeSearchParams = new URLSearchParams(window.location.search || "");
@@ -225,6 +233,8 @@ export default function BookingPage() {
   const repeatServiceId = getQueryParam("service");
   const repeatClientId = getQueryParam("client");
   const repeatClientToken = getQueryParam("token") || getQueryParam("client_token");
+  const repeatDate = getQueryParam("date");
+  const repeatTime = getQueryParam("time");
 
   const [masters, setMasters] = useState([]);
   const [services, setServices] = useState([]);
@@ -237,8 +247,8 @@ export default function BookingPage() {
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
 
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [date, setDate] = useState(() => (isValidBookingDate(repeatDate) ? repeatDate : ""));
+  const [time, setTime] = useState(() => (isValidBookingTime(repeatTime) ? repeatTime : ""));
 
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
@@ -356,6 +366,18 @@ export default function BookingPage() {
       active = false;
     };
   }, [repeatClientId, repeatClientToken]);
+
+  useEffect(() => {
+    if (isValidBookingDate(repeatDate)) {
+      setDate(repeatDate);
+    }
+  }, [repeatDate]);
+
+  useEffect(() => {
+    if (isValidBookingTime(repeatTime)) {
+      setTime(repeatTime);
+    }
+  }, [repeatTime]);
 
   useEffect(() => {
     if (paymentMethod !== "xpay" || paymentData?.provider === "direct") return;

@@ -209,6 +209,15 @@ export default function CalendarPage(){
   const [actionLoading, setActionLoading] = useState("")
   const [showPendingCashOnly, setShowPendingCashOnly] = useState(false)
 
+  function openBookingForSlot(master, time){
+    const params = new URLSearchParams()
+    params.set("salon", String(salonSlug || "").trim())
+    params.set("master", String(master?.id || "").trim())
+    params.set("date", String(selectedDay || "").trim())
+    params.set("time", String(time || "").trim())
+    window.location.hash = `#/booking?${params.toString()}`
+  }
+
   async function load(){
     if(!salonSlug){
       setBookings([])
@@ -305,34 +314,6 @@ export default function CalendarPage(){
     return sum + (Number.isFinite(amount) ? amount : 0)
   }, 0)
   const pendingCashEmptyState = showPendingCashOnly && visibleDayBookings.length === 0
-
-  async function createBooking(master, time){
-    if(isPastSlot(selectedDay, time)){
-      return
-    }
-
-    const client = prompt("Имя клиента")
-    if(!client) return
-
-    try{
-      setActionLoading(`${master?.id || master?.name}-${time}`)
-      const result = await createInternalBooking({
-        salon_slug: salonSlug,
-        master_name: master.name,
-        client_name: client,
-        start_at: `${selectedDay}T${time}:00`
-      })
-      if(!result?.ok){
-        throw new Error(result?.error || "CREATE_BOOKING_FAILED")
-      }
-      await load()
-    }catch(actionError){
-      console.error("SALON CALENDAR CREATE BOOKING ERROR", actionError)
-      alert("Ошибка создания записи")
-    }finally{
-      setActionLoading("")
-    }
-  }
 
   async function moveBooking(booking){
     const startAt = getBookingStartAt(booking)
@@ -516,7 +497,7 @@ export default function CalendarPage(){
                         if(booking){
                           moveBooking(booking)
                         }else if(!pastSlot){
-                          createBooking(master, time)
+                          openBookingForSlot(master, time)
                         }
                       }}
                     >
