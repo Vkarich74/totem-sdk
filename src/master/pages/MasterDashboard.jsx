@@ -236,6 +236,7 @@ export default function MasterDashboard() {
   const [notificationsError, setNotificationsError] = useState("")
   const [readingNotificationUid, setReadingNotificationUid] = useState("")
   const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationsExpanded, setNotificationsExpanded] = useState(false)
 
   useEffect(()=>{
     let cancelled = false
@@ -501,6 +502,14 @@ export default function MasterDashboard() {
   const error = masterError || metricsError
   const masterName = master?.name || ""
   const safeMetrics = useMemo(()=>metrics || {},[metrics])
+  const visibleNotifications = useMemo(() => {
+    if (notificationsExpanded || notifications.length <= 4) {
+      return notifications
+    }
+
+    return notifications.slice(0, 4)
+  }, [notifications, notificationsExpanded])
+  const hiddenNotificationsCount = Math.max(0, notifications.length - visibleNotifications.length)
   const billingUi = useMemo(
     ()=>getBillingUi(billingAccess, billingBlockReason),
     [billingAccess, billingBlockReason]
@@ -918,7 +927,7 @@ export default function MasterDashboard() {
           </div>
         ) : notifications.length ? (
           <div style={{ display: "grid", gap: "12px" }}>
-            {notifications.map((notification)=>{
+            {visibleNotifications.map((notification)=>{
               const uid = getNotificationUid(notification)
               const isRead = Boolean(notification?.is_read || notification?.read_at)
               const title = notification?.title_ru || notification?.title_en || notification?.title || "Без заголовка"
@@ -1034,6 +1043,25 @@ export default function MasterDashboard() {
                 </div>
               )
             })}
+            {hiddenNotificationsCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setNotificationsExpanded((current) => !current)}
+                style={{
+                  width: "100%",
+                  border: "1px solid #d0d5dd",
+                  borderRadius: "10px",
+                  background: "#fff",
+                  color: "#344054",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  padding: "10px 14px",
+                  cursor: "pointer"
+                }}
+              >
+                {notificationsExpanded ? "Свернуть" : `Показать ещё ${hiddenNotificationsCount}`}
+              </button>
+            ) : null}
           </div>
         ) : (
           <div style={{
