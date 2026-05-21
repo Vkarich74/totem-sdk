@@ -240,8 +240,8 @@ export default function SalonPayoutsPage(){
   const pageLoading = contextLoading || loading
   const pageError = !pageLoading && (contextError || error)
   const pageEmpty = !pageLoading && !pageError && payouts.length === 0
-  const visiblePayouts = payoutsExpanded ? payouts : payouts.slice(0, 5)
-  const hiddenPayoutsCount = Math.max(payouts.length - 5, 0)
+  const visiblePayouts = payoutsExpanded ? payouts : payouts.slice(0, 2)
+  const hiddenPayoutsCount = Math.max(payouts.length - 2, 0)
 
   return (
     <div style={styles.page}>
@@ -349,7 +349,7 @@ export default function SalonPayoutsPage(){
                   ))}
                 </div>
 
-                {payouts.length > 5 ? (
+                {payouts.length > 2 ? (
                   <button
                     type="button"
                     onClick={() => setPayoutsExpanded((value) => !value)}
