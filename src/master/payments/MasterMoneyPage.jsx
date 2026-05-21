@@ -383,12 +383,13 @@ export default function MasterMoneyPage() {
 
 const styles = {
   navGrid: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
     gap: "10px",
-    overflowX: "auto",
-    paddingBottom: "4px",
     marginBottom: "16px",
-    scrollbarWidth: "thin"
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -396,8 +397,9 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: "150px",
-    flex: "0 0 auto"
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   navTitle: {
     fontSize: "14px",
@@ -412,7 +414,12 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-    padding: "20px"
+    padding: "20px",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    overflowX: "hidden",
+    boxSizing: "border-box"
   },
   loading: {
     padding: "20px"
@@ -428,7 +435,10 @@ const styles = {
   headerBlock: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px"
+    gap: "6px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   eyebrow: {
     fontSize: "11px",
@@ -440,22 +450,32 @@ const styles = {
   title: {
     margin: 0,
     fontSize: "28px",
-    color: "#111827"
+    color: "#111827",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   subtitle: {
     color: "#6b7280",
-    fontSize: "14px"
+    fontSize: "14px",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px"
+    gap: "12px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   card: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "16px"
+    padding: "16px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   cardLabel: {
     fontSize: "12px",
@@ -470,13 +490,18 @@ const styles = {
   cardHint: {
     marginTop: "6px",
     color: "#6b7280",
-    fontSize: "12px"
+    fontSize: "12px",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   section: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "16px"
+    padding: "16px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   sectionTitle: {
     fontSize: "16px",
@@ -486,13 +511,19 @@ const styles = {
   sectionSubtitle: {
     marginTop: "4px",
     fontSize: "13px",
-    color: "#6b7280"
+    color: "#6b7280",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   row: {
     display: "flex",
     justifyContent: "space-between",
+    flexWrap: "wrap",
     gap: "12px",
     padding: "10px 0",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box",
     borderBottom: "1px solid #eef2f7"
   },
   rowLabel: {
@@ -504,12 +535,16 @@ const styles = {
     color: "#111827",
     fontSize: "14px",
     fontWeight: 600,
-    wordBreak: "break-word"
+    wordBreak: "break-word",
+    overflowWrap: "anywhere"
   },
   linksGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: "10px"
+    gap: "10px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   linkCard: {
     display: "block",
@@ -519,30 +554,47 @@ const styles = {
     borderRadius: "12px",
     padding: "12px",
     background: "#f8fafc",
-    fontWeight: 600
+    fontWeight: 600,
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   list: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px"
+    gap: "10px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   listCard: {
     border: "1px solid #eef2f7",
     borderRadius: "12px",
     padding: "12px",
-    background: "#f8fafc"
+    background: "#f8fafc",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   listTop: {
     display: "flex",
     justifyContent: "space-between",
+    flexWrap: "wrap",
     gap: "12px",
     marginBottom: "6px",
-    color: "#111827"
+    color: "#111827",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   listMeta: {
     color: "#6b7280",
     fontSize: "13px",
-    marginBottom: "6px"
+    marginBottom: "6px",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   listAmount: {
     fontWeight: 700,
@@ -554,6 +606,8 @@ const styles = {
   },
   errorInline: {
     color: "#991b1b",
-    fontSize: "14px"
+    fontSize: "14px",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   }
 };
