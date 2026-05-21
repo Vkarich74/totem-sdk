@@ -1447,8 +1447,8 @@ export default function MasterTemplateEditorPage() {
         </div>
       </PageSection>
 
-      <div style={{ display: "grid", gridTemplateColumns: "280px minmax(0, 1fr)", gap: "20px", alignItems: "start" }}>
-        <aside style={{ position: "sticky", top: "24px", display: "grid", gap: "12px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", alignItems: "start", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+        <aside style={{ position: "sticky", top: "24px", display: "grid", gap: "12px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff" }}>
             <div style={{ display: "grid", gap: "10px" }}>
               <strong style={{ fontSize: "15px", color: "#111827" }}>Sections</strong>
@@ -1493,7 +1493,7 @@ export default function MasterTemplateEditorPage() {
           </div>
         </aside>
 
-        <div style={{ display: "grid", gap: "20px" }}>
+        <div style={{ display: "grid", gap: "20px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
           <Panel id="identity" title="Identity" note="Top identity strip / master identity.">
             <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
               <Field label="Имя мастера"><input value={draft.identity.master_name} onChange={(e) => setDraftField("identity", "master_name", e.target.value)} style={inputStyle()} /></Field>
@@ -1768,7 +1768,7 @@ export default function MasterTemplateEditorPage() {
       {previewState.open ? (
         <div style={previewOverlayStyle}>
           <div style={previewModalStyle}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", minWidth: 0 }}>
               <div>
                 <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>Preview · {resolvedSlug || "master"}</div>
                 <div style={{ marginTop: "6px", fontSize: "13px", color: "#6b7280" }}>{previewState.message}</div>
@@ -1781,7 +1781,7 @@ export default function MasterTemplateEditorPage() {
             ) : (
               <div style={{ display: "grid", gap: "16px" }}>
                 <div style={previewHeroStyle}>
-                  <div style={{ display: "grid", gap: "10px" }}>
+                  <div style={{ display: "grid", gap: "10px", minWidth: 0 }}>
                     <div style={previewBadgeStyle}>{previewIdentity.hero_badge || "Master preview"}</div>
                     <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>
                       {previewIdentity.master_name || "Preview мастера"}
@@ -1969,7 +1969,10 @@ const sectionCardStyle = {
   borderRadius: "14px",
   background: "#ffffff",
   padding: "14px",
-  minHeight: "108px"
+  minHeight: "108px",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const validationLineStyle = {
@@ -1979,7 +1982,10 @@ const validationLineStyle = {
 
 const uploadFieldStyle = {
   display: "grid",
-  gap: "8px"
+  gap: "8px",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const assetPreviewCardStyle = {
@@ -1993,7 +1999,10 @@ const assetPreviewCardStyle = {
   justifyContent: "center",
   alignItems: "center",
   textAlign: "center",
-  gap: "8px"
+  gap: "8px",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const assetPreviewImageStyle = {
@@ -2035,7 +2044,9 @@ const previewOverlayStyle = {
   alignItems: "center",
   justifyContent: "center",
   padding: "24px",
-  zIndex: 50
+  zIndex: 50,
+  minWidth: 0,
+  boxSizing: "border-box"
 };
 
 const previewModalStyle = {
@@ -2047,17 +2058,23 @@ const previewModalStyle = {
   padding: "20px",
   display: "grid",
   gap: "16px",
-  boxShadow: "0 20px 60px rgba(15, 23, 42, 0.18)"
+  boxShadow: "0 20px 60px rgba(15, 23, 42, 0.18)",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const previewHeroStyle = {
   display: "grid",
-  gridTemplateColumns: "1.4fr 1fr",
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
   gap: "16px",
   border: "1px solid #e5e7eb",
   borderRadius: "20px",
   padding: "20px",
-  background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)"
+  background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const previewImageCardStyle = {
@@ -2070,7 +2087,10 @@ const previewImageCardStyle = {
   flexDirection: "column",
   justifyContent: "center",
   alignItems: "center",
-  textAlign: "center"
+  textAlign: "center",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const previewImageRealStyle = {
@@ -2122,7 +2142,10 @@ const previewSecondaryCtaStyle = {
 const previewGridStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: "12px"
+  gap: "12px",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const previewCardStyle = {
@@ -2131,7 +2154,10 @@ const previewCardStyle = {
   background: "#ffffff",
   padding: "16px",
   display: "grid",
-  gap: "8px"
+  gap: "8px",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const previewCardTitleStyle = {
@@ -2153,7 +2179,10 @@ const linkCardStyle = {
   border: "1px solid #e5e7eb",
   borderRadius: "14px",
   background: "#ffffff",
-  padding: "16px"
+  padding: "16px",
+  minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box"
 };
 
 const linkTitleStyle = {
