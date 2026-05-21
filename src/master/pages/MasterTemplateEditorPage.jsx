@@ -1355,7 +1355,7 @@ export default function MasterTemplateEditorPage() {
       : "Полная auth цепочка ещё не внедрена, editor работает в local mock режиме без поломки кабинета.";
 
   return (
-    <div style={{ display: "grid", gap: "20px", padding: "24px" }}>
+    <div style={{ display: "grid", gap: "20px", padding: "24px", width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box" }}>
       <PageHeader
         title="Master Template Editor"
         subtitle={`Mirror editor для мастера${resolvedSlug ? ` · ${resolvedSlug}` : ""}. Логика сохранена как у салона, без трогания эталонного PublicMasterPage.`}
@@ -1376,8 +1376,11 @@ export default function MasterTemplateEditorPage() {
 
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: "12px"
+        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        gap: "12px",
+        minWidth: 0,
+        maxWidth: "100%",
+        boxSizing: "border-box"
       }}>
         <StatusCard title="Статус блока" value={blockValue} note={blockNote} tone={blockTone} />
         <StatusCard title="Slug" value={resolvedSlug || "—"} note="Master editor работает от route slug и master context." />
@@ -1398,7 +1401,10 @@ export default function MasterTemplateEditorPage() {
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "12px"
+            gap: "12px",
+            minWidth: 0,
+            maxWidth: "100%",
+            boxSizing: "border-box"
           }}>
             <StatusCard title="Cloud name" value={cloudinaryConfig.cloudName || "MISSING"} tone={cloudinaryConfig.cloudName ? "good" : "warn"} />
             <StatusCard title="Upload preset" value={cloudinaryConfig.uploadPreset || "MISSING"} tone={cloudinaryConfig.uploadPreset ? "good" : "warn"} />
@@ -1413,7 +1419,10 @@ export default function MasterTemplateEditorPage() {
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "12px"
+            gap: "12px",
+            minWidth: 0,
+            maxWidth: "100%",
+            boxSizing: "border-box"
           }}>
             <StatusCard title="Live publish state" value={validation.is_ready_for_publish ? "READY" : "BLOCKED"} note="Статус считается по текущему draft." tone={validation.is_ready_for_publish ? "good" : "warn"} />
             <StatusCard title="Hard errors" value={String(hardErrors.length)} note="Эти ошибки блокируют publish." tone={hardErrors.length ? "warn" : "good"} />
@@ -1447,10 +1456,10 @@ export default function MasterTemplateEditorPage() {
         </div>
       </PageSection>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", alignItems: "start", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", alignItems: "start", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
         <aside style={{ position: "sticky", top: "24px", display: "grid", gap: "12px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff" }}>
-            <div style={{ display: "grid", gap: "10px" }}>
+            <div style={{ display: "grid", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
               <strong style={{ fontSize: "15px", color: "#111827" }}>Sections</strong>
               {sectionItems.map((item) => (
                 <a
@@ -1465,7 +1474,7 @@ export default function MasterTemplateEditorPage() {
             </div>
           </div>
 
-          <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "10px" }}>
+          <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
             <strong style={{ fontSize: "15px", color: "#111827" }}>Actions</strong>
             <ActionButton onClick={handleSaveDraft} disabled={!resolvedSlug || pageLoading || saveState.kind === "saving"}>
               {saveState.kind === "saving" ? "Сохраняю..." : "Сохранить draft"}
@@ -1480,7 +1489,7 @@ export default function MasterTemplateEditorPage() {
             <Link to={previewPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}>Открыть preview route</Link>
           </div>
 
-          <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "8px" }}>
+          <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "8px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
             <strong style={{ fontSize: "15px", color: "#111827" }}>Validation</strong>
             <div style={{ fontSize: "13px", color: "#111827" }}>Critical</div>
             {hardErrors.length ? hardErrors.map((item) => (
@@ -1495,7 +1504,7 @@ export default function MasterTemplateEditorPage() {
 
         <div style={{ display: "grid", gap: "20px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
           <Panel id="identity" title="Identity" note="Top identity strip / master identity.">
-            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
               <Field label="Имя мастера"><input value={draft.identity.master_name} onChange={(e) => setDraftField("identity", "master_name", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Профессия"><input value={draft.identity.profession} onChange={(e) => setDraftField("identity", "profession", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Город"><input value={draft.identity.city} onChange={(e) => setDraftField("identity", "city", e.target.value)} style={inputStyle()} /></Field>
@@ -1506,8 +1515,8 @@ export default function MasterTemplateEditorPage() {
           <Panel id="hero" title="Hero" note="Main hero content and top CTA.">
             <Field label="Hero subtitle"><input value={draft.identity.subtitle} onChange={(e) => setDraftField("identity", "subtitle", e.target.value)} style={inputStyle()} /></Field>
             <Field label="Hero description"><textarea value={draft.identity.description} onChange={(e) => setDraftField("identity", "description", e.target.value)} style={textareaStyle(5)} /></Field>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
-              <div style={{ display: "grid", gap: "14px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+              <div style={{ display: "grid", gap: "14px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                 <Field label="Hero image asset id" hint="V1 primary pipeline field."><input value={draft.images.hero.image_asset_id} onChange={(e) => setNestedDraftField("images", "hero", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
                 <Field label="Hero image URL" hint="Fallback для dev/manual mode."><input value={draft.images.hero.image_url} onChange={(e) => setNestedDraftField("images", "hero", "image_url", e.target.value)} style={inputStyle()} /></Field>
                 <Field label="Hero alt"><input value={draft.images.hero.alt} onChange={(e) => setNestedDraftField("images", "hero", "alt", e.target.value)} style={inputStyle()} /></Field>
@@ -1519,7 +1528,7 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="contacts" title="Contacts / Location" note="Address card and map contract.">
-            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
               <Field label="Адрес"><input value={draft.location.address} onChange={(e) => setDraftField("location", "address", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Район"><input value={draft.location.district} onChange={(e) => setDraftField("location", "district", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Город"><input value={draft.location.city} onChange={(e) => setDraftField("location", "city", e.target.value)} style={inputStyle()} /></Field>
@@ -1533,7 +1542,7 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="trust" title="Trust" note="Ratings and social proof.">
-            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
               <Field label="Rating value"><input value={draft.trust.rating_value} onChange={(e) => setDraftField("trust", "rating_value", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Review count"><input value={draft.trust.review_count} onChange={(e) => setDraftField("trust", "review_count", e.target.value)} style={inputStyle()} /></Field>
             </div>
@@ -1545,7 +1554,7 @@ export default function MasterTemplateEditorPage() {
             <ArrayCard title="Badges" note="Один badge = одна короткая строка." onAdd={() => addPrimitiveItem("badges", "")} addLabel="Добавить badge">
               {draft.sections.badges.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.badges.map((item, index) => (
-                <div key={`badge_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px" }}>
+                <div key={`badge_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                   <input value={item} onChange={(e) => updatePrimitiveItem("badges", index, e.target.value)} style={inputStyle()} />
                   <ActionButton tone="secondary" onClick={() => removePrimitiveItem("badges", index)}>Удалить</ActionButton>
                 </div>
@@ -1570,7 +1579,7 @@ export default function MasterTemplateEditorPage() {
             <ArrayCard title="Metrics" note="value + label" onAdd={addMetric} addLabel="Добавить metric">
               {draft.metrics.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.metrics.map((item, index) => (
-                <div key={item.id || `metric_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "10px" }}>
+                <div key={item.id || `metric_${index}`} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                   <input placeholder="Value" value={item.value || ""} onChange={(e) => setMetricItem(index, "value", e.target.value)} style={inputStyle()} />
                   <input placeholder="Label" value={item.label || ""} onChange={(e) => setMetricItem(index, "label", e.target.value)} style={inputStyle()} />
                   <ActionButton tone="secondary" onClick={() => removeMetric(index)}>Удалить</ActionButton>
@@ -1584,7 +1593,7 @@ export default function MasterTemplateEditorPage() {
               {draft.sections.featured_services.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.featured_services.map((item, index) => (
                 <div key={item.id || `featured_service_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-                  <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "2fr 1fr 1fr" }}>
+                  <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                     <input placeholder="Title" value={item.title || ""} onChange={(e) => setArrayItem("featured_services", index, "title", e.target.value)} style={inputStyle()} />
                     <input placeholder="Price" value={item.price || ""} onChange={(e) => setArrayItem("featured_services", index, "price", e.target.value)} style={inputStyle()} />
                     <input placeholder="Time" value={item.time || ""} onChange={(e) => setArrayItem("featured_services", index, "time", e.target.value)} style={inputStyle()} />
@@ -1601,7 +1610,7 @@ export default function MasterTemplateEditorPage() {
               {draft.sections.service_catalog.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.service_catalog.map((item, index) => (
                 <div key={item.id || `service_catalog_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-                  <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "2fr 1fr 1fr" }}>
+                  <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                     <input placeholder="Name" value={item.name || ""} onChange={(e) => setArrayItem("service_catalog", index, "name", e.target.value)} style={inputStyle()} />
                     <input placeholder="Price" value={item.price || ""} onChange={(e) => setArrayItem("service_catalog", index, "price", e.target.value)} style={inputStyle()} />
                     <input placeholder="Duration" value={item.duration || ""} onChange={(e) => setArrayItem("service_catalog", index, "duration", e.target.value)} style={inputStyle()} />
@@ -1618,7 +1627,7 @@ export default function MasterTemplateEditorPage() {
               {draft.sections.reviews.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.reviews.map((item, index) => (
                 <div key={item.id || `review_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-                  <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "2fr 1fr" }}>
+                  <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                     <input placeholder="Name" value={item.name || ""} onChange={(e) => setReviewItem(index, "name", e.target.value)} style={inputStyle()} />
                     <input placeholder="Rating" value={item.rating || ""} onChange={(e) => setReviewItem(index, "rating", e.target.value)} style={inputStyle()} />
                   </div>
@@ -1642,7 +1651,7 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="stats" title="Stats" note="Years / rating / bookings block.">
-            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
               <Field label="Years"><input value={draft.stats.years} onChange={(e) => setDraftField("stats", "years", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Rating"><input value={draft.stats.rating} onChange={(e) => setDraftField("stats", "rating", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Bookings"><input value={draft.stats.bookings} onChange={(e) => setDraftField("stats", "bookings", e.target.value)} style={inputStyle()} /></Field>
@@ -1652,8 +1661,8 @@ export default function MasterTemplateEditorPage() {
           <Panel id="images" title="Images" note="Hero now, avatar/portfolio/service-card reserved and already wired into upload pipeline.">
             <div style={{ display: "grid", gap: "16px" }}>
               <div style={nestedCardStyle}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start" }}>
-                  <div style={{ display: "grid", gap: "14px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+                  <div style={{ display: "grid", gap: "14px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                     <Field label="Avatar asset id"><input value={draft.images.avatar.image_asset_id} onChange={(e) => setNestedDraftField("images", "avatar", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
                     <Field label="Avatar URL"><input value={draft.images.avatar.image_url} onChange={(e) => setNestedDraftField("images", "avatar", "image_url", e.target.value)} style={inputStyle()} /></Field>
                     <Field label="Avatar alt"><input value={draft.images.avatar.alt} onChange={(e) => setNestedDraftField("images", "avatar", "alt", e.target.value)} style={inputStyle()} /></Field>
@@ -1667,8 +1676,8 @@ export default function MasterTemplateEditorPage() {
               <ArrayCard title="Portfolio reserved" note="Pipeline ready. Public block будет позже, но upload уже готов." onAdd={addPortfolioItem} addLabel="Добавить portfolio image">
                 {draft.sections.portfolio.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
                 {draft.sections.portfolio.map((item, index) => (
-                  <div key={item.id || `portfolio_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-                    <div style={{ display: "grid", gap: "10px" }}>
+                  <div key={item.id || `portfolio_${index}`} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+                    <div style={{ display: "grid", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                       <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_asset_id", e.target.value)} style={inputStyle()} />
                       <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_url", e.target.value)} style={inputStyle()} />
                       <input placeholder="alt" value={item.alt || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "alt", e.target.value)} style={inputStyle()} />
@@ -1684,8 +1693,8 @@ export default function MasterTemplateEditorPage() {
               <ArrayCard title="Service-card reserved" note="Future service-card visuals." onAdd={() => addImageItem("service_card")} addLabel="Добавить service-card image">
                 {draft.images.service_card.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
                 {draft.images.service_card.map((item, index) => (
-                  <div key={item.id || `service_card_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr minmax(220px, 280px)", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-                    <div style={{ display: "grid", gap: "10px" }}>
+                  <div key={item.id || `service_card_${index}`} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+                    <div style={{ display: "grid", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                       <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_asset_id", e.target.value)} style={inputStyle()} />
                       <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_url", e.target.value)} style={inputStyle()} />
                       <input placeholder="alt" value={item.alt || ""} onChange={(e) => setImageArrayItem("service_card", index, "alt", e.target.value)} style={inputStyle()} />
@@ -1701,7 +1710,7 @@ export default function MasterTemplateEditorPage() {
           </Panel>
 
           <Panel id="cta" title="CTA" note="Booking band + sticky bottom CTA preserved.">
-            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
               <Field label="Booking label"><input value={draft.cta.booking_label} onChange={(e) => setDraftField("cta", "booking_label", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Booking URL"><input value={draft.cta.booking_url} onChange={(e) => setDraftField("cta", "booking_url", e.target.value)} style={inputStyle()} /></Field>
               <Field label="Services label"><input value={draft.cta.services_label} onChange={(e) => setDraftField("cta", "services_label", e.target.value)} style={inputStyle()} /></Field>
@@ -1714,7 +1723,7 @@ export default function MasterTemplateEditorPage() {
               <div style={{ display: "grid", gap: "10px" }}>
                 <input placeholder="Band title" value={draft.sections.booking_band.title} onChange={(e) => setBookingBand("title", e.target.value)} style={inputStyle()} />
                 <textarea placeholder="Band text" value={draft.sections.booking_band.text} onChange={(e) => setBookingBand("text", e.target.value)} style={textareaStyle(3)} />
-                <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+                <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                   <input placeholder="Booking CTA label" value={draft.sections.booking_band.booking_cta_label} onChange={(e) => setBookingBand("booking_cta_label", e.target.value)} style={inputStyle()} />
                   <input placeholder="Booking CTA URL" value={draft.sections.booking_band.booking_cta_url} onChange={(e) => setBookingBand("booking_cta_url", e.target.value)} style={inputStyle()} />
                   <input placeholder="Services CTA label" value={draft.sections.booking_band.services_cta_label} onChange={(e) => setBookingBand("services_cta_label", e.target.value)} style={inputStyle()} />
@@ -1735,8 +1744,11 @@ export default function MasterTemplateEditorPage() {
           <Panel id="preview-publish" title="Preview / Publish" note="Server preview state + local draft snapshot.">
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "12px"
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: "12px",
+              minWidth: 0,
+              maxWidth: "100%",
+              boxSizing: "border-box"
             }}>
               <StatusCard title="Draft save" value={saveState.kind === "idle" ? "IDLE" : saveState.kind.toUpperCase()} note={saveState.message || "Готов к сохранению."} tone={saveState.kind === "error" ? "warn" : saveState.kind === "success" ? "good" : "neutral"} />
               <StatusCard title="Publish" value={publishState.kind === "idle" ? "IDLE" : publishState.kind.toUpperCase()} note={publishState.message || "Готов к публикации."} tone={publishState.kind === "error" ? "warn" : publishState.kind === "success" ? "good" : "neutral"} />
@@ -1750,8 +1762,11 @@ export default function MasterTemplateEditorPage() {
       <PageSection title="Секции шаблона" subtitle="Это жёсткая карта секций, на которые дальше вешаются данные без трогания PublicMasterPage.">
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: "12px"
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "12px",
+          minWidth: 0,
+          maxWidth: "100%",
+          boxSizing: "border-box"
         }}>
           {sectionItems.map((item, index) => (
             <div key={item.id} style={sectionCardStyle}>
