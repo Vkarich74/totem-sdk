@@ -97,6 +97,7 @@ export default function MasterTransactionsPage() {
   const masterSlug = master?.slug || contextSlug || null;
 
   const [transactions, setTransactions] = useState([]);
+  const [transactionsExpanded, setTransactionsExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -173,6 +174,9 @@ export default function MasterTransactionsPage() {
     );
   }, [transactions]);
 
+  const visibleTransactions = transactionsExpanded ? transactions : transactions.slice(0, 4);
+  const hiddenTransactionsCount = Math.max(transactions.length - 4, 0);
+
   return (
     <div style={{ padding: "14px 14px 20px" }}>
       {masterSlug ? <FinanceNav masterSlug={masterSlug} active="transactions" /> : null}
@@ -204,7 +208,7 @@ export default function MasterTransactionsPage() {
             </div>
 
             <div style={styles.cardsList}>
-              {transactions.map((item, index) => (
+              {visibleTransactions.map((item, index) => (
                 <div key={item?.id || index} style={styles.itemCard}>
                   <div style={styles.itemTop}>
                     <strong>{item?.id || `Операция ${index + 1}`}</strong>
@@ -235,6 +239,27 @@ export default function MasterTransactionsPage() {
                 </div>
               ))}
             </div>
+
+            {transactions.length > 4 ? (
+              <div style={{ display: "flex", justifyContent: "flex-start", marginTop: "12px" }}>
+                <button
+                  type="button"
+                  onClick={() => setTransactionsExpanded((value) => !value)}
+                  style={{
+                    border: "1px solid #dbeafe",
+                    background: "#eff6ff",
+                    color: "#1d4ed8",
+                    borderRadius: "999px",
+                    padding: "10px 14px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  {transactionsExpanded ? "Свернуть" : `Показать ещё ${hiddenTransactionsCount}`}
+                </button>
+              </div>
+            ) : null}
           </>
         )}
       </PageSection>
