@@ -879,12 +879,13 @@ export default function MasterFinancePage() {
 
 const styles = {
   navGrid: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
     gap: "10px",
-    overflowX: "auto",
-    paddingBottom: "4px",
     marginBottom: "16px",
-    scrollbarWidth: "thin"
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -892,8 +893,9 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: "150px",
-    flex: "0 0 auto"
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   navTitle: {
     fontSize: "14px",
@@ -905,17 +907,30 @@ const styles = {
     color: "#6b7280"
   },
   page: {
-    padding: "20px"
+    padding: "20px",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    overflowX: "hidden",
+    boxSizing: "border-box"
   },
   container: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px"
+    gap: "16px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   header: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start"
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: "12px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   eyebrow: {
     fontSize: "11px",
@@ -929,49 +944,72 @@ const styles = {
     margin: 0,
     fontSize: "28px",
     lineHeight: 1.1,
-    color: "#111827"
+    color: "#111827",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   subtitle: {
     margin: "8px 0 0",
     color: "#6b7280",
     fontSize: "14px",
-    maxWidth: "720px"
+    maxWidth: "720px",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   loadingCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "18px"
+    padding: "18px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   errorBanner: {
     border: "1px solid #fecaca",
     background: "#fff5f5",
     color: "#991b1b",
     borderRadius: "14px",
-    padding: "16px"
+    padding: "16px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   errorTitle: {
     fontWeight: 700,
     marginBottom: "6px"
   },
   errorText: {
-    fontSize: "14px"
+    fontSize: "14px",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px"
+    gap: "12px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   actionsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px"
+    gap: "12px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   card: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "16px"
+    padding: "16px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   cardLabel: {
     fontSize: "12px",
@@ -986,7 +1024,9 @@ const styles = {
   cardHint: {
     marginTop: "6px",
     fontSize: "12px",
-    color: "#6b7280"
+    color: "#6b7280",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   actionCard: {
     display: "block",
@@ -995,7 +1035,10 @@ const styles = {
     background: "#ffffff",
     padding: "16px",
     textDecoration: "none",
-    color: "#111827"
+    color: "#111827",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   actionTitle: {
     fontSize: "16px",
@@ -1004,18 +1047,26 @@ const styles = {
   },
   actionText: {
     fontSize: "13px",
-    color: "#6b7280"
+    color: "#6b7280",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   stack: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px"
+    gap: "16px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   panel: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "16px"
+    padding: "16px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   panelHeader: {
     marginBottom: "12px"
@@ -1028,18 +1079,26 @@ const styles = {
   panelSubtitle: {
     marginTop: "4px",
     fontSize: "13px",
-    color: "#6b7280"
+    color: "#6b7280",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   infoGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "10px"
+    gap: "10px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   infoRow: {
     border: "1px solid #eef2f7",
     borderRadius: "12px",
     padding: "12px",
-    background: "#f8fafc"
+    background: "#f8fafc",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   infoLabel: {
     fontSize: "12px",
@@ -1055,29 +1114,44 @@ const styles = {
   historyList: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px"
+    gap: "10px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   historyItem: {
     border: "1px solid #eef2f7",
     borderRadius: "12px",
-    background: "#f8fafc"
+    background: "#f8fafc",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   historySummary: {
     cursor: "pointer",
     listStyle: "none",
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "12px",
     padding: "12px 14px",
     fontWeight: 600,
-    color: "#111827"
+    color: "#111827",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   historyBody: {
-    padding: "0 14px 14px"
+    padding: "0 14px 14px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   emptyText: {
     fontSize: "14px",
-    color: "#6b7280"
+    color: "#6b7280",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   }
 };
