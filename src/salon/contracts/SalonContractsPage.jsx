@@ -218,6 +218,7 @@ export default function SalonContractsPage() {
   const [contractActionLoadingId, setContractActionLoadingId] = useState("")
   const [contractActionError, setContractActionError] = useState("")
   const [contractActionSuccess, setContractActionSuccess] = useState("")
+  const [archivedContractsExpanded, setArchivedContractsExpanded] = useState(false)
 
   const { slug: routeSlug } = useParams()
   const location = useLocation()
@@ -904,6 +905,11 @@ export default function SalonContractsPage() {
     [contracts]
   )
 
+  const visibleArchivedContracts = archivedContractsExpanded
+    ? archivedContracts
+    : archivedContracts.slice(0, 1)
+  const hiddenArchivedContractsCount = Math.max(archivedContracts.length - 1, 0)
+
   const latestActiveContract = useMemo(
     () => [...activeContracts].sort((a, b) => new Date(b.effective_from || 0) - new Date(a.effective_from || 0))[0] || null,
     [activeContracts]
@@ -1292,8 +1298,8 @@ export default function SalonContractsPage() {
                       </thead>
 
                       <tbody>
-                        {archivedContracts.map((c, index) => {
-                          const isLast = index === archivedContracts.length - 1
+                        {visibleArchivedContracts.map((c, index) => {
+                          const isLast = index === visibleArchivedContracts.length - 1
 
                           return (
                             <tr key={c.id}>
@@ -1313,6 +1319,26 @@ export default function SalonContractsPage() {
                       </tbody>
                     </table>
                   </div>
+                )}
+
+                {!contractsLoading && archivedContracts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setArchivedContractsExpanded((value) => !value)}
+                    style={{
+                      marginTop: 12,
+                      border: "1px solid #d0d5dd",
+                      background: "#ffffff",
+                      color: "#344054",
+                      borderRadius: 10,
+                      padding: "10px 14px",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    {archivedContractsExpanded ? "Свернуть" : `Показать ещё ${hiddenArchivedContractsCount}`}
+                  </button>
                 )}
               </div>
             </Card>
