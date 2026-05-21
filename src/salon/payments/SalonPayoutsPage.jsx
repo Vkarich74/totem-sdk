@@ -164,6 +164,7 @@ export default function SalonPayoutsPage(){
   const [payouts, setPayouts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [payoutsExpanded, setPayoutsExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -239,6 +240,8 @@ export default function SalonPayoutsPage(){
   const pageLoading = contextLoading || loading
   const pageError = !pageLoading && (contextError || error)
   const pageEmpty = !pageLoading && !pageError && payouts.length === 0
+  const visiblePayouts = payoutsExpanded ? payouts : payouts.slice(0, 5)
+  const hiddenPayoutsCount = Math.max(payouts.length - 5, 0)
 
   return (
     <div style={styles.page}>
@@ -311,7 +314,7 @@ export default function SalonPayoutsPage(){
                 </div>
 
                 <div style={styles.cardsList}>
-                  {payouts.map((item, index) => (
+                  {visiblePayouts.map((item, index) => (
                     <article key={item?.id || index} style={styles.itemCard}>
                       <div style={styles.itemTop}>
                         <div>
@@ -345,6 +348,26 @@ export default function SalonPayoutsPage(){
                     </article>
                   ))}
                 </div>
+
+                {payouts.length > 5 ? (
+                  <button
+                    type="button"
+                    onClick={() => setPayoutsExpanded((value) => !value)}
+                    style={{
+                      marginTop: "12px",
+                      border: "1px solid #d0d5dd",
+                      background: "#ffffff",
+                      color: "#344054",
+                      borderRadius: "10px",
+                      padding: "10px 14px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    {payoutsExpanded ? "Свернуть" : `Показать ещё ${hiddenPayoutsCount}`}
+                  </button>
+                ) : null}
               </>
             ) : null}
           </Panel>
