@@ -425,21 +425,18 @@ const styles = {
     lineHeight: 1.55
   },
   navGrid: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
     gap: "10px",
-    overflowX: "auto",
-    paddingBottom: "4px",
-    marginBottom: "16px",
-    scrollbarWidth: "thin"
+    marginBottom: "16px"
   },
   navCard: {
-    minWidth: "150px",
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     padding: "12px 14px",
     textDecoration: "none",
     boxShadow: "0 1px 2px rgba(16,24,40,0.04)",
-    flex: "0 0 auto",
+    minWidth: 0,
     background: "#ffffff"
   },
   navTitle: {
@@ -488,7 +485,8 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
     gap: "12px",
-    marginBottom: "16px"
+    marginBottom: "16px",
+    minWidth: 0
   },
   statCard: {
     border: "1px solid #eaecf0",
@@ -618,7 +616,8 @@ const styles = {
     marginTop: 12,
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: "12px"
+    gap: "12px",
+    minWidth: 0
   },
   metaCell: {
     borderTop: "1px solid #eef2f7",
