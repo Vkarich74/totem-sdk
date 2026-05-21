@@ -545,14 +545,14 @@ export default function MasterBookingsPage() {
           </div>
         ) : (
           <TableSection>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={styles.table}>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Статус</th>
-                  <th>Дата</th>
-                  <th>Клиент</th>
-                  <th>Телефон</th>
+                  <th style={styles.tableHeadCell}>ID</th>
+                  <th style={styles.tableHeadCell}>Статус</th>
+                  <th style={styles.tableHeadCell}>Дата</th>
+                  <th style={styles.tableHeadCell}>Клиент</th>
+                  <th style={styles.tableHeadCell}>Телефон</th>
                 </tr>
               </thead>
 
@@ -569,25 +569,25 @@ export default function MasterBookingsPage() {
                       }
                     }}
                   >
-                    <td>
+                    <td style={styles.tableCell}>
                       <a href={`#/master/${masterSlug}/bookings/${b.id}`}>
                         BR-{b.id}
                       </a>
                     </td>
 
-                    <td style={{ color: statusColor(b.status) }}>
+                    <td style={{ ...styles.tableCell, color: statusColor(b.status) }}>
                       {statusLabel(b.status)}
                     </td>
 
-                    <td>
+                    <td style={styles.tableCell}>
                       {formatDateTime(b.start_at)}
                     </td>
 
-                    <td>
+                    <td style={styles.tableCell}>
                       {b.client_name || "—"}
                     </td>
 
-                    <td>
+                    <td style={styles.tableCell}>
                       {b.phone || "—"}
                     </td>
                   </tr>
@@ -606,14 +606,18 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: "12px",
-    marginBottom: "16px"
+    marginBottom: "16px",
+    minWidth: 0,
+    maxWidth: "100%"
   },
   summaryCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
     background: "#ffffff",
     padding: "14px",
-    textAlign: "left"
+    textAlign: "left",
+    minWidth: 0,
+    maxWidth: "100%"
   },
   summaryLabel: {
     fontSize: "12px",
@@ -633,21 +637,27 @@ const styles = {
   cardsList: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px"
+    gap: "12px",
+    minWidth: 0,
+    maxWidth: "100%"
   },
   bookingCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
     padding: "14px",
-    textAlign: "left"
+    textAlign: "left",
+    minWidth: 0,
+    maxWidth: "100%"
   },
   cardTop: {
     display: "flex",
     justifyContent: "space-between",
     gap: "10px",
     alignItems: "center",
-    marginBottom: "12px"
+    marginBottom: "12px",
+    flexWrap: "wrap",
+    minWidth: 0
   },
   statusBadge: {
     fontSize: "12px",
@@ -656,7 +666,9 @@ const styles = {
   cardMeta: {
     display: "grid",
     gridTemplateColumns: "1fr",
-    gap: "10px"
+    gap: "10px",
+    minWidth: 0,
+    maxWidth: "100%"
   },
   metaLabel: {
     fontSize: "12px",
@@ -676,12 +688,14 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "14px",
-    maxWidth: "420px"
+    maxWidth: "420px",
+    minWidth: 0
   },
   fieldGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px"
+    gap: "6px",
+    minWidth: 0
   },
   fieldLabel: {
     fontSize: "13px",
@@ -697,7 +711,8 @@ const styles = {
   createActions: {
     display: "flex",
     gap: "10px",
-    flexWrap: "wrap"
+    flexWrap: "wrap",
+    minWidth: 0
   },
   primaryButton: {
     padding: "10px 14px",
@@ -732,5 +747,28 @@ const styles = {
   },
   detailRow: {
     marginBottom: "6px"
+  },
+  table: {
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    tableLayout: "fixed",
+    borderCollapse: "collapse"
+  },
+  tableHeadCell: {
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    minWidth: 0,
+    maxWidth: "100%",
+    verticalAlign: "top"
+  },
+  tableCell: {
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    minWidth: 0,
+    maxWidth: "100%",
+    verticalAlign: "top"
   }
 }
