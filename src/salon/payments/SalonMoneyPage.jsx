@@ -408,12 +408,10 @@ export default function SalonMoneyPage(){
 
 const styles = {
   navGrid: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
     gap: "10px",
-    overflowX: "auto",
-    paddingBottom: "4px",
-    marginBottom: "16px",
-    scrollbarWidth: "thin"
+    marginBottom: "16px"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -421,8 +419,7 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: "150px",
-    flex: "0 0 auto"
+    minWidth: 0
   },
   navTitle: {
     fontSize: "14px",
@@ -474,7 +471,8 @@ const styles = {
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px"
+    gap: "12px",
+    minWidth: 0
   },
   card: {
     border: "1px solid #e5e7eb",
@@ -535,7 +533,8 @@ const styles = {
   linksGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: "10px"
+    gap: "10px",
+    minWidth: 0
   },
   linkCard: {
     display: "block",
