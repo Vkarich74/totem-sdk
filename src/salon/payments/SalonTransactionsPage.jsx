@@ -173,6 +173,7 @@ export default function SalonTransactionsPage(){
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [transactionsExpanded, setTransactionsExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -254,6 +255,8 @@ export default function SalonTransactionsPage(){
   const pageLoading = contextLoading || loading
   const pageError = !pageLoading && (contextError || error)
   const pageEmpty = !pageLoading && !pageError && transactions.length === 0
+  const visibleTransactions = transactionsExpanded ? transactions : transactions.slice(0, 3)
+  const hiddenTransactionsCount = Math.max(transactions.length - 3, 0)
 
   return (
     <div style={styles.page}>
@@ -326,7 +329,7 @@ export default function SalonTransactionsPage(){
                 </div>
 
                 <div style={styles.list}>
-                  {transactions.map((item, index) => (
+                  {visibleTransactions.map((item, index) => (
                     <article key={item?.id || `${item?.reference_id || "tx"}-${index}`} style={styles.itemCard}>
                       <div style={styles.itemTop}>
                         <h3 style={styles.itemTitle}>{item?.id || `Операция ${index + 1}`}</h3>
@@ -357,6 +360,26 @@ export default function SalonTransactionsPage(){
                     </article>
                   ))}
                 </div>
+
+                {transactions.length > 3 ? (
+                  <button
+                    type="button"
+                    onClick={() => setTransactionsExpanded((value) => !value)}
+                    style={{
+                      marginTop: "12px",
+                      border: "1px solid #d0d5dd",
+                      background: "#ffffff",
+                      color: "#344054",
+                      borderRadius: "10px",
+                      padding: "10px 14px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    {transactionsExpanded ? "Свернуть" : `Показать ещё ${hiddenTransactionsCount}`}
+                  </button>
+                ) : null}
               </>
             ) : null}
           </Panel>
