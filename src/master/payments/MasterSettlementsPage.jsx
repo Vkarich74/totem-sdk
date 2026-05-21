@@ -214,12 +214,13 @@ export default function MasterSettlementsPage() {
 
 const styles = {
   navGrid: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
     gap: "10px",
-    overflowX: "auto",
-    paddingBottom: "4px",
     marginBottom: "16px",
-    scrollbarWidth: "thin"
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -227,8 +228,9 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: "150px",
-    flex: "0 0 auto"
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   navTitle: {
     fontSize: "14px",
@@ -243,13 +245,19 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
     gap: "12px",
-    marginBottom: "16px"
+    marginBottom: "16px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   summaryCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
     background: "#ffffff",
-    padding: "14px"
+    padding: "14px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   summaryLabel: {
     fontSize: "12px",
@@ -263,18 +271,26 @@ const styles = {
   summaryHint: {
     marginTop: "4px",
     fontSize: "12px",
-    color: "#6b7280"
+    color: "#6b7280",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   },
   cardsList: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px"
+    gap: "12px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   itemCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
     background: "#ffffff",
-    padding: "14px"
+    padding: "14px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   itemTop: {
     display: "flex",
@@ -282,7 +298,10 @@ const styles = {
     gap: "12px",
     alignItems: "center",
     flexWrap: "wrap",
-    marginBottom: "12px"
+    marginBottom: "12px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   statusBadge: {
     background: "#f3f4f6",
@@ -295,7 +314,10 @@ const styles = {
   metaGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: "10px"
+    gap: "10px",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box"
   },
   metaLabel: {
     fontSize: "12px",
@@ -305,6 +327,8 @@ const styles = {
   metaValue: {
     fontSize: "14px",
     color: "#111827",
-    fontWeight: 600
+    fontWeight: 600,
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
   }
 };
