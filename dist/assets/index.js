@@ -277,6 +277,9 @@ grid-template-columns:1fr;
           border-radius: 16px;
           overflow: hidden;
           box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
         }
 
         .table-section__header {
@@ -314,7 +317,11 @@ grid-template-columns:1fr;
 
         .table-section__body {
           width: 100%;
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
           overflow-x: auto;
+          overflow-y: hidden;
         }
 
         .table-section__body table {

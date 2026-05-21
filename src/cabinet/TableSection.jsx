@@ -33,6 +33,9 @@ export default function TableSection({
           border-radius: 16px;
           overflow: hidden;
           box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
         }
 
         .table-section__header {
@@ -70,7 +73,11 @@ export default function TableSection({
 
         .table-section__body {
           width: 100%;
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
           overflow-x: auto;
+          overflow-y: hidden;
         }
 
         .table-section__body table {
