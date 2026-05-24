@@ -12,6 +12,7 @@ import {
   MobileEmptyState,
   MobileStatCard
 } from "../mobile/MobileUi.jsx";
+import { createPendingOwnerQrPayment, getOwnerQrPaymentOptions } from "../api/internal.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const BOOKING_PAYMENT_STATE_PREFIX = "TOTEM_BOOKING_PAYMENT_STATE";
@@ -128,10 +129,75 @@ function normalizeKgPhone(value) {
 function getPaymentStatusLabel(status) {
   const normalized = String(status || "").toLowerCase();
 
+  if (normalized === "pending_owner_confirmation") return "Ожидает подтверждения";
   if (normalized === "confirmed") return "Оплата получена";
   if (normalized === "failed") return "Оплата не прошла";
   if (normalized === "refunded") return "Оплата возвращена";
+  if (normalized === "rejected") return "Отклонено";
   return "Ожидаем оплату";
+}
+
+function getOwnerQrDestinationOwnerTypeLabel(ownerType) {
+  const normalized = String(ownerType || "").toLowerCase();
+
+  if (normalized === "salon") return "Салон";
+  if (normalized === "master") return "Мастер";
+
+  return "Владелец";
+}
+
+function getOwnerQrErrorMessage(error) {
+  const normalized = String(error || "").trim();
+
+  if (normalized === "OWNER_QR_BOOKING_NOT_FOUND") {
+    return "Не удалось найти запись. Создайте запись ещё раз.";
+  }
+
+  if (normalized === "OWNER_QR_DESTINATION_NOT_FOUND") {
+    return "Собственный QR пока не настроен. Выберите другой способ оплаты.";
+  }
+
+  if (normalized === "OWNER_QR_DESTINATION_INACTIVE") {
+    return "Этот QR сейчас неактивен. Выберите другой способ оплаты.";
+  }
+
+  if (normalized === "OWNER_QR_DESTINATION_BOOKING_MISMATCH") {
+    return "Этот QR не подходит для выбранной записи. Выберите другой вариант.";
+  }
+
+  if (normalized === "OWNER_QR_PAYMENT_ALREADY_CONFIRMED") {
+    return "Оплата уже подтверждена. Выберите другой способ оплаты для новой записи.";
+  }
+
+  if (normalized === "ACTIVE_PAYMENT_EXISTS") {
+    return "Для этой записи уже есть активная оплата. Выберите другой способ оплаты или откройте текущую оплату.";
+  }
+
+  if (normalized === "OWNER_QR_PAYMENT_INVALID_PAYLOAD") {
+    return "Не удалось создать заявку на оплату по QR. Проверьте выбранный QR и попробуйте снова.";
+  }
+
+  if (!normalized) {
+    return "Не удалось создать оплату по QR. Попробуйте снова.";
+  }
+
+  return normalized;
+}
+
+function normalizeOwnerQrDestination(destination) {
+  if (!destination) return null;
+
+  return {
+    id: destination?.id || "",
+    owner_type: String(destination?.owner_type || "").toLowerCase(),
+    owner_id: destination?.owner_id || "",
+    destination_type: destination?.destination_type || "owner_qr",
+    label: destination?.label || "",
+    qr_image_url: destination?.qr_image_url || "",
+    bank_name: destination?.bank_name || "",
+    account_name: destination?.account_name || "",
+    phone_or_account: destination?.phone_or_account || ""
+  };
 }
 
 function getBookingPaymentStateKey(slug) {
@@ -158,7 +224,7 @@ function readBookingPaymentState(slug) {
   }
 }
 
-function writeBookingPaymentState(slug, successData, paymentData) {
+function writeBookingPaymentState(slug, successData, paymentData, ownerQrPayment) {
   if (!slug || !successData?.bookingId) return;
 
   try {
@@ -168,6 +234,7 @@ function writeBookingPaymentState(slug, successData, paymentData) {
         version: BOOKING_PAYMENT_STATE_VERSION,
         successData,
         paymentData: paymentData || null,
+        ownerQrPayment: ownerQrPayment || null,
         savedAt: Date.now()
       })
     );
@@ -260,6 +327,11 @@ export default function BookingPage() {
   const [paymentError, setPaymentError] = useState("");
   const [paymentData, setPaymentData] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [ownerQrOptions, setOwnerQrOptions] = useState([]);
+  const [ownerQrSelectedDestinationId, setOwnerQrSelectedDestinationId] = useState("");
+  const [ownerQrLoading, setOwnerQrLoading] = useState(false);
+  const [ownerQrError, setOwnerQrError] = useState("");
+  const [ownerQrPayment, setOwnerQrPayment] = useState(null);
 
   const submitLockRef = useRef(false);
   const paymentLockRef = useRef(false);
@@ -275,14 +347,23 @@ export default function BookingPage() {
 
     setSuccessData(restored.successData);
     setPaymentData(restored.paymentData || null);
-    setPaymentMethod(restored.paymentData?.provider === "direct" ? "cash" : restored.paymentData ? "xpay" : "cash");
+    setOwnerQrPayment(restored.ownerQrPayment || null);
+    setPaymentMethod(
+      restored.ownerQrPayment
+        ? "owner_qr"
+        : restored.paymentData?.provider === "direct"
+          ? "cash"
+          : restored.paymentData
+            ? "xpay"
+            : "cash"
+    );
     setPaymentError("");
   }, [slug]);
 
   useEffect(() => {
     if (!slug || !successData?.bookingId) return;
-    writeBookingPaymentState(slug, successData, paymentData);
-  }, [slug, successData, paymentData]);
+    writeBookingPaymentState(slug, successData, paymentData, ownerQrPayment);
+  }, [slug, successData, paymentData, ownerQrPayment]);
 
   useEffect(() => {
     if (!slug) {
@@ -493,7 +574,7 @@ export default function BookingPage() {
           setPaymentData(null);
           setPaymentMethod("cash");
           setPaymentError("Не удалось определить цену услуги для оплаты наличными. Выберите услугу с ценой.");
-          writeBookingPaymentState(slug, nextSuccessData, null);
+          writeBookingPaymentState(slug, nextSuccessData, null, null);
           return;
         }
 
@@ -503,17 +584,26 @@ export default function BookingPage() {
           setPaymentData(nextPaymentData);
           setPaymentMethod("cash");
           setPaymentError("");
-          writeBookingPaymentState(slug, nextSuccessData, nextPaymentData);
+          writeBookingPaymentState(slug, nextSuccessData, nextPaymentData, null);
         } catch (err) {
           setPaymentData(null);
           setPaymentMethod("cash");
           setPaymentError(err.message);
-          writeBookingPaymentState(slug, nextSuccessData, null);
+          writeBookingPaymentState(slug, nextSuccessData, null, null);
         }
+      } else if (paymentMethod === "owner_qr") {
+        setPaymentData(null);
+        setOwnerQrPayment(null);
+        setOwnerQrOptions([]);
+        setOwnerQrSelectedDestinationId("");
+        setOwnerQrError("");
+        setPaymentMethod("owner_qr");
+        writeBookingPaymentState(slug, nextSuccessData, null, null);
+        await loadOwnerQrPaymentOptions(nextSuccessData.bookingId);
       } else {
         setPaymentData(null);
         setPaymentMethod("xpay");
-        writeBookingPaymentState(slug, nextSuccessData, null);
+        writeBookingPaymentState(slug, nextSuccessData, null, null);
       }
 
     } catch (err) {
@@ -576,7 +666,7 @@ export default function BookingPage() {
       };
 
       setPaymentData(nextPaymentData);
-      writeBookingPaymentState(slug, successData, nextPaymentData);
+      writeBookingPaymentState(slug, successData, nextPaymentData, ownerQrPayment);
     } catch (err) {
       setPaymentError(err.message);
     } finally {
@@ -615,6 +705,72 @@ export default function BookingPage() {
       provider: data.provider || data?.payment?.provider || "direct",
       status: data.status || data?.payment?.status || "pending"
     };
+  }
+
+  async function loadOwnerQrPaymentOptions(bookingId) {
+    if (!bookingId) return;
+
+    setOwnerQrLoading(true);
+    setOwnerQrError("");
+
+    try {
+      const data = await getOwnerQrPaymentOptions(bookingId);
+      const destinations = Array.isArray(data?.destinations)
+        ? data.destinations.map(normalizeOwnerQrDestination).filter(Boolean)
+        : [];
+
+      setOwnerQrOptions(destinations);
+      setOwnerQrSelectedDestinationId("");
+      setOwnerQrPayment(null);
+
+      if (!destinations.length) {
+        setOwnerQrError("Собственный QR пока не настроен. Выберите другой способ оплаты.");
+      }
+    } catch (err) {
+      setOwnerQrOptions([]);
+      setOwnerQrSelectedDestinationId("");
+      setOwnerQrPayment(null);
+      setOwnerQrError(getOwnerQrErrorMessage(err.message));
+    } finally {
+      setOwnerQrLoading(false);
+    }
+  }
+
+  async function createOwnerQrPendingPayment() {
+    if (!successData?.bookingId || !ownerQrSelectedDestinationId || ownerQrLoading) return;
+
+    const selectedDestination = ownerQrOptions.find((item) => String(item.id) === String(ownerQrSelectedDestinationId));
+    if (!selectedDestination) {
+      setOwnerQrError("Выберите QR для оплаты, чтобы создать заявку.");
+      return;
+    }
+
+    setOwnerQrLoading(true);
+    setOwnerQrError("");
+
+    try {
+      const data = await createPendingOwnerQrPayment({
+        booking_id: successData.bookingId,
+        qr_destination_id: Number(ownerQrSelectedDestinationId)
+      });
+
+      const nextOwnerQrPayment = {
+        ...(data?.payment || data || {}),
+        payment_id: data?.payment_id || data?.payment?.id || data?.id || "",
+        provider: data?.provider || data?.payment?.provider || "owner_qr",
+        method: data?.method || data?.payment?.method || "owner_qr",
+        status: data?.status || data?.payment?.status || "pending_owner_confirmation"
+      };
+
+      setOwnerQrPayment(nextOwnerQrPayment);
+      setPaymentData(null);
+      setPaymentMethod("owner_qr");
+      writeBookingPaymentState(slug, successData, null, nextOwnerQrPayment);
+    } catch (err) {
+      setOwnerQrError(getOwnerQrErrorMessage(err.message));
+    } finally {
+      setOwnerQrLoading(false);
+    }
   }
 
   async function checkPaymentStatus(options = {}) {
@@ -662,7 +818,7 @@ export default function BookingPage() {
 
       setPaymentData(nextPaymentData);
       if (successData?.bookingId) {
-        writeBookingPaymentState(slug, successData, nextPaymentData);
+        writeBookingPaymentState(slug, successData, nextPaymentData, ownerQrPayment);
       }
     } catch (err) {
       if (!options.silent) {
@@ -679,6 +835,11 @@ export default function BookingPage() {
     setPaymentData(null);
     setPaymentMethod("cash");
     setPaymentError("");
+    setOwnerQrOptions([]);
+    setOwnerQrSelectedDestinationId("");
+    setOwnerQrLoading(false);
+    setOwnerQrError("");
+    setOwnerQrPayment(null);
     setStep("form");
     setDate("");
     setTime("");
@@ -728,10 +889,13 @@ export default function BookingPage() {
   if (successData) {
     const isCashPayment = paymentMethod === "cash";
     const isXpayPayment = paymentMethod === "xpay";
+    const isOwnerQrPayment = paymentMethod === "owner_qr";
     const isDirectPayment = paymentData?.provider === "direct";
     const paymentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
+    const ownerQrPaymentStatus = String(ownerQrPayment?.status || ownerQrPayment?.payment?.status || "").toLowerCase();
     const isCashPaymentPending = isCashPayment && isDirectPayment && paymentStatus === "pending";
     const isCashPaymentConfirmed = isCashPayment && isDirectPayment && paymentStatus === "confirmed";
+    const ownerQrPaymentId = getPaymentIdFromData(ownerQrPayment);
     const qrImage = paymentData?.qr_image || paymentData?.payment?.qr_image || "";
     const qrCode = paymentData?.qr_code || paymentData?.payment?.qr_code || "";
     const paymentId = getPaymentIdFromData(paymentData);
@@ -804,6 +968,8 @@ export default function BookingPage() {
             subtitle={
               isCashPayment
                 ? "Оплата наличными ожидает подтверждения после создания записи."
+                : isOwnerQrPayment
+                  ? "Оплата напрямую на QR салона или мастера ожидает подтверждения."
                 : "Платёж и QR сохраняются в том же потоке, что и раньше."
             }
             style={bookingCardStyle}
@@ -816,6 +982,11 @@ export default function BookingPage() {
                     setPaymentError("");
                     setPaymentLoading(false);
                     setPaymentStatusLoading(false);
+                    setOwnerQrError("");
+                    setOwnerQrPayment(null);
+                    setOwnerQrOptions([]);
+                    setOwnerQrSelectedDestinationId("");
+                    setOwnerQrLoading(false);
                     if (paymentData?.provider !== "direct") {
                       setPaymentData(null);
                     }
@@ -864,6 +1035,11 @@ export default function BookingPage() {
 
                     setPaymentMethod("xpay");
                     setPaymentError("");
+                    setOwnerQrError("");
+                    setOwnerQrPayment(null);
+                    setOwnerQrOptions([]);
+                    setOwnerQrSelectedDestinationId("");
+                    setOwnerQrLoading(false);
                     if (currentProvider === "direct" && currentStatus === "pending") {
                       void startPayment();
                     }
@@ -885,6 +1061,63 @@ export default function BookingPage() {
                   <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Оплатить через XPAY</span>
                   <span style={{ fontSize: 13, lineHeight: 1.45, color: isXpayPayment ? "rgba(255,255,255,0.88)" : "#64748B" }}>
                     Показать QR и продолжить онлайн-оплату.
+                  </span>
+                </MobileButton>
+                <MobileButton
+                  onClick={() => {
+                    const currentProvider = String(paymentData?.provider || paymentData?.payment?.provider || "").toLowerCase();
+                    const currentStatus = String(paymentData?.status || paymentData?.payment?.status || "").toLowerCase();
+
+                    if (currentProvider === "direct" && currentStatus === "confirmed") {
+                      setPaymentMethod("cash");
+                      setPaymentError("Оплата наличными подтверждена. Способ оплаты изменить нельзя.");
+                      return;
+                    }
+
+                    if (currentProvider === "xpay" && currentStatus === "pending") {
+                      setPaymentMethod("xpay");
+                      setPaymentError("XPAY QR уже создан. Для перехода на собственный QR нужна отмена QR.");
+                      return;
+                    }
+
+                    if (currentProvider === "xpay" && currentStatus === "confirmed") {
+                      setPaymentMethod("xpay");
+                      setPaymentError("Оплата уже подтверждена. Способ оплаты изменить нельзя.");
+                      return;
+                    }
+
+                    setPaymentMethod("owner_qr");
+                    setPaymentError("");
+                    setPaymentData(null);
+                    setPaymentLoading(false);
+                    setPaymentStatusLoading(false);
+                    setOwnerQrError("");
+                    if (!ownerQrPayment) {
+                      setOwnerQrOptions([]);
+                      setOwnerQrSelectedDestinationId("");
+                      setOwnerQrLoading(false);
+                      if (successData?.bookingId) {
+                        void loadOwnerQrPaymentOptions(successData.bookingId);
+                      }
+                    }
+                  }}
+                  style={{
+                    minHeight: 88,
+                    alignItems: "flex-start",
+                    justifyContent: "flex-start",
+                    textAlign: "left",
+                    whiteSpace: "normal",
+                    borderRadius: 18,
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                  tone={isOwnerQrPayment ? "primary" : "secondary"}
+                >
+                  <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Собственный QR</span>
+                  <span style={{ fontSize: 13, lineHeight: 1.45, color: isOwnerQrPayment ? "rgba(255,255,255,0.88)" : "#64748B" }}>
+                    Оплата напрямую на QR салона или мастера. Запись подтвердят после проверки оплаты.
                   </span>
                 </MobileButton>
               </div>
@@ -962,6 +1195,109 @@ export default function BookingPage() {
                         </div>
                       </div>
                     </>
+                  )}
+                </div>
+              ) : isOwnerQrPayment ? (
+                <div style={{ display: "grid", gap: 12 }}>
+                  {ownerQrPayment ? (
+                    <>
+                      <MobileBadge tone={ownerQrPaymentStatus === "confirmed" ? "success" : "warning"}>
+                        {getPaymentStatusLabel(ownerQrPaymentStatus || "pending_owner_confirmation")}
+                      </MobileBadge>
+                      <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
+                        Оплата ожидает подтверждения владельцем.
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: "#0F766E" }}>
+                        После оплаты по QR владелец подтвердит платёж, и статус обновится.
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gap: 8,
+                          padding: 14,
+                          borderRadius: 16,
+                          background: "#fff7ed",
+                          border: "1px solid #fed7aa",
+                        }}
+                      >
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#9a3412" }}>Собственный QR</div>
+                        <div style={{ fontSize: 13, lineHeight: 1.55, color: "#9a3412" }}>
+                          Заявка на оплату по QR создана и ждёт подтверждения.
+                        </div>
+                        {ownerQrPaymentId ? <MobilePill tone="neutral">Платёж № {ownerQrPaymentId}</MobilePill> : null}
+                        {selectedOwnerQrDestination ? (
+                          <div style={{ fontSize: 13, lineHeight: 1.55, color: "#9a3412" }}>
+                            {selectedOwnerQrDestination.label || "Собственный QR"} · {getOwnerQrDestinationOwnerTypeLabel(selectedOwnerQrDestination.owner_type)}
+                          </div>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : ownerQrLoading ? (
+                    <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>Загружаем доступные QR...</div>
+                  ) : ownerQrOptions.length ? (
+                    <>
+                      {ownerQrError ? <div style={styles.error}>{ownerQrError}</div> : null}
+                      <MobileBadge tone="success">Выберите QR для оплаты</MobileBadge>
+                      <div style={{ display: "grid", gap: 10 }}>
+                        {ownerQrOptions.map((destination) => {
+                          const isSelected = String(destination.id) === String(ownerQrSelectedDestinationId);
+
+                          return (
+                            <div
+                              key={destination.id}
+                              style={{
+                                display: "grid",
+                                gap: 10,
+                                padding: 14,
+                                borderRadius: 16,
+                                border: `1px solid ${isSelected ? "#2563EB" : "#E2E8F0"}`,
+                                background: isSelected ? "#EFF6FF" : "#FFFFFF",
+                              }}
+                            >
+                              <div style={{ display: "grid", gap: 4 }}>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: "#0F172A" }}>
+                                  {destination.label || "Собственный QR"}
+                                </div>
+                                <div style={{ fontSize: 13, lineHeight: 1.5, color: "#475569" }}>
+                                  {getOwnerQrDestinationOwnerTypeLabel(destination.owner_type)} · ID {destination.owner_id}
+                                </div>
+                              </div>
+
+                              {destination.qr_image_url ? (
+                                <img src={destination.qr_image_url} alt="Собственный QR" style={styles.qrImage} />
+                              ) : null}
+
+                              <div style={{ display: "grid", gap: 4, fontSize: 13, lineHeight: 1.5, color: "#334155" }}>
+                                {destination.bank_name ? <div>Банк: {destination.bank_name}</div> : null}
+                                {destination.account_name ? <div>Получатель: {destination.account_name}</div> : null}
+                                {destination.phone_or_account ? <div>Телефон / счёт: {destination.phone_or_account}</div> : null}
+                              </div>
+
+                              <MobileButton
+                                tone={isSelected ? "primary" : "secondary"}
+                                onClick={() => {
+                                  setOwnerQrSelectedDestinationId(String(destination.id));
+                                  setOwnerQrError("");
+                                }}
+                              >
+                                {isSelected ? "QR выбран" : "Выбрать этот QR"}
+                              </MobileButton>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <MobileButton
+                        tone="primary"
+                        onClick={createOwnerQrPendingPayment}
+                        disabled={!ownerQrSelectedDestinationId || ownerQrLoading}
+                      >
+                        {ownerQrLoading ? "Создаём заявку..." : "Создать заявку на оплату по QR"}
+                      </MobileButton>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
+                      {ownerQrError || "Собственный QR пока не настроен. Выберите другой способ оплаты."}
+                    </div>
                   )}
                 </div>
               ) : !paymentData ? (
@@ -1168,6 +1504,11 @@ export default function BookingPage() {
                       setPaymentError("");
                       setPaymentLoading(false);
                       setPaymentStatusLoading(false);
+                      setOwnerQrError("");
+                      setOwnerQrPayment(null);
+                      setOwnerQrOptions([]);
+                      setOwnerQrSelectedDestinationId("");
+                      setOwnerQrLoading(false);
                       if (paymentData?.provider !== "direct") {
                         setPaymentData(null);
                       }
@@ -1216,6 +1557,11 @@ export default function BookingPage() {
 
                       setPaymentMethod("xpay");
                       setPaymentError("");
+                      setOwnerQrError("");
+                      setOwnerQrPayment(null);
+                      setOwnerQrOptions([]);
+                      setOwnerQrSelectedDestinationId("");
+                      setOwnerQrLoading(false);
                     }}
                     style={{
                       minHeight: 88,
@@ -1236,10 +1582,44 @@ export default function BookingPage() {
                       Показать QR и продолжить онлайн-оплату.
                     </span>
                   </MobileButton>
+                  <MobileButton
+                    onClick={() => {
+                      setPaymentMethod("owner_qr");
+                      setPaymentError("");
+                      setPaymentData(null);
+                      setPaymentLoading(false);
+                      setPaymentStatusLoading(false);
+                      setOwnerQrError("");
+                      setOwnerQrPayment(null);
+                      setOwnerQrOptions([]);
+                      setOwnerQrSelectedDestinationId("");
+                      setOwnerQrLoading(false);
+                    }}
+                    style={{
+                      minHeight: 88,
+                      alignItems: "flex-start",
+                      justifyContent: "flex-start",
+                      textAlign: "left",
+                      whiteSpace: "normal",
+                      borderRadius: 18,
+                      padding: 16,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                    tone={paymentMethod === "owner_qr" ? "primary" : "secondary"}
+                  >
+                    <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Собственный QR</span>
+                    <span style={{ fontSize: 13, lineHeight: 1.45, color: paymentMethod === "owner_qr" ? "rgba(255,255,255,0.88)" : "#64748B" }}>
+                      Оплата напрямую на QR салона или мастера. Запись подтвердят после проверки оплаты.
+                    </span>
+                  </MobileButton>
                 </div>
                 <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
                   {paymentMethod === "cash"
                     ? "Вы оплатите услугу на месте после визита."
+                    : paymentMethod === "owner_qr"
+                      ? "Оплата напрямую на QR салона или мастера. Запись подтвердят после проверки оплаты."
                     : "Показать QR и продолжить онлайн-оплату через XPAY."}
                 </div>
               </div>
