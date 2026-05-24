@@ -706,6 +706,21 @@ export async function getBookings(salonSlug = getSalonSlug()){
   return { ok:true, bookings: j.bookings || [] };
 }
 
+export async function getOwnerQrPaymentOptions(bookingId){
+  const safeBookingId = Number(bookingId);
+  const r = await safeInternalJson(`/payments/owner-qr/options?booking_id=${encodeURIComponent(String(Number.isInteger(safeBookingId) && safeBookingId > 0 ? safeBookingId : ""))}`, {
+    method: "GET"
+  });
+  if(!r.ok) return { ok:false, error:"OWNER_QR_PAYMENT_OPTIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"OWNER_QR_PAYMENT_OPTIONS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    booking_id: j.booking_id ?? safeBookingId ?? null,
+    destinations: j.destinations || []
+  };
+}
+
 export async function getMasters(salonSlug = getSalonSlug()){
   const r = await safeInternalJson(`/salons/${salonSlug}/masters`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTERS_FETCH_FAILED", detail:r };
@@ -894,6 +909,76 @@ export async function getMasterPendingCashBookings(masterSlug = getMasterSlug())
     bookings: j.bookings || [],
     count: Number(j.count || 0),
     amount: j.amount || 0
+  };
+}
+
+export async function createPendingOwnerQrPayment(payload = {}){
+  const r = await safeInternalJson(`/payments/owner-qr/pending`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"OWNER_QR_PENDING_PAYMENT_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"OWNER_QR_PENDING_PAYMENT_API_NOT_OK", detail:j };
+  return { ok:true, payment: j.payment || null, qr_destination: j.qr_destination || null };
+}
+
+export async function confirmOwnerQrPayment(paymentId){
+  const safePaymentId = Number(paymentId);
+  const r = await safeInternalJson(`/payments/owner-qr/${encodeURIComponent(String(Number.isInteger(safePaymentId) && safePaymentId > 0 ? safePaymentId : ""))}/confirm`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+  if(!r.ok) return { ok:false, error:"OWNER_QR_CONFIRM_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"OWNER_QR_CONFIRM_API_NOT_OK", detail:j };
+  return { ok:true, payment: j.payment || null, obligations: j.obligations || [] };
+}
+
+export async function rejectOwnerQrPayment(paymentId, rejectionReason){
+  const safePaymentId = Number(paymentId);
+  const r = await safeInternalJson(`/payments/owner-qr/${encodeURIComponent(String(Number.isInteger(safePaymentId) && safePaymentId > 0 ? safePaymentId : ""))}/reject`, {
+    method: "POST",
+    body: JSON.stringify({
+      rejection_reason: String(rejectionReason || "").trim()
+    })
+  });
+  if(!r.ok) return { ok:false, error:"OWNER_QR_REJECT_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"OWNER_QR_REJECT_API_NOT_OK", detail:j };
+  return { ok:true, payment: j.payment || null, obligations: j.obligations || [] };
+}
+
+export async function getSalonOwnerQrPayments(salonSlug = getSalonSlug()){
+  const r = await safeInternalJson(`/salons/${salonSlug}/owner-qr-payments`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_OWNER_QR_PAYMENTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_OWNER_QR_PAYMENTS_API_NOT_OK", detail:j };
+  return { ok:true, payments: j.payments || [] };
+}
+
+export async function getMasterOwnerQrPayments(masterSlug = getMasterSlug()){
+  const r = await safeInternalJson(`/masters/${masterSlug}/owner-qr-payments`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_OWNER_QR_PAYMENTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_OWNER_QR_PAYMENTS_API_NOT_OK", detail:j };
+  return { ok:true, payments: j.payments || [] };
+}
+
+export async function getOwnerQrObligations(ownerType, ownerId){
+  const safeOwnerType = encodeURIComponent(String(ownerType || "").trim());
+  const safeOwnerId = encodeURIComponent(String(Number.isInteger(Number(ownerId)) && Number(ownerId) > 0 ? Number(ownerId) : ""));
+  const r = await safeInternalJson(`/money-core/owners/${safeOwnerType}/${safeOwnerId}/owner-obligations`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"OWNER_QR_OBLIGATIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"OWNER_QR_OBLIGATIONS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    owner_type: j.owner_type || null,
+    owner_id: j.owner_id || null,
+    outgoing_open_total: j.outgoing_open_total || 0,
+    incoming_open_total: j.incoming_open_total || 0,
+    rows: j.rows || []
   };
 }
 
