@@ -721,6 +721,52 @@ export async function getOwnerQrPaymentOptions(bookingId){
   };
 }
 
+async function getOwnerQrDestinationsRequest(path){
+  const r = await safeInternalJson(path, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"OWNER_QR_DESTINATIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"OWNER_QR_DESTINATIONS_API_NOT_OK", detail:j };
+  return { ok:true, destination: j.destination || null, destinations: j.destinations || [] };
+}
+
+async function mutateOwnerQrDestinationRequest(path, payload = {}){
+  const r = await safeInternalJson(path, {
+    method: "PATCH",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"OWNER_QR_DESTINATION_MUTATION_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"OWNER_QR_DESTINATION_API_NOT_OK", detail:j };
+  return { ok:true, destination: j.destination || null };
+}
+
+export async function getSalonOwnerQrDestinations(salonSlug = getSalonSlug()){
+  return getOwnerQrDestinationsRequest(`/salons/${salonSlug}/money-core/owner-qr-destinations`);
+}
+
+export async function getSalonActiveOwnerQrDestination(salonSlug = getSalonSlug()){
+  return getOwnerQrDestinationsRequest(`/salons/${salonSlug}/money-core/owner-qr-destinations/active`);
+}
+
+export async function createSalonOwnerQrDestination(salonSlug = getSalonSlug(), payload = {}){
+  const r = await safeInternalJson(`/salons/${salonSlug}/money-core/owner-qr-destinations`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"SALON_OWNER_QR_DESTINATION_CREATE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_OWNER_QR_DESTINATION_CREATE_API_NOT_OK", detail:j };
+  return { ok:true, destination: j.destination || null };
+}
+
+export async function updateSalonOwnerQrDestination(salonSlug = getSalonSlug(), destinationId, payload = {}){
+  return mutateOwnerQrDestinationRequest(`/salons/${salonSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}`, payload);
+}
+
+export async function deactivateSalonOwnerQrDestination(salonSlug = getSalonSlug(), destinationId){
+  return mutateOwnerQrDestinationRequest(`/salons/${salonSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}/deactivate`, {});
+}
+
 export async function getMasters(salonSlug = getSalonSlug()){
   const r = await safeInternalJson(`/salons/${salonSlug}/masters`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTERS_FETCH_FAILED", detail:r };
@@ -910,6 +956,33 @@ export async function getMasterPendingCashBookings(masterSlug = getMasterSlug())
     count: Number(j.count || 0),
     amount: j.amount || 0
   };
+}
+
+export async function getMasterOwnerQrDestinations(masterSlug = getMasterSlug()){
+  return getOwnerQrDestinationsRequest(`/masters/${masterSlug}/money-core/owner-qr-destinations`);
+}
+
+export async function getMasterActiveOwnerQrDestination(masterSlug = getMasterSlug()){
+  return getOwnerQrDestinationsRequest(`/masters/${masterSlug}/money-core/owner-qr-destinations/active`);
+}
+
+export async function createMasterOwnerQrDestination(masterSlug = getMasterSlug(), payload = {}){
+  const r = await safeInternalJson(`/masters/${masterSlug}/money-core/owner-qr-destinations`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"MASTER_OWNER_QR_DESTINATION_CREATE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_OWNER_QR_DESTINATION_CREATE_API_NOT_OK", detail:j };
+  return { ok:true, destination: j.destination || null };
+}
+
+export async function updateMasterOwnerQrDestination(masterSlug = getMasterSlug(), destinationId, payload = {}){
+  return mutateOwnerQrDestinationRequest(`/masters/${masterSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}`, payload);
+}
+
+export async function deactivateMasterOwnerQrDestination(masterSlug = getMasterSlug(), destinationId){
+  return mutateOwnerQrDestinationRequest(`/masters/${masterSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}/deactivate`, {});
 }
 
 export async function createPendingOwnerQrPayment(payload = {}){

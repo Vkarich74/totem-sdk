@@ -4,6 +4,13 @@ import { Link } from "react-router-dom"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
+import {
+  createMasterOwnerQrDestination,
+  deactivateMasterOwnerQrDestination,
+  getMasterActiveOwnerQrDestination,
+  getMasterOwnerQrDestinations,
+  updateMasterOwnerQrDestination
+} from "../../api/internal"
 
 function Block({ title, hint, children }) {
   return (
@@ -58,6 +65,319 @@ function ReadonlyRow({ label, value }){
       <div style={{ fontSize: "13px", color: "#6b7280" }}>{label}</div>
       <div style={{ fontSize: "13px", fontWeight: 600, color: "#111827", textAlign: "right" }}>{value || "—"}</div>
     </div>
+  )
+}
+
+const OWNER_QR_EMPTY_FORM = {
+  label: "",
+  bank_name: "",
+  account_name: "",
+  phone_or_account: "",
+  qr_image_url: ""
+}
+
+function normalizeOwnerQrForm(destination) {
+  return {
+    label: String(destination?.label || ""),
+    bank_name: String(destination?.bank_name || ""),
+    account_name: String(destination?.account_name || ""),
+    phone_or_account: String(destination?.phone_or_account || ""),
+    qr_image_url: String(destination?.qr_image_url || "")
+  }
+}
+
+function buildOwnerQrPayload(form) {
+  return {
+    label: String(form?.label || "").trim(),
+    bank_name: String(form?.bank_name || "").trim(),
+    account_name: String(form?.account_name || "").trim(),
+    phone_or_account: String(form?.phone_or_account || "").trim(),
+    qr_image_url: String(form?.qr_image_url || "").trim()
+  }
+}
+
+function OwnerQrDestinationEditor({
+  slug,
+  loadDestinations,
+  loadActiveDestination,
+  createDestination,
+  updateDestination,
+  deactivateDestination
+}) {
+  const [form, setForm] = useState(OWNER_QR_EMPTY_FORM)
+  const [destinationId, setDestinationId] = useState("")
+  const [isActive, setIsActive] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState("")
+  const [error, setError] = useState("")
+  const [previewBroken, setPreviewBroken] = useState(false)
+
+  useEffect(() => {
+    setPreviewBroken(false)
+  }, [form.qr_image_url])
+
+  async function loadOwnerQrDestination() {
+    if (!slug) {
+      setForm(OWNER_QR_EMPTY_FORM)
+      setDestinationId("")
+      setIsActive(false)
+      setError("MASTER_SLUG_MISSING")
+      return
+    }
+
+    setLoading(true)
+    setError("")
+    setMessage("")
+
+    try {
+      const [activeResult, listResult] = await Promise.all([
+        loadActiveDestination(slug),
+        loadDestinations(slug)
+      ])
+
+      const activeDestination =
+        activeResult?.destination ||
+        listResult?.destinations?.find((item) => item?.is_active) ||
+        null
+
+      if (activeDestination) {
+        setDestinationId(String(activeDestination.id || ""))
+        setIsActive(Boolean(activeDestination.is_active))
+        setForm(normalizeOwnerQrForm(activeDestination))
+        setPreviewBroken(false)
+      } else {
+        setDestinationId("")
+        setIsActive(false)
+        setForm(OWNER_QR_EMPTY_FORM)
+        setPreviewBroken(false)
+      }
+    } catch (loadError) {
+      setForm(OWNER_QR_EMPTY_FORM)
+      setDestinationId("")
+      setIsActive(false)
+      setError(loadError?.message || "MASTER_OWNER_QR_DESTINATION_LOAD_FAILED")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadOwnerQrDestination()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug])
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+    setMessage("")
+    setError("")
+    if (field === "qr_image_url") {
+      setPreviewBroken(false)
+    }
+  }
+
+  async function persistOwnerQrDestination(nextForm = null) {
+    const payload = buildOwnerQrPayload(nextForm || form)
+    setSaving(true)
+    setError("")
+    setMessage("")
+
+    try {
+      const result = destinationId
+        ? await updateDestination(slug, destinationId, payload)
+        : await createDestination(slug, payload)
+
+      if (!result?.ok) {
+        throw new Error(result?.error || "MASTER_OWNER_QR_DESTINATION_SAVE_FAILED")
+      }
+
+      await loadOwnerQrDestination()
+      setMessage("Собственный QR сохранён")
+      return true
+    } catch (saveError) {
+      setError(saveError?.message || "MASTER_OWNER_QR_DESTINATION_SAVE_FAILED")
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDeactivate() {
+    if (!destinationId || saving) {
+      return
+    }
+
+    setSaving(true)
+    setError("")
+    setMessage("")
+
+    try {
+      const result = await deactivateDestination(slug, destinationId)
+      if (!result?.ok) {
+        throw new Error(result?.error || "MASTER_OWNER_QR_DESTINATION_DEACTIVATE_FAILED")
+      }
+
+      await loadOwnerQrDestination()
+      setMessage("Собственный QR деактивирован")
+    } catch (deactivateError) {
+      setError(deactivateError?.message || "MASTER_OWNER_QR_DESTINATION_DEACTIVATE_FAILED")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleClearImage() {
+    if (!destinationId || saving || !form.qr_image_url) {
+      return
+    }
+
+    const saved = await persistOwnerQrDestination({
+      ...form,
+      qr_image_url: ""
+    })
+
+    if (saved) {
+      setMessage("Изображение QR удалено")
+    }
+  }
+
+  const previewVisible = Boolean(form.qr_image_url && !previewBroken)
+
+  return (
+    <Block
+      title="Собственный QR"
+      hint="Настройка активного QR-destination для мастера. Здесь хранится только ссылка на изображение и реквизиты, без upload или base64."
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.1fr) minmax(180px, 0.9fr)",
+          gap: "16px",
+          alignItems: "start"
+        }}
+      >
+        <div>
+          <ReadonlyRow label="Состояние" value={isActive ? "active" : "inactive"} />
+          <ReadonlyRow label="Destination ID" value={destinationId || "—"} />
+          <Field label="label" value={form.label} onChange={(value) => updateField("label", value)} />
+          <Field label="bank_name" value={form.bank_name} onChange={(value) => updateField("bank_name", value)} />
+          <Field label="account_name" value={form.account_name} onChange={(value) => updateField("account_name", value)} />
+          <Field
+            label="phone_or_account"
+            value={form.phone_or_account}
+            onChange={(value) => updateField("phone_or_account", value)}
+          />
+          <Field
+            label="qr_image_url"
+            value={form.qr_image_url}
+            onChange={(value) => updateField("qr_image_url", value)}
+            placeholder="https://..."
+          />
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "14px" }}>
+            <button
+              type="button"
+              onClick={() => persistOwnerQrDestination()}
+              disabled={saving}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "10px",
+                border: "none",
+                background: "#111827",
+                color: "#fff",
+                cursor: saving ? "wait" : "pointer",
+                fontWeight: 700
+              }}
+            >
+              {saving ? "Сохраняем…" : destinationId ? "Сохранить QR" : "Создать QR"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClearImage}
+              disabled={saving || !form.qr_image_url}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "10px",
+                border: "1px solid #d1d5db",
+                background: "#fff",
+                color: "#111827",
+                cursor: saving || !form.qr_image_url ? "not-allowed" : "pointer",
+                fontWeight: 700
+              }}
+            >
+              Удалить изображение QR
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDeactivate}
+              disabled={saving || !destinationId}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "10px",
+                border: "1px solid #fecaca",
+                background: "#fff5f5",
+                color: "#b42318",
+                cursor: saving || !destinationId ? "not-allowed" : "pointer",
+                fontWeight: 700
+              }}
+            >
+              Деактивировать
+            </button>
+          </div>
+
+          {message ? (
+            <div style={{ marginTop: "12px", fontSize: "13px", color: "#027a48", fontWeight: 600 }}>{message}</div>
+          ) : null}
+          {error ? (
+            <div style={{ marginTop: "12px", fontSize: "13px", color: "#b42318", fontWeight: 600 }}>
+              {error}
+            </div>
+          ) : null}
+          {loading ? (
+            <div style={{ marginTop: "12px", fontSize: "13px", color: "#6b7280" }}>Загружаем active QR…</div>
+          ) : null}
+        </div>
+
+        <div>
+          <div
+            style={{
+              border: "1px solid #e5e7eb",
+              borderRadius: "12px",
+              padding: "12px",
+              background: "#fafafa",
+              minHeight: "220px"
+            }}
+          >
+            <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "10px" }}>Превью QR</div>
+            {previewVisible ? (
+              <img
+                src={form.qr_image_url}
+                alt="QR preview"
+                loading="lazy"
+                decoding="async"
+                onError={() => setPreviewBroken(true)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  maxWidth: "180px",
+                  maxHeight: "180px",
+                  objectFit: "contain",
+                  borderRadius: "10px",
+                  border: "1px solid #e5e7eb",
+                  background: "#fff"
+                }}
+              />
+            ) : (
+              <div style={{ fontSize: "13px", lineHeight: 1.45, color: "#6b7280" }}>
+                {form.qr_image_url ? "Превью недоступно." : "Добавьте ссылку на изображение QR, чтобы увидеть лёгкое превью."}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </Block>
   )
 }
 
@@ -251,6 +571,15 @@ export default function MasterSettingsPage() {
             </Link>
           </div>
         </Block>
+
+        <OwnerQrDestinationEditor
+          slug={slug}
+          loadDestinations={getMasterOwnerQrDestinations}
+          loadActiveDestination={getMasterActiveOwnerQrDestination}
+          createDestination={createMasterOwnerQrDestination}
+          updateDestination={updateMasterOwnerQrDestination}
+          deactivateDestination={deactivateMasterOwnerQrDestination}
+        />
 
         <Block title="Моя ссылка и QR" hint="Быстрый доступ к ссылке записи и QR-коду для клиентов.">
           <OwnerBookingQrCard
