@@ -237,17 +237,75 @@ function OwnerQrDestinationEditor({
       return
     }
 
-    const saved = await persistOwnerQrDestination({
-      ...form,
-      qr_image_url: ""
-    })
+    setSaving(true)
+    setError("")
+    setMessage("")
 
-    if (saved) {
+    try {
+      const result = await deleteImage(slug, destinationId)
+      if (!result?.ok) {
+        throw new Error(result?.error || "MASTER_OWNER_QR_IMAGE_DELETE_FAILED")
+      }
+
+      await loadOwnerQrDestination()
       setMessage("Изображение QR удалено")
+    } catch (deleteError) {
+      setError(deleteError?.message || "MASTER_OWNER_QR_IMAGE_DELETE_FAILED")
+    } finally {
+      setSaving(false)
     }
   }
 
+  async function handleUploadFile(file) {
+    if (!destinationId || saving || uploading) {
+      return
+    }
+
+    if (!file) {
+      setError("OWNER_QR_IMAGE_INVALID_FILE")
+      return
+    }
+
+    setUploading(true)
+    setError("")
+    setMessage("")
+
+    try {
+      const result = await uploadImage(slug, destinationId, file)
+      if (!result?.ok) {
+        throw new Error(result?.error || "MASTER_OWNER_QR_IMAGE_UPLOAD_FAILED")
+      }
+
+      await loadOwnerQrDestination()
+      setMessage("Изображение QR прикреплено")
+    } catch (uploadError) {
+      setError(uploadError?.message || "MASTER_OWNER_QR_IMAGE_UPLOAD_FAILED")
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
+  }
+
+  async function handleFileInputChange(event) {
+    const file = event.target.files?.[0] || null
+    await handleUploadFile(file)
+  }
+
+  function triggerUploadPicker() {
+    if (!destinationId || saving || uploading) {
+      return
+    }
+
+    fileInputRef.current?.click()
+  }
+
   const previewVisible = Boolean(form.qr_image_url && !previewBroken)
+  const hasImage = Boolean(form.qr_image_url)
+  const uploadDisabled = !destinationId || saving || uploading
+  const saveButtonLabel = destinationId ? "Сохранить ссылку" : "Сохранить реквизиты"
+  const uploadButtonLabel = hasImage ? "Заменить изображение QR" : "Загрузить изображение QR"
 
   return (
     <Block
