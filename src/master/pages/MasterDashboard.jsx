@@ -1020,7 +1020,7 @@ export default function MasterDashboard() {
         </div>
       </PageSection>
 
-      <PageSection title="Собственный QR — ожидает подтверждения">
+      <PageSection title="QR для оплаты — ожидает подтверждения">
         <div style={{
           border: "1px solid #e5e7eb",
           borderRadius: "14px",
@@ -1186,7 +1186,7 @@ export default function MasterDashboard() {
             </div>
           ) : (
             <div style={{ fontSize: "13px", color: "#6b7280" }}>
-              Собственный QR пока не ждёт подтверждения.
+              QR для оплаты пока не ждёт подтверждения.
             </div>
           )}
         </div>
