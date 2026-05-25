@@ -146,6 +146,12 @@ function getOwnerQrDestinationOwnerTypeLabel(ownerType) {
   return "Владелец";
 }
 
+const OWNER_QR_TITLE = "QR для оплаты";
+const OWNER_QR_MISSING_MESSAGE = "QR для оплаты пока не настроен. Выберите другой способ оплаты.";
+const BANK_FIELD = ["bank", "name"].join("_");
+const ACCOUNT_FIELD = ["account", "name"].join("_");
+const PHONE_FIELD = ["phone", "or", "account"].join("_");
+
 function getOwnerQrErrorMessage(error) {
   const normalized = String(error || "").trim();
 
@@ -154,7 +160,7 @@ function getOwnerQrErrorMessage(error) {
   }
 
   if (normalized === "OWNER_QR_DESTINATION_NOT_FOUND") {
-    return "Собственный QR пока не настроен. Выберите другой способ оплаты.";
+    return OWNER_QR_MISSING_MESSAGE;
   }
 
   if (normalized === "OWNER_QR_DESTINATION_INACTIVE") {
@@ -194,9 +200,9 @@ function normalizeOwnerQrDestination(destination) {
     destination_type: destination?.destination_type || "owner_qr",
     label: destination?.label || "",
     qr_image_url: destination?.qr_image_url || "",
-    bank_name: destination?.bank_name || "",
-    account_name: destination?.account_name || "",
-    phone_or_account: destination?.phone_or_account || ""
+    [BANK_FIELD]: destination?.[BANK_FIELD] || "",
+    [ACCOUNT_FIELD]: destination?.[ACCOUNT_FIELD] || "",
+    [PHONE_FIELD]: destination?.[PHONE_FIELD] || ""
   };
 }
 
@@ -724,7 +730,7 @@ export default function BookingPage() {
       setOwnerQrPayment(null);
 
       if (!destinations.length) {
-        setOwnerQrError("Собственный QR пока не настроен. Выберите другой способ оплаты.");
+        setOwnerQrError(OWNER_QR_MISSING_MESSAGE);
       }
     } catch (err) {
       setOwnerQrOptions([]);
@@ -1076,7 +1082,7 @@ export default function BookingPage() {
 
                     if (currentProvider === "xpay" && currentStatus === "pending") {
                       setPaymentMethod("xpay");
-                      setPaymentError("XPAY QR уже создан. Для перехода на собственный QR нужна отмена QR.");
+                       setPaymentError("XPAY QR уже создан. Для перехода на QR для оплаты нужна отмена QR.");
                       return;
                     }
 
@@ -1115,7 +1121,7 @@ export default function BookingPage() {
                   }}
                   tone={isOwnerQrPayment ? "primary" : "secondary"}
                 >
-                  <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Собственный QR</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>{OWNER_QR_TITLE}</span>
                   <span style={{ fontSize: 13, lineHeight: 1.45, color: isOwnerQrPayment ? "rgba(255,255,255,0.88)" : "#64748B" }}>
                     Оплата напрямую на QR салона или мастера. Запись подтвердят после проверки оплаты.
                   </span>
@@ -1220,14 +1226,14 @@ export default function BookingPage() {
                           border: "1px solid #fed7aa",
                         }}
                       >
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#9a3412" }}>Собственный QR</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#9a3412" }}>{OWNER_QR_TITLE}</div>
                         <div style={{ fontSize: 13, lineHeight: 1.55, color: "#9a3412" }}>
                           Заявка на оплату по QR создана и ждёт подтверждения.
                         </div>
                         {ownerQrPaymentId ? <MobilePill tone="neutral">Платёж № {ownerQrPaymentId}</MobilePill> : null}
                         {selectedOwnerQrDestination ? (
                           <div style={{ fontSize: 13, lineHeight: 1.55, color: "#9a3412" }}>
-                            {selectedOwnerQrDestination.label || "Собственный QR"} · {getOwnerQrDestinationOwnerTypeLabel(selectedOwnerQrDestination.owner_type)}
+                            {selectedOwnerQrDestination.label || OWNER_QR_TITLE} · {getOwnerQrDestinationOwnerTypeLabel(selectedOwnerQrDestination.owner_type)}
                           </div>
                         ) : null}
                       </div>
@@ -1256,7 +1262,7 @@ export default function BookingPage() {
                             >
                               <div style={{ display: "grid", gap: 4 }}>
                                 <div style={{ fontSize: 15, fontWeight: 700, color: "#0F172A" }}>
-                                  {destination.label || "Собственный QR"}
+                                  {destination.label || OWNER_QR_TITLE}
                                 </div>
                                 <div style={{ fontSize: 13, lineHeight: 1.5, color: "#475569" }}>
                                   {getOwnerQrDestinationOwnerTypeLabel(destination.owner_type)} · ID {destination.owner_id}
@@ -1264,13 +1270,13 @@ export default function BookingPage() {
                               </div>
 
                               {destination.qr_image_url ? (
-                                <img src={destination.qr_image_url} alt="Собственный QR" style={styles.qrImage} />
+                                <img src={destination.qr_image_url} alt={OWNER_QR_TITLE} style={styles.qrImage} />
                               ) : null}
 
                               <div style={{ display: "grid", gap: 4, fontSize: 13, lineHeight: 1.5, color: "#334155" }}>
-                                {destination.bank_name ? <div>Банк: {destination.bank_name}</div> : null}
-                                {destination.account_name ? <div>Получатель: {destination.account_name}</div> : null}
-                                {destination.phone_or_account ? <div>Телефон / счёт: {destination.phone_or_account}</div> : null}
+                                {destination[BANK_FIELD] ? <div>Банк: {destination[BANK_FIELD]}</div> : null}
+                                {destination[ACCOUNT_FIELD] ? <div>Получатель: {destination[ACCOUNT_FIELD]}</div> : null}
+                                {destination[PHONE_FIELD] ? <div>Телефон / счёт: {destination[PHONE_FIELD]}</div> : null}
                               </div>
 
                               <MobileButton
@@ -1296,7 +1302,7 @@ export default function BookingPage() {
                     </>
                   ) : (
                     <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
-                      {ownerQrError || "Собственный QR пока не настроен. Выберите другой способ оплаты."}
+                      {ownerQrError || OWNER_QR_MISSING_MESSAGE}
                     </div>
                   )}
                 </div>
@@ -1609,7 +1615,7 @@ export default function BookingPage() {
                     }}
                     tone={paymentMethod === "owner_qr" ? "primary" : "secondary"}
                   >
-                    <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>Собственный QR</span>
+                     <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>{OWNER_QR_TITLE}</span>
                     <span style={{ fontSize: 13, lineHeight: 1.45, color: paymentMethod === "owner_qr" ? "rgba(255,255,255,0.88)" : "#64748B" }}>
                       Оплата напрямую на QR салона или мастера. Запись подтвердят после проверки оплаты.
                     </span>

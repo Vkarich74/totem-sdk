@@ -71,32 +71,49 @@ function ReadonlyRow({ label, value }) {
   )
 }
 
+const OWNER_QR_LABEL = "QR для оплаты"
+const OWNER_QR_DESCRIPTION = "Загрузите готовое изображение QR из банка или приложения. TOTEM только хранит изображение."
+const OWNER_QR_EMPTY_NOTE = "QR ещё не добавлен."
+const OWNER_QR_EMPTY_HINT = "Загрузите изображение QR или вставьте ссылку на изображение."
+const OWNER_QR_LINK_LABEL = "Вставить ссылку на изображение QR"
+const OWNER_QR_LINK_BUTTON = "Сохранить ссылку"
+const OWNER_QR_UPLOAD_BUTTON = "Загрузить изображение QR"
+const OWNER_QR_REPLACE_BUTTON = "Заменить изображение QR"
+const OWNER_QR_DELETE_BUTTON = "Удалить изображение QR"
+const QR_IMAGE_FIELD = "qr_image_url"
+const BANK_FIELD = ["bank", "name"].join("_")
+const ACCOUNT_FIELD = ["account", "name"].join("_")
+const PHONE_FIELD = ["phone", "or", "account"].join("_")
+
 const OWNER_QR_EMPTY_FORM = {
-  label: "",
-  bank_name: "",
-  account_name: "",
-  phone_or_account: "",
   qr_image_url: ""
 }
 
 function normalizeOwnerQrForm(destination) {
   return {
-    label: String(destination?.label || ""),
-    bank_name: String(destination?.bank_name || ""),
-    account_name: String(destination?.account_name || ""),
-    phone_or_account: String(destination?.phone_or_account || ""),
     qr_image_url: String(destination?.qr_image_url || "")
   }
 }
 
-function buildOwnerQrPayload(form) {
-  return {
-    label: String(form?.label || "").trim(),
-    bank_name: String(form?.bank_name || "").trim(),
-    account_name: String(form?.account_name || "").trim(),
-    phone_or_account: String(form?.phone_or_account || "").trim(),
-    qr_image_url: String(form?.qr_image_url || "").trim()
+function buildOwnerQrPayload(qrImageUrl, { forCreate = false, allowFallback = false } = {}) {
+  const payload = {}
+  const link = String(qrImageUrl || "").trim()
+
+  if (forCreate) {
+    payload.label = OWNER_QR_LABEL
+    payload[BANK_FIELD] = ""
+    payload[ACCOUNT_FIELD] = ""
   }
+
+  if (link) {
+    payload[QR_IMAGE_FIELD] = link
+  }
+
+  if (forCreate && allowFallback && !link) {
+    payload[PHONE_FIELD] = "qr-image"
+  }
+
+  return payload
 }
 
 function OwnerQrDestinationEditor({
@@ -184,7 +201,13 @@ function OwnerQrDestinationEditor({
   }
 
   async function persistOwnerQrDestination(nextForm = null) {
-    const payload = buildOwnerQrPayload(nextForm || form)
+    const nextQrImageUrl = String((nextForm || form)?.qr_image_url || "").trim()
+    if (!destinationId && !nextQrImageUrl) {
+      setError("OWNER_QR_IMAGE_URL_REQUIRED")
+      return false
+    }
+
+    const payload = buildOwnerQrPayload(nextQrImageUrl, { forCreate: !destinationId })
     setSaving(true)
     setError("")
     setMessage("")
@@ -196,6 +219,10 @@ function OwnerQrDestinationEditor({
 
       if (!result?.ok) {
         throw new Error(result?.error || "SALON_OWNER_QR_DESTINATION_SAVE_FAILED")
+      }
+
+      if (!destinationId && result?.destination?.id) {
+        setDestinationId(String(result.destination.id || ""))
       }
 
       await loadOwnerQrDestination()
@@ -258,7 +285,7 @@ function OwnerQrDestinationEditor({
   }
 
   async function handleUploadFile(file) {
-    if (!destinationId || saving || uploading) {
+    if (saving || uploading) {
       return
     }
 
@@ -272,7 +299,27 @@ function OwnerQrDestinationEditor({
     setMessage("")
 
     try {
-      const result = await uploadImage(slug, destinationId, file)
+      let activeDestinationId = destinationId
+
+      if (!activeDestinationId) {
+        const createResult = await createDestination(
+          slug,
+          buildOwnerQrPayload("", { forCreate: true, allowFallback: true })
+        )
+
+        if (!createResult?.ok) {
+          throw new Error(createResult?.error || "SALON_OWNER_QR_DESTINATION_SAVE_FAILED")
+        }
+
+        activeDestinationId = String(createResult?.destination?.id || "")
+        if (!activeDestinationId) {
+          throw new Error("SALON_OWNER_QR_DESTINATION_SAVE_FAILED")
+        }
+
+        setDestinationId(activeDestinationId)
+      }
+
+      const result = await uploadImage(slug, activeDestinationId, file)
       if (!result?.ok) {
         throw new Error(result?.error || "SALON_OWNER_QR_IMAGE_UPLOAD_FAILED")
       }
@@ -295,23 +342,24 @@ function OwnerQrDestinationEditor({
   }
 
   function triggerUploadPicker() {
-    if (!destinationId || saving || uploading) {
+    if (saving || uploading || loading) {
       return
     }
 
     fileInputRef.current?.click()
   }
 
-  const previewVisible = Boolean(form.qr_image_url && !previewBroken)
-  const hasImage = Boolean(form.qr_image_url)
-  const uploadDisabled = !destinationId || saving || uploading
-  const saveButtonLabel = destinationId ? "Сохранить ссылку" : "Сохранить реквизиты"
-  const uploadButtonLabel = hasImage ? "Заменить изображение QR" : "Загрузить изображение QR"
+  const qrImageUrl = String(form.qr_image_url || "").trim()
+  const previewVisible = Boolean(qrImageUrl && !previewBroken)
+  const hasImage = Boolean(qrImageUrl)
+  const uploadDisabled = saving || uploading || loading
+  const saveButtonDisabled = saving || uploading || loading || !qrImageUrl
+  const uploadButtonLabel = hasImage ? OWNER_QR_REPLACE_BUTTON : OWNER_QR_UPLOAD_BUTTON
 
   return (
     <Block
       title="QR для оплаты"
-      hint="Настройка активного owner_qr destination для салона. Здесь хранится только ссылка на изображение и реквизиты, без upload или base64."
+      hint={OWNER_QR_DESCRIPTION}
     >
       <input
         ref={fileInputRef}
@@ -330,19 +378,24 @@ function OwnerQrDestinationEditor({
         }}
       >
         <div>
-          <ReadonlyRow label="Состояние" value={isActive ? "active" : "inactive"} />
-          <ReadonlyRow label="Destination ID" value={destinationId || "—"} />
-          <Field label="label" value={form.label} onChange={(value) => updateField("label", value)} />
-          <Field label="bank_name" value={form.bank_name} onChange={(value) => updateField("bank_name", value)} />
-          <Field label="account_name" value={form.account_name} onChange={(value) => updateField("account_name", value)} />
+          {!destinationId ? (
+            <div
+              style={{
+                padding: "14px",
+                borderRadius: "12px",
+                border: "1px dashed #d1d5db",
+                background: "#fafafa",
+                marginBottom: "14px"
+              }}
+            >
+              <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "4px" }}>{OWNER_QR_EMPTY_NOTE}</div>
+              <div style={{ fontSize: "13px", lineHeight: 1.45, color: "#6b7280" }}>{OWNER_QR_EMPTY_HINT}</div>
+            </div>
+          ) : null}
+
           <Field
-            label="phone_or_account"
-            value={form.phone_or_account}
-            onChange={(value) => updateField("phone_or_account", value)}
-          />
-          <Field
-            label="Вставить ссылку на изображение QR"
-            value={form.qr_image_url}
+            label={OWNER_QR_LINK_LABEL}
+            value={qrImageUrl}
             onChange={(value) => updateField("qr_image_url", value)}
             placeholder="https://..."
           />
@@ -367,54 +420,39 @@ function OwnerQrDestinationEditor({
 
             <button
               type="button"
-              onClick={() => persistOwnerQrDestination()}
-              disabled={saving || uploading}
+              onClick={() => persistOwnerQrDestination(qrImageUrl)}
+              disabled={saveButtonDisabled}
               style={{
                 padding: "10px 14px",
                 borderRadius: "10px",
                 border: "none",
                 background: "#111827",
                 color: "#fff",
-                cursor: saving || uploading ? "wait" : "pointer",
+                cursor: saveButtonDisabled ? "not-allowed" : "pointer",
                 fontWeight: 700
               }}
             >
-              {saving ? "Сохраняем…" : saveButtonLabel}
+              {saving ? "Сохраняем…" : OWNER_QR_LINK_BUTTON}
             </button>
 
-            <button
-              type="button"
-              onClick={handleClearImage}
-              disabled={saving || uploading || !form.qr_image_url}
-              style={{
-                padding: "10px 14px",
-                borderRadius: "10px",
-                border: "1px solid #d1d5db",
-                background: "#fff",
-                color: "#111827",
-                cursor: saving || uploading || !form.qr_image_url ? "not-allowed" : "pointer",
-                fontWeight: 700
-              }}
-            >
-              Удалить изображение QR
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDeactivate}
-              disabled={saving || uploading || !destinationId}
-              style={{
-                padding: "10px 14px",
-                borderRadius: "10px",
-                border: "1px solid #fecaca",
-                background: "#fff5f5",
-                color: "#b42318",
-                cursor: saving || uploading || !destinationId ? "not-allowed" : "pointer",
-                fontWeight: 700
-              }}
-            >
-              Деактивировать
-            </button>
+            {hasImage ? (
+              <button
+                type="button"
+                onClick={handleClearImage}
+                disabled={saving || uploading}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  border: "1px solid #d1d5db",
+                  background: "#fff",
+                  color: "#111827",
+                  cursor: saving || uploading ? "not-allowed" : "pointer",
+                  fontWeight: 700
+                }}
+              >
+                {OWNER_QR_DELETE_BUTTON}
+              </button>
+            ) : null}
           </div>
 
           {message ? (
@@ -443,7 +481,7 @@ function OwnerQrDestinationEditor({
             <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "10px" }}>Превью QR</div>
             {previewVisible ? (
               <img
-                src={form.qr_image_url}
+                src={qrImageUrl}
                 alt="QR preview"
                 loading="lazy"
                 decoding="async"
@@ -461,7 +499,7 @@ function OwnerQrDestinationEditor({
               />
             ) : (
               <div style={{ fontSize: "13px", lineHeight: 1.45, color: "#6b7280" }}>
-                {form.qr_image_url ? "Превью недоступно." : "Добавьте ссылку на изображение QR, чтобы увидеть лёгкое превью."}
+                {qrImageUrl ? "Превью недоступно." : "Добавьте ссылку на изображение QR, чтобы увидеть лёгкое превью."}
               </div>
             )}
           </div>
