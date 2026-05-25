@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
@@ -9,7 +9,9 @@ import {
   deactivateMasterOwnerQrDestination,
   getMasterActiveOwnerQrDestination,
   getMasterOwnerQrDestinations,
-  updateMasterOwnerQrDestination
+  updateMasterOwnerQrDestination,
+  uploadMasterOwnerQrDestinationImage,
+  deleteMasterOwnerQrDestinationImage
 } from "../../api/internal"
 
 function Block({ title, hint, children }) {
@@ -102,16 +104,20 @@ function OwnerQrDestinationEditor({
   loadActiveDestination,
   createDestination,
   updateDestination,
-  deactivateDestination
+  deactivateDestination,
+  uploadImage,
+  deleteImage
 }) {
   const [form, setForm] = useState(OWNER_QR_EMPTY_FORM)
   const [destinationId, setDestinationId] = useState("")
   const [isActive, setIsActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [previewBroken, setPreviewBroken] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     setPreviewBroken(false)
@@ -192,7 +198,7 @@ function OwnerQrDestinationEditor({
       }
 
       await loadOwnerQrDestination()
-      setMessage("Собственный QR сохранён")
+      setMessage("QR для оплаты сохранён")
       return true
     } catch (saveError) {
       setError(saveError?.message || "MASTER_OWNER_QR_DESTINATION_SAVE_FAILED")
@@ -218,7 +224,7 @@ function OwnerQrDestinationEditor({
       }
 
       await loadOwnerQrDestination()
-      setMessage("Собственный QR деактивирован")
+      setMessage("QR для оплаты деактивирован")
     } catch (deactivateError) {
       setError(deactivateError?.message || "MASTER_OWNER_QR_DESTINATION_DEACTIVATE_FAILED")
     } finally {
@@ -245,9 +251,17 @@ function OwnerQrDestinationEditor({
 
   return (
     <Block
-      title="Собственный QR"
-      hint="Настройка активного QR-destination для мастера. Здесь хранится только ссылка на изображение и реквизиты, без upload или base64."
+      title="QR для оплаты"
+      hint="Настройка активного owner_qr destination для мастера. Здесь хранится только ссылка на изображение и реквизиты, без upload или base64."
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        onChange={handleFileInputChange}
+        style={{ display: "none" }}
+      />
+
       <div
         style={{
           display: "grid",
@@ -268,7 +282,7 @@ function OwnerQrDestinationEditor({
             onChange={(value) => updateField("phone_or_account", value)}
           />
           <Field
-            label="qr_image_url"
+            label="Вставить ссылку на изображение QR"
             value={form.qr_image_url}
             onChange={(value) => updateField("qr_image_url", value)}
             placeholder="https://..."
@@ -277,32 +291,49 @@ function OwnerQrDestinationEditor({
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "14px" }}>
             <button
               type="button"
-              onClick={() => persistOwnerQrDestination()}
-              disabled={saving}
-              style={{
-                padding: "10px 14px",
-                borderRadius: "10px",
-                border: "none",
-                background: "#111827",
-                color: "#fff",
-                cursor: saving ? "wait" : "pointer",
-                fontWeight: 700
-              }}
-            >
-              {saving ? "Сохраняем…" : destinationId ? "Сохранить QR" : "Создать QR"}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleClearImage}
-              disabled={saving || !form.qr_image_url}
+              onClick={triggerUploadPicker}
+              disabled={uploadDisabled}
               style={{
                 padding: "10px 14px",
                 borderRadius: "10px",
                 border: "1px solid #d1d5db",
                 background: "#fff",
                 color: "#111827",
-                cursor: saving || !form.qr_image_url ? "not-allowed" : "pointer",
+                cursor: uploadDisabled ? "not-allowed" : "pointer",
+                fontWeight: 700
+              }}
+            >
+              {uploading ? "Загружаем…" : uploadButtonLabel}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => persistOwnerQrDestination()}
+              disabled={saving || uploading}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "10px",
+                border: "none",
+                background: "#111827",
+                color: "#fff",
+                cursor: saving || uploading ? "wait" : "pointer",
+                fontWeight: 700
+              }}
+            >
+              {saving ? "Сохраняем…" : saveButtonLabel}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClearImage}
+              disabled={saving || uploading || !form.qr_image_url}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "10px",
+                border: "1px solid #d1d5db",
+                background: "#fff",
+                color: "#111827",
+                cursor: saving || uploading || !form.qr_image_url ? "not-allowed" : "pointer",
                 fontWeight: 700
               }}
             >
@@ -312,14 +343,14 @@ function OwnerQrDestinationEditor({
             <button
               type="button"
               onClick={handleDeactivate}
-              disabled={saving || !destinationId}
+              disabled={saving || uploading || !destinationId}
               style={{
                 padding: "10px 14px",
                 borderRadius: "10px",
                 border: "1px solid #fecaca",
                 background: "#fff5f5",
                 color: "#b42318",
-                cursor: saving || !destinationId ? "not-allowed" : "pointer",
+                cursor: saving || uploading || !destinationId ? "not-allowed" : "pointer",
                 fontWeight: 700
               }}
             >
@@ -579,6 +610,8 @@ export default function MasterSettingsPage() {
           createDestination={createMasterOwnerQrDestination}
           updateDestination={updateMasterOwnerQrDestination}
           deactivateDestination={deactivateMasterOwnerQrDestination}
+          uploadImage={uploadMasterOwnerQrDestinationImage}
+          deleteImage={deleteMasterOwnerQrDestinationImage}
         />
 
         <Block title="Моя ссылка и QR" hint="Быстрый доступ к ссылке записи и QR-коду для клиентов.">

@@ -98,6 +98,19 @@ function buildJsonHeaders(extraHeaders = {}, includeContentType = true){
   return headers;
 }
 
+function buildAuthHeaders(extraHeaders = {}){
+  const headers = {
+    ...(extraHeaders || {})
+  };
+
+  const token = getAuthAccessToken();
+  if(token && !headers.Authorization){
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
 async function safeInternalJson(path, opts = {}){
   const method = String(opts.method || "GET").toUpperCase();
   const headers = buildJsonHeaders(opts.headers || {}, method !== "GET");
@@ -107,6 +120,36 @@ async function safeInternalJson(path, opts = {}){
     method,
     headers
   });
+}
+
+async function safeInternalRequest(path, opts = {}){
+  const method = String(opts.method || "GET").toUpperCase();
+  const headers = buildAuthHeaders(opts.headers || {});
+  const r = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    method,
+    headers
+  });
+
+  const ct = (r.headers.get("content-type") || "").toLowerCase();
+  const text = await r.text().catch(()=> "");
+  let json = null;
+
+  if(ct.includes("application/json") && text){
+    try{
+      json = JSON.parse(text);
+    }catch(e){
+      json = null;
+    }
+  }
+
+  return {
+    ok:r.ok,
+    status:r.status,
+    ct,
+    text,
+    json
+  };
 }
 
 function buildQuery(params = {}){
@@ -740,6 +783,48 @@ async function mutateOwnerQrDestinationRequest(path, payload = {}){
   return { ok:true, destination: j.destination || null };
 }
 
+async function uploadOwnerQrDestinationImageRequest(path, file){
+  const formData = new FormData();
+  if(file){
+    formData.append("image", file);
+  }
+
+  const r = await safeInternalRequest(path, {
+    method: "POST",
+    body: formData
+  });
+  if(!r.ok){
+    return {
+      ok:false,
+      error:r.json?.error || "OWNER_QR_IMAGE_UPLOAD_FETCH_FAILED",
+      detail:r
+    };
+  }
+  const j = r.json;
+  if(!j || !j.ok){
+    return { ok:false, error:"OWNER_QR_IMAGE_UPLOAD_API_NOT_OK", detail:j || r };
+  }
+  return { ok:true, destination: j.destination || null };
+}
+
+async function deleteOwnerQrDestinationImageRequest(path){
+  const r = await safeInternalRequest(path, {
+    method: "DELETE"
+  });
+  if(!r.ok){
+    return {
+      ok:false,
+      error:r.json?.error || "OWNER_QR_IMAGE_DELETE_FETCH_FAILED",
+      detail:r
+    };
+  }
+  const j = r.json;
+  if(!j || !j.ok){
+    return { ok:false, error:"OWNER_QR_IMAGE_DELETE_API_NOT_OK", detail:j || r };
+  }
+  return { ok:true, destination: j.destination || null };
+}
+
 export async function getSalonOwnerQrDestinations(salonSlug = getSalonSlug()){
   return getOwnerQrDestinationsRequest(`/salons/${salonSlug}/money-core/owner-qr-destinations`);
 }
@@ -765,6 +850,14 @@ export async function updateSalonOwnerQrDestination(salonSlug = getSalonSlug(), 
 
 export async function deactivateSalonOwnerQrDestination(salonSlug = getSalonSlug(), destinationId){
   return mutateOwnerQrDestinationRequest(`/salons/${salonSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}/deactivate`, {});
+}
+
+export async function uploadSalonOwnerQrDestinationImage(salonSlug = getSalonSlug(), destinationId, file){
+  return uploadOwnerQrDestinationImageRequest(`/salons/${salonSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}/image`, file);
+}
+
+export async function deleteSalonOwnerQrDestinationImage(salonSlug = getSalonSlug(), destinationId){
+  return deleteOwnerQrDestinationImageRequest(`/salons/${salonSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}/image`);
 }
 
 export async function getMasters(salonSlug = getSalonSlug()){
@@ -983,6 +1076,14 @@ export async function updateMasterOwnerQrDestination(masterSlug = getMasterSlug(
 
 export async function deactivateMasterOwnerQrDestination(masterSlug = getMasterSlug(), destinationId){
   return mutateOwnerQrDestinationRequest(`/masters/${masterSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}/deactivate`, {});
+}
+
+export async function uploadMasterOwnerQrDestinationImage(masterSlug = getMasterSlug(), destinationId, file){
+  return uploadOwnerQrDestinationImageRequest(`/masters/${masterSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}/image`, file);
+}
+
+export async function deleteMasterOwnerQrDestinationImage(masterSlug = getMasterSlug(), destinationId){
+  return deleteOwnerQrDestinationImageRequest(`/masters/${masterSlug}/money-core/owner-qr-destinations/${encodeURIComponent(String(destinationId || "").trim())}/image`);
 }
 
 export async function createPendingOwnerQrPayment(payload = {}){
