@@ -54,7 +54,7 @@ function normalizeMapEmbedUrl(rawUrl, fallbackAddress) {
     return value;
   }
 
-  if (/google\.[^/]+\/maps/i.test(value)) {
+  if (/google\.[^/]+\/maps/i.test(value) || /maps\.google\.com/i.test(value)) {
     try {
       const parsed = new URL(value);
       const query =

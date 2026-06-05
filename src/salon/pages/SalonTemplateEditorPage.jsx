@@ -157,7 +157,7 @@ function buildMapUrl(contact = {}) {
     return ""
   }
 
-  return `https://maps.google.com/?q=${encodeURIComponent(parts.join(", "))}`
+  return `https://maps.google.com/maps?output=embed&q=${encodeURIComponent(parts.join(", "))}`
 }
 
 function hasHardErrors(validationResult) {
