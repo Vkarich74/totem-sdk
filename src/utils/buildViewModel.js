@@ -36,6 +36,10 @@ function filterActiveItems(items){
   return items.filter((item) => item && item.is_active !== false);
 }
 
+function asArray(items){
+  return Array.isArray(items) ? items : [];
+}
+
 function buildCloudinaryTransformString(transform = {}){
   const parts = [];
 
