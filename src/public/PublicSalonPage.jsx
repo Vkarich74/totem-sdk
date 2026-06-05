@@ -34,6 +34,14 @@ function formatDuration(value) {
   return `${Math.round(minutes)} мин`;
 }
 
+function formatPromoDate(value) {
+  if (typeof value !== "string" || !value.trim()) return "";
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value.trim();
+  const [, year, month, day] = match;
+  return `${day}.${month}.${year}`;
+}
+
 function normalizeText(text) {
   if (typeof text !== "string") return "";
   return text.replace(/\s+/g, " ").trim();
@@ -1214,38 +1222,116 @@ export default function PublicSalonPage({ slug }) {
                 >
                   <div
                     style={{
-                      display: "inline-flex",
-                      padding: "6px 9px",
-                      borderRadius: 999,
-                      background: palette.card,
-                      border: `1px solid ${palette.border}`,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: palette.textMain,
+                      display: "grid",
+                      gridTemplateColumns: isMobile ? "1fr" : "120px 1fr",
+                      gap: 12,
+                      alignItems: "start",
                     }}
                   >
-                    {promo.badge}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 10,
-                      fontSize: 16,
-                      lineHeight: 1.35,
-                      color: palette.textMain,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {promo.title}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 13,
-                      lineHeight: 1.55,
-                      color: palette.textSecondary,
-                    }}
-                  >
-                    {promo.text}
+                    {(promo.image_secure_url || promo.secure_url || promo.image_url) ? (
+                      <div
+                        style={{
+                          ...cardStyle,
+                          overflow: "hidden",
+                          minHeight: isMobile ? 180 : 120,
+                        }}
+                      >
+                        <img
+                          src={promo.image_secure_url || promo.secure_url || promo.image_url}
+                          alt={promo.alt || promo.title || "Акция салона"}
+                          loading="lazy"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "block",
+                            objectFit: "cover",
+                          }}
+                        />
+                      </div>
+                    ) : null}
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          width: "fit-content",
+                          padding: "6px 9px",
+                          borderRadius: 999,
+                          background: palette.card,
+                          border: `1px solid ${palette.border}`,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: palette.textMain,
+                        }}
+                      >
+                        {promo.badge}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: 16,
+                          lineHeight: 1.35,
+                          color: palette.textMain,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {promo.title}
+                      </div>
+
+                      {promo.subtitle || promo.text ? (
+                        <div
+                          style={{
+                            fontSize: 13,
+                            lineHeight: 1.55,
+                            color: palette.textSecondary,
+                          }}
+                        >
+                          {promo.subtitle || promo.text}
+                        </div>
+                      ) : null}
+
+                      {promo.promo_code ? (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            lineHeight: 1.45,
+                            color: palette.textMain,
+                            fontWeight: 700,
+                          }}
+                        >
+                          Промокод: {promo.promo_code}
+                        </div>
+                      ) : null}
+
+                      {promo.valid_until ? (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            lineHeight: 1.45,
+                            color: palette.textSecondary,
+                          }}
+                        >
+                          Действует до {formatPromoDate(promo.valid_until)}
+                        </div>
+                      ) : null}
+
+                      {promo.cta_url && promo.cta_label ? (
+                        <a
+                          href={promo.cta_url}
+                          style={{
+                            ...secondaryButton,
+                            width: "fit-content",
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginTop: 4,
+                          }}
+                        >
+                          {promo.cta_label}
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ))}

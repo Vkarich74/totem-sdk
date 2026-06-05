@@ -209,14 +209,42 @@ function mapTemplateReviews(items){
 }
 
 function mapTemplatePromos(items){
-  return filterActiveItems(items)
+  const mapped = asArray(items)
     .map((promo, index) => ({
-      id: promo.id || index + 1,
-      title: pickFirstString(promo.title, promo.name),
-      text: normalizeText(pickFirstString(promo.text, promo.description)),
-      badge: pickFirstString(promo.badge, "Предложение"),
+      id: promo?.id || index + 1,
+      title: pickFirstString(promo?.title, promo?.name),
+      text: normalizeText(pickFirstString(promo?.text, promo?.description)),
+      subtitle: normalizeText(pickFirstString(promo?.subtitle)),
+      badge: pickFirstString(promo?.badge, "Предложение"),
+      promo_code: pickFirstString(promo?.promo_code),
+      valid_until: pickFirstString(promo?.valid_until),
+      cta_label: pickFirstString(promo?.cta_label),
+      cta_url: pickFirstString(promo?.cta_url),
+      image_asset_id: pickFirstString(
+        promo?.image_asset_id,
+        promo?.asset_id,
+      ),
+      image_secure_url: pickFirstString(
+        promo?.image_secure_url,
+      ),
+      secure_url: pickFirstString(promo?.secure_url),
+      image_url: pickFirstString(promo?.image_url),
+      alt: pickFirstString(promo?.alt),
+      is_active: promo?.is_active,
+      order: Number.isFinite(Number(promo?.order)) ? Number(promo?.order) : index,
+      _index: index,
     }))
+    .filter((promo) => promo.is_active !== false)
     .filter((promo) => promo.title);
+
+  return mapped
+    .sort((a, b) => {
+      const orderA = Number.isFinite(a.order) ? a.order : a._index;
+      const orderB = Number.isFinite(b.order) ? b.order : b._index;
+      if (orderA !== orderB) return orderA - orderB;
+      return a._index - b._index;
+    })
+    .map(({ _index, ...promo }) => promo);
 }
 
 function mapTemplateBenefits(items){
