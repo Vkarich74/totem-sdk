@@ -102,16 +102,29 @@ function extractStreetHouseAddress(address) {
 }
 
 function cleanMapAddress(value, salonName = "") {
+  const salonPattern = salonName ? escapeRegExp(normalizeMapQueryValue(salonName)) : "";
   let normalized = normalizeMapQueryValue(removeRepeatedPhrase(value, salonName));
   if (!normalized) {
     return "";
   }
 
+  if (salonPattern) {
+    normalized = normalized
+      .replace(new RegExp(`\\b(?:салон\\s+красоты|барбершоп|студия)\\s+${salonPattern}\\b`, "gi"), "")
+      .replace(new RegExp(`\\b${salonPattern}\\b`, "gi"), "");
+  }
+
   normalized = normalized
-    .replace(/["«»].*$/g, "")
-    .replace(/\b(?:тц|трц|торговый центр)\b.*$/gi, "")
-    .replace(/\b(?:салон\s+красоты|barbershop|барбершоп|студия)\b.*$/gi, "")
-    .replace(/\b\d+\s*(?:этаж|эт\.?|кабинет|каб\.?|офис|оф\.?|мк\.?|mk\.?).*$/gi, "")
+    .replace(/["«»]/g, "")
+    .replace(/\b(?:салон\s+красоты|барбершоп|студия)\s+[A-Za-zА-Яа-я0-9\s'-]+/gi, "")
+    .replace(/\b\d+\s*(?:этаж|эт\.?)\b/gi, "")
+    .replace(/\b\d+\s*(?:кабинет|каб\.?)\b/gi, "")
+    .replace(/\b(?:каб\.?|офис|оф\.?)\s*\d+\b/gi, "")
+    .replace(/\b\d+\s*(?:офис|оф\.?)\b/gi, "")
+    .replace(
+      /^(.+?\b\d+(?:[\/-]\d+)?(?:[-–—]?[A-Za-zА-Яа-я])?)\s*(?:,|\s)+\b(?:тц|трц|бц|торговый\s+центр|бизнес\s+центр|этаж|эт\.?|кабинет|каб\.?|офис|оф\.?|салон)\b.*$/iu,
+      "$1",
+    )
     .replace(/\s{2,}/g, " ")
     .replace(/\s+,/g, ",")
     .replace(/,\s*,+/g, ",")
@@ -132,16 +145,12 @@ function cleanMapAddress(value, salonName = "") {
 }
 
 function buildMapSearchQuery(contact = {}, identity = {}) {
-  const placeQuery = normalizeMapQueryValue(contact?.map_place_query || "");
-  if (placeQuery) {
-    return placeQuery;
-  }
-
   const salonName = normalizeMapQueryValue(
     pickFirstString(
-      identity?.title,
       identity?.salon_name,
+      identity?.title,
       identity?.name,
+      contact?.name,
       "",
     ),
   );
@@ -151,12 +160,16 @@ function buildMapSearchQuery(contact = {}, identity = {}) {
   const city = stripMapNoise(pickFirstString(contact?.city, ""));
   const country = normalizeMapQueryValue(pickFirstString(contact?.country, "Кыргызстан"));
 
-  const parts = [];
-  if (salonName) parts.push(salonName);
-  if (address) parts.push(address);
-  if (city) parts.push(city);
-  parts.push(country);
-  return normalizeMapQueryValue(parts.join(", "));
+  if (salonName && address && city) {
+    return normalizeMapQueryValue(`${salonName}, ${address}, ${city}, ${country}`);
+  }
+  if (address && city) {
+    return normalizeMapQueryValue(`${address}, ${city}, ${country}`);
+  }
+  if (address) {
+    return normalizeMapQueryValue(`${address}, ${country}`);
+  }
+  return "";
 }
 
 function extractMapQueryFromUrl(rawUrl) {
@@ -504,11 +517,10 @@ export default function PublicSalonPage({ slug }) {
       address,
       city,
       country: pickFirstString(templateViewModel?.country, salon?.country, "Кыргызстан"),
-      map_place_query: templateViewModel?.mapPlaceQuery || salon?.map_place_query || "",
     },
     {
-      title: salonName,
       salon_name: salonName,
+      title: salonName,
       name: salonName,
     },
   );
