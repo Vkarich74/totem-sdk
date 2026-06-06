@@ -52,6 +52,40 @@ function createMapEmbedUrl(addressValue) {
   return `https://maps.google.com/maps?output=embed&q=${query}&z=16`;
 }
 
+function normalizeMapQueryValue(value) {
+  return String(value || "")
+    .replace(/["«»]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*[-–—]\s*/g, " - ")
+    .trim();
+}
+
+function extractMapQueryFromUrl(rawUrl) {
+  if (typeof rawUrl !== "string" || !rawUrl.trim()) return "";
+
+  try {
+    const parsed = new URL(rawUrl.trim());
+    const searchParams = parsed.searchParams;
+    const rawQuery =
+      searchParams.get("q") ||
+      searchParams.get("query") ||
+      searchParams.get("destination") ||
+      searchParams.get("daddr") ||
+      "";
+    return normalizeMapQueryValue(rawQuery);
+  } catch (error) {
+    return normalizeMapQueryValue(rawUrl);
+  }
+}
+
+function buildEmbedUrlFromQuery(query, fallbackAddress) {
+  const normalizedQuery = normalizeMapQueryValue(query || fallbackAddress);
+  if (!normalizedQuery) {
+    return "";
+  }
+  return createMapEmbedUrl(normalizedQuery);
+}
+
 function normalizeMapEmbedUrl(rawUrl, fallbackAddress) {
   const value = pickFirstString(rawUrl);
   if (!value) {
@@ -59,24 +93,29 @@ function normalizeMapEmbedUrl(rawUrl, fallbackAddress) {
   }
 
   if (/output=embed/i.test(value) || /\/maps\/embed/i.test(value)) {
-    return value;
-  }
-
-  if (/google\.[^/]+\/maps/i.test(value) || /maps\.google\.com/i.test(value)) {
     try {
       const parsed = new URL(value);
-      const query =
+      const embedQuery =
         parsed.searchParams.get("q") ||
         parsed.searchParams.get("query") ||
         parsed.searchParams.get("destination") ||
-        fallbackAddress;
-      return createMapEmbedUrl(query);
+        parsed.searchParams.get("daddr") ||
+        "";
+      if (embedQuery) {
+        return createMapEmbedUrl(normalizeMapQueryValue(embedQuery));
+      }
+      return value;
     } catch (error) {
-      return createMapEmbedUrl(fallbackAddress);
+      return value;
     }
   }
 
-  return value;
+  if (/google\.[^/]+\/maps/i.test(value) || /maps\.google\.com/i.test(value)) {
+    const query = extractMapQueryFromUrl(value) || normalizeMapQueryValue(fallbackAddress);
+    return buildEmbedUrlFromQuery(query, fallbackAddress);
+  }
+
+  return buildEmbedUrlFromQuery(value, fallbackAddress);
 }
 
 function getInitials(name) {

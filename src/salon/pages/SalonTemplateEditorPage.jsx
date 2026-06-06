@@ -148,16 +148,55 @@ function buildPreviewPayload(draft, slug) {
   }
 }
 
-function buildMapUrl(contact = {}) {
-  const parts = [contact.address, contact.district, contact.city]
-    .map((value) => String(value || "").trim())
-    .filter(Boolean)
+function normalizeWhitespace(value) {
+  return String(value || "")
+    .replace(/["«»]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*[-–—]\s*/g, " - ")
+    .trim()
+}
 
-  if (!parts.length) {
+function buildMapSearchQuery(contact = {}, identity = {}) {
+  const placeQuery = normalizeWhitespace(contact.map_place_query || "")
+  if (placeQuery) {
+    return placeQuery
+  }
+
+  const salonName = normalizeWhitespace(identity.title || identity.salon_name || contact.title || contact.salon_name || "")
+  const address = normalizeWhitespace(contact.address || "")
+  const city = normalizeWhitespace(contact.city || "")
+  const country = "Кыргызстан"
+
+  const parts = []
+  if (salonName) parts.push(salonName)
+  if (address) parts.push(address)
+  if (city) parts.push(city)
+  parts.push(country)
+
+  return normalizeWhitespace(parts.join(", "))
+}
+
+function buildMapEmbedUrl(query = "") {
+  const normalized = normalizeWhitespace(query)
+  if (!normalized) {
     return ""
   }
 
-  return `https://maps.google.com/maps?output=embed&q=${encodeURIComponent(parts.join(", "))}`
+  return `https://maps.google.com/maps?output=embed&q=${encodeURIComponent(normalized)}&z=16`
+}
+
+function buildMapSearchUrl(query = "") {
+  const normalized = normalizeWhitespace(query)
+  if (!normalized) {
+    return ""
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(normalized)}`
+}
+
+function buildMapUrl(contact = {}, identity = {}) {
+  const query = buildMapSearchQuery(contact, identity)
+  return buildMapEmbedUrl(query)
 }
 
 function hasHardErrors(validationResult) {
@@ -613,7 +652,8 @@ export default function SalonTemplateEditorPage() {
   }), [slug])
 
   const validation = documentState?.validation || {}
-  const mapUrl = buildMapUrl(draft.contact || {})
+  const mapQuery = buildMapSearchQuery(draft.contact || {}, draft.identity || {})
+  const mapUrl = buildMapEmbedUrl(mapQuery)
 
   const previewDraft = useMemo(() => ({
     ...draft,
@@ -643,7 +683,7 @@ export default function SalonTemplateEditorPage() {
   const previewGallery = Array.isArray(previewSections?.gallery) ? previewSections.gallery.slice(0, 3) : []
   const previewAboutParagraphs = Array.isArray(previewSections?.about_paragraphs) ? previewSections.about_paragraphs.slice(0, 2) : []
   const previewMasters = Array.isArray(previewSections?.masters) ? previewSections.masters.slice(0, 2) : []
-  const previewMapUrl = previewContact?.map_embed_url || buildMapUrl(previewContact)
+  const previewMapUrl = previewContact?.map_embed_url || buildMapUrl(previewContact, previewIdentity)
 
   const benefits = Array.isArray(draft.sections?.benefits) ? draft.sections.benefits : []
   const popularServices = Array.isArray(draft.sections?.popular_services) ? draft.sections.popular_services : []
@@ -671,8 +711,12 @@ export default function SalonTemplateEditorPage() {
         }
       }
 
-      if (section === "contact" && ["address", "district", "city"].includes(field)) {
-        next.contact.map_embed_url = buildMapUrl(next.contact)
+      if (section === "contact" && ["address", "district", "city", "map_place_query"].includes(field)) {
+        next.contact.map_embed_url = buildMapUrl(next.contact, next.identity)
+      }
+
+      if (section === "identity" && ["salon_name", "title"].includes(field)) {
+        next.contact.map_embed_url = buildMapUrl(next.contact, next.identity)
       }
 
       return next
