@@ -60,6 +60,45 @@ function normalizeMapQueryValue(value) {
     .trim();
 }
 
+function stripMapNoise(value) {
+  return normalizeMapQueryValue(value)
+    .replace(/\b\d+\s*(?:этаж|эт\.?)\b/gi, "")
+    .replace(/\b\d+\s*(?:кабинет|каб\.?)\b/gi, "")
+    .replace(/\b\d+\s*(?:офис|оф\.)\b/gi, "")
+    .replace(/\b\d+\s*-\s*(?:мк\.?|mk\.?)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*,+/g, ",")
+    .replace(/,\s*$/g, "")
+    .trim();
+}
+
+function buildMapSearchQuery(contact = {}, identity = {}) {
+  const placeQuery = normalizeMapQueryValue(contact?.map_place_query || "");
+  if (placeQuery) {
+    return stripMapNoise(placeQuery);
+  }
+
+  const salonName = normalizeMapQueryValue(
+    pickFirstString(
+      identity?.title,
+      identity?.salon_name,
+      identity?.name,
+      "",
+    ),
+  );
+  const address = stripMapNoise(pickFirstString(contact?.address, contact?.full_address, ""));
+  const city = stripMapNoise(pickFirstString(contact?.city, ""));
+  const country = normalizeMapQueryValue(pickFirstString(contact?.country, "Кыргызстан"));
+
+  const parts = [];
+  if (salonName) parts.push(salonName);
+  if (address) parts.push(address);
+  if (city) parts.push(city);
+  parts.push(country);
+  return normalizeMapQueryValue(parts.join(", "));
+}
+
 function extractMapQueryFromUrl(rawUrl) {
   if (typeof rawUrl !== "string" || !rawUrl.trim()) return "";
 
@@ -78,18 +117,18 @@ function extractMapQueryFromUrl(rawUrl) {
   }
 }
 
-function buildEmbedUrlFromQuery(query, fallbackAddress) {
-  const normalizedQuery = normalizeMapQueryValue(query || fallbackAddress);
+function buildEmbedUrlFromQuery(query, fallbackQuery, fallbackAddress) {
+  const normalizedQuery = normalizeMapQueryValue(query || fallbackQuery || fallbackAddress);
   if (!normalizedQuery) {
     return "";
   }
   return createMapEmbedUrl(normalizedQuery);
 }
 
-function normalizeMapEmbedUrl(rawUrl, fallbackAddress) {
+function normalizeMapEmbedUrl(rawUrl, fallbackAddress, fallbackQuery) {
   const value = pickFirstString(rawUrl);
   if (!value) {
-    return createMapEmbedUrl(fallbackAddress);
+    return createMapEmbedUrl(normalizeMapQueryValue(fallbackQuery || fallbackAddress));
   }
 
   if (/output=embed/i.test(value) || /\/maps\/embed/i.test(value)) {
@@ -102,7 +141,9 @@ function normalizeMapEmbedUrl(rawUrl, fallbackAddress) {
         parsed.searchParams.get("daddr") ||
         "";
       if (embedQuery) {
-        return createMapEmbedUrl(normalizeMapQueryValue(embedQuery));
+        return createMapEmbedUrl(
+          normalizeMapQueryValue(fallbackQuery || embedQuery),
+        );
       }
       return value;
     } catch (error) {
@@ -112,10 +153,10 @@ function normalizeMapEmbedUrl(rawUrl, fallbackAddress) {
 
   if (/google\.[^/]+\/maps/i.test(value) || /maps\.google\.com/i.test(value)) {
     const query = extractMapQueryFromUrl(value) || normalizeMapQueryValue(fallbackAddress);
-    return buildEmbedUrlFromQuery(query, fallbackAddress);
+    return buildEmbedUrlFromQuery(query, fallbackQuery, fallbackAddress);
   }
 
-  return buildEmbedUrlFromQuery(value, fallbackAddress);
+  return buildEmbedUrlFromQuery(value, fallbackQuery, fallbackAddress);
 }
 
 function getInitials(name) {
@@ -398,20 +439,31 @@ export default function PublicSalonPage({ slug }) {
     metrics?.bookings_completed,
   );
   const templateHeroImage = pickFirstString(templateViewModel?.heroImage);
-  const defaultMapAddress = pickFirstString(
-    templateViewModel?.defaultMapAddress,
-    [address, district, city].filter(Boolean).join(", "),
-    "Бишкек",
+  const defaultMapQuery = buildMapSearchQuery(
+    {
+      address,
+      city,
+      country: pickFirstString(templateViewModel?.country, salon?.country, "Кыргызстан"),
+      map_place_query: templateViewModel?.mapPlaceQuery || salon?.map_place_query || "",
+    },
+    {
+      title: salonName,
+      salon_name: salonName,
+      name: salonName,
+    },
   );
-  const mapEmbedUrl = normalizeMapEmbedUrl(
-    pickFirstString(
-      templateViewModel?.mapEmbedUrl,
-      salon?.map_embed_url,
-      salon?.google_map_embed_url,
-      salon?.map_url,
-    ),
-    defaultMapAddress,
-  );
+  const mapEmbedUrl = defaultMapQuery
+    ? createMapEmbedUrl(defaultMapQuery)
+    : normalizeMapEmbedUrl(
+        pickFirstString(
+          templateViewModel?.mapEmbedUrl,
+          salon?.map_embed_url,
+          salon?.google_map_embed_url,
+          salon?.map_url,
+        ),
+        "",
+        "",
+      );
 
   const bookingLabel = pickFirstString(
     viewCta.bookingLabel,

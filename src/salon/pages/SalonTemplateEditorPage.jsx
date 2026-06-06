@@ -42,6 +42,7 @@ const EMPTY_DRAFT = {
     address: "",
     district: "",
     city: "",
+    map_place_query: "",
     phone: "",
     whatsapp: "",
     instagram: "",
@@ -156,16 +157,29 @@ function normalizeWhitespace(value) {
     .trim()
 }
 
+function stripMapNoise(value) {
+  return normalizeWhitespace(value)
+    .replace(/\b\d+\s*(?:этаж|эт\.?)\b/gi, "")
+    .replace(/\b\d+\s*(?:кабинет|каб\.?)\b/gi, "")
+    .replace(/\b\d+\s*(?:офис|оф\.)\b/gi, "")
+    .replace(/\b\d+\s*-\s*(?:мк\.?|mk\.?)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*,+/g, ",")
+    .replace(/,\s*$/g, "")
+    .trim()
+}
+
 function buildMapSearchQuery(contact = {}, identity = {}) {
   const placeQuery = normalizeWhitespace(contact.map_place_query || "")
   if (placeQuery) {
-    return placeQuery
+    return stripMapNoise(placeQuery)
   }
 
-  const salonName = normalizeWhitespace(identity.title || identity.salon_name || contact.title || contact.salon_name || "")
-  const address = normalizeWhitespace(contact.address || "")
-  const city = normalizeWhitespace(contact.city || "")
-  const country = "Кыргызстан"
+  const salonName = stripMapNoise(identity.title || identity.salon_name || contact.title || contact.salon_name || "")
+  const address = stripMapNoise(contact.address || contact.full_address || "")
+  const city = stripMapNoise(contact.city || "")
+  const country = normalizeWhitespace(contact.country || "Кыргызстан")
 
   const parts = []
   if (salonName) parts.push(salonName)
@@ -712,11 +726,15 @@ export default function SalonTemplateEditorPage() {
       }
 
       if (section === "contact" && ["address", "district", "city", "map_place_query"].includes(field)) {
-        next.contact.map_embed_url = buildMapUrl(next.contact, next.identity)
+        const mapQuery = buildMapSearchQuery(next.contact, next.identity)
+        next.contact.map_place_query = mapQuery
+        next.contact.map_embed_url = buildMapEmbedUrl(mapQuery)
       }
 
       if (section === "identity" && ["salon_name", "title"].includes(field)) {
-        next.contact.map_embed_url = buildMapUrl(next.contact, next.identity)
+        const mapQuery = buildMapSearchQuery(next.contact, next.identity)
+        next.contact.map_place_query = mapQuery
+        next.contact.map_embed_url = buildMapEmbedUrl(mapQuery)
       }
 
       return next
