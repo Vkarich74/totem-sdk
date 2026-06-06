@@ -60,12 +60,17 @@ function normalizeMapQueryValue(value) {
     .trim();
 }
 
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function stripMapNoise(value) {
   return normalizeMapQueryValue(value)
-    .replace(/\b\d+\s*(?:этаж|эт\.?)\b/gi, "")
-    .replace(/\b\d+\s*(?:кабинет|каб\.?)\b/gi, "")
-    .replace(/\b\d+\s*(?:офис|оф\.)\b/gi, "")
-    .replace(/\b\d+\s*-\s*(?:мк\.?|mk\.?)\b/gi, "")
+    .replace(/\b\d+\s*(?:этаж|эт\.?)\b.*$/gi, "")
+    .replace(/\b\d+\s*(?:кабинет|каб\.?)\b.*$/gi, "")
+    .replace(/\b\d+\s*(?:офис|оф\.)\b.*$/gi, "")
+    .replace(/\b\d+\s*-\s*(?:мк\.?|mk\.?)\b.*$/gi, "")
+    .replace(/\b(?:салон\s+красоты|barbershop|барбершоп|студия)\b.*$/gi, "")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+,/g, ",")
     .replace(/,\s*,+/g, ",")
@@ -73,10 +78,63 @@ function stripMapNoise(value) {
     .trim();
 }
 
+function removeRepeatedPhrase(value, phrase) {
+  const normalizedPhrase = normalizeMapQueryValue(phrase);
+  if (!normalizedPhrase) {
+    return normalizeMapQueryValue(value);
+  }
+  const pattern = new RegExp(`\\b${escapeRegExp(normalizedPhrase)}\\b`, "gi");
+  return normalizeMapQueryValue(value).replace(pattern, "").replace(/\s{2,}/g, " ").trim();
+}
+
+function extractStreetHouseAddress(address) {
+  const normalized = normalizeMapQueryValue(address);
+  if (!normalized) {
+    return "";
+  }
+
+  const streetMatch = normalized.match(/^(.+?\b\d+(?:[\/-]\d+)?(?:[-–—]?[A-Za-zА-Яа-я])?)/u);
+  if (streetMatch?.[1]) {
+    return normalizeMapQueryValue(streetMatch[1]);
+  }
+
+  return normalized;
+}
+
+function cleanMapAddress(value, salonName = "") {
+  let normalized = normalizeMapQueryValue(removeRepeatedPhrase(value, salonName));
+  if (!normalized) {
+    return "";
+  }
+
+  normalized = normalized
+    .replace(/["«»].*$/g, "")
+    .replace(/\b(?:тц|трц|торговый центр)\b.*$/gi, "")
+    .replace(/\b(?:салон\s+красоты|barbershop|барбершоп|студия)\b.*$/gi, "")
+    .replace(/\b\d+\s*(?:этаж|эт\.?|кабинет|каб\.?|офис|оф\.?|мк\.?|mk\.?).*$/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*,+/g, ",")
+    .replace(/,\s*$/g, "")
+    .trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  const primarySegment = normalizeMapQueryValue(normalized.split(",")[0] || normalized);
+  const streetMatch = primarySegment.match(/^(.+?\b\d+(?:[\/-]\d+)?(?:[-–—]?[A-Za-zА-Яа-я])?)/u);
+  if (streetMatch?.[1]) {
+    return normalizeMapQueryValue(streetMatch[1]);
+  }
+
+  return primarySegment;
+}
+
 function buildMapSearchQuery(contact = {}, identity = {}) {
   const placeQuery = normalizeMapQueryValue(contact?.map_place_query || "");
   if (placeQuery) {
-    return stripMapNoise(placeQuery);
+    return placeQuery;
   }
 
   const salonName = normalizeMapQueryValue(
@@ -87,7 +145,9 @@ function buildMapSearchQuery(contact = {}, identity = {}) {
       "",
     ),
   );
-  const address = stripMapNoise(pickFirstString(contact?.address, contact?.full_address, ""));
+  const address = extractStreetHouseAddress(
+    cleanMapAddress(pickFirstString(contact?.address, contact?.full_address, ""), salonName),
+  );
   const city = stripMapNoise(pickFirstString(contact?.city, ""));
   const country = normalizeMapQueryValue(pickFirstString(contact?.country, "Кыргызстан"));
 
