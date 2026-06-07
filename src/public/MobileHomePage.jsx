@@ -100,6 +100,10 @@ function buildAbsoluteOwnerUrl(path) {
   return `https://www.totemv.com${path}`;
 }
 
+function buildPublicSalonUrl(salonSlug) {
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  return safeSlug ? `https://www.totemv.com/salon?slug=${safeSlug}` : "https://www.totemv.com/salon";
+}
 function buildPublicBookingUrl(salonSlug) {
   return `https://app.totemv.com/#/booking?salon=${encodeURIComponent(String(salonSlug || "").trim())}`;
 }
@@ -2335,7 +2339,7 @@ function SalonCard({ salon, catalogState, onToggleCatalog, countryCode, citySlug
       </div>
       <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
         <a
-          href={buildAbsoluteOwnerUrl(`/salon/${encodeURIComponent(slug)}`)}
+          href={buildPublicSalonUrl(slug)}
           style={secondaryLinkStyle}
         >
           Открыть салон
@@ -3232,7 +3236,7 @@ function CitySurface({
                 {salons.map((salon) => {
                   const slug = String(salon?.slug || "").trim();
                   const salonCatalogState = catalogBySlug[slug] || null;
-                  const openSalonHref = buildAbsoluteOwnerUrl(`/salon/${encodeURIComponent(slug)}`);
+                  const openSalonHref = buildPublicSalonUrl(slug);
                   const bookingLinkHref = cityBookingHref(slug);
 
                   return (

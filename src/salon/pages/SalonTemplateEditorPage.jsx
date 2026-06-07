@@ -728,7 +728,7 @@ export default function SalonTemplateEditorPage() {
   }, [slug, hasToken])
 
   const quickLinks = useMemo(() => ({
-    publicPage: slug ? `/salon/${slug}` : "/salon",
+    publicPage: slug ? `https://www.totemv.com/salon?slug=${encodeURIComponent(slug)}` : "https://www.totemv.com/salon",
     bookings: buildSalonPath(slug, "bookings"),
     services: buildSalonPath(slug, "services"),
     dashboard: buildSalonPath(slug, "dashboard")
