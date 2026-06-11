@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getMobileConfig,
   getMobileCityHome,
@@ -102,7 +102,7 @@ function buildAbsoluteOwnerUrl(path) {
 
 function buildPublicSalonUrl(salonSlug) {
   const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
-  return safeSlug ? `https://www.totemv.com/salon?slug=${safeSlug}` : "https://www.totemv.com/salon";
+  return safeSlug ? `https://www.totemv.com/salon/${safeSlug}` : "https://www.totemv.com/salon";
 }
 function buildPublicBookingUrl(salonSlug) {
   return `https://app.totemv.com/#/booking?salon=${encodeURIComponent(String(salonSlug || "").trim())}`;
@@ -3689,3 +3689,4 @@ const helpStatusStyle = {
   color: "#475569",
   lineHeight: 1.45,
 };
+

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+﻿import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import PageHeader from "../../cabinet/PageHeader"
 import PageSection from "../../cabinet/PageSection"
@@ -728,7 +728,7 @@ export default function SalonTemplateEditorPage() {
   }, [slug, hasToken])
 
   const quickLinks = useMemo(() => ({
-    publicPage: slug ? `https://www.totemv.com/salon?slug=${encodeURIComponent(slug)}` : "https://www.totemv.com/salon",
+    publicPage: slug ? `https://www.totemv.com/salon/${encodeURIComponent(slug)}` : "https://www.totemv.com/salon",
     bookings: buildSalonPath(slug, "bookings"),
     services: buildSalonPath(slug, "services"),
     dashboard: buildSalonPath(slug, "dashboard")
@@ -2369,3 +2369,4 @@ const linkTextStyle = {
   color: "#6b7280",
   lineHeight: 1.45
 }
+
