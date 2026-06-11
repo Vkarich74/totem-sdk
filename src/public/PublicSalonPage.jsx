@@ -243,7 +243,22 @@ function getInitials(name) {
     .join("");
 }
 
+function resolvePublicSlug(slug) {
+  const pathParts = String(window.location.pathname || "").split("/").filter(Boolean);
+  if (typeof slug === "string" && slug.trim()) {
+    return slug.trim();
+  }
+
+  if (pathParts[0] === "salon" && pathParts[1]) {
+    return pathParts[1];
+  }
+
+  const params = new URLSearchParams(window.location.search || "");
+  return String(params.get("slug") || "").trim();
+}
+
 export default function PublicSalonPage({ slug }) {
+  const resolvedSlug = resolvePublicSlug(slug);
   const navigate = useNavigate();
 
   const [salon, setSalon] = useState(null);
@@ -272,7 +287,7 @@ export default function PublicSalonPage({ slug }) {
   }, []);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!resolvedSlug) return;
 
     async function load() {
       setLoading(true);
@@ -283,7 +298,7 @@ export default function PublicSalonPage({ slug }) {
       });
 
       try {
-        const salonData = await getSalon(slug);
+        const salonData = await getSalon(resolvedSlug);
 
         if (!salonData) {
           setNotFound(true);
@@ -291,9 +306,9 @@ export default function PublicSalonPage({ slug }) {
         }
 
         const [mastersData, metricsData, publishedData] = await Promise.all([
-          getMasters(slug),
-          getMetrics(slug),
-          getSalonTemplatePublished(slug).catch(() => ({ ok: false })),
+          getMasters(resolvedSlug),
+          getMetrics(resolvedSlug),
+          getSalonTemplatePublished(resolvedSlug).catch(() => ({ ok: false })),
         ]);
 
         const nextMasters = Array.isArray(mastersData) ? mastersData : [];
@@ -377,7 +392,7 @@ export default function PublicSalonPage({ slug }) {
     }
 
     load();
-  }, [slug]);
+  }, [resolvedSlug]);
 
   const templateBuild = useMemo(() => {
     if (!publishedTemplate) {

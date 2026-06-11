@@ -56,6 +56,20 @@ function hasAnyText(values) {
   return values.some((value) => hasText(value));
 }
 
+function resolvePublicSlug(slug) {
+  const pathParts = String(window.location.pathname || "").split("/").filter(Boolean);
+  if (typeof slug === "string" && slug.trim()) {
+    return slug.trim();
+  }
+
+  if (pathParts[0] === "master" && pathParts[1]) {
+    return pathParts[1];
+  }
+
+  const params = new URLSearchParams(window.location.search || "");
+  return String(params.get("slug") || "").trim();
+}
+
 
 function normalizeMetrics(items) {
   return asArray(items)
@@ -166,6 +180,7 @@ function ActionLink({ href, children, style, ...rest }) {
 }
 
 export default function PublicMasterPage({ slug }) {
+  const resolvedSlug = resolvePublicSlug(slug);
   const [remoteState, setRemoteState] = useState({
     loading: true,
     ok: false,
@@ -178,7 +193,7 @@ export default function PublicMasterPage({ slug }) {
     let cancelled = false;
 
     async function loadPublicPayload() {
-      if (!slug) {
+      if (!resolvedSlug) {
         setRemoteState({
           loading: false,
           ok: false,
@@ -190,14 +205,14 @@ export default function PublicMasterPage({ slug }) {
       }
 
       try {
-        const response = await fetch(`${PUBLIC_API_BASE}/masters/${slug}`);
+        const response = await fetch(`${PUBLIC_API_BASE}/masters/${resolvedSlug}`);
         const json = await response.json();
 
         if (cancelled) return;
 
         if (!response.ok) {
           console.error("PublicMasterPage: public master fetch failed", {
-            slug,
+            slug: resolvedSlug,
             status: response.status,
           });
           setRemoteState({
@@ -212,7 +227,7 @@ export default function PublicMasterPage({ slug }) {
 
         if (!json?.ok) {
           console.error("PublicMasterPage: public master payload api not ok", {
-            slug,
+            slug: resolvedSlug,
             status: response.status,
             json,
           });
@@ -259,7 +274,7 @@ export default function PublicMasterPage({ slug }) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [resolvedSlug]);
 
   const view = useMemo(() => {
     const normalized = normalizeMasterTemplatePayload

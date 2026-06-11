@@ -266,6 +266,24 @@ function MobileLiteAdminDynamicRoute() {
   return <MobileLiteAdminPage roleType={roleType} slug={slug} />;
 }
 
+function CanonicalPublicRedirect({ type, slug }) {
+  useEffect(() => {
+    if (!type || !slug) {
+      return;
+    }
+
+    const safeType = String(type).trim();
+    const safeSlug = String(slug).trim();
+    const nextUrl = `/${safeType}/${encodeURIComponent(safeSlug)}`;
+
+    if (window.location.pathname !== nextUrl || window.location.search) {
+      window.location.replace(nextUrl);
+    }
+  }, [type, slug]);
+
+  return null;
+}
+
 function getPublicRouteFromPathname() {
   const pathParts = getPathParts();
   const hashParts = getHashParts();
@@ -285,11 +303,25 @@ function getPublicRouteFromPathname() {
   }
 
   if (pathParts[0] === "master" && pathParts[1] && !MASTER_STATIC_SEGMENTS.has(pathParts[1])) {
-    return { type: "master", slug: pathParts[1] };
+    return { type: "master", slug: pathParts[1], source: "path" };
+  }
+
+  if (pathParts[0] === "master") {
+    const slug = getSlugFromSearchForType("master");
+    if (slug) {
+      return { type: "master", slug, source: "query" };
+    }
   }
 
   if (pathParts[0] === "salon" && pathParts[1] && !SALON_STATIC_SEGMENTS.has(pathParts[1])) {
-    return { type: "salon", slug: pathParts[1] };
+    return { type: "salon", slug: pathParts[1], source: "path" };
+  }
+
+  if (pathParts[0] === "salon") {
+    const slug = getSlugFromSearchForType("salon");
+    if (slug) {
+      return { type: "salon", slug, source: "query" };
+    }
   }
 
   if (pathParts[0] === "mobile") {
@@ -360,6 +392,10 @@ function PublicPathRouter() {
 
   if (!publicRoute) {
     return null;
+  }
+
+  if (publicRoute.source === "query") {
+    return <CanonicalPublicRedirect type={publicRoute.type} slug={publicRoute.slug} />;
   }
 
   if (publicRoute.type === "master") {
