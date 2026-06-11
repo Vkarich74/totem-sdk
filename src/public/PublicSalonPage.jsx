@@ -298,7 +298,8 @@ export default function PublicSalonPage({ slug }) {
       });
 
       try {
-        const salonData = await getSalon(resolvedSlug);
+        const rawSalonData = await getSalon(resolvedSlug);
+        const salonData = rawSalonData?.salon || rawSalonData?.data || rawSalonData?.payload || rawSalonData;
 
         if (!salonData) {
           setNotFound(true);

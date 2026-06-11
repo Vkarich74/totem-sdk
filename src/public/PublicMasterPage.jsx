@@ -187,6 +187,7 @@ export default function PublicMasterPage({ slug }) {
     payload: null,
     errorCode: "",
     statusCode: 0,
+    raw: null,
   });
 
   useEffect(() => {
@@ -250,6 +251,7 @@ export default function PublicMasterPage({ slug }) {
           loading: false,
           ok: true,
           payload,
+          raw: json,
           errorCode: "",
           statusCode: response.status || 200,
         });
@@ -283,19 +285,43 @@ export default function PublicMasterPage({ slug }) {
     return buildMasterTemplateViewModel(normalized);
   }, [remoteState.payload]);
 
-  const masterName = view.masterName;
-  const profession = view.profession;
-  const city = view.city;
-  const district = view.district;
-  const address = view.address;
-  const schedule = view.schedule;
-  const phone = view.phone;
-  const mapUrl = view.mapUrl;
+  const rawMaster = useMemo(() => {
+    const raw = isObject(remoteState.raw) ? remoteState.raw : {};
+    if (isObject(raw.master)) return raw.master;
+    if (isObject(raw.data)) return raw.data;
+    if (isObject(raw.owner)) return raw.owner;
+    if (isObject(raw.payload?.master)) return raw.payload.master;
+    if (isObject(raw.payload?.identity)) return raw.payload.identity;
+    return {};
+  }, [remoteState.raw]);
+
+  const masterName = pickFirstString(
+    view.masterName,
+    rawMaster.master_name,
+    rawMaster.name,
+    rawMaster.title,
+    rawMaster.display_name,
+    resolvedSlug,
+  );
+  const profession = pickFirstString(
+    view.profession,
+    rawMaster.profession,
+    rawMaster.specialization,
+    rawMaster.role,
+    rawMaster.position,
+    "Мастер",
+  );
+  const city = pickFirstString(view.city, rawMaster.city);
+  const district = pickFirstString(view.district, rawMaster.district);
+  const address = pickFirstString(view.address, rawMaster.address, rawMaster.full_address);
+  const schedule = pickFirstString(view.schedule, rawMaster.schedule, rawMaster.schedule_text);
+  const phone = pickFirstString(view.phone, rawMaster.phone, rawMaster.whatsapp);
+  const mapUrl = pickFirstString(view.mapUrl, rawMaster.map_url, rawMaster.mapUrl);
   const heroImage = view.heroImage;
   const heroAlt = view.heroAlt;
   const heroBadge = view.heroBadge;
-  const subtitle = view.subtitle;
-  const description = view.description;
+  const subtitle = pickFirstString(view.subtitle, rawMaster.subtitle, rawMaster.short_bio);
+  const description = pickFirstString(view.description, rawMaster.description, rawMaster.bio, rawMaster.about);
   const metrics = normalizeMetrics(view.metrics);
   const benefits = normalizeBenefits(view.benefits);
   const featuredServices = normalizeFeaturedServices(view.featuredServices);
@@ -305,7 +331,12 @@ export default function PublicMasterPage({ slug }) {
   const aboutParagraphs = normalizeAboutParagraphs(view.aboutParagraphs);
   const stats = normalizeStats(view.stats);
   const bookingBand = normalizeBookingBand(view.bookingBand);
-  const bookingUrl = view.bookingUrl;
+  const bookingUrl = pickFirstString(
+    view.bookingUrl,
+    rawMaster.booking_url,
+    rawMaster.bookingUrl,
+    resolvedSlug ? `https://app.totemv.com/#/booking?master=${encodeURIComponent(resolvedSlug)}` : "",
+  );
   const bookingLabel = pickFirstString(view.bookingLabel, "Записаться к мастеру");
   const servicesLabel = pickFirstString(view.servicesLabel, "Смотреть услуги");
   const servicesAnchor = view.servicesAnchor;

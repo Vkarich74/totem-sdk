@@ -394,10 +394,6 @@ function PublicPathRouter() {
     return null;
   }
 
-  if (publicRoute.source === "query") {
-    return <CanonicalPublicRedirect type={publicRoute.type} slug={publicRoute.slug} />;
-  }
-
   if (publicRoute.type === "master") {
     return <PublicMasterPage slug={publicRoute.slug} />;
   }
