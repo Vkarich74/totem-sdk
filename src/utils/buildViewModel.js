@@ -431,6 +431,14 @@ export function buildMasterTemplateViewModel(payload){
   const cta = safeObject(normalized.cta);
   const images = safeObject(normalized.images);
     const resolvedHeroImage = resolveTemplateAsset(images, images.hero);
+  const resolvedAvatarImage = resolveTemplateAsset(images, images.avatar, {
+    width: 700,
+    height: 700,
+    crop: "fill",
+    gravity: "face",
+    quality: "auto",
+    format: "auto",
+  });
 
   const metrics = filterActiveItems(normalized.metrics)
     .map((item) => ({
@@ -512,6 +520,8 @@ export function buildMasterTemplateViewModel(payload){
     mapUrl: pickFirstString(location.map_url),
     heroImage: resolvedHeroImage,
     heroAlt: pickFirstString(images?.hero?.alt, identity.master_name),
+    avatarImage: resolvedAvatarImage,
+    avatarAlt: pickFirstString(images?.avatar?.alt, identity.master_name),
     heroBadge: pickFirstString(identity.hero_badge),
     subtitle: pickFirstString(identity.subtitle),
     description: pickFirstString(identity.description),

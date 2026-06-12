@@ -282,6 +282,7 @@ function normalizeMasterCta(cta = {}) {
 function normalizeMasterImages(images = {}) {
   return {
     hero: normalizeImageSlot(images.hero),
+    avatar: normalizeImageSlot(images.avatar),
     logo: normalizeImageSlot(images.logo),
   };
 }

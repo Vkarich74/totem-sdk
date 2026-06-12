@@ -319,6 +319,8 @@ export default function PublicMasterPage({ slug }) {
   const mapUrl = pickFirstString(view.mapUrl, rawMaster.map_url, rawMaster.mapUrl);
   const heroImage = view.heroImage;
   const heroAlt = view.heroAlt;
+  const avatarImage = view.avatarImage || view.avatarUrl || view.masterAvatar || "";
+  const avatarAlt = view.avatarAlt || `${masterName} — ${profession}`;
   const heroBadge = view.heroBadge;
   const subtitle = pickFirstString(view.subtitle, rawMaster.subtitle, rawMaster.short_bio);
   const description = pickFirstString(view.description, rawMaster.description, rawMaster.bio, rawMaster.about);
@@ -527,7 +529,21 @@ export default function PublicMasterPage({ slug }) {
                     flexShrink: 0,
                   }}
                 >
-                  {(masterName || "•").slice(0, 1)}
+                  {avatarImage ? (
+                    <img
+                      src={avatarImage}
+                      alt={avatarAlt}
+                      loading="eager"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "block",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    (masterName || "•").slice(0, 1)
+                  )}
                 </div>
 
                 <div>
