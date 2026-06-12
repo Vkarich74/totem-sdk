@@ -404,7 +404,7 @@ export default function PublicMasterPage({ slug }) {
     color: palette.textMain,
     fontFamily:
       'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    paddingBottom: hasStickyBlock ? "110px" : "32px",
+    paddingBottom: "32px",
   };
 
   const containerStyle = {
@@ -1118,7 +1118,7 @@ export default function PublicMasterPage({ slug }) {
       ) : null}
 
       {hasBookingBand ? (
-        <section id="booking" style={{ paddingBottom: hasStickyBlock ? "110px" : "44px" }}>
+        <section id="booking" style={{ paddingBottom: "44px" }}>
           <div style={containerStyle}>
             <div
               style={{
