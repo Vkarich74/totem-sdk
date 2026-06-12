@@ -238,19 +238,20 @@ export async function loginWithPassword({ email = "", phone = "", password = "" 
   if(!r.ok) return { ok:false, error:"AUTH_LOGIN_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"AUTH_LOGIN_API_NOT_OK", detail:j };
-  if(!j.access_token){
+  const accessToken = String(j.access_token || j.token || "").trim();
+  if(!accessToken){
     return { ok:false, error:"AUTH_LOGIN_NO_TOKEN", detail:j };
   }
 
-  if(j.access_token){
-    setAuthAccessToken(j.access_token);
+  if(accessToken){
+    setAuthAccessToken(accessToken);
   }else{
     clearAuthAccessToken();
   }
 
   return {
     ok:true,
-    access_token:j.access_token,
+    access_token:accessToken,
     token_type:j.token_type || "Bearer",
     auth:j.auth || null,
     auth_context:j.auth_context || null
@@ -286,19 +287,20 @@ export async function authLogin({ login = "", password = "", role = "", slug = "
   if(!r.ok) return { ok:false, error:"AUTH_LOGIN_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"AUTH_LOGIN_API_NOT_OK", detail:j };
-  if(!j.access_token){
+  const accessToken = String(j.access_token || j.token || "").trim();
+  if(!accessToken){
     return { ok:false, error:"AUTH_LOGIN_NO_TOKEN", detail:j };
   }
 
-  if(j.access_token){
-    setAuthAccessToken(j.access_token);
+  if(accessToken){
+    setAuthAccessToken(accessToken);
   }else{
     clearAuthAccessToken();
   }
 
   return {
     ok:true,
-    access_token:j.access_token,
+    access_token:accessToken,
     token_type:j.token_type || "Bearer",
     auth:j.auth || null,
     auth_context:j.auth_context || null
@@ -361,15 +363,16 @@ export async function verifyAuth(payload){
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"AUTH_VERIFY_API_NOT_OK", detail:j };
 
-  if(j.access_token){
-    setAuthAccessToken(j.access_token);
+  const accessToken = String(j.access_token || j.token || "").trim();
+  if(accessToken){
+    setAuthAccessToken(accessToken);
   }else{
     clearAuthAccessToken();
   }
 
   return {
     ok:true,
-    access_token:j.access_token || "",
+    access_token:accessToken,
     token_type:j.token_type || "Bearer",
     auth:j.auth || null
   };
