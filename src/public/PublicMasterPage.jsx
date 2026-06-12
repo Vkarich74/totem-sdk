@@ -355,7 +355,15 @@ export default function PublicMasterPage({ slug }) {
   );
   const bookingLabel = pickFirstString(view.bookingLabel, "Записаться к мастеру");
   const servicesLabel = pickFirstString(view.servicesLabel, "Смотреть услуги");
+  const toSamePageHref = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    if (raw.startsWith("#") || raw.startsWith("/") || /^https?:\/\//i.test(raw) || raw.startsWith("tel:") || raw.startsWith("mailto:")) return raw;
+    return `#${raw.replace(/^#+/, "")}`;
+  };
   const servicesAnchor = view.servicesAnchor;
+  const servicesHref = toSamePageHref(servicesAnchor);
+  const bookingBandServicesHref = toSamePageHref(bookingBand.services_anchor);
   const mapLabel = view.mapLabel;
   const ratingValue = view.ratingValue;
   const reviewCount = view.reviewCount;
@@ -370,7 +378,7 @@ export default function PublicMasterPage({ slug }) {
   const hasHeroInfo = hasAnyText([heroBadge, masterName, profession, subtitle, description, heroImage]);
   const hasLocationCard = hasAnyText([address, district, schedule]);
   const hasTrustCard = hasAnyText([ratingValue, reviewCount, trustNote]);
-  const hasHeroActions = (hasText(bookingLabel) && hasText(bookingUrl)) || (hasText(servicesLabel) && hasText(servicesAnchor));
+  const hasHeroActions = (hasText(bookingLabel) && hasText(bookingUrl)) || (hasText(servicesLabel) && hasText(servicesHref));
   const hasBenefits = benefits.length > 0;
   const hasMetrics = metrics.length > 0;
   const hasFeaturedServices = featuredServices.length > 0;
@@ -783,7 +791,7 @@ export default function PublicMasterPage({ slug }) {
                       <ActionLink href={bookingUrl} style={primaryButtonStyle}>
                         {bookingLabel}
                       </ActionLink>
-                      <ActionLink href={servicesAnchor} style={secondaryButtonStyle}>
+                      <ActionLink href={servicesHref} style={secondaryButtonStyle}>
                         {servicesLabel}
                       </ActionLink>
                     </div>
@@ -954,7 +962,7 @@ export default function PublicMasterPage({ slug }) {
       ) : null}
 
       {hasFeaturedServices ? (
-        <section style={{ paddingBottom: "44px" }}>
+        <section id="services" style={{ paddingBottom: "44px" }}>
           <div style={containerStyle}>
             <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
               <h2 style={sectionTitleStyle}>{UI_TEXT.featuredServicesTitle}</h2>
@@ -1033,7 +1041,7 @@ export default function PublicMasterPage({ slug }) {
       ) : null}
 
       {hasServiceCatalog ? (
-        <section id="services" style={{ paddingBottom: "44px" }}>
+        <section id="service-catalog" style={{ paddingBottom: "44px" }}>
           <div style={containerStyle}>
             <div style={{ ...cardStyle, padding: "16px" }}>
               <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
@@ -1231,12 +1239,12 @@ export default function PublicMasterPage({ slug }) {
                 </div>
 
                 {(hasText(bookingBand.booking_cta_label) && hasText(bookingBand.booking_cta_url)) ||
-                (hasText(bookingBand.services_cta_label) && hasText(bookingBand.services_anchor)) ? (
+                (hasText(bookingBand.services_cta_label) && hasText(bookingBandServicesHref)) ? (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "flex-start" }}>
                     <ActionLink href={bookingBand.booking_cta_url} style={primaryButtonStyle}>
                       {bookingBand.booking_cta_label}
                     </ActionLink>
-                    <ActionLink href={bookingBand.services_anchor} style={secondaryButtonStyle}>
+                    <ActionLink href={bookingBandServicesHref} style={secondaryButtonStyle}>
                       {bookingBand.services_cta_label}
                     </ActionLink>
                   </div>
