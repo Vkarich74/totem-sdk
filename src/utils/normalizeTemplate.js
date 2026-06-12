@@ -284,6 +284,7 @@ function normalizeMasterImages(images = {}) {
   return {
     hero: normalizeImageSlot(images.hero),
     avatar: normalizeImageSlot(images.avatar),
+    service_card: normalizeSectionItems(images.service_card),
     logo: normalizeImageSlot(images.logo),
   };
 }

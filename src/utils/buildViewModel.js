@@ -518,6 +518,14 @@ export function buildMasterTemplateViewModel(payload){
     }))
     .filter((item) => item.imageUrl);
 
+  const serviceCardImages = filterActiveItems(images.service_card)
+    .map((item, index) => ({
+      id: item?.id || item?.image_asset_id || 'service_card_' + (index + 1),
+      imageUrl: resolveTemplateAsset(images, item),
+      alt: pickFirstString(item?.alt, (identity.master_name || 'Мастер') + ' — пример услуги ' + (index + 1)),
+    }))
+    .filter((item) => item.imageUrl);
+
   return {
     masterName: pickFirstString(identity.master_name),
     profession: pickFirstString(identity.profession),
@@ -542,6 +550,7 @@ export function buildMasterTemplateViewModel(payload){
     badges,
     aboutParagraphs,
     portfolioImages,
+    serviceCardImages,
     stats: safeStats,
     bookingBand,
     bookingUrl: pickFirstString(cta.booking_url),

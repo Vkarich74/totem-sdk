@@ -338,6 +338,13 @@ export default function PublicMasterPage({ slug }) {
       alt: isObject(item) ? pickFirstString(item.alt, `${masterName} — работа ${index + 1}`) : `${masterName} — работа ${index + 1}`,
     }))
     .filter((item) => item.imageUrl);
+  const serviceCardImages = asArray(view.serviceCardImages)
+    .map((item, index) => ({
+      id: isObject(item) ? asString(item.id, 'service_card_' + (index + 1)) : 'service_card_' + (index + 1),
+      imageUrl: isObject(item) ? pickFirstString(item.imageUrl, item.url, item.src, item.image_url, item.secure_url) : asString(item),
+      alt: isObject(item) ? pickFirstString(item.alt, masterName + ' — пример услуги ' + (index + 1)) : masterName + ' — пример услуги ' + (index + 1),
+    }))
+    .filter((item) => item.imageUrl);
   const stats = normalizeStats(view.stats);
   const bookingBand = normalizeBookingBand(view.bookingBand);
   const bookingUrl = pickFirstString(
@@ -370,6 +377,7 @@ export default function PublicMasterPage({ slug }) {
   const hasServiceCatalog = serviceCatalog.length > 0;
   const hasReviews = reviews.length > 0;
   const hasPortfolio = portfolioImages.length > 0;
+  const hasServiceCards = serviceCardImages.length > 0;
   const hasAbout = aboutParagraphs.length > 0;
   const statsItems = [
     { value: stats.years, label: UI_TEXT.statsYearsLabel },
@@ -921,6 +929,23 @@ export default function PublicMasterPage({ slug }) {
                       objectFit: "cover",
                     }}
                   />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {hasServiceCards ? (
+        <section style={{ paddingBottom: '44px' }}>
+          <div style={containerStyle}>
+            <div style={{ display: 'grid', gap: '6px', marginBottom: '12px' }}>
+              <h2 style={sectionTitleStyle}>Примеры услуг</h2>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+              {serviceCardImages.map((item) => (
+                <div key={item.id || item.imageUrl} style={{ ...cardStyle, overflow: 'hidden', background: palette.card }}>
+                  <img src={item.imageUrl} alt={item.alt} loading='lazy' style={{ width: '100%', aspectRatio: '4 / 3', display: 'block', objectFit: 'cover' }} />
                 </div>
               ))}
             </div>
