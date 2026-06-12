@@ -617,7 +617,7 @@ export default function PublicSalonPage({ slug }) {
       "linear-gradient(180deg, rgba(17,24,39,0.02) 0%, rgba(79,70,229,0.08) 48%, rgba(124,58,237,0.08) 100%)",
   };
 
-  const pagePaddingBottom = isMobile ? 88 : 32;
+  const pagePaddingBottom = 32;
 
   const container = {
     width: "100%",
@@ -2100,34 +2100,6 @@ export default function PublicSalonPage({ slug }) {
         </div>
       </section>
 
-      {isMobile && (
-        <div
-          style={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 20,
-            padding: 12,
-            background: "rgba(248,245,241,0.96)",
-            backdropFilter: "blur(10px)",
-            borderTop: `1px solid ${palette.border}`,
-          }}
-        >
-          <div style={{ maxWidth: 1140, margin: "0 auto" }}>
-            <button
-              onClick={goToBooking}
-              style={{
-                ...primaryButton,
-                width: "100%",
-                boxShadow: "0 -2px 10px rgba(35,32,28,0.06)",
-              }}
-            >
-              {bookingLabel}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

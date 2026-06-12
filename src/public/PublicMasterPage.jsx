@@ -341,8 +341,6 @@ export default function PublicMasterPage({ slug }) {
   const servicesLabel = pickFirstString(view.servicesLabel, "Смотреть услуги");
   const servicesAnchor = view.servicesAnchor;
   const mapLabel = view.mapLabel;
-  const stickyLabel = view.stickyLabel;
-  const stickySubline = view.stickySubline;
   const ratingValue = view.ratingValue;
   const reviewCount = view.reviewCount;
   const trustNote = view.trustNote;
@@ -383,7 +381,6 @@ export default function PublicMasterPage({ slug }) {
       bookingBand.services_cta_label,
       bookingBand.services_anchor,
     ]);
-  const hasStickyBlock = hasAnyText([masterName, profession, stickySubline, stickyLabel, bookingUrl]);
 
   const palette = {
     bg: "#F4F7FB",
@@ -1161,54 +1158,6 @@ export default function PublicMasterPage({ slug }) {
         </section>
       ) : null}
 
-      {hasStickyBlock ? (
-        <div
-          style={{
-            position: "fixed",
-            left: "16px",
-            right: "16px",
-            bottom: "16px",
-            zIndex: 30,
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            style={{
-              maxWidth: "860px",
-              margin: "0 auto",
-              pointerEvents: "auto",
-              background: "rgba(255,255,255,0.92)",
-              border: `1px solid ${palette.border}`,
-              boxShadow: "0 16px 38px rgba(53, 29, 45, 0.14)",
-              backdropFilter: "blur(12px)",
-              borderRadius: "24px",
-              padding: "12px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              {hasText(titleLine) ? (
-                <div style={{ fontSize: "14px", fontWeight: 700, color: palette.textMain }}>
-                  {titleLine.replace(" — ", " • ")}
-                </div>
-              ) : null}
-              {hasText(stickySubline) ? (
-                <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "2px" }}>
-                  {stickySubline}
-                </div>
-              ) : null}
-            </div>
-
-            <ActionLink href={bookingUrl} style={primaryButtonStyle}>
-              {stickyLabel}
-            </ActionLink>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
