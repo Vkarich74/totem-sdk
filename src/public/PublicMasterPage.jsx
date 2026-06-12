@@ -331,6 +331,13 @@ export default function PublicMasterPage({ slug }) {
   const reviews = normalizeReviews(view.reviews);
   const badges = normalizeBadges(view.badges);
   const aboutParagraphs = normalizeAboutParagraphs(view.aboutParagraphs);
+  const portfolioImages = asArray(view.portfolioImages)
+    .map((item, index) => ({
+      id: isObject(item) ? asString(item.id, `portfolio_${index + 1}`) : `portfolio_${index + 1}`,
+      imageUrl: isObject(item) ? pickFirstString(item.imageUrl, item.url, item.src, item.image_url, item.secure_url) : asString(item),
+      alt: isObject(item) ? pickFirstString(item.alt, `${masterName} — работа ${index + 1}`) : `${masterName} — работа ${index + 1}`,
+    }))
+    .filter((item) => item.imageUrl);
   const stats = normalizeStats(view.stats);
   const bookingBand = normalizeBookingBand(view.bookingBand);
   const bookingUrl = pickFirstString(
@@ -362,6 +369,7 @@ export default function PublicMasterPage({ slug }) {
   const hasFeaturedServices = featuredServices.length > 0;
   const hasServiceCatalog = serviceCatalog.length > 0;
   const hasReviews = reviews.length > 0;
+  const hasPortfolio = portfolioImages.length > 0;
   const hasAbout = aboutParagraphs.length > 0;
   const statsItems = [
     { value: stats.years, label: UI_TEXT.statsYearsLabel },
@@ -879,6 +887,40 @@ export default function PublicMasterPage({ slug }) {
                       {item.label}
                     </div>
                   ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {hasPortfolio ? (
+        <section style={{ paddingBottom: "44px" }}>
+          <div style={containerStyle}>
+            <div style={{ display: "grid", gap: "6px", marginBottom: "12px" }}>
+              <h2 style={sectionTitleStyle}>Портфолио работ</h2>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "10px",
+              }}
+            >
+              {portfolioImages.map((item) => (
+                <div key={item.id || item.imageUrl} style={{ ...cardStyle, overflow: "hidden", background: palette.card }}>
+                  <img
+                    src={item.imageUrl}
+                    alt={item.alt}
+                    loading="lazy"
+                    style={{
+                      width: "100%",
+                      aspectRatio: "4 / 3",
+                      display: "block",
+                      objectFit: "cover",
+                    }}
+                  />
                 </div>
               ))}
             </div>

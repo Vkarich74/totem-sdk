@@ -509,6 +509,15 @@ export function buildMasterTemplateViewModel(payload){
     services_anchor: pickFirstString(sections?.booking_band?.services_anchor),
   };
 
+  const portfolioImages = filterActiveItems(sections.portfolio)
+    .sort((a, b) => Number(a?.slot_index || 0) - Number(b?.slot_index || 0))
+    .map((item, index) => ({
+      id: item?.id || item?.image_asset_id || `portfolio_${index + 1}`,
+      imageUrl: resolveTemplateAsset(images, item),
+      alt: pickFirstString(item?.alt, `${identity.master_name || "Мастер"} — работа ${index + 1}`),
+    }))
+    .filter((item) => item.imageUrl);
+
   return {
     masterName: pickFirstString(identity.master_name),
     profession: pickFirstString(identity.profession),
@@ -532,6 +541,7 @@ export function buildMasterTemplateViewModel(payload){
     reviews,
     badges,
     aboutParagraphs,
+    portfolioImages,
     stats: safeStats,
     bookingBand,
     bookingUrl: pickFirstString(cta.booking_url),

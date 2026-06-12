@@ -255,6 +255,7 @@ function normalizeMasterSections(sections = {}) {
     service_catalog: normalizeSectionItems(sections.service_catalog),
     reviews: normalizeSectionItems(sections.reviews),
     about_paragraphs: normalizeSectionItems(sections.about_paragraphs),
+    portfolio: normalizeSectionItems(sections.portfolio),
     booking_band: asObject(sections.booking_band),
     badges: normalizeSectionItems(sections.badges),
   };
