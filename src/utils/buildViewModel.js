@@ -430,14 +430,7 @@ export function buildMasterTemplateViewModel(payload){
   const stats = safeObject(normalized.stats);
   const cta = safeObject(normalized.cta);
   const images = safeObject(normalized.images);
-  const resolvedHeroImage = resolveTemplateAsset(images, images.hero, {
-    width: 1400,
-    height: 1400,
-    crop: "fill",
-    gravity: "face",
-    quality: "auto",
-    format: "auto",
-  });
+    const resolvedHeroImage = resolveTemplateAsset(images, images.hero);
 
   const metrics = filterActiveItems(normalized.metrics)
     .map((item) => ({

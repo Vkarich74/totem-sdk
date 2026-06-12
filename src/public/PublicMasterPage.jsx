@@ -486,9 +486,10 @@ export default function PublicMasterPage({ slug }) {
       loading="eager"
       style={{
         width: "100%",
-        height: "100%",
+        height: "auto",
         display: "block",
-        objectFit: "cover",
+        objectFit: "contain",
+        objectPosition: "center center",
       }}
     />
   ) : null;
@@ -565,7 +566,7 @@ export default function PublicMasterPage({ slug }) {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                  gridTemplateColumns: "1fr",
                   gap: "22px",
                   alignItems: "stretch",
                 }}
@@ -760,10 +761,15 @@ export default function PublicMasterPage({ slug }) {
                 <div
                   style={{
                     position: "relative",
-                    minHeight: "560px",
+                    height: "auto",
+                    minHeight: 0,
+                    width: "100%",
+                    maxWidth: "100%",
+                    margin: "0 auto",
                     borderRadius: "24px",
                     overflow: "hidden",
-                    background: heroImage ? "#EEF2FF" : "transparent",
+                    background: heroImage ? "linear-gradient(135deg, #070604 0%, #17110c 52%, #050403 100%)" : "transparent",
+                    display: "block",
                   }}
                 >
                   {heroVisual}
