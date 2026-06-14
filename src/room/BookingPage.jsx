@@ -12,7 +12,7 @@ import {
   MobileEmptyState,
   MobileStatCard
 } from "../mobile/MobileUi.jsx";
-import { createPendingOwnerQrPayment, getOwnerQrPaymentOptions } from "../api/internal.js";
+import { createPendingOwnerQrPayment, getMasterServices, getOwnerQrPaymentOptions } from "../api/internal.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const BOOKING_PAYMENT_STATE_PREFIX = "TOTEM_BOOKING_PAYMENT_STATE";
@@ -284,35 +284,93 @@ function getSelectedServicePrice(services, selectedService) {
   return Number.isFinite(price) && price > 0 ? price : null;
 }
 
+function addCompareValue(target, value) {
+  if (value === undefined || value === null) return;
+
+  const normalized = String(value).trim();
+  if (!normalized) return;
+
+  target.add(normalized);
+}
+
 function getMasterCompareValues(master) {
-  return [
-    master?.id,
-    master?.master_id,
-    master?.masterId,
-    master?.slug,
-    master?.master_slug,
-    master?.masterSlug
-  ]
-    .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
-    .map(String);
+  const values = new Set();
+
+  addCompareValue(values, master?.id);
+  addCompareValue(values, master?.master_id);
+  addCompareValue(values, master?.masterId);
+  addCompareValue(values, master?.slug);
+  addCompareValue(values, master?.master_slug);
+  addCompareValue(values, master?.masterSlug);
+
+  return [...values];
 }
 
 function getServiceMasterCompareValues(service) {
-  return [
-    service?.master_id,
-    service?.masterId,
-    service?.owner_id,
-    service?.ownerId,
-    service?.master?.id,
-    service?.master?.master_id,
-    service?.master?.slug,
-    service?.master_slug,
-    service?.masterSlug,
-    service?.master?.master_slug,
-    service?.master?.masterSlug
-  ]
-    .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
-    .map(String);
+  const values = new Set();
+
+  addCompareValue(values, service?.master_id);
+  addCompareValue(values, service?.masterId);
+  addCompareValue(values, service?.owner_id);
+  addCompareValue(values, service?.ownerId);
+  addCompareValue(values, service?.master?.id);
+  addCompareValue(values, service?.master?.master_id);
+  addCompareValue(values, service?.master?.masterId);
+  addCompareValue(values, service?.master?.slug);
+  addCompareValue(values, service?.master_slug);
+  addCompareValue(values, service?.masterSlug);
+  addCompareValue(values, service?.master?.master_slug);
+  addCompareValue(values, service?.master?.masterSlug);
+
+  for (const masterId of Array.isArray(service?.master_ids) ? service.master_ids : []) {
+    addCompareValue(values, masterId);
+  }
+
+  for (const masterId of Array.isArray(service?.masterIds) ? service.masterIds : []) {
+    addCompareValue(values, masterId);
+  }
+
+  for (const masterSlug of Array.isArray(service?.master_slugs) ? service.master_slugs : []) {
+    addCompareValue(values, masterSlug);
+  }
+
+  for (const masterSlug of Array.isArray(service?.masterSlugs) ? service.masterSlugs : []) {
+    addCompareValue(values, masterSlug);
+  }
+
+  for (const masterItem of Array.isArray(service?.masters) ? service.masters : []) {
+    addCompareValue(values, masterItem?.id);
+    addCompareValue(values, masterItem?.master_id);
+    addCompareValue(values, masterItem?.masterId);
+    addCompareValue(values, masterItem?.slug);
+    addCompareValue(values, masterItem?.master_slug);
+    addCompareValue(values, masterItem?.masterSlug);
+  }
+
+  return [...values];
+}
+
+function normalizeServicesPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+
+  return (
+    payload.services ||
+    payload.items ||
+    payload.data?.services ||
+    payload.data?.items ||
+    payload.result?.services ||
+    payload.result?.items ||
+    []
+  );
+}
+
+function getMasterLookupSlug(master) {
+  return String(master?.slug || master?.master_slug || master?.masterSlug || "").trim();
+}
+
+function getMasterLookupId(master) {
+  return String(master?.id || master?.master_id || master?.masterId || "").trim();
 }
 
 function isValidBookingDate(value) {
@@ -348,6 +406,9 @@ export default function BookingPage() {
 
   const [masters, setMasters] = useState([]);
   const [services, setServices] = useState([]);
+  const [masterServices, setMasterServices] = useState([]);
+  const [masterServicesLoading, setMasterServicesLoading] = useState(false);
+  const [masterServicesLoadedFor, setMasterServicesLoadedFor] = useState("");
 
   const [selectedMaster, setSelectedMaster] = useState("");
   const [selectedMasterName, setSelectedMasterName] = useState("");
@@ -418,6 +479,7 @@ export default function BookingPage() {
 
     async function loadData() {
       try {
+        setInitLoading(true);
         const [mastersRes, servicesRes] = await Promise.all([
           fetch(`${API_BASE}/public/salons/${slug}/masters`),
           fetch(`${API_BASE}/public/salons/${slug}/services`)
@@ -427,7 +489,7 @@ export default function BookingPage() {
         const servicesData = await servicesRes.json();
 
         const loadedMasters = mastersData.masters || [];
-        const loadedServices = servicesData.services || [];
+        const loadedServices = normalizeServicesPayload(servicesData);
 
         setMasters(loadedMasters);
         setServices(loadedServices);
@@ -534,7 +596,7 @@ export default function BookingPage() {
     );
   }, [masters, selectedMaster]);
 
-  const filteredServices = useMemo(() => {
+  const salonFilteredServices = useMemo(() => {
     if (!selectedMasterObject) return [];
 
     const selectedValues = getMasterCompareValues(selectedMasterObject);
@@ -544,12 +606,97 @@ export default function BookingPage() {
       const serviceValues = getServiceMasterCompareValues(service);
 
       if (!serviceValues.length) {
-        return true;
+        return false;
       }
 
       return serviceValues.some((value) => selectedValues.includes(value));
     });
   }, [services, selectedMasterObject]);
+
+  const selectedMasterServicesKey = useMemo(() => {
+    if (!selectedMasterObject) return "";
+    return getMasterLookupSlug(selectedMasterObject) || getMasterLookupId(selectedMasterObject);
+  }, [selectedMasterObject]);
+
+  const filteredServices = useMemo(() => {
+    if (!selectedMasterObject) return [];
+    if (salonFilteredServices.length) return salonFilteredServices;
+    if (masterServicesLoadedFor === selectedMasterServicesKey) return masterServices;
+    return [];
+  }, [masterServices, masterServicesLoadedFor, salonFilteredServices, selectedMasterObject, selectedMasterServicesKey]);
+
+  useEffect(() => {
+    let active = true;
+    const selectedMasterServiceSlug = selectedMasterObject ? getMasterLookupSlug(selectedMasterObject) : "";
+    const selectedMasterServiceId = selectedMasterObject ? getMasterLookupId(selectedMasterObject) : "";
+
+    if (!selectedMasterObject || (!selectedMasterServiceSlug && !selectedMasterServiceId)) {
+      if (masterServices.length) setMasterServices([]);
+      if (masterServicesLoading) setMasterServicesLoading(false);
+      if (masterServicesLoadedFor) setMasterServicesLoadedFor("");
+      return () => {
+        active = false;
+      };
+    }
+
+    if (salonFilteredServices.length > 0) {
+      if (masterServices.length) setMasterServices([]);
+      if (masterServicesLoading) setMasterServicesLoading(false);
+      if (masterServicesLoadedFor) setMasterServicesLoadedFor("");
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadKey = selectedMasterServicesKey || selectedMasterServiceSlug || selectedMasterServiceId;
+    if (masterServicesLoadedFor === loadKey) {
+      return () => {
+        active = false;
+      };
+    }
+
+    if (masterServicesLoading) {
+      return () => {
+        active = false;
+      };
+    }
+
+    setMasterServicesLoading(true);
+
+    (async () => {
+      try {
+        const response = await getMasterServices(selectedMasterServiceSlug || selectedMasterServiceId);
+        if (!active) return;
+
+        const loadedMasterServices = normalizeServicesPayload(response?.services || response?.items || response?.data || response);
+        setMasterServices(loadedMasterServices);
+        setMasterServicesLoadedFor(loadKey);
+      } catch {
+        if (!active) return;
+        setMasterServices([]);
+        setMasterServicesLoadedFor(loadKey);
+      } finally {
+        if (!active) return;
+        setMasterServicesLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    selectedMasterObject,
+    selectedMasterServicesKey,
+    salonFilteredServices.length,
+    masterServicesLoadedFor,
+    masterServices.length,
+    masterServicesLoading
+  ]);
+
+  const servicesAreLoading = Boolean(
+    initLoading ||
+    (selectedMasterObject && !filteredServices.length && (!masterServicesLoadedFor || masterServicesLoading))
+  );
 
   const timeOptions = useMemo(() => {
     const options = generateTimeOptions(15);
@@ -637,7 +784,7 @@ export default function BookingPage() {
       setSuccessData(nextSuccessData);
       setPaymentError("");
       if (paymentMethod === "cash") {
-        const selectedServicePrice = getSelectedServicePrice(services, selectedService);
+        const selectedServicePrice = getSelectedServicePrice(filteredServices, selectedService);
 
         if (selectedServicePrice == null) {
           setPaymentData(null);
@@ -1515,13 +1662,18 @@ export default function BookingPage() {
                   value={selectedService}
                   onChange={(e) => setSelectedService(e.target.value)}
                   style={styles.input}
+                  disabled={servicesAreLoading}
                 >
-                  <option value="">Выберите услугу</option>
-                  {filteredServices.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} — {s.price}сом
-                    </option>
-                  ))}
+                  <option value="">
+                    {servicesAreLoading ? "Загружаем услуги мастера..." : "Выберите услугу"}
+                  </option>
+                  {!servicesAreLoading
+                    ? filteredServices.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} — {s.price}сом
+                        </option>
+                      ))
+                    : null}
                 </select>
 
                 {masters.length ? null : (
@@ -1530,6 +1682,13 @@ export default function BookingPage() {
                     description="Как только салон опубликует специалистов, они появятся здесь."
                   />
                 )}
+
+                {!servicesAreLoading && selectedMasterObject && !filteredServices.length ? (
+                  <MobileEmptyState
+                    title="Услуги пока не найдены"
+                    description="У выбранного мастера пока нет опубликованных услуг."
+                  />
+                ) : null}
               </div>
             </MobileCard>
           </MobileSection>
