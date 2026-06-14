@@ -186,13 +186,20 @@ function getSafeBookingList(payload){
   return []
 }
 
+function isCancelledBookingStatus(status){
+  const normalized = String(status || "").trim().toLowerCase()
+  return normalized === "cancelled" || normalized === "canceled" || normalized === "отмена"
+}
+
 function isPendingCashBooking(booking){
   const provider = String(booking?.payment_provider || "").toLowerCase()
   const status = String(booking?.payment_status || "").toLowerCase()
 
   return Boolean(
-    booking?.cash_pending_alert ||
+    !isCancelledBookingStatus(booking?.status) &&
+    (booking?.cash_pending_alert ||
     (provider === "direct" && status === "pending" && Boolean(booking?.payment_is_active))
+    )
   )
 }
 
@@ -433,7 +440,7 @@ export default function MasterDashboard() {
         }
 
         const result = await getMasterPendingCashBookings(slug)
-        const bookings = getSafeBookingList(result)
+        const bookings = getSafeBookingList(result).filter((booking) => !isCancelledBookingStatus(booking?.status))
 
         if(!cancelled){
           setPendingCashBookings(bookings)

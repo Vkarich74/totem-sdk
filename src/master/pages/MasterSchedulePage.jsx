@@ -139,6 +139,14 @@ if(s==="canceled")return"cancelled"
 return s
 }
 
+function isCancelledBooking(status){
+return normalizeStatus(status)==="cancelled"
+}
+
+function isActiveBooking(status){
+return !isCancelledBooking(status)
+}
+
 function statusLabel(s){
 s=normalizeStatus(s)
 
@@ -199,6 +207,18 @@ function formatMoney(value){
 return String(value||0)+" сом"
 }
 
+function formatTimeHHMM(value){
+const date=new Date(value)
+if(Number.isNaN(date.getTime()))return"—"
+
+return new Intl.DateTimeFormat("ru-RU",{
+hour:"2-digit",
+minute:"2-digit",
+hour12:false,
+timeZone:"Asia/Bishkek"
+}).format(date)
+}
+
 function bookingAmount(b){
 const raw=
 b.price ??
@@ -235,7 +255,7 @@ if(toDateKey(start)!==dateKey)continue
 
 const status=normalizeStatus(b.status)
 
-if(status==="cancelled")continue
+if(!isActiveBooking(status))continue
 
 busyMinutes+=durationMinutes(b.start_at,b.end_at)
 }
@@ -283,7 +303,7 @@ if(toDateKey(start)!==dateKey)continue
 
 const status=normalizeStatus(b.status)
 
-if(status==="cancelled")continue
+if(!isActiveBooking(status))continue
 
 bookingsCount++
 busyMinutes+=durationMinutes(b.start_at,b.end_at)
@@ -507,6 +527,8 @@ if(!b.start_at)continue
 
 const d=toDateKey(new Date(b.start_at))
 
+if(!isActiveBooking(b.status))continue
+
 if(d===today)t++
 if(d===yesterday)y++
 if(d===tomorrow)tm++
@@ -552,6 +574,7 @@ const startSlot=slotKey(start)
 const dur=durationMinutes(start,end)
 const span=Math.max(1,Math.round(dur/15))
 const effectiveStatus=normalizeStatus(statusOverrides[b.id] ?? b.status)
+if(isCancelledBooking(effectiveStatus))continue
 const isNowBooking=toDateKey(start)===todayKey() && isNowInsideBooking(start,end)
 
 calendar[startSlot]={
@@ -835,9 +858,9 @@ boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 )}
 
 <div style={{marginTop:"4px"}}>
-{new Date(b.start_at).toLocaleTimeString().slice(0,5)}
+{formatTimeHHMM(b.start_at)}
 {" – "}
-{new Date(b.end_at).toLocaleTimeString().slice(0,5)}
+{formatTimeHHMM(b.end_at)}
 </div>
 
 <div style={{marginTop:"4px"}}>
