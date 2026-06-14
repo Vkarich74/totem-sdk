@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug, buildSalonPath } from "../SalonContext"
-import { acceptContract, archiveContract, createSalonContract, getSalonContracts, getSalonMasters } from "../../api/internal"
+import { acceptContract as acceptContractApi, archiveContract as archiveContractApi, createSalonContract, getSalonContracts, getSalonMasters } from "../../api/internal"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
@@ -834,7 +834,7 @@ export default function SalonContractsPage() {
     }
   }
 
-  async function acceptContract(contractId) {
+  async function handleAcceptContract(contractId) {
     if (contractActionLoadingId) {
       return
     }
@@ -843,10 +843,10 @@ export default function SalonContractsPage() {
     setContractActionLoadingId(contractId)
 
     try {
-      const result = await acceptContract(contractId)
+      const result = await acceptContractApi(contractId)
 
       if (!result?.ok) {
-        setContractActionError(result?.error || result?.detail?.json?.error || "Не удалось принять контракт")
+        setContractActionError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || "Не удалось принять контракт")
         return
       }
 
@@ -862,7 +862,7 @@ export default function SalonContractsPage() {
     }
   }
 
-  async function archiveContract(contractId) {
+  async function handleArchiveContract(contractId) {
     if (contractActionLoadingId) {
       return
     }
@@ -871,10 +871,10 @@ export default function SalonContractsPage() {
     setContractActionLoadingId(contractId)
 
     try {
-      const result = await archiveContract(contractId)
+      const result = await archiveContractApi(contractId)
 
       if (!result?.ok) {
-        setContractActionError(result?.error || result?.detail?.json?.error || "Не удалось архивировать контракт")
+        setContractActionError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || "Не удалось архивировать контракт")
         return
       }
 
@@ -959,7 +959,7 @@ export default function SalonContractsPage() {
             {mode === "pending" && (
               <button
                 type="button"
-                onClick={() => acceptContract(contract.id)}
+                onClick={() => handleAcceptContract(contract.id)}
                 disabled={actionsLocked}
                 style={{
                   ...primaryButtonStyle,
@@ -975,7 +975,7 @@ export default function SalonContractsPage() {
 
             <button
               type="button"
-              onClick={() => archiveContract(contract.id)}
+              onClick={() => handleArchiveContract(contract.id)}
               disabled={actionsLocked}
               style={{
                 ...(mode === "active" ? dangerButtonStyle : secondaryButtonStyle),
@@ -1161,7 +1161,7 @@ export default function SalonContractsPage() {
                                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                   <button
                                     type="button"
-                                    onClick={() => archiveContract(c.id)}
+                                    onClick={() => handleArchiveContract(c.id)}
                                     disabled={actionsLocked}
                                     style={{
                                       ...dangerButtonStyle,
@@ -1232,7 +1232,7 @@ export default function SalonContractsPage() {
                                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                   <button
                                     type="button"
-                                    onClick={() => acceptContract(c.id)}
+                                    onClick={() => handleAcceptContract(c.id)}
                                     disabled={actionsLocked}
                                     style={{
                                       ...primaryButtonStyle,
@@ -1247,7 +1247,7 @@ export default function SalonContractsPage() {
 
                                   <button
                                     type="button"
-                                    onClick={() => archiveContract(c.id)}
+                                    onClick={() => handleArchiveContract(c.id)}
                                     disabled={actionsLocked}
                                     style={{
                                       ...secondaryButtonStyle,
