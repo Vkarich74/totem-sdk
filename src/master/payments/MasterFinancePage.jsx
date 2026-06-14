@@ -8,6 +8,7 @@ import {
   getMasterContractHistory,
   getMasterMoneyCoreSummary,
   getMasterPayouts,
+  getMasterRentObligations,
   getMasterSettlements,
   getMasterWalletBalance,
   getMasterWithdrawDestinations,
@@ -221,6 +222,10 @@ export default function MasterFinancePage() {
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([]);
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null);
   const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([]);
+  const [rentObligations, setRentObligations] = useState([]);
+  const [rentObligationsSummary, setRentObligationsSummary] = useState(null);
+  const [rentObligationsLoading, setRentObligationsLoading] = useState(true);
+  const [rentObligationsError, setRentObligationsError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -388,6 +393,61 @@ export default function MasterFinancePage() {
     };
   }, [masterSlug]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRentObligations() {
+      if (!masterSlug) {
+        if (!cancelled) {
+          setRentObligations([]);
+          setRentObligationsSummary(null);
+          setRentObligationsError("");
+          setRentObligationsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setRentObligationsLoading(true);
+        setRentObligationsError("");
+
+        const result = await getMasterRentObligations(masterSlug);
+
+        if (cancelled) return;
+
+        if (result?.ok) {
+          setRentObligations(Array.isArray(result?.obligations) ? result.obligations : []);
+          setRentObligationsSummary(result?.summary || null);
+        }
+        else {
+          setRentObligations([]);
+          setRentObligationsSummary(null);
+          setRentObligationsError("Не удалось загрузить обязательства по аренде.");
+        }
+      }
+      catch (e) {
+        console.error("MASTER_RENT_OBLIGATIONS_LOAD_FAILED", e);
+
+        if (!cancelled) {
+          setRentObligations([]);
+          setRentObligationsSummary(null);
+          setRentObligationsError("Не удалось загрузить обязательства по аренде.");
+        }
+      }
+      finally {
+        if (!cancelled) {
+          setRentObligationsLoading(false);
+        }
+      }
+    }
+
+    void loadRentObligations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [masterSlug]);
+
   const billingSnapshot = getBillingSnapshot();
   const billingStateLabel = formatBillingState(
     billingSnapshot.billing,
@@ -418,6 +478,14 @@ export default function MasterFinancePage() {
   }, [settlements]);
 
   const historyPreview = useMemo(() => history.slice(0, 5), [history]);
+
+  const formatObligationStatus = (value) => {
+    if (value === "open") return "Открыто";
+    if (value === "paid") return "Оплачено";
+    if (value === "cancelled") return "Отменено";
+    if (value === "voided") return "Аннулировано";
+    return value || "—";
+  };
 
   return (
     <div style={styles.page}>
@@ -845,6 +913,54 @@ export default function MasterFinancePage() {
                 ) : (
                   <div style={styles.emptyText}>Расчетных периодов пока нет.</div>
                 )}
+              </Panel>
+
+              <Panel title="Обязательства по аренде" subtitle="Только read-only список fixed_rent без изменений финансового контура.">
+                {rentObligationsError ? (
+                  <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", fontSize: 14 }}>
+                    {rentObligationsError}
+                  </div>
+                ) : null}
+
+                <div style={styles.infoGrid}>
+                  <InfoRow label="Открыто" value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.open_count ?? 0))} />
+                  <InfoRow label="Сумма открытых" value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.open_amount ?? 0))} KGS`} />
+                  <InfoRow label="Оплачено" value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.paid_count ?? 0))} />
+                  <InfoRow label="Оплаченная сумма" value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.paid_amount ?? 0))} KGS`} />
+                </div>
+
+                {rentObligationsLoading ? (
+                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>Загружаем обязательства по аренде...</div>
+                ) : null}
+
+                {!rentObligationsLoading && !rentObligationsError && rentObligations.length === 0 ? (
+                  <div style={{ marginTop: 12 }}>
+                    <EmptyState
+                      title="Обязательства по аренде пока не найдены."
+                      text="Read-only список по fixed_rent появится после создания обязательств."
+                    />
+                  </div>
+                ) : null}
+
+                {!rentObligationsLoading && !rentObligationsError && rentObligations.length > 0 ? (
+                  <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                    {rentObligations.map((item, index) => {
+                      const periodLabel = `${formatDateTime(item?.period_start)} — ${formatDateTime(item?.period_end)}`;
+                      const amountLabel = `${new Intl.NumberFormat("ru-RU").format(Number(item?.amount || 0))} KGS`;
+                      const dueLabel = formatDateTime(item?.due_at);
+
+                      return (
+                        <PreviewRow
+                          key={item?.id || `${item?.contract_id || "obligation"}-${index}`}
+                          title={periodLabel}
+                          meta={`Срок оплаты: ${dueLabel}`}
+                          value={amountLabel}
+                          status={formatObligationStatus(item?.status)}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : null}
               </Panel>
 
               <Panel title="История контрактов" subtitle="Компактный блок. Полная история не перегружает hub.">
