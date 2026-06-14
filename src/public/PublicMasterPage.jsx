@@ -44,6 +44,21 @@ function pickFirstString(...values) {
   return "";
 }
 
+function pickFirstDefinedString(...values) {
+  for (const value of values) {
+    if (value === null || typeof value === "undefined") {
+      continue;
+    }
+
+    const normalized = String(value).trim();
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return "";
+}
+
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -347,10 +362,25 @@ export default function PublicMasterPage({ slug }) {
     .filter((item) => item.imageUrl);
   const stats = normalizeStats(view.stats);
   const bookingBand = normalizeBookingBand(view.bookingBand);
+  const salonSlug = pickFirstString(
+    rawMaster.salon_slug,
+    rawMaster.salonSlug,
+    rawMaster.salon?.slug,
+    rawMaster.salon?.salon_slug,
+  );
+  const bookingMasterId = pickFirstDefinedString(
+    rawMaster.id,
+    rawMaster.master_id,
+    rawMaster.masterId,
+    resolvedSlug,
+  );
   const bookingUrl = pickFirstString(
     view.bookingUrl,
     rawMaster.booking_url,
     rawMaster.bookingUrl,
+    salonSlug && bookingMasterId
+      ? `https://app.totemv.com/#/booking?salon=${encodeURIComponent(salonSlug)}&master=${encodeURIComponent(bookingMasterId)}`
+      : "",
     resolvedSlug ? `https://app.totemv.com/#/booking?master=${encodeURIComponent(resolvedSlug)}` : "",
   );
   const bookingLabel = pickFirstString(view.bookingLabel, "Записаться к мастеру");

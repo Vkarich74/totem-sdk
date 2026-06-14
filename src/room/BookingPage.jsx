@@ -295,7 +295,13 @@ function isValidBookingTime(value) {
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
   const nativeSearchParams = new URLSearchParams(window.location.search || "");
-  const getQueryParam = (key) => searchParams.get(key) || nativeSearchParams.get(key) || "";
+  const hashSearchParams = useMemo(() => {
+    const hash = String(window.location.hash || "");
+    const queryIndex = hash.indexOf("?");
+    if (queryIndex === -1) return new URLSearchParams();
+    return new URLSearchParams(hash.slice(queryIndex + 1));
+  }, []);
+  const getQueryParam = (key) => searchParams.get(key) || nativeSearchParams.get(key) || hashSearchParams.get(key) || "";
 
   const slug =
     getQueryParam("salon") ||
@@ -342,6 +348,7 @@ export default function BookingPage() {
   const submitLockRef = useRef(false);
   const paymentLockRef = useRef(false);
   const restoredStateRef = useRef(false);
+  const selectedMasterFromPublicPage = Boolean(repeatMasterId && selectedMaster);
 
   useEffect(() => {
     if (!slug || restoredStateRef.current) return;
@@ -395,7 +402,12 @@ export default function BookingPage() {
         setServices(loadedServices);
 
         if (repeatMasterId) {
-          const repeatedMaster = loadedMasters.find((m) => String(m.id) === String(repeatMasterId));
+          const repeatedMaster = loadedMasters.find((m) => (
+            String(m.id) === String(repeatMasterId) ||
+            String(m.master_id) === String(repeatMasterId) ||
+            String(m.slug) === String(repeatMasterId) ||
+            String(m.master_slug) === String(repeatMasterId)
+          ));
 
           if (repeatedMaster) {
             setSelectedMaster(String(repeatedMaster.id));
@@ -1421,7 +1433,9 @@ export default function BookingPage() {
                   name="master_id"
                   aria-label="Выбор мастера"
                   value={selectedMaster}
+                  disabled={selectedMasterFromPublicPage}
                   onChange={(e) => {
+                    if (selectedMasterFromPublicPage) return;
                     const id = e.target.value;
                     setSelectedMaster(id);
                     const master = masters.find((m) => String(m.id) === id);
@@ -1437,6 +1451,12 @@ export default function BookingPage() {
                     </option>
                   ))}
                 </select>
+
+                {selectedMasterFromPublicPage ? (
+                  <div style={{ fontSize: 12, lineHeight: 1.4, color: "#64748B" }}>
+                    Мастер выбран с публичной страницы
+                  </div>
+                ) : null}
 
                 <select
                   name="service_id"
