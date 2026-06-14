@@ -284,6 +284,37 @@ function getSelectedServicePrice(services, selectedService) {
   return Number.isFinite(price) && price > 0 ? price : null;
 }
 
+function getMasterCompareValues(master) {
+  return [
+    master?.id,
+    master?.master_id,
+    master?.masterId,
+    master?.slug,
+    master?.master_slug,
+    master?.masterSlug
+  ]
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
+    .map(String);
+}
+
+function getServiceMasterCompareValues(service) {
+  return [
+    service?.master_id,
+    service?.masterId,
+    service?.owner_id,
+    service?.ownerId,
+    service?.master?.id,
+    service?.master?.master_id,
+    service?.master?.slug,
+    service?.master_slug,
+    service?.masterSlug,
+    service?.master?.master_slug,
+    service?.master?.masterSlug
+  ]
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
+    .map(String);
+}
+
 function isValidBookingDate(value) {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -410,7 +441,7 @@ export default function BookingPage() {
           ));
 
           if (repeatedMaster) {
-            setSelectedMaster(String(repeatedMaster.id));
+            setSelectedMaster(String(repeatedMaster.id || repeatedMaster.master_id || repeatMasterId));
             setSelectedMasterName(repeatedMaster.name || "");
           }
         }
@@ -495,10 +526,30 @@ export default function BookingPage() {
     return digits.length === 12 && digits.startsWith("996");
   }
 
+  const selectedMasterObject = useMemo(() => {
+    if (!selectedMaster) return null;
+    return (
+      masters.find((master) => getMasterCompareValues(master).includes(String(selectedMaster))) ||
+      null
+    );
+  }, [masters, selectedMaster]);
+
   const filteredServices = useMemo(() => {
-    if (!selectedMaster) return [];
-    return services.filter((s) => String(s.master_id) === String(selectedMaster));
-  }, [services, selectedMaster]);
+    if (!selectedMasterObject) return [];
+
+    const selectedValues = getMasterCompareValues(selectedMasterObject);
+    if (!selectedValues.length) return [];
+
+    return services.filter((service) => {
+      const serviceValues = getServiceMasterCompareValues(service);
+
+      if (!serviceValues.length) {
+        return true;
+      }
+
+      return serviceValues.some((value) => selectedValues.includes(value));
+    });
+  }, [services, selectedMasterObject]);
 
   const timeOptions = useMemo(() => {
     const options = generateTimeOptions(15);
