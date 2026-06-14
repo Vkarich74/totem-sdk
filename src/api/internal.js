@@ -940,6 +940,24 @@ export async function getSalonContracts(salonSlug = getSalonSlug()){
   };
 }
 
+export async function getSalonRentObligations(salonSlug = getSalonSlug(), params = {}){
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const suffix = buildQuery({
+    status: params?.status,
+    from: params?.from,
+    to: params?.to
+  });
+  const r = await safeInternalJson(`/salons/${safeSlug}/rent-obligations${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_RENT_OBLIGATIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_RENT_OBLIGATIONS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    obligations: j.obligations || [],
+    summary: j.summary || null
+  };
+}
+
 export async function createSalonContract(salonSlug = getSalonSlug(), payload = {}){
   const r = await safeInternalJson(`/salons/${salonSlug}/contracts`, {
     method: "POST",
@@ -1328,6 +1346,24 @@ export async function getMasterContractHistory(masterSlug = getMasterSlug()){
   return {
     ok:true,
     history: j.history || j.contracts || j.items || []
+  };
+}
+
+export async function getMasterRentObligations(masterSlug = getMasterSlug(), params = {}){
+  const safeSlug = encodeURIComponent(String(masterSlug || "").trim());
+  const suffix = buildQuery({
+    status: params?.status,
+    from: params?.from,
+    to: params?.to
+  });
+  const r = await safeInternalJson(`/masters/${safeSlug}/rent-obligations${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_RENT_OBLIGATIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_RENT_OBLIGATIONS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    obligations: j.obligations || [],
+    summary: j.summary || null
   };
 }
 
