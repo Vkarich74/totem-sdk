@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug, buildSalonPath } from "../SalonContext"
-import { acceptContract as acceptContractApi, archiveContract as archiveContractApi, createSalonContract, getSalonContracts, getSalonMasters } from "../../api/internal"
+import { acceptContract as acceptContractApi, archiveContract as archiveContractApi, createSalonContract, getSalonContracts, getSalonMasters, getSalonRentObligations } from "../../api/internal"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
@@ -189,6 +189,10 @@ export default function SalonContractsPage() {
 
   const [masters, setMasters] = useState([])
   const [mastersLoading, setMastersLoading] = useState(true)
+  const [rentObligations, setRentObligations] = useState([])
+  const [rentObligationsSummary, setRentObligationsSummary] = useState(null)
+  const [rentObligationsLoading, setRentObligationsLoading] = useState(true)
+  const [rentObligationsError, setRentObligationsError] = useState("")
 
   const [selectedMasterId, setSelectedMasterId] = useState("")
   const [contractModel, setContractModel] = useState("percentage")
@@ -401,6 +405,18 @@ export default function SalonContractsPage() {
     initializePage()
   }, [])
 
+  useEffect(() => {
+    if (!salonSlug) {
+      setRentObligations([])
+      setRentObligationsSummary(null)
+      setRentObligationsError("")
+      setRentObligationsLoading(false)
+      return
+    }
+
+    void loadRentObligations()
+  }, [salonSlug])
+
   async function initializePage() {
     setContractsLoading(true)
     setMastersLoading(true)
@@ -444,6 +460,34 @@ export default function SalonContractsPage() {
     }
     finally {
       setMastersLoading(false)
+    }
+  }
+
+  async function loadRentObligations() {
+    setRentObligationsLoading(true)
+    setRentObligationsError("")
+
+    try {
+      const result = await getSalonRentObligations(salonSlug)
+
+      if (result?.ok) {
+        setRentObligations(Array.isArray(result?.obligations) ? result.obligations : [])
+        setRentObligationsSummary(result?.summary || null)
+      }
+      else {
+        setRentObligations([])
+        setRentObligationsSummary(null)
+        setRentObligationsError("Не удалось загрузить обязательства по аренде.")
+      }
+    }
+    catch (err) {
+      console.error("Rent obligations load error:", err)
+      setRentObligations([])
+      setRentObligationsSummary(null)
+      setRentObligationsError("Не удалось загрузить обязательства по аренде.")
+    }
+    finally {
+      setRentObligationsLoading(false)
     }
   }
 
@@ -536,6 +580,14 @@ export default function SalonContractsPage() {
     if (value === "pending") return "Ожидает"
     if (value === "archived") return "Архивный"
     if (value === "draft") return "Черновик"
+    return value || "-"
+  }
+
+  function formatObligationStatus(value) {
+    if (value === "open") return "Открыто"
+    if (value === "paid") return "Оплачено"
+    if (value === "cancelled") return "Отменено"
+    if (value === "voided") return "Аннулировано"
     return value || "-"
   }
 
@@ -1078,6 +1130,119 @@ export default function SalonContractsPage() {
                   value={contractsLoading ? "..." : (latestArchivedContract ? getMasterName(latestArchivedContract) : "—")}
                   note={contractsLoading ? "Загрузка..." : (latestArchivedContract ? formatDateTime(latestArchivedContract.archived_at) : "Архив пока пуст")}
                 />
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <div style={{ marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
+                    Обязательства по аренде
+                  </h3>
+                  <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+                    Только read-only список по fixed_rent без изменения контрактов или финансового контура.
+                  </p>
+                </div>
+
+                {rentObligationsError ? (
+                  <div
+                    style={{
+                      marginBottom: 12,
+                      padding: 12,
+                      borderRadius: 12,
+                      border: "1px solid #fde68a",
+                      background: "#fffbeb",
+                      color: "#92400e",
+                      fontSize: 14
+                    }}
+                  >
+                    {rentObligationsError}
+                  </div>
+                ) : null}
+
+                <div style={compactGridStyle}>
+                  <InfoBox
+                    label="Открыто"
+                    value={rentObligationsLoading ? "..." : Number(rentObligationsSummary?.open_count ?? 0)}
+                    note="Ожидают оплаты"
+                  />
+
+                  <InfoBox
+                    label="Сумма открытых"
+                    value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.open_amount ?? 0))} KGS`}
+                    note="Сумма обязательств в работе"
+                  />
+
+                  <InfoBox
+                    label="Оплачено"
+                    value={rentObligationsLoading ? "..." : Number(rentObligationsSummary?.paid_count ?? 0)}
+                    note="Уже закрыты"
+                  />
+
+                  <InfoBox
+                    label="Оплаченная сумма"
+                    value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.paid_amount ?? 0))} KGS`}
+                    note="Сумма оплаченных обязательств"
+                  />
+                </div>
+
+                {rentObligationsLoading && (
+                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
+                    Загружаем обязательства по аренде...
+                  </div>
+                )}
+
+                {!rentObligationsLoading && !rentObligationsError && rentObligations.length === 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <EmptyState text="Обязательства по аренде пока не найдены." />
+                  </div>
+                )}
+
+                {!rentObligationsLoading && !rentObligationsError && rentObligations.length > 0 && (
+                  <div style={{ ...tableWrapStyle, marginTop: 12 }}>
+                    <table style={tableStyle}>
+                      <thead>
+                        <tr>
+                          <th style={tableHeadCellStyle}>Период</th>
+                          <th style={tableHeadCellStyle}>Сумма</th>
+                          <th style={tableHeadCellStyle}>Статус</th>
+                          <th style={tableHeadCellStyle}>Срок оплаты</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {rentObligations.map((item, index) => {
+                          const isLast = index === rentObligations.length - 1
+                          return (
+                            <tr key={item?.id || `${item?.contract_id || "obligation"}-${index}`}>
+                              {renderCell(
+                                <div>
+                                  <div style={{ fontWeight: 600, color: "#111827" }}>
+                                    {formatDateTime(item?.period_start)} — {formatDateTime(item?.period_end)}
+                                  </div>
+                                  <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+                                    Contract: {item?.contract_id || "—"}
+                                  </div>
+                                </div>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                <span style={{ fontWeight: 600 }}>{`${new Intl.NumberFormat("ru-RU").format(Number(item?.amount || 0))} KGS`}</span>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                <span style={getStatusStyle(item?.status)}>{formatObligationStatus(item?.status)}</span>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                formatDateTime(item?.due_at),
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               {contractActionError && (
