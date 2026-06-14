@@ -12,7 +12,7 @@ import {
   MobileEmptyState,
   MobileStatCard
 } from "../mobile/MobileUi.jsx";
-import { createPendingOwnerQrPayment, getMasterServices, getOwnerQrPaymentOptions } from "../api/internal.js";
+import { createPendingOwnerQrPayment, getOwnerQrPaymentOptions } from "../api/internal.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const BOOKING_PAYMENT_STATE_PREFIX = "TOTEM_BOOKING_PAYMENT_STATE";
@@ -406,9 +406,6 @@ export default function BookingPage() {
 
   const [masters, setMasters] = useState([]);
   const [services, setServices] = useState([]);
-  const [masterServices, setMasterServices] = useState([]);
-  const [masterServicesLoading, setMasterServicesLoading] = useState(false);
-  const [masterServicesLoadedFor, setMasterServicesLoadedFor] = useState("");
 
   const [selectedMaster, setSelectedMaster] = useState("");
   const [selectedMasterName, setSelectedMasterName] = useState("");
@@ -613,90 +610,11 @@ export default function BookingPage() {
     });
   }, [services, selectedMasterObject]);
 
-  const selectedMasterServicesKey = useMemo(() => {
-    if (!selectedMasterObject) return "";
-    return getMasterLookupSlug(selectedMasterObject) || getMasterLookupId(selectedMasterObject);
-  }, [selectedMasterObject]);
-
   const filteredServices = useMemo(() => {
-    if (!selectedMasterObject) return [];
-    if (salonFilteredServices.length) return salonFilteredServices;
-    if (masterServicesLoadedFor === selectedMasterServicesKey) return masterServices;
-    return [];
-  }, [masterServices, masterServicesLoadedFor, salonFilteredServices, selectedMasterObject, selectedMasterServicesKey]);
+    return selectedMasterObject ? salonFilteredServices : [];
+  }, [salonFilteredServices, selectedMasterObject]);
 
-  useEffect(() => {
-    let active = true;
-    const selectedMasterServiceSlug = selectedMasterObject ? getMasterLookupSlug(selectedMasterObject) : "";
-    const selectedMasterServiceId = selectedMasterObject ? getMasterLookupId(selectedMasterObject) : "";
-
-    if (!selectedMasterObject || (!selectedMasterServiceSlug && !selectedMasterServiceId)) {
-      if (masterServices.length) setMasterServices([]);
-      if (masterServicesLoading) setMasterServicesLoading(false);
-      if (masterServicesLoadedFor) setMasterServicesLoadedFor("");
-      return () => {
-        active = false;
-      };
-    }
-
-    if (salonFilteredServices.length > 0) {
-      if (masterServices.length) setMasterServices([]);
-      if (masterServicesLoading) setMasterServicesLoading(false);
-      if (masterServicesLoadedFor) setMasterServicesLoadedFor("");
-      return () => {
-        active = false;
-      };
-    }
-
-    const loadKey = selectedMasterServicesKey || selectedMasterServiceSlug || selectedMasterServiceId;
-    if (masterServicesLoadedFor === loadKey) {
-      return () => {
-        active = false;
-      };
-    }
-
-    if (masterServicesLoading) {
-      return () => {
-        active = false;
-      };
-    }
-
-    setMasterServicesLoading(true);
-
-    (async () => {
-      try {
-        const response = await getMasterServices(selectedMasterServiceSlug || selectedMasterServiceId);
-        if (!active) return;
-
-        const loadedMasterServices = normalizeServicesPayload(response?.services || response?.items || response?.data || response);
-        setMasterServices(loadedMasterServices);
-        setMasterServicesLoadedFor(loadKey);
-      } catch {
-        if (!active) return;
-        setMasterServices([]);
-        setMasterServicesLoadedFor(loadKey);
-      } finally {
-        if (!active) return;
-        setMasterServicesLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [
-    selectedMasterObject,
-    selectedMasterServicesKey,
-    salonFilteredServices.length,
-    masterServicesLoadedFor,
-    masterServices.length,
-    masterServicesLoading
-  ]);
-
-  const servicesAreLoading = Boolean(
-    initLoading ||
-    (selectedMasterObject && !filteredServices.length && (!masterServicesLoadedFor || masterServicesLoading))
-  );
+  const servicesAreLoading = Boolean(initLoading);
 
   const timeOptions = useMemo(() => {
     const options = generateTimeOptions(15);
