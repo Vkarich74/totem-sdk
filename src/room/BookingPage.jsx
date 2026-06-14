@@ -671,6 +671,8 @@ export default function BookingPage() {
         master_id: Number(selectedMaster),
         service_id: Number(selectedService), // ← ВАЖНО
         start_at: startAt,
+        date,
+        time,
         client_name: normalizedName,
         phone: normalizedPhone
       };
