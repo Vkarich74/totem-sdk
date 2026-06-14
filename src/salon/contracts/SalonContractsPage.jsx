@@ -942,6 +942,34 @@ export default function SalonContractsPage() {
     }
   }
 
+  async function handleRestoreContract(contractId) {
+    if (contractActionLoadingId) {
+      return
+    }
+
+    resetMessages()
+    setContractActionLoadingId(contractId)
+
+    try {
+      const result = await acceptContractApi(contractId)
+
+      if (!result?.ok) {
+        setContractActionError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || "Не удалось восстановить контракт")
+        return
+      }
+
+      setContractActionSuccess("Контракт восстановлен и переведён в активный статус")
+      await refreshContracts()
+    }
+    catch (err) {
+      console.error("Restore contract error:", err)
+      setContractActionError("Ошибка восстановления контракта")
+    }
+    finally {
+      setContractActionLoadingId("")
+    }
+  }
+
   const activeContracts = useMemo(
     () => contracts.filter((c) => c.status === "active"),
     [contracts]
@@ -1459,6 +1487,7 @@ export default function SalonContractsPage() {
                           <th style={tableHeadCellStyle}>Дата начала</th>
                           <th style={tableHeadCellStyle}>Архивирован</th>
                           <th style={tableHeadCellStyle}>Статус</th>
+                          <th style={tableHeadCellStyle}>Действия</th>
                         </tr>
                       </thead>
 
@@ -1476,6 +1505,23 @@ export default function SalonContractsPage() {
                               {renderCell(formatDateTime(c.archived_at), isLast ? { borderBottom: "none" } : {})}
                               {renderCell(
                                 <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRestoreContract(c.id)}
+                                    disabled={Boolean(contractActionLoadingId)}
+                                    style={{
+                                      ...secondaryButtonStyle,
+                                      opacity: contractActionLoadingId ? 0.7 : 1,
+                                      cursor: contractActionLoadingId ? "wait" : "pointer"
+                                    }}
+                                  >
+                                    {contractActionLoadingId === c.id ? "Обработка..." : "Восстановить"}
+                                  </button>
+                                </div>,
                                 isLast ? { borderBottom: "none" } : {}
                               )}
                             </tr>
