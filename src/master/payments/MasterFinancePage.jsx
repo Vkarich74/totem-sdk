@@ -8,6 +8,7 @@ import {
   getMasterContractHistory,
   getMasterMoneyCoreSummary,
   getMasterPayouts,
+  getMasterSalaryObligations,
   getMasterRentObligations,
   getMasterSettlements,
   getMasterWalletBalance,
@@ -226,6 +227,10 @@ export default function MasterFinancePage() {
   const [rentObligationsSummary, setRentObligationsSummary] = useState(null);
   const [rentObligationsLoading, setRentObligationsLoading] = useState(true);
   const [rentObligationsError, setRentObligationsError] = useState("");
+  const [salaryObligations, setSalaryObligations] = useState([]);
+  const [salaryObligationsSummary, setSalaryObligationsSummary] = useState(null);
+  const [salaryObligationsLoading, setSalaryObligationsLoading] = useState(true);
+  const [salaryObligationsError, setSalaryObligationsError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -335,6 +340,61 @@ export default function MasterFinancePage() {
     }
 
     loadFinance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [masterSlug]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSalaryObligations() {
+      if (!masterSlug) {
+        if (!cancelled) {
+          setSalaryObligations([]);
+          setSalaryObligationsSummary(null);
+          setSalaryObligationsError("");
+          setSalaryObligationsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setSalaryObligationsLoading(true);
+        setSalaryObligationsError("");
+
+        const result = await getMasterSalaryObligations(masterSlug);
+
+        if (cancelled) return;
+
+        if (result?.ok) {
+          setSalaryObligations(Array.isArray(result?.obligations) ? result.obligations : []);
+          setSalaryObligationsSummary(result?.summary || null);
+        }
+        else {
+          setSalaryObligations([]);
+          setSalaryObligationsSummary(null);
+          setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.");
+        }
+      }
+      catch (e) {
+        console.error("MASTER_SALARY_OBLIGATIONS_LOAD_FAILED", e);
+
+        if (!cancelled) {
+          setSalaryObligations([]);
+          setSalaryObligationsSummary(null);
+          setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.");
+        }
+      }
+      finally {
+        if (!cancelled) {
+          setSalaryObligationsLoading(false);
+        }
+      }
+    }
+
+    void loadSalaryObligations();
 
     return () => {
       cancelled = true;
@@ -485,6 +545,12 @@ export default function MasterFinancePage() {
     if (value === "cancelled") return "Отменено";
     if (value === "voided") return "Аннулировано";
     return value || "—";
+  };
+
+  const formatCurrencyAmount = (value, currencyCode = "KGS") => {
+    const amount = Number(value || 0);
+    if (Number.isNaN(amount)) return "—";
+    return `${new Intl.NumberFormat("ru-RU").format(amount)} ${currencyCode}`;
   };
 
   return (
@@ -954,6 +1020,54 @@ export default function MasterFinancePage() {
                           key={item?.id || `${item?.contract_id || "obligation"}-${index}`}
                           title={periodLabel}
                           meta={`Срок оплаты: ${dueLabel}`}
+                          value={amountLabel}
+                          status={formatObligationStatus(item?.status)}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </Panel>
+
+              <Panel title="Обязательства по зарплате" subtitle="Только read-only список salary без изменения записей, выплат или финансового контура.">
+                {salaryObligationsError ? (
+                  <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", fontSize: 14 }}>
+                    {salaryObligationsError}
+                  </div>
+                ) : null}
+
+                <div style={styles.infoGrid}>
+                  <InfoRow label="Открыто" value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.open_count ?? 0))} />
+                  <InfoRow label="Сумма открытых" value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.open_amount ?? 0, "KGS")} />
+                  <InfoRow label="Оплачено" value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.paid_count ?? 0))} />
+                  <InfoRow label="Оплаченная сумма" value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.paid_amount ?? 0, "KGS")} />
+                </div>
+
+                {salaryObligationsLoading ? (
+                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>Загружаем обязательства по зарплате...</div>
+                ) : null}
+
+                {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length === 0 ? (
+                  <div style={{ marginTop: 12 }}>
+                    <EmptyState
+                      title="Обязательства по зарплате пока не найдены."
+                      text="Read-only список по salary появится после создания обязательств."
+                    />
+                  </div>
+                ) : null}
+
+                {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length > 0 ? (
+                  <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                    {salaryObligations.map((item, index) => {
+                      const periodLabel = `${formatDateTime(item?.period_start)} — ${formatDateTime(item?.period_end)}`;
+                      const amountLabel = formatCurrencyAmount(item?.amount, item?.currency || "KGS");
+                      const dueLabel = formatDateTime(item?.due_at);
+
+                      return (
+                        <PreviewRow
+                          key={item?.id || `${item?.contract_id || "salary-obligation"}-${index}`}
+                          title={periodLabel}
+                          meta={`Срок выплаты: ${dueLabel}`}
                           value={amountLabel}
                           status={formatObligationStatus(item?.status)}
                         />
