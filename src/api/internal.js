@@ -958,6 +958,24 @@ export async function getSalonRentObligations(salonSlug = getSalonSlug(), params
   };
 }
 
+export async function getSalonSalaryObligations(salonSlug = getSalonSlug(), params = {}){
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const suffix = buildQuery({
+    status: params?.status,
+    from: params?.from,
+    to: params?.to
+  });
+  const r = await safeInternalJson(`/salons/${safeSlug}/salary-obligations${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_SALARY_OBLIGATIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_SALARY_OBLIGATIONS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    obligations: j.obligations || [],
+    summary: j.summary || null
+  };
+}
+
 export async function createSalonContract(salonSlug = getSalonSlug(), payload = {}){
   const r = await safeInternalJson(`/salons/${salonSlug}/contracts`, {
     method: "POST",
@@ -1360,6 +1378,24 @@ export async function getMasterRentObligations(masterSlug = getMasterSlug(), par
   if(!r.ok) return { ok:false, error:"MASTER_RENT_OBLIGATIONS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_RENT_OBLIGATIONS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    obligations: j.obligations || [],
+    summary: j.summary || null
+  };
+}
+
+export async function getMasterSalaryObligations(masterSlug = getMasterSlug(), params = {}){
+  const safeSlug = encodeURIComponent(String(masterSlug || "").trim());
+  const suffix = buildQuery({
+    status: params?.status,
+    from: params?.from,
+    to: params?.to
+  });
+  const r = await safeInternalJson(`/masters/${safeSlug}/salary-obligations${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"MASTER_SALARY_OBLIGATIONS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"MASTER_SALARY_OBLIGATIONS_API_NOT_OK", detail:j };
   return {
     ok:true,
     obligations: j.obligations || [],
