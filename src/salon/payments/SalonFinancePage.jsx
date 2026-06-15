@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { getMoneyCoreDestinationProviders, getSalonContracts, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
+import { getMoneyCoreDestinationProviders, getSalonContracts, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -199,6 +199,7 @@ export default function SalonFinancePage(){
   const [settlements, setSettlements] = useState([])
   const [payouts, setPayouts] = useState([])
   const [moneyCoreSummary, setMoneyCoreSummary] = useState(null)
+  const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null)
   const [moneyCoreDestinationProviders, setMoneyCoreDestinationProviders] = useState([])
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([])
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null)
@@ -217,6 +218,7 @@ export default function SalonFinancePage(){
           setContracts([])
           setSettlements([])
           setPayouts([])
+          setPaymentProjectionSummary(null)
           setError("SLUG_MISSING")
           setLoading(false)
         }
@@ -233,6 +235,7 @@ export default function SalonFinancePage(){
           contractsRaw,
           settlementsRaw,
           payoutsRaw,
+          paymentProjectionRaw,
           moneyCoreRaw
         ] = await Promise.all([
           getSalonMetrics(slug),
@@ -240,6 +243,7 @@ export default function SalonFinancePage(){
           getSalonContracts(slug),
           getSalonSettlements(slug),
           getSalonPayouts(slug),
+          getSalonPaymentProjections(slug),
           getSalonMoneyCoreSummary(slug)
         ])
 
@@ -250,6 +254,7 @@ export default function SalonFinancePage(){
         setContracts(normalizeList(contractsRaw?.ok ? { contracts: contractsRaw.contracts } : {}, ["contracts", "items"]))
         setSettlements(normalizeList(settlementsRaw?.ok ? { settlements: settlementsRaw.settlements } : {}, ["settlements", "periods", "items"]))
         setPayouts(normalizeList(payoutsRaw?.ok ? { payouts: payoutsRaw.payouts } : {}, ["payouts", "items"]))
+        setPaymentProjectionSummary(paymentProjectionRaw?.ok ? paymentProjectionRaw.summary : null)
         setMoneyCoreSummary((moneyCoreRaw?.ok ? moneyCoreRaw.summary : null) || moneyCoreRaw?.data || moneyCoreRaw || null)
       }catch(loadError){
         console.error("SALON FINANCE LOAD ERROR", loadError)
@@ -260,6 +265,7 @@ export default function SalonFinancePage(){
           setContracts([])
           setSettlements([])
           setPayouts([])
+          setPaymentProjectionSummary(null)
           setMoneyCoreSummary(null)
           setError(loadError?.message || "SALON_FINANCE_LOAD_FAILED")
         }
@@ -416,6 +422,8 @@ export default function SalonFinancePage(){
           <StatCard title="Доход сегодня" value={money(metricsView.revenueToday)} note="Операционная выручка за день" />
           <StatCard title="Доход за месяц" value={money(metricsView.revenueMonth)} note="Главный срез по текущей выручке" />
           <StatCard title="Активные контракты" value={String(activeContracts.length)} note="Связка с мастерами и правила расчётов" />
+          <StatCard title="История оплат" value={money(paymentProjectionSummary?.history_amount)} note={`Строк в истории: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
+          <StatCard title="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} note={`Открытых строк: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
         </section>
 
             <Panel

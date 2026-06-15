@@ -7,6 +7,7 @@ import {
   getMasterActiveContract,
   getMasterContractHistory,
   getMasterMoneyCoreSummary,
+  getMasterPaymentProjections,
   getMasterPayouts,
   getMasterSalaryObligations,
   getMasterRentObligations,
@@ -219,6 +220,7 @@ export default function MasterFinancePage() {
   const [settlements, setSettlements] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [moneyCoreSummary, setMoneyCoreSummary] = useState(null);
+  const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null);
   const [moneyCoreDestinationProviders, setMoneyCoreDestinationProviders] = useState([]);
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([]);
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null);
@@ -249,6 +251,7 @@ export default function MasterFinancePage() {
             setWallet(null);
             setSettlements([]);
             setPayouts([]);
+            setPaymentProjectionSummary(null);
             setError("Не найден master slug");
           }
           return;
@@ -260,6 +263,7 @@ export default function MasterFinancePage() {
             walletResult,
             settlementsResult,
             payoutsResult,
+            paymentProjectionResult,
             moneyCoreResult
           ] = await Promise.allSettled([
             getMasterActiveContract(masterSlug),
@@ -267,6 +271,7 @@ export default function MasterFinancePage() {
             getMasterWalletBalance(masterSlug),
             getMasterSettlements(masterSlug),
             getMasterPayouts(masterSlug),
+            getMasterPaymentProjections(masterSlug),
             getMasterMoneyCoreSummary(masterSlug)
           ]);
 
@@ -302,6 +307,12 @@ export default function MasterFinancePage() {
             : []
           );
 
+        setPaymentProjectionSummary(
+          paymentProjectionResult.status === "fulfilled" && paymentProjectionResult.value?.ok
+            ? paymentProjectionResult.value.summary || null
+            : null
+        );
+
         const summarySource =
           moneyCoreResult.status === "fulfilled" ? moneyCoreResult.value : null;
         const summary =
@@ -329,6 +340,7 @@ export default function MasterFinancePage() {
           setWallet(null);
           setSettlements([]);
           setPayouts([]);
+          setPaymentProjectionSummary(null);
           setMoneyCoreSummary(null);
           setError("Не удалось загрузить finance overview");
         }
@@ -584,6 +596,8 @@ export default function MasterFinancePage() {
               <StatCard label="Статус billing" value={billingStateLabel} hint={`Запись: ${formatAccessFlag(billingSnapshot.canWrite)} · Выплаты: ${formatAccessFlag(billingSnapshot.canWithdraw)}`} />
               <StatCard label="Сеты" value={String(settlements.length)} hint={money(settlementTotal)} />
               <StatCard label="Выплаты" value={String(payouts.length)} hint={money(payoutTotal)} />
+              <StatCard label="История оплат" value={money(paymentProjectionSummary?.history_amount)} hint={`Строк: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
+              <StatCard label="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} hint={`Открыто: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
             </section>
 
             <Panel
@@ -960,6 +974,8 @@ export default function MasterFinancePage() {
                   <InfoRow label="Модель" value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
                   <InfoRow label="Баланс" value={money(walletBalance)} />
                   <InfoRow label="Billing state" value={billingStateLabel} />
+                  <InfoRow label="История оплат" value={money(paymentProjectionSummary?.history_amount)} />
+                  <InfoRow label="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} />
                   <InfoRow label="Write доступ" value={formatAccessFlag(billingSnapshot.canWrite)} />
                   <InfoRow label="Withdraw доступ" value={formatAccessFlag(billingSnapshot.canWithdraw)} />
                   <InfoRow label="Block reason" value={billingSnapshot.billingBlockReason || "—"} />
