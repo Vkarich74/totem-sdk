@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug, buildSalonPath } from "../SalonContext"
-import { acceptContract as acceptContractApi, archiveContract as archiveContractApi, createSalonContract, getSalonContracts, getSalonMasters, getSalonRentObligations } from "../../api/internal"
+import { acceptContract as acceptContractApi, archiveContract as archiveContractApi, createSalonContract, getSalonContracts, getSalonMasters, getSalonRentObligations, getSalonSalaryObligations } from "../../api/internal"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
@@ -193,6 +193,10 @@ export default function SalonContractsPage() {
   const [rentObligationsSummary, setRentObligationsSummary] = useState(null)
   const [rentObligationsLoading, setRentObligationsLoading] = useState(true)
   const [rentObligationsError, setRentObligationsError] = useState("")
+  const [salaryObligations, setSalaryObligations] = useState([])
+  const [salaryObligationsSummary, setSalaryObligationsSummary] = useState(null)
+  const [salaryObligationsLoading, setSalaryObligationsLoading] = useState(true)
+  const [salaryObligationsError, setSalaryObligationsError] = useState("")
 
   const [selectedMasterId, setSelectedMasterId] = useState("")
   const [contractModel, setContractModel] = useState("percentage")
@@ -411,10 +415,15 @@ export default function SalonContractsPage() {
       setRentObligationsSummary(null)
       setRentObligationsError("")
       setRentObligationsLoading(false)
+      setSalaryObligations([])
+      setSalaryObligationsSummary(null)
+      setSalaryObligationsError("")
+      setSalaryObligationsLoading(false)
       return
     }
 
     void loadRentObligations()
+    void loadSalaryObligations()
   }, [salonSlug])
 
   async function initializePage() {
@@ -491,9 +500,41 @@ export default function SalonContractsPage() {
     }
   }
 
+  async function loadSalaryObligations() {
+    setSalaryObligationsLoading(true)
+    setSalaryObligationsError("")
+
+    try {
+      const result = await getSalonSalaryObligations(salonSlug)
+
+      if (result?.ok) {
+        setSalaryObligations(Array.isArray(result?.obligations) ? result.obligations : [])
+        setSalaryObligationsSummary(result?.summary || null)
+      }
+      else {
+        setSalaryObligations([])
+        setSalaryObligationsSummary(null)
+        setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.")
+      }
+    }
+    catch (err) {
+      console.error("Salary obligations load error:", err)
+      setSalaryObligations([])
+      setSalaryObligationsSummary(null)
+      setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.")
+    }
+    finally {
+      setSalaryObligationsLoading(false)
+    }
+  }
+
   async function refreshContracts() {
     setContractsLoading(true)
-    await loadContracts()
+    await Promise.all([
+      loadContracts(),
+      loadRentObligations(),
+      loadSalaryObligations()
+    ])
   }
 
   function resetMessages() {
@@ -718,6 +759,16 @@ export default function SalonContractsPage() {
     if (value === "prepaid") return "предоплата"
     if (value === "accrued") return "по факту"
     return value || "-"
+  }
+
+  function formatCurrencyAmount(value, currencyCode = "KGS") {
+    const amount = Number(value || 0)
+
+    if (Number.isNaN(amount)) {
+      return "-"
+    }
+
+    return `${new Intl.NumberFormat("ru-RU").format(amount)} ${currencyCode}`
   }
 
   function buildTermsJson() {
@@ -1254,6 +1305,119 @@ export default function SalonContractsPage() {
                               )}
                               {renderCell(
                                 <span style={{ fontWeight: 600 }}>{`${new Intl.NumberFormat("ru-RU").format(Number(item?.amount || 0))} KGS`}</span>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                <span style={getStatusStyle(item?.status)}>{formatObligationStatus(item?.status)}</span>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                formatDateTime(item?.due_at),
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: 24 }}>
+                <div style={{ marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
+                    Обязательства по зарплате
+                  </h3>
+                  <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
+                    Только read-only список по salary без изменения контрактов или финансового контура.
+                  </p>
+                </div>
+
+                {salaryObligationsError ? (
+                  <div
+                    style={{
+                      marginBottom: 12,
+                      padding: 12,
+                      borderRadius: 12,
+                      border: "1px solid #fde68a",
+                      background: "#fffbeb",
+                      color: "#92400e",
+                      fontSize: 14
+                    }}
+                  >
+                    {salaryObligationsError}
+                  </div>
+                ) : null}
+
+                <div style={compactGridStyle}>
+                  <InfoBox
+                    label="Открыто"
+                    value={salaryObligationsLoading ? "..." : Number(salaryObligationsSummary?.open_count ?? 0)}
+                    note="Ожидают выплаты"
+                  />
+
+                  <InfoBox
+                    label="Сумма открытых"
+                    value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.open_amount ?? 0, "KGS")}
+                    note="Сумма обязательств к выплате"
+                  />
+
+                  <InfoBox
+                    label="Оплачено"
+                    value={salaryObligationsLoading ? "..." : Number(salaryObligationsSummary?.paid_count ?? 0)}
+                    note="Уже закрыты"
+                  />
+
+                  <InfoBox
+                    label="Оплаченная сумма"
+                    value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.paid_amount ?? 0, "KGS")}
+                    note="Сумма закрытых обязательств"
+                  />
+                </div>
+
+                {salaryObligationsLoading && (
+                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
+                    Загружаем обязательства по зарплате...
+                  </div>
+                )}
+
+                {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length === 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <EmptyState text="Обязательства по зарплате пока не найдены." />
+                  </div>
+                )}
+
+                {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length > 0 && (
+                  <div style={{ ...tableWrapStyle, marginTop: 12 }}>
+                    <table style={tableStyle}>
+                      <thead>
+                        <tr>
+                          <th style={tableHeadCellStyle}>Период</th>
+                          <th style={tableHeadCellStyle}>Сумма</th>
+                          <th style={tableHeadCellStyle}>Статус</th>
+                          <th style={tableHeadCellStyle}>Срок выплаты</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {salaryObligations.map((item, index) => {
+                          const isLast = index === salaryObligations.length - 1
+                          return (
+                            <tr key={item?.id || `${item?.contract_id || "salary-obligation"}-${index}`}>
+                              {renderCell(
+                                <div>
+                                  <div style={{ fontWeight: 600, color: "#111827" }}>
+                                    {formatDateTime(item?.period_start)} — {formatDateTime(item?.period_end)}
+                                  </div>
+                                  <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+                                    Contract: {item?.contract_id || "—"}
+                                  </div>
+                                </div>,
+                                isLast ? { borderBottom: "none" } : {}
+                              )}
+                              {renderCell(
+                                <span style={{ fontWeight: 600 }}>{formatCurrencyAmount(item?.amount, item?.currency || "KGS")}</span>,
                                 isLast ? { borderBottom: "none" } : {}
                               )}
                               {renderCell(
