@@ -2177,3 +2177,45 @@ export async function publishMasterTemplate(masterSlug = getMasterSlug(), publis
   if(!j || !j.ok) return { ok:false, error:"MASTER_TEMPLATE_PUBLISH_API_NOT_OK", detail:j };
   return { ok:true, published: Boolean(j.published), document: j.document || null };
 }
+
+
+function buildPaymentProjectionQuery(filters = {}){
+  const params = new URLSearchParams();
+  const allowed = ['master_id', 'status', 'from', 'to'];
+
+  allowed.forEach((key) => {
+    const value = filters && filters[key];
+    if(value !== undefined && value !== null && String(value).trim() !== ''){
+      params.set(key, String(value).trim());
+    }
+  });
+
+  const qs = params.toString();
+  return qs ? '?' + qs : '';
+}
+
+export async function getSalonPaymentProjections(salonSlug = getSalonSlug(), filters = {}){
+  try{
+    const query = buildPaymentProjectionQuery(filters);
+    const r = await safeInternalJson('/salons/' + salonSlug + '/payments/projection' + query, { method: 'GET' });
+    if(!r.ok) return { ok:false, error:'SALON_PAYMENT_PROJECTIONS_FETCH_FAILED', detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:'SALON_PAYMENT_PROJECTIONS_API_NOT_OK', detail:j };
+    return j;
+  }catch(e){
+    return { ok:false, error:'SALON_PAYMENT_PROJECTIONS_ERROR', message:e?.message || String(e) };
+  }
+}
+
+export async function getMasterPaymentProjections(masterSlug = getMasterSlug(), filters = {}){
+  try{
+    const query = buildPaymentProjectionQuery(filters);
+    const r = await safeInternalJson('/masters/' + masterSlug + '/payments/projection' + query, { method: 'GET' });
+    if(!r.ok) return { ok:false, error:'MASTER_PAYMENT_PROJECTIONS_FETCH_FAILED', detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:'MASTER_PAYMENT_PROJECTIONS_API_NOT_OK', detail:j };
+    return j;
+  }catch(e){
+    return { ok:false, error:'MASTER_PAYMENT_PROJECTIONS_ERROR', message:e?.message || String(e) };
+  }
+}
