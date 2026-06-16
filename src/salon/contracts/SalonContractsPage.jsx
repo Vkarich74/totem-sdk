@@ -199,6 +199,7 @@ export default function SalonContractsPage() {
   const [salaryObligationsError, setSalaryObligationsError] = useState("")
 
   const [selectedMasterId, setSelectedMasterId] = useState("")
+  const [selectedObligationMasterId, setSelectedObligationMasterId] = useState("")
   const [contractModel, setContractModel] = useState("percentage")
   const [masterPercent, setMasterPercent] = useState("70")
   const [salonPercent, setSalonPercent] = useState("20")
@@ -625,14 +626,21 @@ export default function SalonContractsPage() {
   }
 
   function formatObligationStatus(value) {
-    if (value === "open") return "Открыто"
-    if (value === "paid") return "Оплачено"
-    if (value === "cancelled") return "Отменено"
-    if (value === "voided") return "Аннулировано"
+    const status = String(value || "").trim().toLowerCase()
+
+    if (status === "overdue") return "Просрочено"
+    if (status === "upcoming") return "Предстоящий"
+    if (status === "open") return "Открыто"
+    if (status === "paid") return "Оплачено"
+    if (status === "cancelled") return "Отменено"
+    if (status === "voided") return "Аннулировано"
+    if (status === "active") return "Активный"
+    if (status === "pending") return "Ожидает"
+    if (status === "archived") return "Архивный"
     return value || "-"
   }
 
-  function formatDateTime(value) {
+  function formatDateTime(value, source) {
     if (!value) {
       return "-"
     }
@@ -644,16 +652,59 @@ export default function SalonContractsPage() {
     }
 
     return new Intl.DateTimeFormat("ru-RU", {
+      timeZone: resolveBusinessTimeZone(source),
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
+      hour12: false
     }).format(date)
   }
 
   function getStatusStyle(status) {
-    if (status === "active") {
+    const normalizedStatus = String(status || "").trim().toLowerCase()
+
+    if (normalizedStatus === "overdue") {
+      return {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#b42318",
+        background: "#fef2f2"
+      }
+    }
+
+    if (normalizedStatus === "open" || normalizedStatus === "active") {
+      return {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#a16207",
+        background: "#fef3c7"
+      }
+    }
+
+    if (normalizedStatus === "upcoming" || normalizedStatus === "pending") {
+      return {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#1d4ed8",
+        background: "#dbeafe"
+      }
+    }
+
+    if (normalizedStatus === "paid") {
       return {
         display: "inline-flex",
         alignItems: "center",
@@ -666,7 +717,7 @@ export default function SalonContractsPage() {
       }
     }
 
-    if (status === "pending") {
+    if (normalizedStatus === "cancelled" || normalizedStatus === "voided") {
       return {
         display: "inline-flex",
         alignItems: "center",
@@ -674,12 +725,12 @@ export default function SalonContractsPage() {
         borderRadius: 999,
         fontSize: 12,
         fontWeight: 700,
-        color: "#92400e",
-        background: "#fef3c7"
+        color: "#9f1239",
+        background: "#fce7f3"
       }
     }
 
-    if (status === "archived") {
+    if (normalizedStatus === "archived") {
       return {
         display: "inline-flex",
         alignItems: "center",
@@ -769,6 +820,321 @@ export default function SalonContractsPage() {
     }
 
     return `${new Intl.NumberFormat("ru-RU").format(amount)} ${currencyCode}`
+  }
+
+  const DEFAULT_BUSINESS_TIME_ZONE = "Asia/Bishkek"
+
+  function resolveBusinessTimeZone(source) {
+    const directTimezone = [
+      source?.timezone,
+      source?.time_zone,
+      source?.business_timezone,
+      source?.salon_timezone,
+      source?.master_timezone,
+      source?.contract_timezone
+    ].find((value) => String(value || "").trim())
+
+    if (directTimezone) {
+      return String(directTimezone).trim()
+    }
+
+    const cityCandidates = [
+      source?.city,
+      source?.salon_city,
+      source?.master_city,
+      source?.location_city
+    ]
+
+    for (const cityValue of cityCandidates) {
+      const city = String(cityValue || "").trim().toLowerCase()
+
+      if (!city) {
+        continue
+      }
+
+      if (city.includes("bishkek") || city.includes("бишкек")) {
+        return "Asia/Bishkek"
+      }
+
+      if (
+        city.includes("almaty") ||
+        city.includes("алматы") ||
+        city.includes("астана") ||
+        city.includes("nur-sultan") ||
+        city.includes("нур-султан") ||
+        city.includes("nur sultan")
+      ) {
+        return "Asia/Almaty"
+      }
+    }
+
+    return DEFAULT_BUSINESS_TIME_ZONE
+  }
+
+  function formatSignedCurrency(value, sign, currencyCode = "KGS") {
+    const amount = Math.abs(Number(value || 0))
+
+    if (Number.isNaN(amount)) {
+      return "-"
+    }
+
+    const prefix = sign === "-" ? "-" : sign === "+" ? "+" : ""
+    return `${prefix}${new Intl.NumberFormat("ru-RU").format(amount)} ${currencyCode}`
+  }
+
+  function normalizeObligationStatus(value) {
+    return String(value || "").trim().toLowerCase()
+  }
+
+  function getObligationMasterId(item) {
+    const value = item?.master_id ?? item?.masterId ?? item?.contract_master_id ?? item?.contractMasterId ?? item?.master?.id ?? item?.master?.master_id
+    return value == null || value === "" ? "" : String(value)
+  }
+
+  function getObligationMasterName(item) {
+    return (
+      item?.master_name ||
+      item?.master?.name ||
+      item?.master?.slug ||
+      item?.master_slug ||
+      item?.masterSlug ||
+      item?.contract_master_id ||
+      item?.master_id ||
+      "—"
+    )
+  }
+
+  function getObligationAmount(item) {
+    const amount = Number(item?.amount ?? 0)
+    return Number.isFinite(amount) ? amount : 0
+  }
+
+  function normalizeSalonObligation(item, type) {
+    const normalizedStatus = normalizeObligationStatus(item?.status)
+    const amount = getObligationAmount(item)
+
+    return {
+      ...item,
+      obligation_type: type,
+      master_key: getObligationMasterId(item),
+      master_label: getObligationMasterName(item),
+      status: normalizedStatus,
+      amount,
+      currency: item?.currency || "KGS",
+      is_open: normalizedStatus === "open" || normalizedStatus === "overdue" || normalizedStatus === "upcoming" || normalizedStatus === "active" || normalizedStatus === "pending"
+    }
+  }
+
+  function getObligationPriority(item) {
+    const status = normalizeObligationStatus(item?.status)
+
+    if (status === "overdue") return 0
+    if (status === "open" || status === "active") return 1
+    if (status === "upcoming" || status === "pending") return 2
+    if (status === "paid") return 3
+    return 4
+  }
+
+  function sortObligationsByPriority(items) {
+    return [...(Array.isArray(items) ? items : [])].sort((left, right) => {
+      const leftRank = getObligationPriority(left)
+      const rightRank = getObligationPriority(right)
+
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank
+      }
+
+      const leftTime = new Date(
+        left?.due_at ||
+        left?.period_start ||
+        left?.paid_at ||
+        left?.created_at ||
+        0
+      ).getTime() || 0
+      const rightTime = new Date(
+        right?.due_at ||
+        right?.period_start ||
+        right?.paid_at ||
+        right?.created_at ||
+        0
+      ).getTime() || 0
+
+      if (leftRank === 3) {
+        return rightTime - leftTime
+      }
+
+      return leftTime - rightTime
+    })
+  }
+
+  function buildSalonObligationsModel(rentRows, salaryRows, masterRows) {
+    const mastersMap = new Map()
+
+    for (const master of Array.isArray(masterRows) ? masterRows : []) {
+      const values = [
+        master?.id,
+        master?.master_id,
+        master?.slug,
+        master?.master_slug
+      ].map((value) => String(value || "").trim()).filter(Boolean)
+
+      if (!values.length) {
+        continue
+      }
+
+      const masterInfo = {
+        id: master?.id ?? null,
+        slug: master?.slug || master?.master_slug || "",
+        name: master?.name || master?.slug || master?.master_slug || String(master?.id || ""),
+        values
+      }
+
+      for (const value of values) {
+        if (!mastersMap.has(value)) {
+          mastersMap.set(value, masterInfo)
+        }
+      }
+    }
+
+    const normalizedRent = sortObligationsByPriority((Array.isArray(rentRows) ? rentRows : []).map((item) => normalizeSalonObligation(item, "rent")))
+    const normalizedSalary = sortObligationsByPriority((Array.isArray(salaryRows) ? salaryRows : []).map((item) => normalizeSalonObligation(item, "salary")))
+
+    const combined = [...normalizedRent, ...normalizedSalary].map((item) => {
+      const matched = mastersMap.get(item.master_key) || [...mastersMap.values()].find((candidate) => candidate.values.includes(item.master_key)) || null
+
+      return {
+        ...item,
+        master_id: item.master_key || matched?.id || item.master_id || null,
+        master_name: matched?.name || item.master_label,
+        master_slug: matched?.slug || item.master_slug || "",
+        master_values: matched?.values || [item.master_key].filter(Boolean)
+      }
+    })
+
+    const masterGroups = new Map()
+
+    for (const item of combined) {
+      const groupKey = String(item.master_id || item.master_slug || item.master_name || "unknown")
+      if (!masterGroups.has(groupKey)) {
+        masterGroups.set(groupKey, {
+          key: groupKey,
+          master_id: item.master_id || null,
+          master_slug: item.master_slug || "",
+          master_name: item.master_name || item.master_label || "—",
+          rent: [],
+          salary: [],
+          open_count: 0,
+          overdue_count: 0,
+          rent_receivable_amount: 0,
+          salary_payable_amount: 0,
+          rent_received_amount: 0,
+          salary_paid_amount: 0,
+          priority_rank: 99,
+          priority_obligation: null,
+          priority_label: null,
+          priority_note: null
+        })
+      }
+
+      const bucket = masterGroups.get(groupKey)
+      bucket[item.obligation_type].push(item)
+
+      if (item.is_open) {
+        bucket.open_count += 1
+      }
+
+      if (item.status === "overdue") {
+        bucket.overdue_count += 1
+      }
+
+      if (item.obligation_type === "rent") {
+        if (item.is_open) {
+          bucket.rent_receivable_amount += item.amount
+        }
+
+        if (item.status === "paid") {
+          bucket.rent_received_amount += item.amount
+        }
+      }
+
+      if (item.obligation_type === "salary") {
+        if (item.is_open) {
+          bucket.salary_payable_amount += item.amount
+        }
+
+        if (item.status === "paid") {
+          bucket.salary_paid_amount += item.amount
+        }
+      }
+
+      const candidateRank = getObligationPriority(item)
+      const candidateTime = new Date(
+        item?.due_at ||
+        item?.period_start ||
+        item?.paid_at ||
+        item?.created_at ||
+        0
+      ).getTime() || 0
+
+      const currentTime = bucket.priority_obligation ? new Date(
+        bucket.priority_obligation?.due_at ||
+        bucket.priority_obligation?.period_start ||
+        bucket.priority_obligation?.paid_at ||
+        bucket.priority_obligation?.created_at ||
+        0
+      ).getTime() || 0 : 0
+
+      const shouldReplace =
+        !bucket.priority_obligation ||
+        candidateRank < bucket.priority_rank ||
+        (
+          candidateRank === bucket.priority_rank &&
+          (
+            candidateRank === 3
+              ? candidateTime > currentTime
+              : candidateTime < currentTime
+          )
+        )
+
+      if (shouldReplace) {
+        bucket.priority_rank = candidateRank
+        bucket.priority_obligation = item
+        bucket.priority_label = formatObligationStatus(item.status)
+        bucket.priority_note = `${item.obligation_type === "salary" ? "Зарплата" : "Аренда"} · ${formatDateTime(item?.due_at || item?.period_start || item?.paid_at || item?.created_at, item)}`
+      }
+    }
+
+    const masterCards = [...masterGroups.values()].sort((left, right) => {
+      if (left.priority_rank !== right.priority_rank) {
+        return left.priority_rank - right.priority_rank
+      }
+
+      return String(left.master_name).localeCompare(String(right.master_name), "ru")
+    })
+
+    const summary = masterCards.reduce((acc, group) => {
+      acc.open_count += group.open_count
+      acc.overdue_count += group.overdue_count
+      acc.rent_receivable_amount += group.rent_receivable_amount
+      acc.salary_payable_amount += group.salary_payable_amount
+      acc.rent_received_amount += group.rent_received_amount
+      acc.salary_paid_amount += group.salary_paid_amount
+      return acc
+    }, {
+      open_count: 0,
+      overdue_count: 0,
+      rent_receivable_amount: 0,
+      salary_payable_amount: 0,
+      rent_received_amount: 0,
+      salary_paid_amount: 0
+    })
+
+    return {
+      masters: masterCards,
+      rent: normalizedRent,
+      salary: normalizedSalary,
+      summary
+    }
   }
 
   function buildTermsJson() {
@@ -1057,6 +1423,43 @@ export default function SalonContractsPage() {
   const isSalaryModel = contractModel === "salary"
   const isHybridModel = contractModel === "hybrid"
   const hasMasters = masters.length > 0
+  const salonObligationsModel = useMemo(
+    () => buildSalonObligationsModel(rentObligations, salaryObligations, masters),
+    [rentObligations, salaryObligations, masters]
+  )
+
+  const selectedObligationMaster = useMemo(() => {
+    if (!salonObligationsModel.masters.length) {
+      return null
+    }
+
+    const selectedKey = String(selectedObligationMasterId || "").trim()
+
+    if (!selectedKey) {
+      return salonObligationsModel.masters[0]
+    }
+
+    return (
+      salonObligationsModel.masters.find((item) => String(item.key) === selectedKey) ||
+      salonObligationsModel.masters[0] ||
+      null
+    )
+  }, [selectedObligationMasterId, salonObligationsModel.masters])
+
+  useEffect(() => {
+    if (!salonObligationsModel.masters.length) {
+      if (selectedObligationMasterId) {
+        setSelectedObligationMasterId("")
+      }
+      return
+    }
+
+    const selectedExists = salonObligationsModel.masters.some((item) => String(item.key) === String(selectedObligationMasterId || "").trim())
+
+    if (!selectedExists) {
+      setSelectedObligationMasterId(String(salonObligationsModel.masters[0].key))
+    }
+  }, [salonObligationsModel.masters, selectedObligationMasterId])
 
   function renderContractCard(contract, mode = "active") {
     const isBusy = contractActionLoadingId === contract.id
@@ -1211,231 +1614,285 @@ export default function SalonContractsPage() {
                 />
               </div>
 
-              <div style={{ marginTop: 16 }}>
-                <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
-                    Обязательства по аренде
-                  </h3>
-                  <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-                    Только read-only список по fixed_rent без изменения контрактов или финансового контура.
-                  </p>
-                </div>
-
+              <SectionBlock
+                title="Обязательства мастер-салон"
+                hint="Салон видит обязательства по мастерам, срокам и статусам. Аренда — к получению, зарплата — к выплате."
+                style={{ marginTop: 16 }}
+              >
                 {rentObligationsError ? (
-                  <div
-                    style={{
-                      marginBottom: 12,
-                      padding: 12,
-                      borderRadius: 12,
-                      border: "1px solid #fde68a",
-                      background: "#fffbeb",
-                      color: "#92400e",
-                      fontSize: 14
-                    }}
-                  >
+                  <div style={{
+                    marginBottom: 10,
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #fde68a",
+                    background: "#fffbeb",
+                    color: "#92400e",
+                    fontSize: 14
+                  }}>
                     {rentObligationsError}
                   </div>
                 ) : null}
 
-                <div style={compactGridStyle}>
-                  <InfoBox
-                    label="Открыто"
-                    value={rentObligationsLoading ? "..." : Number(rentObligationsSummary?.open_count ?? 0)}
-                    note="Ожидают оплаты"
-                  />
-
-                  <InfoBox
-                    label="Сумма открытых"
-                    value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.open_amount ?? 0))} KGS`}
-                    note="Сумма обязательств в работе"
-                  />
-
-                  <InfoBox
-                    label="Оплачено"
-                    value={rentObligationsLoading ? "..." : Number(rentObligationsSummary?.paid_count ?? 0)}
-                    note="Уже закрыты"
-                  />
-
-                  <InfoBox
-                    label="Оплаченная сумма"
-                    value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.paid_amount ?? 0))} KGS`}
-                    note="Сумма оплаченных обязательств"
-                  />
-                </div>
-
-                {rentObligationsLoading && (
-                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
-                    Загружаем обязательства по аренде...
-                  </div>
-                )}
-
-                {!rentObligationsLoading && !rentObligationsError && rentObligations.length === 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <EmptyState text="Обязательства по аренде пока не найдены." />
-                  </div>
-                )}
-
-                {!rentObligationsLoading && !rentObligationsError && rentObligations.length > 0 && (
-                  <div style={{ ...tableWrapStyle, marginTop: 12 }}>
-                    <table style={tableStyle}>
-                      <thead>
-                        <tr>
-                          <th style={tableHeadCellStyle}>Период</th>
-                          <th style={tableHeadCellStyle}>Сумма</th>
-                          <th style={tableHeadCellStyle}>Статус</th>
-                          <th style={tableHeadCellStyle}>Срок оплаты</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {rentObligations.map((item, index) => {
-                          const isLast = index === rentObligations.length - 1
-                          return (
-                            <tr key={item?.id || `${item?.contract_id || "obligation"}-${index}`}>
-                              {renderCell(
-                                <div>
-                                  <div style={{ fontWeight: 600, color: "#111827" }}>
-                                    {formatDateTime(item?.period_start)} — {formatDateTime(item?.period_end)}
-                                  </div>
-                                  <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                                    Contract: {item?.contract_id || "—"}
-                                  </div>
-                                </div>,
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                              {renderCell(
-                                <span style={{ fontWeight: 600 }}>{`${new Intl.NumberFormat("ru-RU").format(Number(item?.amount || 0))} KGS`}</span>,
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                              {renderCell(
-                                <span style={getStatusStyle(item?.status)}>{formatObligationStatus(item?.status)}</span>,
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                              {renderCell(
-                                formatDateTime(item?.due_at),
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginTop: 24 }}>
-                <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
-                    Обязательства по зарплате
-                  </h3>
-                  <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-                    Только read-only список по salary без изменения контрактов или финансового контура.
-                  </p>
-                </div>
-
                 {salaryObligationsError ? (
-                  <div
-                    style={{
-                      marginBottom: 12,
-                      padding: 12,
-                      borderRadius: 12,
-                      border: "1px solid #fde68a",
-                      background: "#fffbeb",
-                      color: "#92400e",
-                      fontSize: 14
-                    }}
-                  >
+                  <div style={{
+                    marginBottom: 10,
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #fde68a",
+                    background: "#fffbeb",
+                    color: "#92400e",
+                    fontSize: 14
+                  }}>
                     {salaryObligationsError}
+                  </div>
+                ) : null}
+
+                {rentObligationsLoading || salaryObligationsLoading ? (
+                  <div style={{
+                    marginBottom: 12,
+                    color: "#6b7280",
+                    fontSize: 14
+                  }}>
+                    Загружаем обязательства мастер-салон...
                   </div>
                 ) : null}
 
                 <div style={compactGridStyle}>
                   <InfoBox
                     label="Открыто"
-                    value={salaryObligationsLoading ? "..." : Number(salaryObligationsSummary?.open_count ?? 0)}
-                    note="Ожидают выплаты"
+                    value={salonObligationsModel.summary ? Number(salonObligationsModel.summary.open_count ?? 0) : 0}
+                    note="Активные обязательства в работе"
                   />
-
                   <InfoBox
-                    label="Сумма открытых"
-                    value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.open_amount ?? 0, "KGS")}
-                    note="Сумма обязательств к выплате"
+                    label="Просрочено"
+                    value={salonObligationsModel.summary ? Number(salonObligationsModel.summary.overdue_count ?? 0) : 0}
+                    note="Требуют внимания"
                   />
-
                   <InfoBox
-                    label="Оплачено"
-                    value={salaryObligationsLoading ? "..." : Number(salaryObligationsSummary?.paid_count ?? 0)}
-                    note="Уже закрыты"
+                    label="Аренда к получению"
+                    value={formatSignedCurrency(salonObligationsModel.summary?.rent_receivable_amount ?? 0, "+")}
+                    note="Положительный поток для салона"
                   />
-
                   <InfoBox
-                    label="Оплаченная сумма"
-                    value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.paid_amount ?? 0, "KGS")}
-                    note="Сумма закрытых обязательств"
+                    label="Зарплата к выплате"
+                    value={formatSignedCurrency(salonObligationsModel.summary?.salary_payable_amount ?? 0, "-")}
+                    note="Отток в пользу мастеров"
+                  />
+                  <InfoBox
+                    label="Аренда получена"
+                    value={formatSignedCurrency(salonObligationsModel.summary?.rent_received_amount ?? 0, "+")}
+                    note="Закрытые арендные периоды"
+                  />
+                  <InfoBox
+                    label="Зарплата выплачена"
+                    value={formatSignedCurrency(salonObligationsModel.summary?.salary_paid_amount ?? 0, "+")}
+                    note="Закрытые зарплатные периоды"
                   />
                 </div>
 
-                {salaryObligationsLoading && (
-                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
-                    Загружаем обязательства по зарплате...
-                  </div>
-                )}
-
-                {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length === 0 && (
+                {!rentObligationsLoading && !salaryObligationsLoading && !salonObligationsModel.masters.length ? (
                   <div style={{ marginTop: 12 }}>
-                    <EmptyState text="Обязательства по зарплате пока не найдены." />
+                    <EmptyState text="Обязательства мастер-салон пока не найдены." />
                   </div>
-                )}
+                ) : null}
 
-                {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length > 0 && (
-                  <div style={{ ...tableWrapStyle, marginTop: 12 }}>
-                    <table style={tableStyle}>
-                      <thead>
-                        <tr>
-                          <th style={tableHeadCellStyle}>Период</th>
-                          <th style={tableHeadCellStyle}>Сумма</th>
-                          <th style={tableHeadCellStyle}>Статус</th>
-                          <th style={tableHeadCellStyle}>Срок выплаты</th>
-                        </tr>
-                      </thead>
+                {salonObligationsModel.masters.length ? (
+                  <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                      gap: 12
+                    }}>
+                      {salonObligationsModel.masters.map((master) => {
+                        const isActive = String(master.key) === String(selectedObligationMaster?.key || "")
 
-                      <tbody>
-                        {salaryObligations.map((item, index) => {
-                          const isLast = index === salaryObligations.length - 1
-                          return (
-                            <tr key={item?.id || `${item?.contract_id || "salary-obligation"}-${index}`}>
-                              {renderCell(
-                                <div>
-                                  <div style={{ fontWeight: 600, color: "#111827" }}>
-                                    {formatDateTime(item?.period_start)} — {formatDateTime(item?.period_end)}
-                                  </div>
-                                  <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                                    Contract: {item?.contract_id || "—"}
-                                  </div>
-                                </div>,
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                              {renderCell(
-                                <span style={{ fontWeight: 600 }}>{formatCurrencyAmount(item?.amount, item?.currency || "KGS")}</span>,
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                              {renderCell(
-                                <span style={getStatusStyle(item?.status)}>{formatObligationStatus(item?.status)}</span>,
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                              {renderCell(
-                                formatDateTime(item?.due_at),
-                                isLast ? { borderBottom: "none" } : {}
-                              )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                        return (
+                          <button
+                            key={master.key}
+                            type="button"
+                            onClick={() => setSelectedObligationMasterId(String(master.key))}
+                            style={{
+                              textAlign: "left",
+                              border: isActive ? "1px solid #111827" : "1px solid #e5e7eb",
+                              borderRadius: 14,
+                              background: isActive ? "#f8fafc" : "#fff",
+                              padding: 14,
+                              cursor: "pointer"
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>{master.master_name || "—"}</div>
+                                <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+                                  {master.priority_label || "—"} · {master.overdue_count || 0} просрочено
+                                </div>
+                              </div>
+                              <span style={getStatusStyle(master.priority_obligation?.status || "open")}>
+                                {master.priority_label || "—"}
+                              </span>
+                            </div>
+
+                            <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                              <div style={{ fontSize: 13, color: "#374151" }}>
+                                Аренда к получению: <strong>{formatSignedCurrency(master.rent_receivable_amount || 0, "+")}</strong>
+                              </div>
+                              <div style={{ fontSize: 13, color: "#374151" }}>
+                                Зарплата к выплате: <strong>{formatSignedCurrency(master.salary_payable_amount || 0, "-")}</strong>
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {selectedObligationMaster ? (
+                      <Card soft style={{ padding: 16 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+                          <div>
+                            <div style={{ fontSize: 12, color: "#6b7280" }}>Выбранный мастер</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: "#111827", marginTop: 4 }}>
+                              {selectedObligationMaster.master_name || "—"}
+                            </div>
+                            <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
+                              {selectedObligationMaster.priority_note || "Список обязательств по мастеру"}
+                            </div>
+                          </div>
+                          <span style={getStatusStyle(selectedObligationMaster.priority_obligation?.status || "open")}>
+                            {selectedObligationMaster.priority_label || "Открыто"}
+                          </span>
+                        </div>
+
+                        <div style={compactGridStyle}>
+                          <InfoBox
+                            label="Открыто"
+                            value={selectedObligationMaster.open_count || 0}
+                            note="Активные или ожидающие периоды"
+                          />
+                          <InfoBox
+                            label="Просрочено"
+                            value={selectedObligationMaster.overdue_count || 0}
+                            note="Требуют срочного действия"
+                          />
+                          <InfoBox
+                            label="Аренда к получению"
+                            value={formatSignedCurrency(selectedObligationMaster.rent_receivable_amount || 0, "+")}
+                            note="Салон должен получить"
+                          />
+                          <InfoBox
+                            label="Зарплата к выплате"
+                            value={formatSignedCurrency(selectedObligationMaster.salary_payable_amount || 0, "-")}
+                            note="Салон должен выплатить"
+                          />
+                        </div>
+
+                        <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
+                          <div>
+                            <div style={{ marginBottom: 10, fontSize: 15, fontWeight: 800, color: "#111827" }}>
+                              Аренда к получению
+                            </div>
+                            {selectedObligationMaster.rent.length ? (
+                              <div style={{ ...tableWrapStyle, minWidth: 0 }}>
+                                <table style={{ ...tableStyle, minWidth: 820 }}>
+                                  <thead>
+                                    <tr>
+                                      <th style={tableHeadCellStyle}>Период</th>
+                                      <th style={tableHeadCellStyle}>Сумма</th>
+                                      <th style={tableHeadCellStyle}>Статус</th>
+                                      <th style={tableHeadCellStyle}>Срок оплаты</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {selectedObligationMaster.rent.map((item, index) => {
+                                      const isLast = index === selectedObligationMaster.rent.length - 1
+                                      return (
+                                        <tr key={item?.id || `${item?.contract_id || "rent-obligation"}-${index}`}>
+                                          {renderCell(
+                                            <div>
+                                              <div style={{ fontWeight: 600, color: "#111827" }}>
+                                                {formatDateTime(item?.period_start, item)} — {formatDateTime(item?.period_end, item)}
+                                              </div>
+                                            </div>,
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                          {renderCell(
+                                            <span style={{ fontWeight: 600 }}>{formatSignedCurrency(item?.amount, "+", item?.currency || "KGS")}</span>,
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                          {renderCell(
+                                            <span style={getStatusStyle(item?.status)}>{formatObligationStatus(item?.status)}</span>,
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                          {renderCell(
+                                            formatDateTime(item?.due_at, item),
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <EmptyState text="Аренда к получению пока не найдена." />
+                            )}
+                          </div>
+
+                          <div>
+                            <div style={{ marginBottom: 10, fontSize: 15, fontWeight: 800, color: "#111827" }}>
+                              Зарплата к выплате
+                            </div>
+                            {selectedObligationMaster.salary.length ? (
+                              <div style={{ ...tableWrapStyle, minWidth: 0 }}>
+                                <table style={{ ...tableStyle, minWidth: 820 }}>
+                                  <thead>
+                                    <tr>
+                                      <th style={tableHeadCellStyle}>Период</th>
+                                      <th style={tableHeadCellStyle}>Сумма</th>
+                                      <th style={tableHeadCellStyle}>Статус</th>
+                                      <th style={tableHeadCellStyle}>Срок выплаты</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {selectedObligationMaster.salary.map((item, index) => {
+                                      const isLast = index === selectedObligationMaster.salary.length - 1
+                                      return (
+                                        <tr key={item?.id || `${item?.contract_id || "salary-obligation"}-${index}`}>
+                                          {renderCell(
+                                            <div>
+                                              <div style={{ fontWeight: 600, color: "#111827" }}>
+                                                {formatDateTime(item?.period_start, item)} — {formatDateTime(item?.period_end, item)}
+                                              </div>
+                                            </div>,
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                          {renderCell(
+                                            <span style={{ fontWeight: 600 }}>{formatSignedCurrency(item?.amount, "-", item?.currency || "KGS")}</span>,
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                          {renderCell(
+                                            <span style={getStatusStyle(item?.status)}>{formatObligationStatus(item?.status)}</span>,
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                          {renderCell(
+                                            formatDateTime(item?.due_at, item),
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <EmptyState text="Зарплата к выплате пока не найдена." />
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    ) : null}
                   </div>
-                )}
-              </div>
+                ) : null}
+              </SectionBlock>
 
               {contractActionError && (
                 <div

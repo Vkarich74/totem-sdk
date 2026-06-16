@@ -9,6 +9,8 @@ import {
   confirmSalonCashPayment,
   getBookings as getSalonBookings,
   getSalonMetrics,
+  getSalonRentObligations,
+  getSalonSalaryObligations,
   getSalonOwnerQrPayments,
   getSalonPaymentProjections,
   rejectOwnerQrPayment
@@ -95,6 +97,241 @@ function getOwnerQrPaymentAmount(payment){
   const value = payment?.amount ?? payment?.payment_amount ?? payment?.price_snapshot ?? 0
   const amount = Number(value || 0)
   return Number.isFinite(amount) ? amount : 0
+}
+
+const DEFAULT_BUSINESS_TIME_ZONE = "Asia/Bishkek"
+
+function resolveBusinessTimeZone(source){
+  const directTimezone = [
+    source?.timezone,
+    source?.time_zone,
+    source?.business_timezone,
+    source?.salon_timezone,
+    source?.master_timezone,
+    source?.contract_timezone
+  ].find((value) => String(value || "").trim())
+
+  if(directTimezone){
+    return String(directTimezone).trim()
+  }
+
+  const cityCandidates = [
+    source?.city,
+    source?.salon_city,
+    source?.master_city,
+    source?.location_city
+  ]
+
+  for(const cityValue of cityCandidates){
+    const city = String(cityValue || "").trim().toLowerCase()
+
+    if(!city){
+      continue
+    }
+
+    if(city.includes("bishkek") || city.includes("бишкек")){
+      return "Asia/Bishkek"
+    }
+
+    if(
+      city.includes("almaty") ||
+      city.includes("алматы") ||
+      city.includes("астана") ||
+      city.includes("nur-sultan") ||
+      city.includes("нур-султан") ||
+      city.includes("nur sultan")
+    ){
+      return "Asia/Almaty"
+    }
+  }
+
+  return DEFAULT_BUSINESS_TIME_ZONE
+}
+
+function formatBusinessDateTime(value, source){
+  if(!value){
+    return "—"
+  }
+
+  const date = new Date(value)
+
+  if(Number.isNaN(date.getTime())){
+    return "—"
+  }
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: resolveBusinessTimeZone(source),
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date)
+}
+
+function formatSignedMoney(value, sign){
+  const amount = Math.abs(Number(value || 0))
+
+  if(Number.isNaN(amount)){
+    return "—"
+  }
+
+  const prefix = sign === "-" ? "-" : sign === "+" ? "+" : ""
+  return `${prefix}${new Intl.NumberFormat("ru-RU").format(amount)} сом`
+}
+
+function normalizeObligationStatus(value){
+  return String(value || "").trim().toLowerCase()
+}
+
+function getObligationStatusLabel(value){
+  const status = normalizeObligationStatus(value)
+
+  if(status === "overdue") return "Просрочено"
+  if(status === "upcoming") return "Предстоящий"
+  if(status === "open") return "Открыто"
+  if(status === "paid") return "Оплачено"
+  if(status === "cancelled") return "Отменено"
+  if(status === "voided") return "Аннулировано"
+  if(status === "active") return "Активный"
+  if(status === "pending") return "Ожидает"
+  if(status === "archived") return "Архив"
+
+  return value || "—"
+}
+
+function getObligationPriority(item){
+  const status = normalizeObligationStatus(item?.status)
+
+  if(status === "overdue"){
+    return 0
+  }
+
+  if(status === "open" || status === "active"){
+    return 1
+  }
+
+  if(status === "upcoming" || status === "pending"){
+    return 2
+  }
+
+  if(status === "paid"){
+    return 3
+  }
+
+  return 4
+}
+
+function getObligationAmount(item){
+  const amount = Number(item?.amount ?? item?.open_amount ?? item?.paid_amount ?? 0)
+  return Number.isFinite(amount) ? amount : 0
+}
+
+function buildSalonObligationSummary(rentObligations, salaryObligations){
+  const rentRows = Array.isArray(rentObligations) ? rentObligations : []
+  const salaryRows = Array.isArray(salaryObligations) ? salaryObligations : []
+  const combined = [
+    ...rentRows.map((item) => ({ ...item, obligation_type: "rent" })),
+    ...salaryRows.map((item) => ({ ...item, obligation_type: "salary" }))
+  ]
+
+  const summary = {
+    open_count: 0,
+    overdue_count: 0,
+    rent_receivable_amount: 0,
+    salary_payable_amount: 0,
+    rent_received_amount: 0,
+    salary_paid_amount: 0,
+    priority_obligation: null,
+    priority_label: null,
+    priority_note: null
+  }
+
+  let priorityCandidate = null
+
+  for(const item of combined){
+    const status = normalizeObligationStatus(item?.status)
+    const amount = getObligationAmount(item)
+    const isOpenish = status === "open" || status === "overdue" || status === "upcoming" || status === "active" || status === "pending"
+
+    if(isOpenish){
+      summary.open_count += 1
+    }
+
+    if(status === "overdue"){
+      summary.overdue_count += 1
+    }
+
+    if(item?.obligation_type === "rent"){
+      if(isOpenish){
+        summary.rent_receivable_amount += amount
+      }
+
+      if(status === "paid"){
+        summary.rent_received_amount += amount
+      }
+    }
+
+    if(item?.obligation_type === "salary"){
+      if(isOpenish){
+        summary.salary_payable_amount += amount
+      }
+
+      if(status === "paid"){
+        summary.salary_paid_amount += amount
+      }
+    }
+
+    const priorityRank = getObligationPriority(item)
+    const candidateTime = new Date(
+      item?.due_at ||
+      item?.period_start ||
+      item?.paid_at ||
+      item?.created_at ||
+      0
+    ).getTime() || 0
+
+    if(!priorityCandidate){
+      priorityCandidate = {
+        item,
+        rank: priorityRank,
+        time: candidateTime
+      }
+      continue
+    }
+
+    const shouldReplace =
+      priorityRank < priorityCandidate.rank ||
+      (
+        priorityRank === priorityCandidate.rank &&
+        (
+          priorityRank === 3
+            ? candidateTime > priorityCandidate.time
+            : candidateTime < priorityCandidate.time
+        )
+      )
+
+    if(shouldReplace){
+      priorityCandidate = {
+        item,
+        rank: priorityRank,
+        time: candidateTime
+      }
+    }
+  }
+
+  if(priorityCandidate?.item){
+    const priorityItem = priorityCandidate.item
+    const kindLabel = priorityItem.obligation_type === "salary" ? "Зарплата" : "Аренда"
+    const priorityLabel = getObligationStatusLabel(priorityItem?.status)
+
+    summary.priority_obligation = priorityItem
+    summary.priority_label = priorityLabel
+    summary.priority_note = `${kindLabel} · ${formatBusinessDateTime(priorityItem?.due_at || priorityItem?.period_start || priorityItem?.paid_at || priorityItem?.created_at, priorityItem)}`
+  }
+
+  return summary
 }
 
 function getOwnerQrActionErrorMessage(error){
@@ -396,6 +633,8 @@ export default function DashboardPage(){
 
   const [metrics, setMetrics] = useState(null)
   const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null)
+  const [contractObligations, setContractObligations] = useState({ rent: [], salary: [], summary: null })
+  const [contractObligationsLoading, setContractObligationsLoading] = useState(true)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState("")
   const [empty, setEmpty] = useState(false)
@@ -488,6 +727,64 @@ export default function DashboardPage(){
     }
 
     loadPaymentProjectionSummary()
+
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadContractObligations(){
+      if(!slug){
+        if(!cancelled){
+          setContractObligations({ rent: [], salary: [], summary: null })
+          setContractObligationsLoading(false)
+        }
+        return
+      }
+
+      try{
+        setContractObligationsLoading(true)
+
+        const [rentResult, salaryResult] = await Promise.allSettled([
+          getSalonRentObligations(slug),
+          getSalonSalaryObligations(slug)
+        ])
+
+        if(cancelled){
+          return
+        }
+
+        const rentOk = rentResult.status === "fulfilled" && rentResult.value?.ok
+        const salaryOk = salaryResult.status === "fulfilled" && salaryResult.value?.ok
+
+        if(!rentOk || !salaryOk){
+          setContractObligations({ rent: [], salary: [], summary: null })
+          return
+        }
+
+        const rent = Array.isArray(rentResult.value?.obligations) ? rentResult.value.obligations : []
+        const salary = Array.isArray(salaryResult.value?.obligations) ? salaryResult.value.obligations : []
+
+        setContractObligations({
+          rent,
+          salary,
+          summary: buildSalonObligationSummary(rent, salary)
+        })
+      }catch(error){
+        if(!cancelled){
+          setContractObligations({ rent: [], salary: [], summary: null })
+        }
+      }finally{
+        if(!cancelled){
+          setContractObligationsLoading(false)
+        }
+      }
+    }
+
+    void loadContractObligations()
 
     return () => {
       cancelled = true
@@ -1491,6 +1788,120 @@ export default function DashboardPage(){
             note="Быстрый обзор без тяжёлых таблиц. Детальные движения и расчёты вынесены в финансовые страницы."
           />
         </div>
+      </PageSection>
+
+      <PageSection
+        title="Обязательства мастер-салон"
+        right={(
+          <Link
+            to={buildSalonPath(slug, "contracts")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "40px",
+              padding: "8px 14px",
+              borderRadius: "10px",
+              border: "1px solid #d0d5dd",
+              background: "#ffffff",
+              color: "#344054",
+              textDecoration: "none",
+              fontSize: "13px",
+              fontWeight: 700
+            }}
+          >
+            Открыть операционку
+          </Link>
+        )}
+      >
+        {contractObligationsLoading ? (
+          <div style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "14px",
+            background: "#fff",
+            padding: "14px",
+            color: "#6b7280",
+            fontSize: "14px"
+          }}>
+            Загружаем обязательства мастер-салон...
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: "12px" }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "12px"
+            }}>
+              <SummaryCard
+                title="Открыто"
+                value={Number(contractObligations.summary?.open_count || 0)}
+                note="Активные обязательства в работе"
+              />
+              <SummaryCard
+                title="Просрочено"
+                value={Number(contractObligations.summary?.overdue_count || 0)}
+                note="Требуют внимания"
+              />
+              <SummaryCard
+                title="Аренда к получению"
+                value={formatSignedMoney(contractObligations.summary?.rent_receivable_amount || 0, "+")}
+                note="Положительный поток для салона"
+              />
+              <SummaryCard
+                title="Зарплата к выплате"
+                value={formatSignedMoney(contractObligations.summary?.salary_payable_amount || 0, "-")}
+                note="Отток в пользу мастеров"
+              />
+              <SummaryCard
+                title="Требует действия"
+                value={contractObligations.summary?.priority_label || "—"}
+                note={contractObligations.summary?.priority_note || "Открой операционку, чтобы увидеть ближайшее обязательство"}
+              />
+            </div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "12px"
+            }}>
+              <SummaryCard
+                title="Аренда получена"
+                value={formatSignedMoney(contractObligations.summary?.rent_received_amount || 0, "+")}
+                note="Закрытые арендные периоды"
+              />
+              <SummaryCard
+                title="Зарплата выплачена"
+                value={formatSignedMoney(contractObligations.summary?.salary_paid_amount || 0, "+")}
+                note="Закрытые зарплатные периоды"
+              />
+            </div>
+
+            {!contractObligations.rent.length && !contractObligations.salary.length ? (
+              <EmptyState text="Обязательства мастер-салон пока не найдены." />
+            ) : (
+              <div style={{ display: "grid", gap: "12px" }}>
+                {contractObligations.summary?.priority_obligation ? (
+                  <div style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "14px",
+                    background: "#fff",
+                    padding: "14px"
+                  }}>
+                    <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px" }}>
+                      Главное действие
+                    </div>
+                    <div style={{ fontSize: "16px", fontWeight: 800, color: "#111827", marginBottom: "4px" }}>
+                      {contractObligations.summary.priority_label || "—"}
+                    </div>
+                    <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.45 }}>
+                      {contractObligations.summary.priority_note || "Открой операционку для подробностей."}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        )}
       </PageSection>
 
       {empty ? (

@@ -27,20 +27,85 @@ function money(value) {
   return `${new Intl.NumberFormat("ru-RU").format(n)} сом`;
 }
 
-function formatDateTime(iso) {
+const DEFAULT_BUSINESS_TIME_ZONE = "Asia/Bishkek";
+
+function resolveBusinessTimeZone(source) {
+  const directTimezone = [
+    source?.timezone,
+    source?.time_zone,
+    source?.business_timezone,
+    source?.salon_timezone,
+    source?.master_timezone,
+    source?.contract_timezone
+  ].find((value) => String(value || "").trim());
+
+  if (directTimezone) {
+    return String(directTimezone).trim();
+  }
+
+  const cityCandidates = [
+    source?.city,
+    source?.salon_city,
+    source?.master_city,
+    source?.location_city
+  ];
+
+  for (const cityValue of cityCandidates) {
+    const city = String(cityValue || "").trim().toLowerCase();
+
+    if (!city) {
+      continue;
+    }
+
+    if (city.includes("bishkek") || city.includes("бишкек")) {
+      return "Asia/Bishkek";
+    }
+
+    if (
+      city.includes("almaty") ||
+      city.includes("алматы") ||
+      city.includes("астана") ||
+      city.includes("nur-sultan") ||
+      city.includes("нур-султан") ||
+      city.includes("nur sultan")
+    ) {
+      return "Asia/Almaty";
+    }
+  }
+
+  return DEFAULT_BUSINESS_TIME_ZONE;
+}
+
+function formatDateTime(iso, source) {
   if (!iso) return "—";
 
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
 
-  return (
-    d.toLocaleDateString("ru-RU") +
-    " " +
-    d.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit"
-    })
-  );
+  return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: resolveBusinessTimeZone(source),
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(d);
+}
+
+function formatSignedCurrency(value, sign, currency = "KGS") {
+  const amount = Math.abs(Number(value || 0));
+
+  if (Number.isNaN(amount)) {
+    return "—";
+  }
+
+  const prefix = sign === "-" ? "-" : sign === "+" ? "+" : "";
+  return `${prefix}${new Intl.NumberFormat("ru-RU").format(amount)} ${currency}`;
+}
+
+function normalizeObligationStatus(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function normalizeContractResponse(payload) {
@@ -552,10 +617,14 @@ export default function MasterFinancePage() {
   const historyPreview = useMemo(() => history.slice(0, 5), [history]);
 
   const formatObligationStatus = (value) => {
-    if (value === "open") return "Открыто";
-    if (value === "paid") return "Оплачено";
-    if (value === "cancelled") return "Отменено";
-    if (value === "voided") return "Аннулировано";
+    const status = normalizeObligationStatus(value);
+
+    if (status === "overdue") return "Просрочено";
+    if (status === "upcoming") return "Предстоящий";
+    if (status === "open") return "Открыто";
+    if (status === "paid") return "Оплачено";
+    if (status === "cancelled") return "Отменено";
+    if (status === "voided") return "Аннулировано";
     return value || "—";
   };
 
@@ -602,7 +671,7 @@ export default function MasterFinancePage() {
 
             <Panel
               title="Money Core: баланс и вывод"
-              subtitle="Новая модель вывода средств. Сейчас доступен только только просмотр режим."
+              subtitle="Новая модель вывода средств. Сейчас доступен только просмотр."
             >
               <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: "#fff7ed", border: "1px solid #fed7aa", color: "#92400e" }}>
                 Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
@@ -997,7 +1066,7 @@ export default function MasterFinancePage() {
                 )}
               </Panel>
 
-              <Panel title="Обязательства по аренде" subtitle="Только только просмотр список fixed_rent без изменений финансового контура.">
+              <Panel title="Обязательства по аренде" subtitle="Только просмотр. Аренда показывает обязательства мастера перед салоном.">
                 {rentObligationsError ? (
                   <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", fontSize: 14 }}>
                     {rentObligationsError}
@@ -1006,9 +1075,9 @@ export default function MasterFinancePage() {
 
                 <div style={styles.infoGrid}>
                   <InfoRow label="Открыто" value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.open_count ?? 0))} />
-                  <InfoRow label="Сумма открытых" value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.open_amount ?? 0))} KGS`} />
+                  <InfoRow label="Аренда к оплате / удержанию" value={rentObligationsLoading ? "..." : formatSignedCurrency(rentObligationsSummary?.open_amount ?? 0, "-")} />
                   <InfoRow label="Оплачено" value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.paid_count ?? 0))} />
-                  <InfoRow label="Оплаченная сумма" value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.paid_amount ?? 0))} KGS`} />
+                  <InfoRow label="Аренда оплачена / удержана" value={rentObligationsLoading ? "..." : formatSignedCurrency(rentObligationsSummary?.paid_amount ?? 0, "-")} />
                 </div>
 
                 {rentObligationsLoading ? (
@@ -1027,9 +1096,9 @@ export default function MasterFinancePage() {
                 {!rentObligationsLoading && !rentObligationsError && rentObligations.length > 0 ? (
                   <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
                     {rentObligations.map((item, index) => {
-                      const periodLabel = `${formatDateTime(item?.period_start)} — ${formatDateTime(item?.period_end)}`;
-                      const amountLabel = `${new Intl.NumberFormat("ru-RU").format(Number(item?.amount || 0))} KGS`;
-                      const dueLabel = formatDateTime(item?.due_at);
+                      const periodLabel = `${formatDateTime(item?.period_start, item)} — ${formatDateTime(item?.period_end, item)}`;
+                      const amountLabel = formatSignedCurrency(item?.amount, "-", item?.currency || "KGS");
+                      const dueLabel = formatDateTime(item?.due_at, item);
 
                       return (
                         <PreviewRow
@@ -1045,7 +1114,7 @@ export default function MasterFinancePage() {
                 ) : null}
               </Panel>
 
-              <Panel title="Обязательства по зарплате" subtitle="Только только просмотр список salary без изменения записей, выплат или финансового контура.">
+              <Panel title="Обязательства по зарплате" subtitle="Только просмотр. Зарплата показывает обязательства салона перед мастером.">
                 {salaryObligationsError ? (
                   <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", fontSize: 14 }}>
                     {salaryObligationsError}
@@ -1054,9 +1123,9 @@ export default function MasterFinancePage() {
 
                 <div style={styles.infoGrid}>
                   <InfoRow label="Открыто" value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.open_count ?? 0))} />
-                  <InfoRow label="Сумма открытых" value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.open_amount ?? 0, "KGS")} />
+                  <InfoRow label="Зарплата к получению" value={salaryObligationsLoading ? "..." : formatSignedCurrency(salaryObligationsSummary?.open_amount ?? 0, "+")} />
                   <InfoRow label="Оплачено" value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.paid_count ?? 0))} />
-                  <InfoRow label="Оплаченная сумма" value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.paid_amount ?? 0, "KGS")} />
+                  <InfoRow label="Зарплата получена" value={salaryObligationsLoading ? "..." : formatSignedCurrency(salaryObligationsSummary?.paid_amount ?? 0, "+")} />
                 </div>
 
                 {salaryObligationsLoading ? (
@@ -1075,9 +1144,9 @@ export default function MasterFinancePage() {
                 {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length > 0 ? (
                   <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
                     {salaryObligations.map((item, index) => {
-                      const periodLabel = `${formatDateTime(item?.period_start)} — ${formatDateTime(item?.period_end)}`;
-                      const amountLabel = formatCurrencyAmount(item?.amount, item?.currency || "KGS");
-                      const dueLabel = formatDateTime(item?.due_at);
+                      const periodLabel = `${formatDateTime(item?.period_start, item)} — ${formatDateTime(item?.period_end, item)}`;
+                      const amountLabel = formatSignedCurrency(item?.amount, "+", item?.currency || "KGS");
+                      const dueLabel = formatDateTime(item?.due_at, item);
 
                       return (
                         <PreviewRow
