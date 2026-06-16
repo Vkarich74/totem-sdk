@@ -31,3 +31,6 @@ android/keystore.properties
 _backup/
 backup/
 tmp/
+# TOTEM local duplicate/backup snapshots - never commit
+src/**/* (1).jsx
+src/**/*.bak_public_url_*
