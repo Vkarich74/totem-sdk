@@ -9,6 +9,7 @@ import {
   confirmOwnerQrPayment,
   getMasterMetrics,
   getMasterOwnerQrPayments,
+  getMasterPaymentProjections,
   getMasterPendingCashBookings,
   rejectOwnerQrPayment
 } from "../../api/internal"
@@ -291,6 +292,7 @@ export default function MasterDashboard() {
   } = useMaster()
 
   const [metrics, setMetrics] = useState(null)
+  const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState("")
   const [empty, setEmpty] = useState(false)
@@ -378,6 +380,32 @@ export default function MasterDashboard() {
     }
 
     loadMetrics()
+
+    return ()=>{
+      cancelled = true
+    }
+  },[slug])
+
+  useEffect(()=>{
+    let cancelled = false
+
+    async function loadPaymentProjectionSummary(){
+      if(!slug){
+        if(!cancelled) setPaymentProjectionSummary(null)
+        return
+      }
+
+      try{
+        const result = await getMasterPaymentProjections(slug)
+        if(!cancelled){
+          setPaymentProjectionSummary(result?.ok ? (result.summary || null) : null)
+        }
+      }catch(error){
+        if(!cancelled) setPaymentProjectionSummary(null)
+      }
+    }
+
+    loadPaymentProjectionSummary()
 
     return ()=>{
       cancelled = true
@@ -670,6 +698,7 @@ export default function MasterDashboard() {
   const error = masterError || metricsError
   const masterName = master?.name || ""
   const safeMetrics = useMemo(()=>metrics || {},[metrics])
+  const financeCardAmount = Number(paymentProjectionSummary?.history_amount || 0)
   const visibleNotifications = useMemo(() => {
     if (notificationsExpanded || notifications.length <= 4) {
       return notifications
@@ -861,8 +890,8 @@ export default function MasterDashboard() {
           <StatCard title="Записей сегодня" value={safeMetrics.bookings_today || 0} />
           <StatCard title="Записей за неделю" value={safeMetrics.bookings_week || 0} />
           <StatCard title="Клиентов всего" value={safeMetrics.clients_total || 0} />
-          <StatCard title="Доход сегодня" value={money(safeMetrics.revenue_today)} />
-          <StatCard title="Доход за месяц" value={money(safeMetrics.revenue_month)} />
+          <StatCard title="Доход сегодня" value={money(financeCardAmount)} />
+          <StatCard title="Доход за месяц" value={money(financeCardAmount)} />
         </div>
 
         <div style={{
@@ -1443,7 +1472,7 @@ export default function MasterDashboard() {
           />
           <SummaryCard
             title="Деньги сейчас"
-            value={money(safeMetrics.revenue_today)}
+            value={money(financeCardAmount)}
             note="Быстрый обзор без тяжёлых таблиц. Детальные движения вынесены в отдельные финансовые страницы."
           />
           <SummaryCard

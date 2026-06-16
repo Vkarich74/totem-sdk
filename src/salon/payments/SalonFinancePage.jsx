@@ -374,7 +374,7 @@ export default function SalonFinancePage(){
 
   const pageLoading = contextLoading || loading
   const pageError = !pageLoading && (contextError || error)
-  const showEmpty = !pageLoading && !pageError && !contracts.length && !settlements.length && !payouts.length && !walletBalance && !metricsView.revenueMonth
+  const showEmpty = !pageLoading && !pageError && !contracts.length && !settlements.length && !payouts.length && !walletBalance && !Number(paymentProjectionSummary?.history_amount || 0)
   const moneyCoreZones = moneyCoreSummary || {}
 
   return (
@@ -419,8 +419,8 @@ export default function SalonFinancePage(){
 
         <section style={styles.statsGrid}>
           <StatCard title="Баланс кошелька" value={money(walletBalance)} note="Текущий wallet balance салона" />
-          <StatCard title="Доход сегодня" value={money(metricsView.revenueToday)} note="Операционная выручка за день" />
-          <StatCard title="Доход за месяц" value={money(metricsView.revenueMonth)} note="Главный срез по текущей выручке" />
+          <StatCard title="Доход сегодня" value={money(paymentProjectionSummary?.history_amount)} note="Операционная выручка за день" />
+          <StatCard title="Доход за месяц" value={money(paymentProjectionSummary?.history_amount)} note="Главный срез по текущей выручке" />
           <StatCard title="Активные контракты" value={String(activeContracts.length)} note="Связка с мастерами и правила расчётов" />
           <StatCard title="История оплат" value={money(paymentProjectionSummary?.history_amount)} note={`Строк в истории: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
           <StatCard title="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} note={`Открытых строк: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
@@ -793,7 +793,7 @@ export default function SalonFinancePage(){
               <div style={styles.infoGrid}>
                 <div style={styles.infoItem}>
                   <div style={styles.infoLabel}>Платежей всего</div>
-                  <div style={styles.infoValue}>{metricsView.paymentsTotal}</div>
+                  <div style={styles.infoValue}>{Number(paymentProjectionSummary?.history_count || 0)}</div>
                 </div>
                 <div style={styles.infoItem}>
                   <div style={styles.infoLabel}>Записей сегодня</div>

@@ -10,6 +10,7 @@ import {
   getBookings as getSalonBookings,
   getSalonMetrics,
   getSalonOwnerQrPayments,
+  getSalonPaymentProjections,
   rejectOwnerQrPayment
 } from "../../api/internal"
 import { getSalonNotifications, markSalonNotificationRead } from "../../api/salon.js"
@@ -394,6 +395,7 @@ export default function DashboardPage(){
   } = useSalonContext()
 
   const [metrics, setMetrics] = useState(null)
+  const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState("")
   const [empty, setEmpty] = useState(false)
@@ -460,6 +462,32 @@ export default function DashboardPage(){
     }
 
     loadMetrics()
+
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadPaymentProjectionSummary(){
+      if(!slug){
+        if(!cancelled) setPaymentProjectionSummary(null)
+        return
+      }
+
+      try{
+        const result = await getSalonPaymentProjections(slug)
+        if(!cancelled){
+          setPaymentProjectionSummary(result?.ok ? (result.summary || null) : null)
+        }
+      }catch(error){
+        if(!cancelled) setPaymentProjectionSummary(null)
+      }
+    }
+
+    loadPaymentProjectionSummary()
 
     return () => {
       cancelled = true
@@ -752,6 +780,7 @@ export default function DashboardPage(){
   const error = salonError || metricsError
   const salonName = identity?.name || identity?.title || ""
   const safeMetrics = useMemo(() => metrics || {}, [metrics])
+  const financeCardAmount = Number(paymentProjectionSummary?.history_amount || 0)
   const visibleNotifications = useMemo(() => {
     if (notificationsExpanded || notifications.length <= 4) {
       return notifications
@@ -852,7 +881,7 @@ export default function DashboardPage(){
             />
             <HeroMetric
               title="Финансы"
-              value={money(safeMetrics.revenue_today)}
+              value={money(financeCardAmount)}
               note={canWithdraw ? "Выплаты доступны" : "Выплаты ограничены"}
             />
             <HeroMetric
@@ -891,8 +920,8 @@ export default function DashboardPage(){
           <CompactMetric title="Записей за неделю" value={safeMetrics.bookings_week || 0} note="Динамика за 7 дней" />
           <CompactMetric title="Клиентов всего" value={safeMetrics.clients_total || 0} note="Накопленная клиентская база" />
           <CompactMetric title="Активных мастеров" value={safeMetrics.masters_active || 0} note="Команда в рабочем режиме" />
-          <CompactMetric title="Доход сегодня" value={money(safeMetrics.revenue_today)} note="Быстрый финансовый обзор" />
-          <CompactMetric title="Доход за месяц" value={money(safeMetrics.revenue_month)} note="Общая monthly динамика" />
+          <CompactMetric title="Доход сегодня" value={money(financeCardAmount)} note="Быстрый финансовый обзор" />
+          <CompactMetric title="Доход за месяц" value={money(financeCardAmount)} note="Общая monthly динамика" />
         </StatGrid>
 
         <div style={{
@@ -1458,7 +1487,7 @@ export default function DashboardPage(){
           />
           <SummaryCard
             title="Деньги сейчас"
-            value={money(safeMetrics.revenue_today)}
+            value={money(financeCardAmount)}
             note="Быстрый обзор без тяжёлых таблиц. Детальные движения и расчёты вынесены в финансовые страницы."
           />
         </div>
