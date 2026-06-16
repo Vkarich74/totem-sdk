@@ -4,15 +4,7 @@ import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonConte
 import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import OwnerPushOptInCard from "../../components/OwnerPushOptInCard"
-import {
-  confirmOwnerQrPayment,
-  confirmSalonCashPayment,
-  getBookings as getSalonBookings,
-  getSalonMetrics,
-  getSalonOwnerQrPayments,
-  getSalonPaymentProjections,
-  rejectOwnerQrPayment
-} from "../../api/internal"
+import { confirmSalonCashPayment, getBookings as getSalonBookings, getSalonMetrics } from "../../api/internal"
 import { getSalonNotifications, markSalonNotificationRead } from "../../api/salon.js"
 
 function money(value){
@@ -64,59 +56,6 @@ function getBookingAmount(booking){
   const value = booking?.payment_amount ?? booking?.price_snapshot ?? booking?.price ?? 0
   const amount = Number(value || 0)
   return Number.isFinite(amount) ? amount : 0
-}
-
-function getSafeOwnerQrPaymentList(payload){
-  if(Array.isArray(payload)) return payload
-  if(Array.isArray(payload?.payments)) return payload.payments
-  if(Array.isArray(payload?.data?.payments)) return payload.data.payments
-  if(Array.isArray(payload?.items)) return payload.items
-  if(Array.isArray(payload?.data?.items)) return payload.data.items
-  return []
-}
-
-function getOwnerQrPaymentStatusLabel(payment){
-  const status = String(payment?.status || payment?.payment_status || "").toLowerCase()
-
-  if(status === "pending_owner_confirmation") return "Ожидает подтверждения"
-  if(status === "confirmed") return "Подтверждено"
-  if(status === "rejected") return "Отклонено"
-  return status ? status : "—"
-}
-
-function isOwnerQrPayment(payment){
-  const provider = String(payment?.provider || payment?.payment_provider || "").toLowerCase()
-  const method = String(payment?.method || "").toLowerCase()
-
-  return provider === "owner_qr" || method === "owner_qr"
-}
-
-function getOwnerQrPaymentAmount(payment){
-  const value = payment?.amount ?? payment?.payment_amount ?? payment?.price_snapshot ?? 0
-  const amount = Number(value || 0)
-  return Number.isFinite(amount) ? amount : 0
-}
-
-function getOwnerQrActionErrorMessage(error){
-  const code = String(error || "").trim()
-
-  if(code === "OWNER_QR_CONFIRM_WRITE_DISABLED"){
-    return "Подтверждение временно закрыто: финансовое окно Money Core выключено."
-  }
-
-  if(code === "OWNER_QR_ACTIVE_CONTRACT_REQUIRED"){
-    return "Нельзя подтвердить: нет активного контракта между салоном и мастером."
-  }
-
-  if(code === "OWNER_QR_INVALID_CONTRACT_TERMS"){
-    return "Нельзя подтвердить: условия распределения некорректны."
-  }
-
-  if(code === "OWNER_QR_FORBIDDEN"){
-    return "Недостаточно прав для подтверждения или отклонения этой оплаты."
-  }
-
-  return code || "Не удалось выполнить действие"
 }
 
 function getBillingUi(billingAccess, billingBlockReason){
@@ -395,7 +334,6 @@ export default function DashboardPage(){
   } = useSalonContext()
 
   const [metrics, setMetrics] = useState(null)
-  const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState("")
   const [empty, setEmpty] = useState(false)
@@ -403,17 +341,11 @@ export default function DashboardPage(){
   const [pendingCashLoading, setPendingCashLoading] = useState(false)
   const [pendingCashError, setPendingCashError] = useState("")
   const [confirmingCashKey, setConfirmingCashKey] = useState("")
-  const [ownerQrPayments, setOwnerQrPayments] = useState([])
-  const [ownerQrLoading, setOwnerQrLoading] = useState(false)
-  const [ownerQrError, setOwnerQrError] = useState("")
-  const [ownerQrActionError, setOwnerQrActionError] = useState("")
-  const [ownerQrActionLoadingId, setOwnerQrActionLoadingId] = useState("")
   const [notifications, setNotifications] = useState([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationsError, setNotificationsError] = useState("")
   const [readingNotificationUid, setReadingNotificationUid] = useState("")
   const [unreadCount, setUnreadCount] = useState(0)
-  const [notificationsExpanded, setNotificationsExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -466,68 +398,6 @@ export default function DashboardPage(){
     return () => {
       cancelled = true
     }
-  }, [slug])
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadPaymentProjectionSummary(){
-      if(!slug){
-        if(!cancelled) setPaymentProjectionSummary(null)
-        return
-      }
-
-      try{
-        const result = await getSalonPaymentProjections(slug)
-        if(!cancelled){
-          setPaymentProjectionSummary(result?.ok ? (result.summary || null) : null)
-        }
-      }catch(error){
-        if(!cancelled) setPaymentProjectionSummary(null)
-      }
-    }
-
-    loadPaymentProjectionSummary()
-
-    return () => {
-      cancelled = true
-    }
-  }, [slug])
-
-  async function loadOwnerQrPayments(){
-    if(!slug){
-      setOwnerQrPayments([])
-      setOwnerQrLoading(false)
-      setOwnerQrError("")
-      setOwnerQrActionError("")
-      return
-    }
-
-    try{
-      setOwnerQrLoading(true)
-      setOwnerQrError("")
-      setOwnerQrActionError("")
-
-      const result = await getSalonOwnerQrPayments(slug)
-
-      if(!result?.ok){
-        const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
-        throw new Error(status ? "SALON_OWNER_QR_HTTP_" + status : (result?.error || "SALON_OWNER_QR_LOAD_FAILED"))
-      }
-
-      const payments = getSafeOwnerQrPaymentList(result).filter(isOwnerQrPayment)
-      setOwnerQrPayments(payments)
-    }catch(error){
-      console.error("SALON DASHBOARD OWNER QR LOAD ERROR", error)
-      setOwnerQrPayments([])
-      setOwnerQrError(error?.message || "SALON_OWNER_QR_LOAD_FAILED")
-    }finally{
-      setOwnerQrLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadOwnerQrPayments()
   }, [slug])
 
   useEffect(() => {
@@ -661,66 +531,6 @@ export default function DashboardPage(){
     }
   }
 
-  async function confirmOwnerQrBooking(payment){
-    const paymentId = payment?.id || payment?.payment_id
-    if(!paymentId || ownerQrActionLoadingId){
-      return
-    }
-
-    const key = String(paymentId)
-    setOwnerQrActionLoadingId(key)
-    setOwnerQrActionError("")
-
-    try{
-      const result = await confirmOwnerQrPayment(paymentId)
-
-      if(!result?.ok){
-        const code = String(result?.error || result?.detail?.error || result?.message || "OWNER_QR_CONFIRM_FAILED")
-        throw new Error(code)
-      }
-
-      await loadOwnerQrPayments()
-    }catch(error){
-      setOwnerQrActionError(getOwnerQrActionErrorMessage(error?.message || "OWNER_QR_CONFIRM_FAILED"))
-    }finally{
-      setOwnerQrActionLoadingId("")
-    }
-  }
-
-  async function rejectOwnerQrBooking(payment){
-    const paymentId = payment?.id || payment?.payment_id
-    if(!paymentId || ownerQrActionLoadingId){
-      return
-    }
-
-    const reason = typeof window !== "undefined" ? window.prompt("Укажите причину отклонения:", "") : ""
-    const rejectionReason = String(reason || "").trim()
-
-    if(!rejectionReason){
-      setOwnerQrActionError("Укажите причину отклонения")
-      return
-    }
-
-    const key = String(paymentId)
-    setOwnerQrActionLoadingId(key)
-    setOwnerQrActionError("")
-
-    try{
-      const result = await rejectOwnerQrPayment(paymentId, rejectionReason)
-
-      if(!result?.ok){
-        const code = String(result?.error || result?.detail?.error || result?.message || "OWNER_QR_REJECT_FAILED")
-        throw new Error(code)
-      }
-
-      await loadOwnerQrPayments()
-    }catch(error){
-      setOwnerQrActionError(getOwnerQrActionErrorMessage(error?.message || "OWNER_QR_REJECT_FAILED"))
-    }finally{
-      setOwnerQrActionLoadingId("")
-    }
-  }
-
   async function loadSalonNotifications(){
     if(!slug){
       setUnreadCount(0)
@@ -780,15 +590,6 @@ export default function DashboardPage(){
   const error = salonError || metricsError
   const salonName = identity?.name || identity?.title || ""
   const safeMetrics = useMemo(() => metrics || {}, [metrics])
-  const financeCardAmount = Number(paymentProjectionSummary?.history_amount || 0)
-  const visibleNotifications = useMemo(() => {
-    if (notificationsExpanded || notifications.length <= 4) {
-      return notifications
-    }
-
-    return notifications.slice(0, 4)
-  }, [notifications, notificationsExpanded])
-  const hiddenNotificationsCount = Math.max(0, notifications.length - visibleNotifications.length)
   const billingUi = useMemo(
     () => getBillingUi(billingAccess, billingBlockReason),
     [billingAccess, billingBlockReason]
@@ -881,7 +682,7 @@ export default function DashboardPage(){
             />
             <HeroMetric
               title="Финансы"
-              value={money(financeCardAmount)}
+              value={money(safeMetrics.revenue_today)}
               note={canWithdraw ? "Выплаты доступны" : "Выплаты ограничены"}
             />
             <HeroMetric
@@ -920,8 +721,8 @@ export default function DashboardPage(){
           <CompactMetric title="Записей за неделю" value={safeMetrics.bookings_week || 0} note="Динамика за 7 дней" />
           <CompactMetric title="Клиентов всего" value={safeMetrics.clients_total || 0} note="Накопленная клиентская база" />
           <CompactMetric title="Активных мастеров" value={safeMetrics.masters_active || 0} note="Команда в рабочем режиме" />
-          <CompactMetric title="Доход сегодня" value={money(financeCardAmount)} note="Быстрый финансовый обзор" />
-          <CompactMetric title="Доход за месяц" value={money(financeCardAmount)} note="Общая динамика за месяц" />
+          <CompactMetric title="Доход сегодня" value={money(safeMetrics.revenue_today)} note="Быстрый финансовый обзор" />
+          <CompactMetric title="Доход за месяц" value={money(safeMetrics.revenue_month)} note="Общая monthly динамика" />
         </StatGrid>
 
         <div style={{
@@ -1066,178 +867,6 @@ export default function DashboardPage(){
         </div>
       </PageSection>
 
-      <PageSection title="QR для оплаты — ожидает подтверждения">
-        <div style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: "14px",
-          background: "#fff",
-          padding: "16px"
-        }}>
-          <div style={{ fontSize: "13px", color: "#4b5563", lineHeight: 1.5, marginBottom: "12px" }}>
-            Клиент выбрал оплату на QR. Подтвердите только после фактического поступления денег.
-          </div>
-
-          {ownerQrActionError ? (
-            <div style={{
-              border: "1px solid #fca5a5",
-              borderRadius: "14px",
-              background: "#fff5f5",
-              color: "#b91c1c",
-              padding: "12px",
-              fontSize: "13px",
-              marginBottom: "12px"
-            }}>
-              {ownerQrActionError}
-            </div>
-          ) : null}
-
-          {ownerQrError ? (
-            <div style={{
-              border: "1px solid #fca5a5",
-              borderRadius: "14px",
-              background: "#fff",
-              color: "#b91c1c",
-              padding: "12px",
-              fontSize: "13px",
-              marginBottom: "12px"
-            }}>
-              {ownerQrError}
-            </div>
-          ) : null}
-
-          {ownerQrLoading ? (
-            <div style={{ fontSize: "13px", color: "#7f1d1d" }}>
-              Загружаем owner_qr платежи…
-            </div>
-          ) : ownerQrPayments.length ? (
-            <div style={{ display: "grid", gap: "10px" }}>
-              {ownerQrPayments.slice(0, 10).map((payment) => {
-                const key = String(payment?.id || payment?.payment_id || "")
-                const amount = getOwnerQrPaymentAmount(payment)
-                const status = String(payment?.status || payment?.payment_status || "").toLowerCase()
-                const isPending = status === "pending_owner_confirmation" || status === "pending"
-                const isBusy = ownerQrActionLoadingId === key
-                const clientName = String(payment?.client_name || payment?.client?.name || "").trim()
-                const clientPhone = String(payment?.client_phone || payment?.client?.phone || "").trim()
-                const serviceName = String(payment?.service_name || payment?.service?.name || "").trim()
-                const bookingStartAt = payment?.booking_start_at || payment?.start_at || payment?.booking?.start_at || ""
-                const createdAt = payment?.created_at || payment?.payment_created_at || ""
-                const rejectedAt = payment?.rejected_at || ""
-                const rejectionReason = String(payment?.rejection_reason || "").trim()
-
-                return (
-                  <div
-                    key={key || `${payment?.booking_id || "owner-qr"}-${payment?.created_at || ""}`}
-                    style={{
-                      display: "grid",
-                      gap: "10px",
-                      padding: "12px",
-                      borderRadius: "14px",
-                      background: "#ffffff",
-                      border: status === "rejected" ? "1px solid #fecaca" : "1px solid #e5e7eb"
-                    }}
-                  >
-                    <div style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: "10px",
-                      flexWrap: "wrap",
-                      alignItems: "flex-start"
-                    }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                          Запись #{payment?.booking_id || "—"}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-                          {serviceName || "Услуга"}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-                          {bookingStartAt ? formatNotificationDate(bookingStartAt) : "—"}
-                        </div>
-                      </div>
-
-                      <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
-                        <span style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          padding: "5px 9px",
-                          borderRadius: "999px",
-                          background: status === "rejected" ? "#fef2f2" : "#eff6ff",
-                          color: status === "rejected" ? "#991b1b" : "#1d4ed8",
-                          fontSize: "12px",
-                          fontWeight: 800,
-                          border: status === "rejected" ? "1px solid #fecaca" : "1px solid #bfdbfe"
-                        }}>
-                          {getOwnerQrPaymentStatusLabel(payment)}
-                        </span>
-                        <span style={{ fontSize: "13px", fontWeight: 800, color: "#111827" }}>
-                          {amount > 0 ? money(amount) : money(payment?.amount)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={{ fontSize: "13px", color: "#374151", lineHeight: 1.55, display: "grid", gap: "4px" }}>
-                      {clientName ? <div>Клиент: <strong>{clientName}</strong></div> : null}
-                      {clientPhone ? <div>Телефон: <strong>{clientPhone}</strong></div> : null}
-                      <div>Создано: <strong>{createdAt ? formatNotificationDate(createdAt) : "—"}</strong></div>
-                      {status === "rejected" && rejectedAt ? (
-                        <div>Отклонено: <strong>{formatNotificationDate(rejectedAt)}</strong></div>
-                      ) : null}
-                      {rejectionReason ? <div style={{ color: "#991b1b" }}>Причина: <strong>{rejectionReason}</strong></div> : null}
-                    </div>
-
-                    {isPending ? (
-                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={() => confirmOwnerQrBooking(payment)}
-                          disabled={isBusy}
-                          style={{
-                            minHeight: "40px",
-                            padding: "0 14px",
-                            borderRadius: "10px",
-                            border: "1px solid #2563eb",
-                            background: isBusy ? "#dbeafe" : "#2563eb",
-                            color: "#fff",
-                            fontSize: "13px",
-                            fontWeight: 800,
-                            cursor: isBusy ? "default" : "pointer"
-                          }}
-                        >
-                          {isBusy ? "Подтверждаем…" : "Подтвердить оплату"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => rejectOwnerQrBooking(payment)}
-                          disabled={isBusy}
-                          style={{
-                            minHeight: "40px",
-                            padding: "0 14px",
-                            borderRadius: "10px",
-                            border: "1px solid #dc2626",
-                            background: isBusy ? "#fee2e2" : "#dc2626",
-                            color: "#fff",
-                            fontSize: "13px",
-                            fontWeight: 800,
-                            cursor: isBusy ? "default" : "pointer"
-                          }}
-                        >
-                          {isBusy ? "Отклоняем…" : "Отклонить"}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div style={{ fontSize: "13px", color: "#6b7280" }}>
-              QR для оплаты пока не ждёт подтверждения.
-            </div>
-          )}
-        </div>
-      </PageSection>
-
       <PageSection title="Быстрый доступ">
         <div style={{
           display: "grid",
@@ -1306,7 +935,7 @@ export default function DashboardPage(){
           </div>
         ) : notifications.length ? (
           <div style={{ display: "grid", gap: "12px" }}>
-            {visibleNotifications.map((notification) => {
+            {notifications.map((notification) => {
               const uid = getNotificationUid(notification)
               const isRead = Boolean(notification?.is_read || notification?.read_at)
               const title = notification?.title_ru || notification?.title_en || notification?.title || "Без заголовка"
@@ -1422,25 +1051,6 @@ export default function DashboardPage(){
                 </div>
               )
             })}
-            {hiddenNotificationsCount > 0 ? (
-              <button
-                type="button"
-                onClick={() => setNotificationsExpanded((current) => !current)}
-                style={{
-                  width: "100%",
-                  border: "1px solid #d0d5dd",
-                  borderRadius: "10px",
-                  background: "#fff",
-                  color: "#344054",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  padding: "10px 14px",
-                  cursor: "pointer"
-                }}
-              >
-                {notificationsExpanded ? "Свернуть" : `Показать ещё ${hiddenNotificationsCount}`}
-              </button>
-            ) : null}
           </div>
         ) : (
           <div style={{
@@ -1464,7 +1074,7 @@ export default function DashboardPage(){
         }}>
           <RouteCard to={buildSalonPath(slug, "bookings")} title="Записи" note="Открой поток записей, фильтруй статусы и работай с операционкой дня." />
           <RouteCard to={buildSalonPath(slug, "calendar")} title="Календарь" note="Перейди в time-based view, если нужно быстро понять окна и плотность расписания." />
-          <RouteCard to={buildSalonPath(slug, "money")} title="Финансы" note="Баланс, расчёты и доступ к выводу." tone="finance" />
+          <RouteCard to={buildSalonPath(slug, "money")} title="Финансы" note="Смотри деньги сейчас без тяжёлого ledger на стартовом экране." tone="finance" />
           <RouteCard to={buildSalonPath(slug, "contracts")} title="Команда / договоры" note="Переход прямо к договорному модулю салона и связке с мастерами." tone="finance" />
         </div>
       </PageSection>
@@ -1486,8 +1096,8 @@ export default function DashboardPage(){
             note="На dashboard только обзор. Полное управление командой живёт на отдельной странице и не перегружает стартовый экран."
           />
           <SummaryCard
-            title="Кошелёк и вывод"
-            value={money(financeCardAmount)}
+            title="Деньги сейчас"
+            value={money(safeMetrics.revenue_today)}
             note="Быстрый обзор без тяжёлых таблиц. Детальные движения и расчёты вынесены в финансовые страницы."
           />
         </div>

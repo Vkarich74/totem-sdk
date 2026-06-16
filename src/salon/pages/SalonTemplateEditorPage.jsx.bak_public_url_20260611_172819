@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import PageHeader from "../../cabinet/PageHeader"
 import PageSection from "../../cabinet/PageSection"
@@ -728,7 +728,7 @@ export default function SalonTemplateEditorPage() {
   }, [slug, hasToken])
 
   const quickLinks = useMemo(() => ({
-    publicPage: slug ? `https://www.totemv.com/salon/${encodeURIComponent(slug)}` : "https://www.totemv.com/salon",
+    publicPage: slug ? `https://www.totemv.com/salon?slug=${encodeURIComponent(slug)}` : "https://www.totemv.com/salon",
     bookings: buildSalonPath(slug, "bookings"),
     services: buildSalonPath(slug, "services"),
     dashboard: buildSalonPath(slug, "dashboard")
@@ -1238,7 +1238,7 @@ export default function SalonTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(nextDraft, slug),
         mode: "mock",
-        message: "Локальный preview открыт без доступ к серверу. Это mock по текущему draft."
+        message: "Локальный preview открыт без backend auth. Это mock по текущему draft."
       }))
       return
     }
@@ -1259,7 +1259,7 @@ export default function SalonTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(nextDraft, slug),
         mode: "fallback",
-        message: extractMessage(saveResult, "DRAFT_SAVE_BEFORE_PREVIEW_FAILED — открыт текущий черновик.")
+        message: extractMessage(saveResult, "DRAFT_SAVE_BEFORE_PREVIEW_FAILED — открыт fallback preview.")
       }))
       return
     }
@@ -1280,7 +1280,7 @@ export default function SalonTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(nextDraft, slug),
         mode: "fallback",
-        message: extractMessage(result, "PREVIEW_FETCH_FAILED — открыт текущий черновик.")
+        message: extractMessage(result, "PREVIEW_FETCH_FAILED — открыт fallback preview.")
       }))
       return
     }
@@ -1311,8 +1311,8 @@ export default function SalonTemplateEditorPage() {
       setSaveState(createStatusState(
         "success",
         !hasHardErrors(validationResult)
-          ? "Черновик сохранён локально. Это режим редактирования до подключения полной цепочки доступа."
-          : "Черновик сохранён локально с обязательные поля. Проверь обязательные поля перед публикацией."
+          ? "Черновик сохранён локально. Это mock-режим до подключения полной цепочки доступа."
+          : "Черновик сохранён локально с validation errors. Проверь обязательные поля перед публикацией."
       ))
       setPublishState(createStatusState())
       return
@@ -1354,7 +1354,7 @@ export default function SalonTemplateEditorPage() {
       const nextDocument = buildLocalDocument(documentState, nextDraft, slug, "publish", validationResult)
       setDocumentState(nextDocument)
       setDraft(mergeDraft(nextDocument.draft || nextDraft))
-      setPublishState(createStatusState("success", "Публикация выполнена локально. Это режим редактирования до подключения полной цепочки доступа."))
+      setPublishState(createStatusState("success", "Публикация выполнена локально. Это mock-режим до подключения полной цепочки доступа."))
       setSaveState(createStatusState())
       return
     }
@@ -1391,7 +1391,7 @@ export default function SalonTemplateEditorPage() {
     ? pageError
     : hasToken
       ? "Страница читает document и позволяет работать с backend."
-      : "Полная цепочка доступа ещё не внедрена. Страница работает в безопасном режиме без поломки кабинета."
+      : "Полная цепочка доступа ещё не внедрена. Страница работает в local mock режиме без поломки кабинета."
 
   const sectionHealthItems = [
     { label: "Benefits", value: benefits.length },
@@ -1406,7 +1406,7 @@ export default function SalonTemplateEditorPage() {
     <div style={{ display: "grid", gap: "20px" }}>
       <PageHeader
         title="Редактор публичной страницы"
-        subtitle={`Рабочая точка редактор страницы для салона${slug ? ` · ${slug}` : ""}. Здесь начинается настройка, предпросмотр и публикация без изменения публичного шаблона.`}
+        subtitle={`Рабочая точка template system для салона${slug ? ` · ${slug}` : ""}. Здесь начинается draft / preview / publish flow без изменения публичного шаблона.`}
         actions={(
           <>
             <ActionButton tone="secondary" onClick={handleSaveDraft} disabled={!readyForWrite || pageLoading || saveState.kind === "saving"}>
@@ -1445,9 +1445,9 @@ export default function SalonTemplateEditorPage() {
       </div>
 
       {!hasToken ? (
-        <PageSection title="Локальный режим" subtitle="Полная цепочка доступа ещё не внедрена, поэтому доступ к серверу для browser не обязателен на этом этапе.">
+        <PageSection title="Локальный режим" subtitle="Полная цепочка доступа ещё не внедрена, поэтому backend auth для browser не обязателен на этом этапе.">
           <div style={infoBoxStyle}>
-            Страница работает в безопасном режиме. Это не ломает контракт: сейчас мы фиксируем работу редактора, preview и экран публикации, не трогая вход в систему.
+            Страница работает в local mock режиме. Это не ломает контракт: сейчас мы фиксируем editor flow, preview и publish UI, не трогая login system.
           </div>
         </PageSection>
       ) : null}
@@ -1461,7 +1461,7 @@ export default function SalonTemplateEditorPage() {
           }}>
             <StatusCard title="Cloud name" value={cloudinaryConfig.cloudName || "MISSING"} tone={cloudinaryConfig.cloudName ? "good" : "warn"} />
             <StatusCard title="Upload preset" value={cloudinaryConfig.uploadPreset || "MISSING"} tone={cloudinaryConfig.uploadPreset ? "good" : "warn"} />
-            <StatusCard title="Медиа-хранилище" value={cloudinaryConfig.rootFolder} note={`Папка медиа: ${cloudinaryConfig.rootFolder}/${SALON_OWNER_TYPE}/<slug>/<asset_kind>`} tone="neutral" />
+            <StatusCard title="Root folder" value={cloudinaryConfig.rootFolder} note={`Storage contract: ${cloudinaryConfig.rootFolder}/${SALON_OWNER_TYPE}/<slug>/<asset_kind>`} tone="neutral" />
             <StatusCard title="Upload state" value={cloudinaryReady ? "READY" : "BLOCKED"} note={cloudinaryReady ? "Можно загружать изображения прямо из editor." : "Нужно заполнить VITE_CLOUDINARY_* в SDK env."} tone={cloudinaryReady ? "good" : "warn"} />
           </div>
         </div>
@@ -2014,7 +2014,7 @@ export default function SalonTemplateEditorPage() {
         </div>
       ) : null}
 
-      <PageSection title="Быстрые переходы" subtitle="Рабочая навигация вокруг раздел редактора без смешивания с публичная страница.">
+      <PageSection title="Быстрые переходы" subtitle="Рабочая навигация вокруг template entry point без смешивания с public template.">
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -2037,7 +2037,7 @@ export default function SalonTemplateEditorPage() {
 
           <a href={quickLinks.publicPage} style={linkCardStyle}>
             <div style={linkTitleStyle}>Public page</div>
-            <div style={linkTextStyle}>Открыть публичную страницу салона отдельно от работу редактора.</div>
+            <div style={linkTextStyle}>Открыть публичную страницу салона отдельно от editor flow.</div>
           </a>
         </div>
       </PageSection>
@@ -2369,4 +2369,3 @@ const linkTextStyle = {
   color: "#6b7280",
   lineHeight: 1.45
 }
-

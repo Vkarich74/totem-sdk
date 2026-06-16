@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { getSalonSettlements } from "../../api/internal"
+import { getSalonPayouts } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -30,20 +30,20 @@ function safeParse(text){
   }
 }
 
-function normalizeSettlements(payload){
+function normalizePayouts(payload){
   if(Array.isArray(payload)) return payload
-  if(Array.isArray(payload?.settlements)) return payload.settlements
-  if(Array.isArray(payload?.periods)) return payload.periods
+  if(Array.isArray(payload?.payouts)) return payload.payouts
   if(Array.isArray(payload?.items)) return payload.items
-  if(Array.isArray(payload?.data?.settlements)) return payload.data.settlements
+  if(Array.isArray(payload?.data?.payouts)) return payload.data.payouts
   return []
 }
 
 function getStatusLabel(value){
   const status = String(value || "").toLowerCase()
-  if(status === "open") return "Открыт"
-  if(status === "closed") return "Закрыт"
   if(status === "pending") return "Ожидает"
+  if(status === "processing") return "Обрабатывается"
+  if(status === "completed" || status === "paid") return "Завершена"
+  if(status === "failed") return "Ошибка"
   return value || "—"
 }
 
@@ -80,17 +80,17 @@ function getBillingUi(billingAccess, billingBlockReason){
     tone: "#027a48",
     bg: "#ecfdf3",
     border: "#abefc6",
-    note: "Расчётные периоды и денежные данные доступны без ограничений"
+    note: "Выплаты и движение денег доступны без ограничений"
   }
 }
 
 function FinanceNav({ slug, active }){
   const items = [
     { key: "finance", label: "Финансы", note: "overview", to: buildSalonPath(slug, "finance") },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: buildSalonPath(slug, "money") },
+    { key: "money", label: "Доход", note: "деньги сейчас", to: buildSalonPath(slug, "money") },
     { key: "settlements", label: "Сеты", note: "расчётные периоды", to: buildSalonPath(slug, "settlements") },
     { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: buildSalonPath(slug, "payouts") },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: buildSalonPath(slug, "transactions") },
+    { key: "transactions", label: "Транзакции", note: "ledger", to: buildSalonPath(slug, "transactions") },
     { key: "contracts", label: "Контракты", note: "договоры мастеров", to: buildSalonPath(slug, "contracts") }
   ]
 
@@ -149,7 +149,7 @@ function EmptyBox({ title, text }){
   )
 }
 
-export default function SalonSettlementsPage(){
+export default function SalonPayoutsPage(){
   const { slug: routeSlug } = useParams()
   const slug = resolveSalonSlug(routeSlug)
 
@@ -161,17 +161,17 @@ export default function SalonSettlementsPage(){
     error: contextError
   } = useSalonContext()
 
-  const [settlements, setSettlements] = useState([])
+  const [payouts, setPayouts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
     let cancelled = false
 
-    async function loadSettlements(){
+    async function loadPayouts(){
       if(!slug){
         if(!cancelled){
-          setSettlements([])
+          setPayouts([])
           setLoading(false)
           setError("Не найден salon slug")
         }
@@ -182,21 +182,21 @@ export default function SalonSettlementsPage(){
         setLoading(true)
         setError("")
 
-        const result = await getSalonSettlements(slug)
+        const result = await getSalonPayouts(slug)
 
         if(cancelled) return
 
         if(!result?.ok){
-          throw new Error("SALON_SETTLEMENTS_FETCH_FAILED")
+          throw new Error("SALON_PAYOUTS_FETCH_FAILED")
         }
 
-        setSettlements(normalizeSettlements({ settlements: result.settlements || [] }))
+        setPayouts(normalizePayouts({ payouts: result.payouts || [] }))
       }catch(e){
-        console.error("SALON_SETTLEMENTS_LOAD_FAILED", e)
+        console.error("SALON_PAYOUTS_LOAD_FAILED", e)
 
         if(!cancelled){
-          setSettlements([])
-          setError("Не удалось загрузить расчётные периоды")
+          setPayouts([])
+          setError("Не удалось загрузить выплаты")
         }
       }finally{
         if(!cancelled){
@@ -205,7 +205,7 @@ export default function SalonSettlementsPage(){
       }
     }
 
-    loadSettlements()
+    loadPayouts()
 
     return () => {
       cancelled = true
@@ -213,35 +213,43 @@ export default function SalonSettlementsPage(){
   }, [slug])
 
   const totalAmount = useMemo(() => {
-    return settlements.reduce((acc, item) => {
-      return acc + (Number(item?.amount ?? item?.total_amount) || 0)
-    }, 0)
-  }, [settlements])
+    return payouts.reduce((acc, item) => acc + (Number(item?.amount) || 0), 0)
+  }, [payouts])
 
-  const openCount = useMemo(() => {
-    return settlements.filter((item) => String(item?.status || "").toLowerCase() === "open").length
-  }, [settlements])
+  const completedCount = useMemo(() => {
+    return payouts.filter((item) => {
+      const status = String(item?.status || "").toLowerCase()
+      return status === "completed" || status === "paid"
+    }).length
+  }, [payouts])
 
-  const closedCount = useMemo(() => {
-    return settlements.filter((item) => String(item?.status || "").toLowerCase() === "closed").length
-  }, [settlements])
+  const pendingCount = useMemo(() => {
+    return payouts.filter((item) => {
+      const status = String(item?.status || "").toLowerCase()
+      return status === "pending" || status === "processing"
+    }).length
+  }, [payouts])
 
-  const lastSettlement = settlements[0] || null
+  const failedCount = useMemo(() => {
+    return payouts.filter((item) => String(item?.status || "").toLowerCase() === "failed").length
+  }, [payouts])
+
+  const lastPayout = payouts[0] || null
   const billingUi = getBillingUi(billingAccess, billingBlockReason)
   const pageLoading = contextLoading || loading
   const pageError = !pageLoading && (contextError || error)
-  const pageEmpty = !pageLoading && !pageError && settlements.length === 0
+  const pageEmpty = !pageLoading && !pageError && payouts.length === 0
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        {slug ? <FinanceNav slug={slug} active="settlements" /> : null}
+        {slug ? <FinanceNav slug={slug} active="payouts" /> : null}
 
         <header style={styles.pageHeader}>
           <p style={styles.eyebrow}>Salon finance / mobile</p>
-          <h1 style={styles.pageTitle}>Сеты</h1>
+          <h1 style={styles.pageTitle}>Выплаты</h1>
           <p style={styles.pageSubtitle}>
-            Расчётные периоды салона: суммы, даты начала и окончания, текущий статус и готовность к выводу.
+            Фактические выплаты салона: суммы, статусы, доступ к выводу и последние движения по payout-цепочке.
           </p>
         </header>
 
@@ -258,21 +266,21 @@ export default function SalonSettlementsPage(){
           </div>
           <div style={styles.alertMeta}>
             <div>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</div>
-            <div>Периодов: {settlements.length}</div>
+            <div>Записей: {payouts.length}</div>
           </div>
         </section>
 
         <section style={styles.statsGrid}>
-          <StatCard title="Всего сетов" value={settlements.length} note="Все найденные расчётные периоды" />
-          <StatCard title="Общая сумма" value={money(totalAmount)} note="Сумма по всем периодам" />
-          <StatCard title="Открытые" value={openCount} note="Периоды, ещё не закрытые системой" />
-          <StatCard title="Закрытые" value={closedCount} note={lastSettlement ? `Последний статус: ${getStatusLabel(lastSettlement?.status)}` : "Данных пока нет"} />
+          <StatCard title="Всего выплат" value={payouts.length} note="Все найденные payout-операции" />
+          <StatCard title="Общая сумма" value={money(totalAmount)} note="Сумма по всем выплатам" />
+          <StatCard title="В обработке" value={pendingCount} note="Pending + processing" />
+          <StatCard title="Завершено" value={completedCount} note={failedCount ? `Ошибок: ${failedCount}` : "Без ошибочных выплат"} />
         </section>
 
         <div style={styles.mainStack}>
           <Panel
-            title="Лента расчётных периодов"
-            note="Каждый сет выводится отдельной карточкой. На мобильном экране сначала идёт смысловой заголовок, затем даты и сумма."
+            title="Лента выплат"
+            note="Основной список payout-записей. На мобильном экране структура остаётся одноколоночной и читаемой."
           >
             {pageLoading ? <div style={styles.infoText}>Загрузка...</div> : null}
 
@@ -285,8 +293,8 @@ export default function SalonSettlementsPage(){
 
             {pageEmpty ? (
               <EmptyBox
-                title="Сеты отсутствуют"
-                text="Расчётные периоды появятся после накопления транзакций и закрытия операций. Каркас страницы уже готов под mobile-first сценарий."
+                title="Выплат пока нет"
+                text="Выплаты появятся после обработки заявок и закрытия расчётных периодов. Каркас страницы уже готов под мобильную работу."
               />
             ) : null}
 
@@ -294,23 +302,21 @@ export default function SalonSettlementsPage(){
               <>
                 <div style={styles.listHeader}>
                   <div>
-                    <h3 style={styles.listTitle}>Последние периоды</h3>
-                    <p style={styles.listNote}>Короткий обзор без перегруза: период, статус, сумма и ключевые даты.</p>
+                    <h3 style={styles.listTitle}>Последние операции</h3>
+                    <p style={styles.listNote}>Каждая карточка показывает сумму, дату, reference и текущий статус.</p>
                   </div>
                   <div style={styles.listMeta}>
-                    Последний сет: {lastSettlement ? formatDateTime(lastSettlement?.period_end || lastSettlement?.created_at) : "—"}
+                    Последняя выплата: {lastPayout ? formatDateTime(lastPayout?.created_at || lastPayout?.date) : "—"}
                   </div>
                 </div>
 
                 <div style={styles.cardsList}>
-                  {settlements.map((item, index) => (
+                  {payouts.map((item, index) => (
                     <article key={item?.id || index} style={styles.itemCard}>
                       <div style={styles.itemTop}>
                         <div>
-                          <h3 style={styles.itemTitle}>{item?.id || `Сет ${index + 1}`}</h3>
-                          <p style={styles.itemSubtitle}>
-                            {formatDateTime(item?.period_start || item?.start_date)} → {formatDateTime(item?.period_end || item?.end_date)}
-                          </p>
+                          <h3 style={styles.itemTitle}>{item?.id || `Выплата ${index + 1}`}</h3>
+                          <p style={styles.itemSubtitle}>{formatDateTime(item?.created_at || item?.date)}</p>
                         </div>
                         <div style={styles.badge}>{getStatusLabel(item?.status)}</div>
                       </div>
@@ -318,22 +324,22 @@ export default function SalonSettlementsPage(){
                       <div style={styles.metaGrid}>
                         <div style={styles.metaCell}>
                           <div style={styles.metaLabel}>Сумма</div>
-                          <div style={styles.metaValue}>{money(item?.amount ?? item?.total_amount)}</div>
+                          <div style={styles.metaValue}>{money(item?.amount)}</div>
                         </div>
 
                         <div style={styles.metaCell}>
-                          <div style={styles.metaLabel}>Создан</div>
-                          <div style={styles.metaValue}>{formatDateTime(item?.created_at)}</div>
+                          <div style={styles.metaLabel}>Создана</div>
+                          <div style={styles.metaValue}>{formatDateTime(item?.created_at || item?.date)}</div>
                         </div>
 
                         <div style={styles.metaCell}>
-                          <div style={styles.metaLabel}>Начало периода</div>
-                          <div style={styles.metaValue}>{formatDateTime(item?.period_start || item?.start_date)}</div>
+                          <div style={styles.metaLabel}>Связка</div>
+                          <div style={styles.metaValue}>{item?.reference || item?.reference_id || "—"}</div>
                         </div>
 
                         <div style={styles.metaCell}>
-                          <div style={styles.metaLabel}>Конец периода</div>
-                          <div style={styles.metaValue}>{formatDateTime(item?.period_end || item?.end_date)}</div>
+                          <div style={styles.metaLabel}>Статус</div>
+                          <div style={styles.metaValue}>{getStatusLabel(item?.status)}</div>
                         </div>
                       </div>
                     </article>
@@ -345,7 +351,7 @@ export default function SalonSettlementsPage(){
 
           <Panel
             title="Короткий статус модуля"
-            note="Страница держит стабильный верхний DOM при любых данных и даёт однородное поведение вместе с выплатами и транзакциями."
+            note="Верхний каркас страницы не схлопывается даже без данных. Это нужно для стабильного mobile UX и audit DOM."
           >
             <div style={styles.infoGrid}>
               <div style={styles.infoItem}>
@@ -354,15 +360,15 @@ export default function SalonSettlementsPage(){
               </div>
               <div style={styles.infoItem}>
                 <div style={styles.infoLabel}>Последняя сумма</div>
-                <div style={styles.infoValue}>{lastSettlement ? money(lastSettlement?.amount ?? lastSettlement?.total_amount) : "—"}</div>
+                <div style={styles.infoValue}>{lastPayout ? money(lastPayout?.amount) : "—"}</div>
               </div>
               <div style={styles.infoItem}>
                 <div style={styles.infoLabel}>Последний статус</div>
-                <div style={styles.infoValue}>{lastSettlement ? getStatusLabel(lastSettlement?.status) : "—"}</div>
+                <div style={styles.infoValue}>{lastPayout ? getStatusLabel(lastPayout?.status) : "—"}</div>
               </div>
               <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Открытых периодов</div>
-                <div style={styles.infoValue}>{openCount}</div>
+                <div style={styles.infoLabel}>Ошибочные выплаты</div>
+                <div style={styles.infoValue}>{failedCount}</div>
               </div>
             </div>
           </Panel>
@@ -407,10 +413,12 @@ const styles = {
     lineHeight: 1.55
   },
   navGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+    display: "flex",
     gap: "10px",
-    marginBottom: "16px"
+    overflowX: "auto",
+    paddingBottom: "4px",
+    marginBottom: "16px",
+    scrollbarWidth: "thin"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -418,7 +426,8 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: 0,
+    minWidth: "150px",
+    flex: "0 0 auto",
     boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
   },
   navTitle: {
@@ -466,8 +475,7 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
     gap: "12px",
-    marginBottom: "16px",
-    minWidth: 0
+    marginBottom: "16px"
   },
   statCard: {
     border: "1px solid #e5e7eb",
@@ -606,8 +614,7 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: "12px",
-    marginTop: "14px",
-    minWidth: 0
+    marginTop: "14px"
   },
   metaCell: {
     borderTop: "1px solid #eef2f7",
@@ -628,8 +635,7 @@ const styles = {
   infoGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px",
-    minWidth: 0
+    gap: "12px"
   },
   infoItem: {
     borderTop: "1px solid #eef2f7",

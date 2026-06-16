@@ -203,7 +203,7 @@ function OwnerQrDestinationEditor({
   async function persistOwnerQrDestination(nextForm = null) {
     const nextQrImageUrl = String((nextForm || form)?.qr_image_url || "").trim()
     if (!destinationId && !nextQrImageUrl) {
-      setError("OWNER_QR_IMAGE_URL_REQUIRED")
+      setError("\u0414\u043e\u0431\u0430\u0432\u044c\u0442\u0435 \u0441\u0441\u044b\u043b\u043a\u0443 \u043d\u0430 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 QR")
       return false
     }
 
@@ -290,7 +290,7 @@ function OwnerQrDestinationEditor({
     }
 
     if (!file) {
-      setError("OWNER_QR_IMAGE_INVALID_FILE")
+      setError("\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u043e\u0435 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 QR")
       return
     }
 
@@ -707,7 +707,7 @@ export default function SettingsPage() {
           <Field label="Максимум вперёд (дней)" value={advance} onChange={setAdvance} type="number" />
         </Block>
 
-        <Block title="Billing / доступ" hint="Read-only блок. Здесь только статус и маршруты в профильные страницы, без тяжёлых таблиц.">
+        <Block title="Доступ и оплата" hint="Информационный блок. Статус и переходы в профильные разделы.">
           <ReadonlyRow label="Salon slug" value={slug} />
           <ReadonlyRow label="Billing model" value={billingModel} />
           <ReadonlyRow label="Статус подписки" value={subscriptionStatus} />

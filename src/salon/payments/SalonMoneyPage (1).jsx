@@ -98,10 +98,10 @@ function Row({ label, value }){
 function FinanceNav({ slug, active }){
   const items = [
     { key: "finance", label: "Финансы", note: "overview", to: buildSalonPath(slug, "finance") },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: buildSalonPath(slug, "money") },
+    { key: "money", label: "Доход", note: "деньги сейчас", to: buildSalonPath(slug, "money") },
     { key: "settlements", label: "Сеты", note: "расчётные периоды", to: buildSalonPath(slug, "settlements") },
     { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: buildSalonPath(slug, "payouts") },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: buildSalonPath(slug, "transactions") },
+    { key: "transactions", label: "Транзакции", note: "ledger", to: buildSalonPath(slug, "transactions") },
     { key: "contracts", label: "Контракты", note: "договоры мастеров", to: buildSalonPath(slug, "contracts") }
   ]
 
@@ -325,7 +325,7 @@ export default function SalonMoneyPage(){
       <div style={styles.headerBlock}>
         <div style={styles.eyebrow}>SALON CABINET</div>
         <h3 style={styles.title}>Доход</h3>
-        <div style={styles.subtitle}>Баланс, доступы и ближайший расчётный контур салона.</div>
+        <div style={styles.subtitle}>Деньги сейчас: баланс, доступы и ближайший расчётный контур салона.</div>
       </div>
 
       {slug ? <FinanceNav slug={slug} active="money" /> : null}
@@ -408,10 +408,12 @@ export default function SalonMoneyPage(){
 
 const styles = {
   navGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+    display: "flex",
     gap: "10px",
-    marginBottom: "16px"
+    overflowX: "auto",
+    paddingBottom: "4px",
+    marginBottom: "16px",
+    scrollbarWidth: "thin"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -419,7 +421,8 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: 0
+    minWidth: "150px",
+    flex: "0 0 auto"
   },
   navTitle: {
     fontSize: "14px",
@@ -471,8 +474,7 @@ const styles = {
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px",
-    minWidth: 0
+    gap: "12px"
   },
   card: {
     border: "1px solid #e5e7eb",
@@ -533,8 +535,7 @@ const styles = {
   linksGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: "10px",
-    minWidth: 0
+    gap: "10px"
   },
   linkCard: {
     display: "block",

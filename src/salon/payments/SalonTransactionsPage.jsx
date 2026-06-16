@@ -90,17 +90,17 @@ function getBillingUi(billingAccess, billingBlockReason){
     tone: "#027a48",
     bg: "#ecfdf3",
     border: "#abefc6",
-    note: "Техническая финансовая лента доступна без ограничений"
+    note: "История финансовых операций доступна без ограничений"
   }
 }
 
 function FinanceNav({ slug, active }){
   const items = [
     { key: "finance", label: "Финансы", note: "overview", to: buildSalonPath(slug, "finance") },
-    { key: "money", label: "Доход", note: "деньги сейчас", to: buildSalonPath(slug, "money") },
+    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: buildSalonPath(slug, "money") },
     { key: "settlements", label: "Сеты", note: "расчётные периоды", to: buildSalonPath(slug, "settlements") },
     { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: buildSalonPath(slug, "payouts") },
-    { key: "transactions", label: "Транзакции", note: "ledger", to: buildSalonPath(slug, "transactions") },
+    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: buildSalonPath(slug, "transactions") },
     { key: "contracts", label: "Контракты", note: "договоры мастеров", to: buildSalonPath(slug, "contracts") }
   ]
 
@@ -267,7 +267,7 @@ export default function SalonTransactionsPage(){
           <p style={styles.eyebrow}>Salon finance / mobile</p>
           <h1 style={styles.pageTitle}>Транзакции</h1>
           <p style={styles.pageSubtitle}>
-            Техническая финансовая лента салона: движения денег, направления, типы операций и reference-связи.
+            История финансовых операций салона: движения денег, направления, типы операций и связанные записи.
           </p>
         </header>
 
@@ -298,7 +298,7 @@ export default function SalonTransactionsPage(){
         <div style={styles.mainStack}>
           <Panel
             title="Финансовая лента"
-            note="Основной список ledger-операций. Карточки собраны под одноколоночный mobile-first сценарий без потери структуры."
+            note="Основной список финансовых операций. Карточки адаптированы для мобильного просмотра без потери структуры."
           >
             {pageLoading ? <div style={styles.infoText}>Загрузка...</div> : null}
 

@@ -383,10 +383,10 @@ export default function SalonFinancePage(){
         {slug ? (
           <nav aria-label="Финансовые разделы" style={styles.navGrid}>
             <FinanceNavCard to={buildSalonPath(slug, "finance")} title="Финансы" note="Общий обзор" active />
-            <FinanceNavCard to={buildSalonPath(slug, "money")} title="Доход" note="Деньги сейчас" />
+            <FinanceNavCard to={buildSalonPath(slug, "money")} title="Кошелёк и вывод" note="Баланс, расчёты и вывод" />
             <FinanceNavCard to={buildSalonPath(slug, "settlements")} title="Сеты" note="Расчётные периоды" />
             <FinanceNavCard to={buildSalonPath(slug, "payouts")} title="Выплаты" note="Фактические выплаты" />
-            <FinanceNavCard to={buildSalonPath(slug, "transactions")} title="Транзакции" note="Техническая лента" />
+            <FinanceNavCard to={buildSalonPath(slug, "transactions")} title="Транзакции" note="История операций" />
             <FinanceNavCard to={buildSalonPath(slug, "contracts")} title="Контракты" note="Договорный модуль" />
           </nav>
         ) : null}
@@ -428,7 +428,7 @@ export default function SalonFinancePage(){
 
             <Panel
               title="Money Core: баланс и вывод"
-              note="Новая модель вывода средств. Сейчас доступен только read-only режим."
+              note="Новая модель вывода средств. Сейчас доступен только только просмотр режим."
             >
           <div style={{ marginBottom: 12, color: "#92400e", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: 12 }}>
             Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
@@ -436,16 +436,16 @@ export default function SalonFinancePage(){
 
           {moneyCoreSummary ? (
             <div style={styles.statsGrid}>
-              <StatCard title="provider_hold" value={money(moneyCoreZones.provider_hold)} note="Резерв у провайдера" />
-              <StatCard title="pending_settlement" value={money(moneyCoreZones.pending_settlement)} note="Ожидает расчёта" />
+              <StatCard title="Резерв у провайдера" value={money(moneyCoreZones.provider_hold)} note="Резерв у провайдера" />
+              <StatCard title="Ожидает расчёта" value={money(moneyCoreZones.pending_settlement)} note="Ожидает расчёта" />
               <StatCard title="available" value={money(moneyCoreZones.available)} note="Доступно к выводу" />
               <StatCard title="locked" value={money(moneyCoreZones.locked)} note="Заблокировано под выплаты" />
               <StatCard title="paid_out" value={money(moneyCoreZones.paid_out)} note="Уже выплачено" />
-              <StatCard title="refunded" value={money(moneyCoreZones.refunded)} note="Возвраты" />
-              <StatCard title="reversed" value={money(moneyCoreZones.reversed)} note="Ревёрсы" />
-              <StatCard title="requires_review" value={money(moneyCoreZones.requires_review)} note="Требует проверки" />
-              <StatCard title="commission" value={money(moneyCoreZones.commission)} note="Комиссия" />
-              <StatCard title="fee_reserved" value={money(moneyCoreZones.fee_reserved)} note="Резерв под fee" />
+              <StatCard title="Возвраты" value={money(moneyCoreZones.refunded)} note="Возвраты" />
+              <StatCard title="Отменённые операции" value={money(moneyCoreZones.reversed)} note="Отмены" />
+              <StatCard title="Требует проверки" value={money(moneyCoreZones.requires_review)} note="Требует проверки" />
+              <StatCard title="Комиссия сервиса" value={money(moneyCoreZones.commission)} note="Комиссия" />
+              <StatCard title="Резерв комиссии" value={money(moneyCoreZones.fee_reserved)} note="Резерв комиссии" />
             </div>
               ) : (
                 <EmptyState
@@ -648,7 +648,7 @@ export default function SalonFinancePage(){
                   ) : (
                     <EmptyState
                       title="Настройки вывода не заданы"
-                      text="Пока используется дефолтная read-only конфигурация."
+                      text="Пока используется дефолтная только просмотр конфигурация."
                     />
                   )}
                 </Panel>
@@ -818,10 +818,10 @@ export default function SalonFinancePage(){
             {slug ? (
               <div style={styles.navOverviewGrid}>
                 <FinanceNavCard to={buildSalonPath(slug, "finance")} title="Финансы" note="Общий обзор" active />
-                <FinanceNavCard to={buildSalonPath(slug, "money")} title="Доход" note="Деньги сейчас" />
+                <FinanceNavCard to={buildSalonPath(slug, "money")} title="Кошелёк и вывод" note="Баланс, расчёты и вывод" />
                 <FinanceNavCard to={buildSalonPath(slug, "settlements")} title="Сеты" note="Расчётные периоды" />
                 <FinanceNavCard to={buildSalonPath(slug, "payouts")} title="Выплаты" note="Фактические выплаты" />
-                <FinanceNavCard to={buildSalonPath(slug, "transactions")} title="Транзакции" note="Техническая лента" />
+                <FinanceNavCard to={buildSalonPath(slug, "transactions")} title="Транзакции" note="История операций" />
                 <FinanceNavCard to={buildSalonPath(slug, "contracts")} title="Контракты" note="Договорный модуль" />
               </div>
             ) : (

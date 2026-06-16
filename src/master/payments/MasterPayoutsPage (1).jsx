@@ -56,10 +56,10 @@ function SummaryCard({ label, value, hint }) {
 function FinanceNav({ masterSlug, active }) {
   const items = [
     { key: "finance", label: "Финансы", note: "overview", to: `/master/${masterSlug}/finance` },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: `/master/${masterSlug}/money` },
+    { key: "money", label: "Доход", note: "деньги сейчас", to: `/master/${masterSlug}/money` },
     { key: "settlements", label: "Сеты", note: "расчётные периоды", to: `/master/${masterSlug}/settlements` },
     { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: `/master/${masterSlug}/payouts` },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: `/master/${masterSlug}/transactions` }
+    { key: "transactions", label: "Транзакции", note: "ledger", to: `/master/${masterSlug}/transactions` }
   ];
 
   return (
@@ -215,13 +215,12 @@ export default function MasterPayoutsPage() {
 
 const styles = {
   navGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    display: "flex",
     gap: "10px",
+    overflowX: "auto",
+    paddingBottom: "4px",
     marginBottom: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    scrollbarWidth: "thin"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -229,9 +228,8 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    minWidth: "150px",
+    flex: "0 0 auto"
   },
   navTitle: {
     fontSize: "14px",
@@ -246,19 +244,13 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
     gap: "12px",
-    marginBottom: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    marginBottom: "16px"
   },
   summaryCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
     background: "#ffffff",
-    padding: "14px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    padding: "14px"
   },
   summaryLabel: {
     fontSize: "12px",
@@ -272,26 +264,18 @@ const styles = {
   summaryHint: {
     marginTop: "4px",
     fontSize: "12px",
-    color: "#6b7280",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    color: "#6b7280"
   },
   cardsList: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "12px"
   },
   itemCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
     background: "#ffffff",
-    padding: "14px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    padding: "14px"
   },
   itemTop: {
     display: "flex",
@@ -299,10 +283,7 @@ const styles = {
     gap: "12px",
     alignItems: "center",
     flexWrap: "wrap",
-    marginBottom: "12px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    marginBottom: "12px"
   },
   statusBadge: {
     background: "#f3f4f6",
@@ -315,10 +296,7 @@ const styles = {
   metaGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: "10px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "10px"
   },
   metaLabel: {
     fontSize: "12px",
@@ -329,7 +307,6 @@ const styles = {
     fontSize: "14px",
     color: "#111827",
     fontWeight: 600,
-    wordBreak: "break-word",
-    overflowWrap: "anywhere"
+    wordBreak: "break-word"
   }
 };

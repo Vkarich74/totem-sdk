@@ -37,7 +37,7 @@ const sectionItems = [
   { id: "images", label: "Images", note: "Hero mandatory, avatar/portfolio/service-card reserved." },
   { id: "cta", label: "CTA", note: "Booking CTA band и sticky CTA." },
   { id: "seo", label: "SEO", note: "Title, description и canonical URL." },
-  { id: "preview-publish", label: "Preview / Publish", note: "Сохранение, preview, publish и validation state." }
+  { id: "preview-publish", label: "Предпросмотр и публикация", note: "Сохранение, preview, publish и validation state." }
 ];
 
 const EMPTY_DRAFT = {
@@ -1185,8 +1185,8 @@ export default function MasterTemplateEditorPage() {
       setSaveState({
         kind: "success",
         message: validationResult.is_ready_for_publish
-          ? "Черновик сохранён локально. Это mock-режим до полной auth цепочки."
-          : "Черновик сохранён локально с validation blockers."
+          ? "Черновик сохранён локально. Это режим редактирования до полной цепочки доступа."
+          : "Черновик сохранён локально с обязательные поля."
       });
       return { ok: true, document: nextDocument, validation: validationResult, mode: "mock" };
     }
@@ -1238,7 +1238,7 @@ export default function MasterTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "fallback",
-        message: saveResult.error || "PREVIEW_SAVE_FAILED — открыт fallback preview."
+        message: saveResult.error || "PREVIEW_SAVE_FAILED — открыт текущий черновик."
       });
       return;
     }
@@ -1249,7 +1249,7 @@ export default function MasterTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "mock",
-        message: "Локальный preview открыт без backend auth. Это mock по текущему draft."
+        message: "Локальный preview открыт без доступ к серверу. Это mock по текущему draft."
       });
       return;
     }
@@ -1262,7 +1262,7 @@ export default function MasterTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "fallback",
-        message: extractMessage(result, "MASTER_TEMPLATE_PREVIEW_FAILED — открыт fallback preview.")
+        message: extractMessage(result, "Не удалось открыть серверный предпросмотр. Показан текущий черновик.")
       });
       return;
     }
@@ -1289,7 +1289,7 @@ export default function MasterTemplateEditorPage() {
       setDocumentState(nextDocument);
       setPublishState({
         kind: "error",
-        message: "Публикация заблокирована: исправь обязательные поля master template."
+        message: "Публикация заблокирована: исправь обязательные поля страница мастера."
       });
       return;
     }
@@ -1311,7 +1311,7 @@ export default function MasterTemplateEditorPage() {
       setDraft(mergeDraft(nextDocument.draft || draft));
       setPublishState({
         kind: "success",
-        message: "Публикация выполнена локально. Это mock-режим до полной auth цепочки."
+        message: "Публикация выполнена локально. Это режим редактирования до полной цепочки доступа."
       });
       return;
     }
@@ -1340,7 +1340,7 @@ export default function MasterTemplateEditorPage() {
       }
     });
     setDraft(mergeDraft(nextDraft));
-    setPublishState({ kind: "success", message: "Master template опубликован." });
+    setPublishState({ kind: "success", message: "Страница мастера опубликована." });
     setSaveState({ kind: "idle", message: "" });
   }
 
@@ -1352,12 +1352,12 @@ export default function MasterTemplateEditorPage() {
     ? pageError
     : hasToken
       ? "Страница читает document и работает с backend."
-      : "Полная auth цепочка ещё не внедрена, editor работает в local mock режиме без поломки кабинета.";
+      : "Полная цепочка доступа ещё не внедрена, editor работает в безопасном режиме без поломки кабинета.";
 
   return (
     <div style={{ display: "grid", gap: "20px", padding: "24px", width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box" }}>
       <PageHeader
-        title="Master Template Editor"
+        title="Редактор страницы мастера"
         subtitle={`Mirror editor для мастера${resolvedSlug ? ` · ${resolvedSlug}` : ""}. Логика сохранена как у салона, без трогания эталонного PublicMasterPage.`}
         actions={(
           <>
@@ -1389,9 +1389,9 @@ export default function MasterTemplateEditorPage() {
       </div>
 
       {!hasToken ? (
-        <PageSection title="Локальный режим" subtitle="Полная цепочка доступа ещё не внедрена, поэтому backend auth для browser не обязателен на этом этапе.">
+        <PageSection title="Локальный режим" subtitle="Полная цепочка доступа ещё не внедрена, поэтому доступ к серверу для browser не обязателен на этом этапе.">
           <div style={infoBoxStyle}>
-            Страница работает в local mock режиме. Это не ломает контракт: сейчас мы фиксируем editor flow, preview и publish UI, не трогая эталонный public shell.
+            Страница работает в безопасном режиме. Это не ломает контракт: сейчас мы фиксируем работу редактора, preview и экран публикации, не трогая эталонный публичную страницу.
           </div>
         </PageSection>
       ) : null}
@@ -1408,7 +1408,7 @@ export default function MasterTemplateEditorPage() {
           }}>
             <StatusCard title="Cloud name" value={cloudinaryConfig.cloudName || "MISSING"} tone={cloudinaryConfig.cloudName ? "good" : "warn"} />
             <StatusCard title="Upload preset" value={cloudinaryConfig.uploadPreset || "MISSING"} tone={cloudinaryConfig.uploadPreset ? "good" : "warn"} />
-            <StatusCard title="Root folder" value={cloudinaryConfig.rootFolder} note={`Storage contract: ${cloudinaryConfig.rootFolder}/${MASTER_OWNER_TYPE}/<slug>/<asset_kind>`} tone="neutral" />
+            <StatusCard title="Медиа-хранилище" value={cloudinaryConfig.rootFolder} note={`Папка медиа: ${cloudinaryConfig.rootFolder}/${MASTER_OWNER_TYPE}/<slug>/<asset_kind>`} tone="neutral" />
             <StatusCard title="Upload state" value={cloudinaryReady ? "READY" : "BLOCKED"} note={cloudinaryReady ? "Можно загружать hero/avatar/portfolio/service-card прямо из editor." : "Нужно заполнить VITE_CLOUDINARY_* в SDK env."} tone={cloudinaryReady ? "good" : "warn"} />
           </div>
         </div>
@@ -1638,7 +1638,7 @@ export default function MasterTemplateEditorPage() {
             </ArrayCard>
           </Panel>
 
-          <Panel id="about" title="About" note="About + stats composition stays together in public shell.">
+          <Panel id="about" title="About" note="About + stats composition stays together in публичную страницу.">
             <ArrayCard title="About paragraphs" note="Минимум 1 paragraph обязателен для publish." onAdd={addAboutParagraph} addLabel="Добавить paragraph">
               {draft.sections.about_paragraphs.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
               {draft.sections.about_paragraphs.map((item, index) => (
@@ -1741,7 +1741,7 @@ export default function MasterTemplateEditorPage() {
             </div>
           </Panel>
 
-          <Panel id="preview-publish" title="Preview / Publish" note="Server preview state + local draft snapshot.">
+          <Panel id="preview-publish" title="Предпросмотр и публикация" note="Проверьте страницу перед публикацией.">
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -1753,7 +1753,7 @@ export default function MasterTemplateEditorPage() {
               <StatusCard title="Draft save" value={saveState.kind === "idle" ? "IDLE" : saveState.kind.toUpperCase()} note={saveState.message || "Готов к сохранению."} tone={saveState.kind === "error" ? "warn" : saveState.kind === "success" ? "good" : "neutral"} />
               <StatusCard title="Publish" value={publishState.kind === "idle" ? "IDLE" : publishState.kind.toUpperCase()} note={publishState.message || "Готов к публикации."} tone={publishState.kind === "error" ? "warn" : publishState.kind === "success" ? "good" : "neutral"} />
               <StatusCard title="Preview mode" value={(previewState.mode || "idle").toUpperCase()} note={previewState.message || "Preview ещё не открыт."} tone={previewState.mode === "backend" ? "good" : previewState.mode === "fallback" ? "warn" : "neutral"} />
-              <StatusCard title="Published path" value={publicPath} note="Эталонный public shell пока не трогаем." tone="neutral" />
+              <StatusCard title="Published path" value={publicPath} note="Эталонный публичную страницу пока не трогаем." tone="neutral" />
             </div>
           </Panel>
         </div>
@@ -1915,7 +1915,7 @@ export default function MasterTemplateEditorPage() {
         </div>
       ) : null}
 
-      <PageSection title="Быстрые переходы" subtitle="Рабочая навигация вокруг template entry point без смешивания с public template shell.">
+      <PageSection title="Быстрые переходы" subtitle="Рабочая навигация вокруг раздел редактора без смешивания с публичную страницу.">
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -1938,7 +1938,7 @@ export default function MasterTemplateEditorPage() {
 
           <a href="#preview-publish" style={linkCardStyle}>
             <div style={linkTitleStyle}>Publish state</div>
-            <div style={linkTextStyle}>Контроль draft / preview / publish без возврата к прошлым фиксам.</div>
+            <div style={linkTextStyle}>Контроль настройка, предпросмотр и публикация без возврата к прошлым фиксам.</div>
           </a>
         </div>
       </PageSection>

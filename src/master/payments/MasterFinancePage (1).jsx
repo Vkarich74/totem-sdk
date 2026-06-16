@@ -7,10 +7,7 @@ import {
   getMasterActiveContract,
   getMasterContractHistory,
   getMasterMoneyCoreSummary,
-  getMasterPaymentProjections,
   getMasterPayouts,
-  getMasterSalaryObligations,
-  getMasterRentObligations,
   getMasterSettlements,
   getMasterWalletBalance,
   getMasterWithdrawDestinations,
@@ -181,10 +178,10 @@ function InfoRow({ label, value }) {
 function FinanceNav({ masterSlug, active }) {
   const items = [
     { key: "finance", label: "Финансы", note: "overview", to: `/master/${masterSlug}/finance` },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: `/master/${masterSlug}/money` },
+    { key: "money", label: "Доход", note: "деньги сейчас", to: `/master/${masterSlug}/money` },
     { key: "settlements", label: "Сеты", note: "расчётные периоды", to: `/master/${masterSlug}/settlements` },
     { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: `/master/${masterSlug}/payouts` },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: `/master/${masterSlug}/transactions` }
+    { key: "transactions", label: "Транзакции", note: "ledger", to: `/master/${masterSlug}/transactions` }
   ];
 
   return (
@@ -220,19 +217,10 @@ export default function MasterFinancePage() {
   const [settlements, setSettlements] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [moneyCoreSummary, setMoneyCoreSummary] = useState(null);
-  const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null);
   const [moneyCoreDestinationProviders, setMoneyCoreDestinationProviders] = useState([]);
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([]);
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null);
   const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([]);
-  const [rentObligations, setRentObligations] = useState([]);
-  const [rentObligationsSummary, setRentObligationsSummary] = useState(null);
-  const [rentObligationsLoading, setRentObligationsLoading] = useState(true);
-  const [rentObligationsError, setRentObligationsError] = useState("");
-  const [salaryObligations, setSalaryObligations] = useState([]);
-  const [salaryObligationsSummary, setSalaryObligationsSummary] = useState(null);
-  const [salaryObligationsLoading, setSalaryObligationsLoading] = useState(true);
-  const [salaryObligationsError, setSalaryObligationsError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -251,7 +239,6 @@ export default function MasterFinancePage() {
             setWallet(null);
             setSettlements([]);
             setPayouts([]);
-            setPaymentProjectionSummary(null);
             setError("Не найден master slug");
           }
           return;
@@ -263,7 +250,6 @@ export default function MasterFinancePage() {
             walletResult,
             settlementsResult,
             payoutsResult,
-            paymentProjectionResult,
             moneyCoreResult
           ] = await Promise.allSettled([
             getMasterActiveContract(masterSlug),
@@ -271,7 +257,6 @@ export default function MasterFinancePage() {
             getMasterWalletBalance(masterSlug),
             getMasterSettlements(masterSlug),
             getMasterPayouts(masterSlug),
-            getMasterPaymentProjections(masterSlug),
             getMasterMoneyCoreSummary(masterSlug)
           ]);
 
@@ -307,12 +292,6 @@ export default function MasterFinancePage() {
             : []
           );
 
-        setPaymentProjectionSummary(
-          paymentProjectionResult.status === "fulfilled" && paymentProjectionResult.value?.ok
-            ? paymentProjectionResult.value.summary || null
-            : null
-        );
-
         const summarySource =
           moneyCoreResult.status === "fulfilled" ? moneyCoreResult.value : null;
         const summary =
@@ -340,7 +319,6 @@ export default function MasterFinancePage() {
           setWallet(null);
           setSettlements([]);
           setPayouts([]);
-          setPaymentProjectionSummary(null);
           setMoneyCoreSummary(null);
           setError("Не удалось загрузить finance overview");
         }
@@ -352,61 +330,6 @@ export default function MasterFinancePage() {
     }
 
     loadFinance();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [masterSlug]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadSalaryObligations() {
-      if (!masterSlug) {
-        if (!cancelled) {
-          setSalaryObligations([]);
-          setSalaryObligationsSummary(null);
-          setSalaryObligationsError("");
-          setSalaryObligationsLoading(false);
-        }
-        return;
-      }
-
-      try {
-        setSalaryObligationsLoading(true);
-        setSalaryObligationsError("");
-
-        const result = await getMasterSalaryObligations(masterSlug);
-
-        if (cancelled) return;
-
-        if (result?.ok) {
-          setSalaryObligations(Array.isArray(result?.obligations) ? result.obligations : []);
-          setSalaryObligationsSummary(result?.summary || null);
-        }
-        else {
-          setSalaryObligations([]);
-          setSalaryObligationsSummary(null);
-          setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.");
-        }
-      }
-      catch (e) {
-        console.error("MASTER_SALARY_OBLIGATIONS_LOAD_FAILED", e);
-
-        if (!cancelled) {
-          setSalaryObligations([]);
-          setSalaryObligationsSummary(null);
-          setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.");
-        }
-      }
-      finally {
-        if (!cancelled) {
-          setSalaryObligationsLoading(false);
-        }
-      }
-    }
-
-    void loadSalaryObligations();
 
     return () => {
       cancelled = true;
@@ -465,61 +388,6 @@ export default function MasterFinancePage() {
     };
   }, [masterSlug]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadRentObligations() {
-      if (!masterSlug) {
-        if (!cancelled) {
-          setRentObligations([]);
-          setRentObligationsSummary(null);
-          setRentObligationsError("");
-          setRentObligationsLoading(false);
-        }
-        return;
-      }
-
-      try {
-        setRentObligationsLoading(true);
-        setRentObligationsError("");
-
-        const result = await getMasterRentObligations(masterSlug);
-
-        if (cancelled) return;
-
-        if (result?.ok) {
-          setRentObligations(Array.isArray(result?.obligations) ? result.obligations : []);
-          setRentObligationsSummary(result?.summary || null);
-        }
-        else {
-          setRentObligations([]);
-          setRentObligationsSummary(null);
-          setRentObligationsError("Не удалось загрузить обязательства по аренде.");
-        }
-      }
-      catch (e) {
-        console.error("MASTER_RENT_OBLIGATIONS_LOAD_FAILED", e);
-
-        if (!cancelled) {
-          setRentObligations([]);
-          setRentObligationsSummary(null);
-          setRentObligationsError("Не удалось загрузить обязательства по аренде.");
-        }
-      }
-      finally {
-        if (!cancelled) {
-          setRentObligationsLoading(false);
-        }
-      }
-    }
-
-    void loadRentObligations();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [masterSlug]);
-
   const billingSnapshot = getBillingSnapshot();
   const billingStateLabel = formatBillingState(
     billingSnapshot.billing,
@@ -550,20 +418,6 @@ export default function MasterFinancePage() {
   }, [settlements]);
 
   const historyPreview = useMemo(() => history.slice(0, 5), [history]);
-
-  const formatObligationStatus = (value) => {
-    if (value === "open") return "Открыто";
-    if (value === "paid") return "Оплачено";
-    if (value === "cancelled") return "Отменено";
-    if (value === "voided") return "Аннулировано";
-    return value || "—";
-  };
-
-  const formatCurrencyAmount = (value, currencyCode = "KGS") => {
-    const amount = Number(value || 0);
-    if (Number.isNaN(amount)) return "—";
-    return `${new Intl.NumberFormat("ru-RU").format(amount)} ${currencyCode}`;
-  };
 
   return (
     <div style={styles.page}>
@@ -596,13 +450,11 @@ export default function MasterFinancePage() {
               <StatCard label="Статус billing" value={billingStateLabel} hint={`Запись: ${formatAccessFlag(billingSnapshot.canWrite)} · Выплаты: ${formatAccessFlag(billingSnapshot.canWithdraw)}`} />
               <StatCard label="Сеты" value={String(settlements.length)} hint={money(settlementTotal)} />
               <StatCard label="Выплаты" value={String(payouts.length)} hint={money(payoutTotal)} />
-              <StatCard label="История оплат" value={money(paymentProjectionSummary?.history_amount)} hint={`Строк: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
-              <StatCard label="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} hint={`Открыто: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
             </section>
 
             <Panel
               title="Money Core: баланс и вывод"
-              subtitle="Новая модель вывода средств. Сейчас доступен только только просмотр режим."
+              subtitle="Новая модель вывода средств. Сейчас доступен только read-only режим."
             >
               <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: "#fff7ed", border: "1px solid #fed7aa", color: "#92400e" }}>
                 Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
@@ -610,16 +462,16 @@ export default function MasterFinancePage() {
 
               {moneyCoreSummary ? (
                 <section style={styles.grid}>
-                  <StatCard label="Резерв у провайдера" value={money(moneyCoreZones.provider_hold)} hint="Резерв у провайдера" />
-                  <StatCard label="Ожидает расчёта" value={money(moneyCoreZones.pending_settlement)} hint="Ожидает расчёта" />
+                  <StatCard label="provider_hold" value={money(moneyCoreZones.provider_hold)} hint="Резерв у провайдера" />
+                  <StatCard label="pending_settlement" value={money(moneyCoreZones.pending_settlement)} hint="Ожидает расчёта" />
                   <StatCard label="available" value={money(moneyCoreZones.available)} hint="Доступно к выводу" />
                   <StatCard label="locked" value={money(moneyCoreZones.locked)} hint="Заблокировано" />
                   <StatCard label="paid_out" value={money(moneyCoreZones.paid_out)} hint="Уже выплачено" />
-                  <StatCard label="Возвраты" value={money(moneyCoreZones.refunded)} hint="Возвраты" />
-                  <StatCard label="Отменённые операции" value={money(moneyCoreZones.reversed)} hint="Отмены" />
-                  <StatCard label="Требует проверки" value={money(moneyCoreZones.requires_review)} hint="Требует проверки" />
-                  <StatCard label="Комиссия сервиса" value={money(moneyCoreZones.commission)} hint="Комиссия" />
-                  <StatCard label="Резерв комиссии" value={money(moneyCoreZones.fee_reserved)} hint="Резерв комиссии" />
+                  <StatCard label="refunded" value={money(moneyCoreZones.refunded)} hint="Возвраты" />
+                  <StatCard label="reversed" value={money(moneyCoreZones.reversed)} hint="Ревёрсы" />
+                  <StatCard label="requires_review" value={money(moneyCoreZones.requires_review)} hint="Требует проверки" />
+                  <StatCard label="commission" value={money(moneyCoreZones.commission)} hint="Комиссия" />
+                  <StatCard label="fee_reserved" value={money(moneyCoreZones.fee_reserved)} hint="Резерв под fee" />
                 </section>
               ) : (
                 <EmptyState
@@ -823,7 +675,7 @@ export default function MasterFinancePage() {
                     ) : (
                       <EmptyState
                         title="Настройки вывода не заданы"
-                        text="Пока используется дефолтная только просмотр конфигурация."
+                        text="Пока используется дефолтная read-only конфигурация."
                       />
                     )}
                   </Panel>
@@ -962,7 +814,7 @@ export default function MasterFinancePage() {
 
               <Link to={`/master/${masterSlug}/transactions`} style={styles.actionCard}>
                 <div style={styles.actionTitle}>Транзакции</div>
-                <div style={styles.actionText}>История финансовых операций</div>
+                <div style={styles.actionText}>Техническая финансовая лента и движения</div>
               </Link>
             </section>
 
@@ -974,8 +826,6 @@ export default function MasterFinancePage() {
                   <InfoRow label="Модель" value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
                   <InfoRow label="Баланс" value={money(walletBalance)} />
                   <InfoRow label="Billing state" value={billingStateLabel} />
-                  <InfoRow label="История оплат" value={money(paymentProjectionSummary?.history_amount)} />
-                  <InfoRow label="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} />
                   <InfoRow label="Write доступ" value={formatAccessFlag(billingSnapshot.canWrite)} />
                   <InfoRow label="Withdraw доступ" value={formatAccessFlag(billingSnapshot.canWithdraw)} />
                   <InfoRow label="Block reason" value={billingSnapshot.billingBlockReason || "—"} />
@@ -995,102 +845,6 @@ export default function MasterFinancePage() {
                 ) : (
                   <div style={styles.emptyText}>Расчетных периодов пока нет.</div>
                 )}
-              </Panel>
-
-              <Panel title="Обязательства по аренде" subtitle="Только только просмотр список fixed_rent без изменений финансового контура.">
-                {rentObligationsError ? (
-                  <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", fontSize: 14 }}>
-                    {rentObligationsError}
-                  </div>
-                ) : null}
-
-                <div style={styles.infoGrid}>
-                  <InfoRow label="Открыто" value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.open_count ?? 0))} />
-                  <InfoRow label="Сумма открытых" value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.open_amount ?? 0))} KGS`} />
-                  <InfoRow label="Оплачено" value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.paid_count ?? 0))} />
-                  <InfoRow label="Оплаченная сумма" value={rentObligationsLoading ? "..." : `${new Intl.NumberFormat("ru-RU").format(Number(rentObligationsSummary?.paid_amount ?? 0))} KGS`} />
-                </div>
-
-                {rentObligationsLoading ? (
-                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>Загружаем обязательства по аренде...</div>
-                ) : null}
-
-                {!rentObligationsLoading && !rentObligationsError && rentObligations.length === 0 ? (
-                  <div style={{ marginTop: 12 }}>
-                    <EmptyState
-                      title="Обязательства по аренде пока не найдены."
-                      text="Список обязательств по аренде появится после создания записей."
-                    />
-                  </div>
-                ) : null}
-
-                {!rentObligationsLoading && !rentObligationsError && rentObligations.length > 0 ? (
-                  <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-                    {rentObligations.map((item, index) => {
-                      const periodLabel = `${formatDateTime(item?.period_start)} — ${formatDateTime(item?.period_end)}`;
-                      const amountLabel = `${new Intl.NumberFormat("ru-RU").format(Number(item?.amount || 0))} KGS`;
-                      const dueLabel = formatDateTime(item?.due_at);
-
-                      return (
-                        <PreviewRow
-                          key={item?.id || `${item?.contract_id || "obligation"}-${index}`}
-                          title={periodLabel}
-                          meta={`Срок оплаты: ${dueLabel}`}
-                          value={amountLabel}
-                          status={formatObligationStatus(item?.status)}
-                        />
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </Panel>
-
-              <Panel title="Обязательства по зарплате" subtitle="Только только просмотр список salary без изменения записей, выплат или финансового контура.">
-                {salaryObligationsError ? (
-                  <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", fontSize: 14 }}>
-                    {salaryObligationsError}
-                  </div>
-                ) : null}
-
-                <div style={styles.infoGrid}>
-                  <InfoRow label="Открыто" value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.open_count ?? 0))} />
-                  <InfoRow label="Сумма открытых" value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.open_amount ?? 0, "KGS")} />
-                  <InfoRow label="Оплачено" value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.paid_count ?? 0))} />
-                  <InfoRow label="Оплаченная сумма" value={salaryObligationsLoading ? "..." : formatCurrencyAmount(salaryObligationsSummary?.paid_amount ?? 0, "KGS")} />
-                </div>
-
-                {salaryObligationsLoading ? (
-                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>Загружаем обязательства по зарплате...</div>
-                ) : null}
-
-                {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length === 0 ? (
-                  <div style={{ marginTop: 12 }}>
-                    <EmptyState
-                      title="Обязательства по зарплате пока не найдены."
-                      text="Список обязательств по зарплате появится после создания записей."
-                    />
-                  </div>
-                ) : null}
-
-                {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length > 0 ? (
-                  <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-                    {salaryObligations.map((item, index) => {
-                      const periodLabel = `${formatDateTime(item?.period_start)} — ${formatDateTime(item?.period_end)}`;
-                      const amountLabel = formatCurrencyAmount(item?.amount, item?.currency || "KGS");
-                      const dueLabel = formatDateTime(item?.due_at);
-
-                      return (
-                        <PreviewRow
-                          key={item?.id || `${item?.contract_id || "salary-obligation"}-${index}`}
-                          title={periodLabel}
-                          meta={`Срок выплаты: ${dueLabel}`}
-                          value={amountLabel}
-                          status={formatObligationStatus(item?.status)}
-                        />
-                      );
-                    })}
-                  </div>
-                ) : null}
               </Panel>
 
               <Panel title="История контрактов" subtitle="Компактный блок. Полная история не перегружает hub.">
@@ -1125,13 +879,12 @@ export default function MasterFinancePage() {
 
 const styles = {
   navGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    display: "flex",
     gap: "10px",
+    overflowX: "auto",
+    paddingBottom: "4px",
     marginBottom: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    scrollbarWidth: "thin"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -1139,9 +892,8 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    minWidth: "150px",
+    flex: "0 0 auto"
   },
   navTitle: {
     fontSize: "14px",
@@ -1153,30 +905,17 @@ const styles = {
     color: "#6b7280"
   },
   page: {
-    padding: "20px",
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    overflowX: "hidden",
-    boxSizing: "border-box"
+    padding: "20px"
   },
   container: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "16px"
   },
   header: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    flexWrap: "wrap",
-    gap: "12px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    alignItems: "flex-start"
   },
   eyebrow: {
     fontSize: "11px",
@@ -1190,72 +929,49 @@ const styles = {
     margin: 0,
     fontSize: "28px",
     lineHeight: 1.1,
-    color: "#111827",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    color: "#111827"
   },
   subtitle: {
     margin: "8px 0 0",
     color: "#6b7280",
     fontSize: "14px",
-    maxWidth: "720px",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    maxWidth: "720px"
   },
   loadingCard: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "18px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    padding: "18px"
   },
   errorBanner: {
     border: "1px solid #fecaca",
     background: "#fff5f5",
     color: "#991b1b",
     borderRadius: "14px",
-    padding: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    padding: "16px"
   },
   errorTitle: {
     fontWeight: 700,
     marginBottom: "6px"
   },
   errorText: {
-    fontSize: "14px",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    fontSize: "14px"
   },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "12px"
   },
   actionsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "12px"
   },
   card: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    padding: "16px"
   },
   cardLabel: {
     fontSize: "12px",
@@ -1270,9 +986,7 @@ const styles = {
   cardHint: {
     marginTop: "6px",
     fontSize: "12px",
-    color: "#6b7280",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    color: "#6b7280"
   },
   actionCard: {
     display: "block",
@@ -1281,10 +995,7 @@ const styles = {
     background: "#ffffff",
     padding: "16px",
     textDecoration: "none",
-    color: "#111827",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    color: "#111827"
   },
   actionTitle: {
     fontSize: "16px",
@@ -1293,26 +1004,18 @@ const styles = {
   },
   actionText: {
     fontSize: "13px",
-    color: "#6b7280",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    color: "#6b7280"
   },
   stack: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "16px"
   },
   panel: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    padding: "16px"
   },
   panelHeader: {
     marginBottom: "12px"
@@ -1325,26 +1028,18 @@ const styles = {
   panelSubtitle: {
     marginTop: "4px",
     fontSize: "13px",
-    color: "#6b7280",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    color: "#6b7280"
   },
   infoGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "10px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "10px"
   },
   infoRow: {
     border: "1px solid #eef2f7",
     borderRadius: "12px",
     padding: "12px",
-    background: "#f8fafc",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    background: "#f8fafc"
   },
   infoLabel: {
     fontSize: "12px",
@@ -1360,44 +1055,29 @@ const styles = {
   historyList: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "10px"
   },
   historyItem: {
     border: "1px solid #eef2f7",
     borderRadius: "12px",
-    background: "#f8fafc",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    background: "#f8fafc"
   },
   historySummary: {
     cursor: "pointer",
     listStyle: "none",
     display: "flex",
-    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "12px",
     padding: "12px 14px",
     fontWeight: 600,
-    color: "#111827",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    color: "#111827"
   },
   historyBody: {
-    padding: "0 14px 14px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    padding: "0 14px 14px"
   },
   emptyText: {
     fontSize: "14px",
-    color: "#6b7280",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    color: "#6b7280"
   }
 };

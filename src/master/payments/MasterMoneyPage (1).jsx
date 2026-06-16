@@ -96,10 +96,10 @@ function Row({ label, value }) {
 function FinanceNav({ masterSlug, active }) {
   const items = [
     { key: "finance", label: "Финансы", note: "overview", to: `/master/${masterSlug}/finance` },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: `/master/${masterSlug}/money` },
+    { key: "money", label: "Доход", note: "деньги сейчас", to: `/master/${masterSlug}/money` },
     { key: "settlements", label: "Сеты", note: "расчётные периоды", to: `/master/${masterSlug}/settlements` },
     { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: `/master/${masterSlug}/payouts` },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: `/master/${masterSlug}/transactions` }
+    { key: "transactions", label: "Транзакции", note: "ledger", to: `/master/${masterSlug}/transactions` }
   ];
 
   return (
@@ -312,7 +312,7 @@ export default function MasterMoneyPage() {
       <div style={styles.headerBlock}>
         <div style={styles.eyebrow}>MASTER CABINET</div>
         <h3 style={styles.title}>Доход</h3>
-        <div style={styles.subtitle}>Баланс, доступы и ближайший расчётный контур мастера.</div>
+        <div style={styles.subtitle}>Деньги сейчас: баланс, доступы и ближайший расчетный контур.</div>
       </div>
 
       {slug ? <FinanceNav masterSlug={slug} active="money" /> : null}
@@ -383,13 +383,12 @@ export default function MasterMoneyPage() {
 
 const styles = {
   navGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    display: "flex",
     gap: "10px",
+    overflowX: "auto",
+    paddingBottom: "4px",
     marginBottom: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    scrollbarWidth: "thin"
   },
   navCard: {
     border: "1px solid #e5e7eb",
@@ -397,9 +396,8 @@ const styles = {
     padding: "12px 14px",
     textDecoration: "none",
     display: "block",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    minWidth: "150px",
+    flex: "0 0 auto"
   },
   navTitle: {
     fontSize: "14px",
@@ -414,12 +412,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-    padding: "20px",
-    width: "100%",
-    maxWidth: "100%",
-    minWidth: 0,
-    overflowX: "hidden",
-    boxSizing: "border-box"
+    padding: "20px"
   },
   loading: {
     padding: "20px"
@@ -435,10 +428,7 @@ const styles = {
   headerBlock: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "6px"
   },
   eyebrow: {
     fontSize: "11px",
@@ -450,32 +440,22 @@ const styles = {
   title: {
     margin: 0,
     fontSize: "28px",
-    color: "#111827",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    color: "#111827"
   },
   subtitle: {
     color: "#6b7280",
-    fontSize: "14px",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    fontSize: "14px"
   },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "12px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "12px"
   },
   card: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    padding: "16px"
   },
   cardLabel: {
     fontSize: "12px",
@@ -490,18 +470,13 @@ const styles = {
   cardHint: {
     marginTop: "6px",
     color: "#6b7280",
-    fontSize: "12px",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    fontSize: "12px"
   },
   section: {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     background: "#ffffff",
-    padding: "16px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    padding: "16px"
   },
   sectionTitle: {
     fontSize: "16px",
@@ -511,19 +486,13 @@ const styles = {
   sectionSubtitle: {
     marginTop: "4px",
     fontSize: "13px",
-    color: "#6b7280",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    color: "#6b7280"
   },
   row: {
     display: "flex",
     justifyContent: "space-between",
-    flexWrap: "wrap",
     gap: "12px",
     padding: "10px 0",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box",
     borderBottom: "1px solid #eef2f7"
   },
   rowLabel: {
@@ -535,16 +504,12 @@ const styles = {
     color: "#111827",
     fontSize: "14px",
     fontWeight: 600,
-    wordBreak: "break-word",
-    overflowWrap: "anywhere"
+    wordBreak: "break-word"
   },
   linksGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: "10px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "10px"
   },
   linkCard: {
     display: "block",
@@ -554,47 +519,30 @@ const styles = {
     borderRadius: "12px",
     padding: "12px",
     background: "#f8fafc",
-    fontWeight: 600,
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    fontWeight: 600
   },
   list: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    gap: "10px"
   },
   listCard: {
     border: "1px solid #eef2f7",
     borderRadius: "12px",
     padding: "12px",
-    background: "#f8fafc",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    background: "#f8fafc"
   },
   listTop: {
     display: "flex",
     justifyContent: "space-between",
-    flexWrap: "wrap",
     gap: "12px",
     marginBottom: "6px",
-    color: "#111827",
-    minWidth: 0,
-    maxWidth: "100%",
-    boxSizing: "border-box"
+    color: "#111827"
   },
   listMeta: {
     color: "#6b7280",
     fontSize: "13px",
-    marginBottom: "6px",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    marginBottom: "6px"
   },
   listAmount: {
     fontWeight: 700,
@@ -606,8 +554,6 @@ const styles = {
   },
   errorInline: {
     color: "#991b1b",
-    fontSize: "14px",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word"
+    fontSize: "14px"
   }
 };
