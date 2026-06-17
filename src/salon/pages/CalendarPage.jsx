@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug } from "../SalonContext"
 import { generateTimeSlots } from "../../calendar/calendarEngine"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
-import { createBooking as createInternalBooking, getBookings, getMasters, moveBooking as moveInternalBooking } from "../../api/internal"
+import { getSalonCalendar } from "../../api/internal"
 
 
 function useIsMobile(){
@@ -48,7 +48,7 @@ function normalizeStatus(status){
 
 function statusText(status){
   const value = normalizeStatus(status)
-  if(value === "reserved") return "Ожидает"
+  if(value === "reserved" || value === "pending") return "Ожидает"
   if(value === "confirmed") return "Подтверждена"
   if(value === "completed") return "Завершена"
   if(value === "cancelled") return "Отменена"
@@ -57,7 +57,7 @@ function statusText(status){
 
 function statusColor(status){
   const value = normalizeStatus(status)
-  if(value === "reserved") return "#f59e0b"
+  if(value === "reserved" || value === "pending") return "#f59e0b"
   if(value === "confirmed") return "#2563eb"
   if(value === "completed") return "#6b7280"
   if(value === "cancelled") return "#ef4444"
@@ -116,7 +116,9 @@ function isPastSlot(dayKey, time){
 function formatDateLabel(value){
   if(!value) return "—"
 
-  const date = parseLocalDateKey(value) || new Date(value)
+  const normalized = String(value || "").trim()
+  const localStamp = normalized.includes(" ") ? normalized.split(" ")[0] : normalized
+  const date = parseLocalDateKey(localStamp) || new Date(normalized)
   if(Number.isNaN(date.getTime())) return "—"
 
   return date.toLocaleDateString("ru-RU", {
@@ -129,13 +131,103 @@ function formatDateLabel(value){
 function formatTimeLabel(value){
   if(!value) return "—"
 
-  const date = new Date(value)
+  const normalized = String(value || "").trim()
+  const timePart = normalized.includes(" ") ? normalized.split(" ")[1] : ""
+  if(timePart && /^\d{2}:\d{2}/.test(timePart)){
+    return timePart.slice(0, 5)
+  }
+
+  const date = new Date(normalized)
   if(Number.isNaN(date.getTime())) return "—"
 
   return date.toLocaleTimeString("ru-RU", {
     hour: "2-digit",
     minute: "2-digit"
   })
+}
+
+function normalizeCalendarDateKey(value){
+  const text = String(value || "").trim()
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(text)) return ""
+  return text
+}
+
+function addDaysKey(dateKey, delta){
+  const date = parseLocalDateKey(dateKey)
+  if(!date) return ""
+  const next = new Date(date)
+  next.setDate(next.getDate() + Number(delta || 0))
+  return toLocalDateKey(next)
+}
+
+function parseCalendarSearchDate(search){
+  try{
+    const params = new URLSearchParams(String(search || ""))
+    return normalizeCalendarDateKey(params.get("date"))
+  }catch(e){
+    return ""
+  }
+}
+
+function parseLocalStamp(value){
+  const normalized = String(value || "").trim().replace("T", " ")
+  if(!normalized) return null
+
+  const [datePart, timePartRaw = ""] = normalized.split(" ")
+  const timePart = timePartRaw.slice(0, 5)
+  if(!normalizeCalendarDateKey(datePart) || !/^\d{2}:\d{2}$/.test(timePart)){
+    return null
+  }
+
+  return { date: datePart, time: timePart }
+}
+
+function isOccupiedEventStatus(status){
+  const value = normalizeStatus(status)
+  return ["pending", "confirmed", "completed"].includes(value)
+}
+
+function isCancelledEventStatus(status){
+  const value = normalizeStatus(status)
+  return ["cancelled", "canceled", "rejected", "failed", "refunded"].includes(value)
+}
+
+function getAvailabilityStatus(row){
+  return String(row?.availability_status || row?.status || "").trim().toLowerCase()
+}
+
+function getAvailabilityLabel(row){
+  const status = getAvailabilityStatus(row)
+  if(status === "unknown") return "График не задан"
+  if(status === "configured") return "График задан"
+  return "Доступность неизвестна"
+}
+
+function eventStartsAtSlot(event, dayKey, time){
+  const start = parseLocalStamp(event?.start_local || event?.start_at)
+  if(!start) return false
+  return start.date === dayKey && start.time === time
+}
+
+function eventOverlapsSlot(event, dayKey, time){
+  const start = parseLocalStamp(event?.start_local || event?.start_at)
+  if(!start || start.date !== dayKey) return false
+
+  const end = parseLocalStamp(event?.end_local || event?.end_at)
+  if(!end || end.date !== dayKey){
+    return start.time === time
+  }
+
+  return time >= start.time && time < end.time
+}
+
+function formatLocalRange(startValue, endValue){
+  const start = formatTimeLabel(startValue)
+  const end = formatTimeLabel(endValue)
+  if(start === "—" && end === "—") return "—"
+  if(end === "—") return start
+  if(start === "—") return end
+  return `${start} — ${end}`
 }
 
 function normalizeBooking(raw){
@@ -206,31 +298,25 @@ function formatCurrency(value){
 
 export default function CalendarPage(){
   const { slug: routeSlug } = useParams()
+  const location = useLocation()
   const salonSlug = resolveSalonSlug(routeSlug)
   const isMobile = useIsMobile()
 
-  const [bookings, setBookings] = useState([])
-  const [masters, setMasters] = useState([])
-  const [selectedDay, setSelectedDay] = useState(() => getLocalTodayKey())
+  const routeDay = useMemo(() => parseCalendarSearchDate(location.search), [location.search])
+  const [selectedDay, setSelectedDay] = useState(() => routeDay || getLocalTodayKey())
+  const [calendarResponse, setCalendarResponse] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [actionLoading, setActionLoading] = useState("")
-  const [showPendingCashOnly, setShowPendingCashOnly] = useState(false)
 
-  function openBookingForSlot(master, time){
-    const dateKey = isValidLocalDateKey(selectedDay) ? selectedDay : getLocalTodayKey()
-    const params = new URLSearchParams()
-    params.set("salon", String(salonSlug || "").trim())
-    params.set("master", String(master?.id || "").trim())
-    params.set("date", dateKey)
-    params.set("time", String(time || "").trim())
-    window.location.hash = `#/booking?${params.toString()}`
-  }
+  useEffect(() => {
+    if(routeDay && routeDay !== selectedDay){
+      setSelectedDay(routeDay)
+    }
+  }, [routeDay, selectedDay])
 
   async function load(){
     if(!salonSlug){
-      setBookings([])
-      setMasters([])
+      setCalendarResponse(null)
       setError("SALON_SLUG_MISSING")
       setLoading(false)
       return
@@ -240,27 +326,20 @@ export default function CalendarPage(){
       setLoading(true)
       setError("")
 
-      const [resBookings, resMasters] = await Promise.all([
-        getBookings(salonSlug),
-        getMasters(salonSlug)
-      ])
-
-      if(!resBookings?.ok){
-        throw new Error("SALON_CALENDAR_BOOKINGS_LOAD_FAILED")
+      const result = await getSalonCalendar(salonSlug, selectedDay)
+      if(!result?.ok){
+        throw new Error("SALON_CALENDAR_LOAD_FAILED")
       }
 
-      const normalizedBookings = (resBookings.bookings || []).map(normalizeBooking)
-      const normalizedMasters = resMasters?.ok ? (resMasters.masters || []) : []
+      setCalendarResponse(result)
 
-      setBookings(normalizedBookings)
-      setMasters(normalizedMasters)
-
-      const dayOptions = buildDayOptions(normalizedBookings)
-      setSelectedDay((prev) => (isValidLocalDateKey(prev) ? prev : getLocalTodayKey()))
+      const backendRequestedDate = normalizeCalendarDateKey(result?.date?.requested_date)
+      if(backendRequestedDate && backendRequestedDate !== selectedDay){
+        setSelectedDay(backendRequestedDate)
+      }
     }catch(loadError){
       console.error("SALON CALENDAR LOAD ERROR", loadError)
-      setBookings([])
-      setMasters([])
+      setCalendarResponse(null)
       setError(loadError?.message || "SALON_CALENDAR_LOAD_FAILED")
     }finally{
       setLoading(false)
@@ -269,94 +348,104 @@ export default function CalendarPage(){
 
   useEffect(() => {
     load()
-  }, [salonSlug])
+  }, [salonSlug, selectedDay])
 
-  const dayOptions = useMemo(() => buildDayOptions(bookings), [bookings])
   const slots = useMemo(() => generateTimeSlots(), [])
+  const masters = calendarResponse?.masters || []
+  const workingHours = calendarResponse?.working_hours || []
+  const events = calendarResponse?.events || []
+  const summary = calendarResponse?.summary || {}
+  const dateMeta = calendarResponse?.date || {}
 
-  const bookingsByMasterAndTime = useMemo(() => {
+  const activeMastersCount = Number(summary.active_masters_count ?? masters.length ?? 0)
+  const eventsCount = Number(summary.events_count ?? events.length ?? 0)
+  const occupiedCount = Number(summary.occupied_count ?? events.filter((event) => isOccupiedEventStatus(event?.status)).length ?? 0)
+  const pendingCount = Number(summary.pending_count ?? events.filter((event) => normalizeStatus(event?.status) === "pending").length ?? 0)
+
+  const workingHoursByMasterId = useMemo(() => {
     const index = new Map()
-
-    bookings.forEach((booking) => {
-      const startAt = getBookingStartAt(booking)
-      if(!startAt) return
-
-      const date = new Date(startAt)
-      if(Number.isNaN(date.getTime())) return
-
-      const dayKey = toLocalDateKey(date)
-      if(selectedDay && dayKey !== selectedDay) return
-
-      const timeKey = formatTimeLabel(startAt)
-      const masterKey = String(booking.master_name || "")
-      index.set(`${masterKey}__${timeKey}`, booking)
+    workingHours.forEach((row) => {
+      index.set(String(row?.master_id || ""), row)
     })
-
     return index
-  }, [bookings, selectedDay])
+  }, [workingHours])
 
-  const dayBookings = useMemo(() => {
-    return bookings
-      .filter((booking) => {
-        const startAt = getBookingStartAt(booking)
-        if(!startAt || !selectedDay) return false
-
-        const date = new Date(startAt)
-        if(Number.isNaN(date.getTime())) return false
-
-        return toLocalDateKey(date) === selectedDay
-      })
-      .sort((left, right) => new Date(getBookingStartAt(left)) - new Date(getBookingStartAt(right)))
-  }, [bookings, selectedDay])
-
-  const pendingCashDayBookings = useMemo(() => {
-    return dayBookings.filter(isPendingCashBooking)
-  }, [dayBookings])
-
-  const visibleDayBookings = useMemo(() => {
-    return showPendingCashOnly ? pendingCashDayBookings : dayBookings
-  }, [dayBookings, pendingCashDayBookings, showPendingCashOnly])
-
-  const dailyPendingCashCount = pendingCashDayBookings.length
-  const dailyPendingCashAmount = pendingCashDayBookings.reduce((sum, booking) => {
-    const amount = Number(booking?.payment_amount || booking?.price_snapshot || 0)
-    return sum + (Number.isFinite(amount) ? amount : 0)
-  }, 0)
-  const pendingCashEmptyState = showPendingCashOnly && visibleDayBookings.length === 0
-
-  async function moveBooking(booking){
-    const startAt = getBookingStartAt(booking)
-    const newTime = prompt("Новое время (например 12:00)", formatTimeLabel(startAt))
-    if(!newTime) return
-
-    try{
-      setActionLoading(String(booking.id))
-      const result = await moveInternalBooking(booking.id, `${selectedDay}T${newTime}:00`)
-      if(!result?.ok){
-        throw new Error(result?.error || "MOVE_BOOKING_FAILED")
+  const eventsByMasterId = useMemo(() => {
+    const index = new Map()
+    events.forEach((event) => {
+      const key = String(event?.master_id || "")
+      if(!index.has(key)){
+        index.set(key, [])
       }
-      await load()
-    }catch(actionError){
-      console.error("SALON CALENDAR MOVE BOOKING ERROR", actionError)
-      alert("Ошибка переноса записи")
-    }finally{
-      setActionLoading("")
-    }
+      index.get(key).push(event)
+    })
+    return index
+  }, [events])
+
+  const dayEvents = useMemo(() => {
+    return [...events]
+      .filter((event) => {
+        const start = parseLocalStamp(event?.start_local || event?.start_at)
+        return Boolean(start && start.date === selectedDay)
+      })
+      .sort((left, right) => {
+        const leftStart = String(left?.start_local || left?.start_at || "")
+        const rightStart = String(right?.start_local || right?.start_at || "")
+        return leftStart.localeCompare(rightStart)
+      })
+  }, [events, selectedDay])
+
+  const todayDate = normalizeCalendarDateKey(dateMeta.salon_today) || getLocalTodayKey()
+  const prevDate = normalizeCalendarDateKey(dateMeta.prev_date) || addDaysKey(selectedDay || todayDate, -1)
+  const nextDate = normalizeCalendarDateKey(dateMeta.next_date) || addDaysKey(selectedDay || todayDate, 1)
+
+  const currentDayLabel = formatDateLabel(selectedDay)
+  const todayLabel = formatDateLabel(todayDate)
+
+  function selectDay(nextDay){
+    const normalized = normalizeCalendarDateKey(nextDay)
+    if(!normalized) return
+    setSelectedDay(normalized)
   }
 
-  const summary = {
-    masters: masters.length,
-    bookings: dayBookings.length,
-    confirmed: dayBookings.filter((booking) => booking.status === "confirmed").length,
-    pending: dayBookings.filter((booking) => booking.status === "reserved").length,
-    cash_pending_count: dailyPendingCashCount,
-    cash_pending_amount: dailyPendingCashAmount
+  function renderEventCard(event){
+    const occupied = isOccupiedEventStatus(event?.status)
+    const cancelled = isCancelledEventStatus(event?.status)
+    const tone = occupied ? "#2563eb" : cancelled ? "#9ca3af" : "#7c3aed"
+    const text = occupied ? "Занято" : cancelled ? "Отменена" : statusText(event?.status)
+
+    return (
+      <div
+        key={`${event?.booking_id || event?.booking_code || event?.master_id || "event"}-${event?.start_local || event?.start_at || ""}`}
+        style={{
+          ...styles.mobileCard,
+          borderColor: `${tone}33`
+        }}
+      >
+        <div style={styles.mobileCardHeader}>
+          <div>
+            <div style={styles.mobileTitle}>{event?.client_name || "Клиент"}</div>
+            <div style={styles.mobileMeta}>{event?.master_name || "Мастер"}</div>
+          </div>
+          <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
+            <span style={{ ...styles.statusBadge, background: `${tone}18`, color: tone }}>{text}</span>
+          </div>
+        </div>
+        <div style={styles.mobileMetaRow}>
+          <span>{formatLocalRange(event?.start_local || event?.start_at, event?.end_local || event?.end_at)}</span>
+          <span>{selectedDay ? currentDayLabel : "—"}</span>
+        </div>
+        {event?.service_name ? <div style={styles.mobileService}>{event.service_name}</div> : null}
+        {event?.client_phone ? <div style={styles.mobilePhone}>{event.client_phone}</div> : null}
+        {event?.price !== null && event?.price !== undefined ? <div style={styles.mobilePaymentLabel}>{formatCurrency(event.price)}</div> : null}
+      </div>
+    )
   }
 
   if(loading){
     return (
       <PageSection title="Расписание салона">
-        <div style={styles.feedbackCard}>Загрузка расписания…</div>
+        <div style={styles.feedbackCard}>Загрузка календаря…</div>
       </PageSection>
     )
   }
@@ -365,7 +454,7 @@ export default function CalendarPage(){
     return (
       <PageSection title="Расписание салона">
         <div style={styles.errorCard}>
-          <div style={styles.errorTitle}>Не удалось загрузить расписание</div>
+          <div style={styles.errorTitle}>Не удалось загрузить календарь</div>
           <div style={styles.errorText}>{error}</div>
           <button style={styles.primaryButton} onClick={load}>Повторить</button>
         </div>
@@ -373,161 +462,141 @@ export default function CalendarPage(){
     )
   }
 
-  if(masters.length === 0){
+  if(!masters.length){
     return (
       <PageSection title="Расписание салона">
-        <EmptyState title="Нет мастеров" description="Сначала добавьте мастеров, чтобы построить расписание салона." />
+        <EmptyState title="Нет активных мастеров" description="Backend не вернул мастеров для календаря." />
       </PageSection>
     )
   }
 
   return (
     <PageSection title="Расписание салона">
-      <div style={styles.pageHint}>Календарь записей и управление слотами мастеров</div>
+      <div style={styles.pageHint}>Backend-календарь салона по таймзоне салона и активным мастерам</div>
 
       <div style={styles.summaryGrid}>
-        <SummaryCard label="Мастеров" value={summary.masters} hint="В активном расписании" />
-        <SummaryCard label="Записей на день" value={summary.bookings} hint={selectedDay ? formatDateLabel(selectedDay) : "—"} />
-        <SummaryCard label="Подтверждены" value={summary.confirmed} hint="Активные записи" />
-        <SummaryCard label="Ожидают" value={summary.pending} hint="Требуют внимания" />
+        <SummaryCard label="Мастеров" value={activeMastersCount} hint="Только активные мастера" />
+        <SummaryCard label="Записей на день" value={eventsCount} hint={currentDayLabel} />
+        <SummaryCard label="Подтверждены" value={occupiedCount} hint="Активные записи" />
+        <SummaryCard label="Ожидают" value={pendingCount} hint="Требуют внимания" />
       </div>
 
       <div style={styles.toolbar}>
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>День</label>
-          <select
-            value={selectedDay}
-            onChange={(event) => {
-              const value = String(event.target.value || "").trim()
-              if(!isValidLocalDateKey(value)) return
-              setSelectedDay(value)
-            }}
-            style={styles.select}
+        <div style={styles.calendarNav}>
+          <button
+            type="button"
+            style={styles.navButton}
+            onClick={() => selectDay(prevDate)}
+            disabled={!prevDate}
           >
-            {dayOptions.map((day) => (
-              <option key={day} value={day}>{formatDateLabel(day)}</option>
-            ))}
-          </select>
+            ←
+          </button>
+          <button
+            type="button"
+            style={styles.navButton}
+            onClick={() => selectDay(todayDate)}
+            disabled={!todayDate}
+          >
+            Сегодня
+          </button>
+          <button
+            type="button"
+            style={styles.navButton}
+            onClick={() => selectDay(nextDate)}
+            disabled={!nextDate}
+          >
+            →
+          </button>
         </div>
 
-        <label style={styles.filterPill}>
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Дата</label>
           <input
-            type="checkbox"
-            checked={showPendingCashOnly}
-            onChange={(event) => setShowPendingCashOnly(event.target.checked)}
+            type="date"
+            value={selectedDay}
+            onChange={(event) => selectDay(event.target.value)}
+            style={styles.dateInput}
           />
-          <span>Незакрытые наличные</span>
-        </label>
+        </div>
       </div>
 
-      {(dailyPendingCashCount > 0 || showPendingCashOnly) ? (
-        <div style={styles.pendingCashSummary}>
-          Незакрытые наличные: {dailyPendingCashCount} / {formatCurrency(dailyPendingCashAmount)}
-        </div>
+      <div style={styles.calendarMetaRow}>
+        <div>Выбранный день: <b>{currentDayLabel}</b></div>
+        <div>Сегодня в салоне: <b>{todayLabel}</b></div>
+      </div>
+
+      {workingHours.some((row) => getAvailabilityStatus(row) === "unknown") ? (
+        <div style={styles.availabilityNote}>Доступность неизвестна: график мастера не задан.</div>
       ) : null}
 
-      {pendingCashEmptyState ? (
-        <EmptyState
-          title="Незакрытых наличных за выбранный день нет."
-          description="Снимите фильтр или выберите другой день."
-        />
-      ) : isMobile ? (
-        visibleDayBookings.length === 0 ? (
+      {isMobile ? (
+        dayEvents.length === 0 ? (
           <EmptyState
             title="На этот день записей нет"
-            description="Выберите другой день или создайте запись из свободного слота."
+            description="Календарь показывает только backend-события и не создаёт запись из пустого слота."
           />
         ) : (
           <div style={styles.mobileList}>
-            {visibleDayBookings.map((booking) => {
-              const color = statusColor(booking.status)
-              const pendingCash = isPendingCashBooking(booking)
-              return (
-                <button
-                  key={booking.id}
-                  type="button"
-                  style={{ ...styles.mobileCard, borderColor: `${color}33` }}
-                  onClick={() => moveBooking(booking)}
-                >
-                  <div style={styles.mobileCardHeader}>
-                    <div>
-                      <div style={styles.mobileTitle}>{booking.client_name}</div>
-                      <div style={styles.mobileMeta}>{booking.master_name}</div>
-                    </div>
-                    <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
-                      <span style={{ ...styles.statusBadge, background: `${color}18`, color }}>{statusText(booking.status)}</span>
-                      {pendingCash ? (
-                        <span style={styles.pendingCashBadge}>Наличные ожидают подтверждения</span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div style={styles.mobileMetaRow}>
-                    <span>{formatTimeLabel(getBookingStartAt(booking))}</span>
-                    <span>{formatDateLabel(getBookingStartAt(booking))}</span>
-                  </div>
-                  {booking.service_name ? <div style={styles.mobileService}>{booking.service_name}</div> : null}
-                  {pendingCash ? <div style={styles.mobilePaymentLabel}>{getPaymentLabelRu(booking)}</div> : null}
-                  {booking.phone ? <div style={styles.mobilePhone}>{booking.phone}</div> : null}
-                </button>
-              )
-            })}
+            {dayEvents.map((event) => renderEventCard(event))}
           </div>
         )
       ) : (
         <div style={styles.desktopWrap}>
           <div style={{ ...styles.grid, gridTemplateColumns: `110px repeat(${Math.max(1, masters.length)}, minmax(180px, 1fr))` }}>
-            <div style={styles.cornerCell}></div>
+            <div style={styles.cornerCell}>
+              <div style={styles.cornerTitle}>Время</div>
+              <div style={styles.cornerSubtitle}>{currentDayLabel}</div>
+            </div>
 
-            {masters.map((master) => (
-              <div key={master.id || master.name} style={styles.masterHeader}>
-                {master.name}
-              </div>
-            ))}
+            {masters.map((master) => {
+              const availabilityRow = workingHoursByMasterId.get(String(master.id || ""))
+              return (
+                <div key={master.id} style={styles.masterHeader}>
+                  <div style={styles.masterName}>{master.name}</div>
+                  <div style={styles.masterAvailability}>{getAvailabilityLabel(availabilityRow)}</div>
+                </div>
+              )
+            })}
 
             {slots.map((time) => (
               <div key={time} style={{ display: "contents" }}>
                 <div style={styles.timeCell}>{time}</div>
 
                 {masters.map((master) => {
-                  const booking = bookingsByMasterAndTime.get(`${String(master.name)}__${time}`)
-                  const color = booking ? statusColor(booking.status) : "#e5e7eb"
-                  const loadingKey = booking ? String(booking.id) : `${master?.id || master?.name}-${time}`
-                  const pastSlot = !booking && isPastSlot(selectedDay, time)
+                  const masterId = String(master?.id || "")
+                  const availabilityRow = workingHoursByMasterId.get(masterId)
+                  const masterEvents = eventsByMasterId.get(masterId) || []
+                  const occupiedEvent = masterEvents.find((event) => isOccupiedEventStatus(event?.status) && eventOverlapsSlot(event, selectedDay, time))
+                  const historyEvent = masterEvents.find((event) => isCancelledEventStatus(event?.status) && eventStartsAtSlot(event, selectedDay, time))
+                  const availabilityUnknown = getAvailabilityStatus(availabilityRow) === "unknown" || !availabilityRow
+                  const cellTone = occupiedEvent ? "#2563eb" : historyEvent ? "#9ca3af" : "#e5e7eb"
 
                   return (
-                    <button
-                      key={`${master.id || master.name}-${time}`}
-                      type="button"
-                      disabled={actionLoading === loadingKey || pastSlot}
+                    <div
+                      key={`${masterId}-${time}`}
                       style={{
                         ...styles.slotCell,
-                        background: booking ? `${color}14` : "#ffffff",
-                        borderLeft: "1px solid #e5e7eb",
-                        opacity: pastSlot ? 0.5 : 1,
-                        cursor: pastSlot ? "not-allowed" : "pointer"
-                      }}
-                      onClick={() => {
-                        if(booking){
-                          moveBooking(booking)
-                        }else if(!pastSlot){
-                          openBookingForSlot(master, time)
-                        }
+                        background: occupiedEvent ? "#eff6ff" : historyEvent ? "#f8fafc" : "#ffffff",
+                        borderLeft: "1px solid #e5e7eb"
                       }}
                     >
-                      {booking ? (
+                      {occupiedEvent ? (
                         <div style={styles.bookingCell}>
-                          <div style={styles.bookingClient}>{booking.client_name}</div>
-                          <div style={styles.bookingMeta}>{statusText(booking.status)}</div>
-                          {isPendingCashBooking(booking) ? (
-                            <div style={styles.bookingCashMeta}>{getPaymentLabelRu(booking)}</div>
-                          ) : null}
+                          <div style={{ ...styles.bookingClient, color: cellTone }}>{occupiedEvent.client_name || "Занято"}</div>
+                          <div style={styles.bookingMeta}>{occupiedEvent.service_name || statusText(occupiedEvent.status)}</div>
+                          <div style={styles.bookingCashMeta}>{formatLocalRange(occupiedEvent.start_local || occupiedEvent.start_at, occupiedEvent.end_local || occupiedEvent.end_at)}</div>
                         </div>
-                      ) : pastSlot ? (
-                        <div style={styles.emptySlotPast}>Время прошло</div>
+                      ) : historyEvent ? (
+                        <div style={styles.historyCell}>
+                          <div style={styles.historyTitle}>Отменена</div>
+                          <div style={styles.historyMeta}>{historyEvent.client_name || "Клиент"}</div>
+                        </div>
                       ) : (
-                        <div style={styles.emptySlotAction}>Добавить клиента</div>
+                        <div style={styles.unknownSlotCell}>
+                          <div style={styles.unknownSlotTitle}>{availabilityUnknown ? "График не задан" : "Доступность неизвестна"}</div>
+                        </div>
                       )}
-                    </button>
+                    </div>
                   )
                 })}
               </div>
@@ -581,6 +650,23 @@ const styles = {
     flexWrap: "wrap",
     marginBottom: 16
   },
+  calendarNav: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap"
+  },
+  navButton: {
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    background: "#fff",
+    color: "#111827",
+    minHeight: 40,
+    minWidth: 40,
+    padding: "0 12px",
+    fontWeight: 700,
+    cursor: "pointer"
+  },
   filterPill: {
     display: "inline-flex",
     alignItems: "center",
@@ -611,6 +697,14 @@ const styles = {
     flexDirection: "column",
     gap: 6,
     minWidth: 220
+  },
+  dateInput: {
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    padding: "10px 12px",
+    fontSize: 14,
+    background: "#fff",
+    minHeight: 40
   },
   label: {
     fontSize: 12,
@@ -647,6 +741,25 @@ const styles = {
     color: "#be123c",
     fontSize: 14
   },
+  calendarMetaRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    marginBottom: 12,
+    color: "#374151",
+    fontSize: 13
+  },
+  availabilityNote: {
+    marginBottom: 12,
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    background: "#f8fafc",
+    color: "#475569",
+    fontSize: 13,
+    fontWeight: 600
+  },
   primaryButton: {
     border: "none",
     borderRadius: 10,
@@ -673,7 +786,10 @@ const styles = {
     left: 0,
     zIndex: 4,
     background: "#f9fafb",
-    borderBottom: "1px solid #e5e7eb"
+    borderBottom: "1px solid #e5e7eb",
+    padding: 12,
+    display: "grid",
+    gap: 4
   },
   masterHeader: {
     position: "sticky",
@@ -685,7 +801,29 @@ const styles = {
     padding: 12,
     textAlign: "center",
     fontWeight: 700,
+    color: "#111827",
+    display: "grid",
+    gap: 4
+  },
+  masterName: {
+    fontSize: 14,
+    fontWeight: 700,
     color: "#111827"
+  },
+  masterAvailability: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: 600
+  },
+  cornerTitle: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: 600
+  },
+  cornerSubtitle: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: 700
   },
   timeCell: {
     position: "sticky",
@@ -706,7 +844,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer"
+    cursor: "default"
   },
   bookingCell: {
     display: "grid",
@@ -726,6 +864,31 @@ const styles = {
     fontSize: 11,
     color: "#991b1b",
     fontWeight: 700
+  },
+  historyCell: {
+    display: "grid",
+    gap: 3,
+    textAlign: "center"
+  },
+  historyTitle: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: "#64748b"
+  },
+  historyMeta: {
+    fontSize: 11,
+    color: "#94a3b8"
+  },
+  unknownSlotCell: {
+    display: "grid",
+    gap: 2,
+    textAlign: "center"
+  },
+  unknownSlotTitle: {
+    color: "#94a3b8",
+    fontSize: 13,
+    fontWeight: 600,
+    lineHeight: 1.2
   },
   emptySlot: {
     color: "#9ca3af",

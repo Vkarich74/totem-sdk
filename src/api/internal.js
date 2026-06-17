@@ -752,6 +752,28 @@ export async function getBookings(salonSlug = getSalonSlug()){
   return { ok:true, bookings: j.bookings || [] };
 }
 
+export async function getSalonCalendar(salonSlug = getSalonSlug(), date){
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const suffix = buildQuery({
+    date: String(date || "").trim()
+  });
+
+  const r = await safeInternalJson(`/salons/${safeSlug}/calendar${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"SALON_CALENDAR_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_CALENDAR_API_NOT_OK", detail:j };
+
+  return {
+    ok:true,
+    salon: j.salon || null,
+    date: j.date || null,
+    masters: j.masters || [],
+    working_hours: j.working_hours || [],
+    events: j.events || [],
+    summary: j.summary || {}
+  };
+}
+
 export async function getOwnerQrPaymentOptions(bookingId){
   const safeBookingId = Number(bookingId);
   const r = await safeInternalJson(`/payments/owner-qr/options?booking_id=${encodeURIComponent(String(Number.isInteger(safeBookingId) && safeBookingId > 0 ? safeBookingId : ""))}`, {
