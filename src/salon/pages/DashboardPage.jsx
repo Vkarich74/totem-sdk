@@ -162,10 +162,13 @@ function readCollectionAnchorMetric(summary, keys = []){
   for(const key of keys){
     const countKey = `${key}_count`
     const amountKey = `${key}_amount`
+    const hasCount = Object.prototype.hasOwnProperty.call(source, countKey)
+    const hasAmount = Object.prototype.hasOwnProperty.call(source, amountKey)
+    const hasRaw = Object.prototype.hasOwnProperty.call(source, key)
 
-    if(Object.prototype.hasOwnProperty.call(source, countKey) || Object.prototype.hasOwnProperty.call(source, amountKey)){
-      const count = Number(source?.[countKey] ?? 0)
-      const amount = Number(source?.[amountKey] ?? 0)
+    if(hasCount || hasAmount || hasRaw){
+      const count = hasCount ? Number(source?.[countKey]) : null
+      const amount = hasAmount ? Number(source?.[amountKey]) : (hasRaw ? Number(source?.[key]) : null)
       return {
         count: Number.isFinite(count) ? count : null,
         amount: Number.isFinite(amount) ? amount : null
@@ -1942,14 +1945,14 @@ export default function DashboardPage(){
                               {item?.collector_owner_type === "master" ? "У мастера" : item?.collector_owner_type === "salon" ? "У салона" : getCollectionAnchorOwnerLabel(item?.collector_owner_type)}
                             </span>
                             <span style={{ fontSize: "13px", fontWeight: 800, color: "#111827" }}>
-                              {money(item?.amount || item?.total_amount || item?.amount_total || 0)}
+                              {money(item?.total_paid || item?.amount || item?.total_amount || item?.amount_total || 0)}
                             </span>
                           </div>
                         </div>
 
                         <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}>
-                          {Number(item?.count || item?.anchor_count || item?.total_count || 0) > 0
-                            ? `${Number(item?.count || item?.anchor_count || item?.total_count || 0)} записей`
+                          {Number(item?.payment_count || item?.count || item?.anchor_count || item?.total_count || 0) > 0
+                            ? `${Number(item?.payment_count || item?.count || item?.anchor_count || item?.total_count || 0)} записей`
                             : "—"}
                         </div>
                       </div>

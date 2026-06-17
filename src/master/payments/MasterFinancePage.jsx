@@ -249,9 +249,12 @@ function readCollectionAnchorMetric(summary, keys = []) {
   for (const key of keys) {
     const countKey = `${key}_count`;
     const amountKey = `${key}_amount`;
-    if (Object.prototype.hasOwnProperty.call(source, countKey) || Object.prototype.hasOwnProperty.call(source, amountKey)) {
-      const count = Number(source?.[countKey] ?? 0);
-      const amount = Number(source?.[amountKey] ?? 0);
+    const hasCount = Object.prototype.hasOwnProperty.call(source, countKey);
+    const hasAmount = Object.prototype.hasOwnProperty.call(source, amountKey);
+    const hasRaw = Object.prototype.hasOwnProperty.call(source, key);
+    if (hasCount || hasAmount || hasRaw) {
+      const count = hasCount ? Number(source?.[countKey]) : null;
+      const amount = hasAmount ? Number(source?.[amountKey]) : (hasRaw ? Number(source?.[key]) : null);
       return {
         count: Number.isFinite(count) ? count : null,
         amount: Number.isFinite(amount) ? amount : null
