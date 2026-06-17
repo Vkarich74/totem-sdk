@@ -203,6 +203,13 @@ function getAvailabilityLabel(row){
   return "Доступность неизвестна"
 }
 
+function getEmptySlotLabel(row){
+  const status = getAvailabilityStatus(row)
+  if(status === "configured") return "Свободно"
+  if(status === "unknown") return "График не задан"
+  return "Доступность неизвестна"
+}
+
 function eventStartsAtSlot(event, dayKey, time){
   const start = parseLocalStamp(event?.start_local || event?.start_at)
   if(!start) return false
@@ -568,7 +575,6 @@ export default function CalendarPage(){
                   const masterEvents = eventsByMasterId.get(masterId) || []
                   const occupiedEvent = masterEvents.find((event) => isOccupiedEventStatus(event?.status) && eventOverlapsSlot(event, selectedDay, time))
                   const historyEvent = masterEvents.find((event) => isCancelledEventStatus(event?.status) && eventStartsAtSlot(event, selectedDay, time))
-                  const availabilityUnknown = getAvailabilityStatus(availabilityRow) === "unknown" || !availabilityRow
                   const cellTone = occupiedEvent ? "#2563eb" : historyEvent ? "#9ca3af" : "#e5e7eb"
 
                   return (
@@ -593,7 +599,7 @@ export default function CalendarPage(){
                         </div>
                       ) : (
                         <div style={styles.unknownSlotCell}>
-                          <div style={styles.unknownSlotTitle}>{availabilityUnknown ? "График не задан" : "Доступность неизвестна"}</div>
+                          <div style={styles.unknownSlotTitle}>{getEmptySlotLabel(availabilityRow)}</div>
                         </div>
                       )}
                     </div>
