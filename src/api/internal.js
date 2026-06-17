@@ -2285,3 +2285,78 @@ export async function getMasterLostProfit(masterSlug = getMasterSlug(), params =
     return { ok:false, error:"MASTER_LOST_PROFIT_FETCH_FAILED", message:e?.message || String(e) };
   }
 }
+
+export async function getSalonCollectionAnchors(salonSlug = getSalonSlug(), params = {}){
+  try{
+    const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+    const query = buildQuery({
+      from: params?.from,
+      to: params?.to,
+      master_id: params?.master_id,
+      master_slug: params?.master_slug,
+      limit: params?.limit
+    });
+    const r = await safeInternalJson("/salons/" + safeSlug + "/collection-anchors" + query, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"SALON_COLLECTION_ANCHORS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_COLLECTION_ANCHORS_API_NOT_OK", detail:j };
+    return {
+      ok:true,
+      scope: j.scope || null,
+      filters: j.filters || null,
+      summary: j.summary || null,
+      rows: Array.isArray(j.rows) ? j.rows : [],
+      by_master: Array.isArray(j.by_master) ? j.by_master : [],
+      monthly: Array.isArray(j.monthly) ? j.monthly : [],
+      close_actions_available: Boolean(j.close_actions_available)
+    };
+  }catch(e){
+    return { ok:false, error:"SALON_COLLECTION_ANCHORS_FETCH_FAILED", message:e?.message || String(e) };
+  }
+}
+
+export async function getMasterCollectionAnchors(masterSlug = getMasterSlug(), params = {}){
+  try{
+    const safeSlug = encodeURIComponent(String(masterSlug || "").trim());
+    const query = buildQuery({
+      from: params?.from,
+      to: params?.to,
+      limit: params?.limit
+    });
+    const r = await safeInternalJson("/masters/" + safeSlug + "/collection-anchors" + query, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MASTER_COLLECTION_ANCHORS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_COLLECTION_ANCHORS_API_NOT_OK", detail:j };
+    return {
+      ok:true,
+      scope: j.scope || null,
+      filters: j.filters || null,
+      summary: j.summary || null,
+      rows: Array.isArray(j.rows) ? j.rows : [],
+      monthly: Array.isArray(j.monthly) ? j.monthly : [],
+      close_actions_available: Boolean(j.close_actions_available)
+    };
+  }catch(e){
+    return { ok:false, error:"MASTER_COLLECTION_ANCHORS_FETCH_FAILED", message:e?.message || String(e) };
+  }
+}
+
+export async function closeSalonCollectionAnchors(salonSlug = getSalonSlug(), payload = {}){
+  try{
+    const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+    const r = await safeInternalJson("/salons/" + safeSlug + "/collection-anchors/close", {
+      method: "POST",
+      body: JSON.stringify(payload || {})
+    });
+    if(!r.ok) return { ok:false, error:"SALON_COLLECTION_ANCHORS_CLOSE_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_COLLECTION_ANCHORS_CLOSE_API_NOT_OK", detail:j };
+    return {
+      ok:true,
+      anchor: j.anchor || j.row || j.data || null,
+      summary: j.summary || null
+    };
+  }catch(e){
+    return { ok:false, error:"SALON_COLLECTION_ANCHORS_CLOSE_FETCH_FAILED", message:e?.message || String(e) };
+  }
+}

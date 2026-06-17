@@ -6,6 +6,7 @@ import {
   getMoneyCoreDestinationProviders,
   getMasterActiveContract,
   getMasterContractHistory,
+  getMasterCollectionAnchors,
   getMasterLostProfit,
   getMasterMoneyCoreSummary,
   getMasterPaymentProjections,
@@ -187,6 +188,122 @@ function sumAmounts(items) {
   return items.reduce((acc, item) => acc + (Number(item?.amount) || 0), 0);
 }
 
+function getCollectionAnchorOwnerLabel(value) {
+  const status = String(value || "").trim().toLowerCase();
+
+  if (status === "master") return "У мастера";
+  if (status === "salon") return "У салона";
+  if (status === "unknown") return "Не определено";
+  if (status === "conflict") return "Конфликт";
+  return status ? status : "—";
+}
+
+function getCollectionAnchorStatusLabel(value) {
+  const status = String(value || "").trim().toLowerCase();
+
+  if (status === "open") return "Открыто";
+  if (status === "closed") return "Закрыто";
+  if (status === "not_needed") return "Не требуется";
+  if (status === "unknown") return "Не определено";
+  if (status === "conflict") return "Конфликт";
+  return status ? status : "—";
+}
+
+function getCollectionAnchorRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.anchors)) return payload.anchors;
+  return [];
+}
+
+function readCollectionAnchorMetric(summary, keys = []) {
+  const source = summary && typeof summary === "object" ? summary : {};
+
+  for (const key of keys) {
+    const raw = source?.[key];
+    if (raw && typeof raw === "object") {
+      const count = Number(
+        raw.count ??
+        raw.total_count ??
+        raw.items_count ??
+        raw.row_count ??
+        raw.anchor_count ??
+        raw.value ??
+        0
+      );
+      const amount = Number(
+        raw.amount ??
+        raw.total_amount ??
+        raw.amount_total ??
+        raw.sum ??
+        0
+      );
+      return {
+        count: Number.isFinite(count) ? count : null,
+        amount: Number.isFinite(amount) ? amount : null
+      };
+    }
+  }
+
+  for (const key of keys) {
+    const countKey = `${key}_count`;
+    const amountKey = `${key}_amount`;
+    if (Object.prototype.hasOwnProperty.call(source, countKey) || Object.prototype.hasOwnProperty.call(source, amountKey)) {
+      const count = Number(source?.[countKey] ?? 0);
+      const amount = Number(source?.[amountKey] ?? 0);
+      return {
+        count: Number.isFinite(count) ? count : null,
+        amount: Number.isFinite(amount) ? amount : null
+      };
+    }
+  }
+
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      const amount = Number(source?.[key]);
+      if (Number.isFinite(amount)) {
+        return { count: null, amount };
+      }
+    }
+  }
+
+  return { count: null, amount: null };
+}
+
+function formatCollectionAnchorMetric(summary, keys = []) {
+  const metric = readCollectionAnchorMetric(summary, keys);
+
+  if (metric.amount === null && metric.count === null) {
+    return "—";
+  }
+
+  if (metric.count === null) {
+    return money(metric.amount);
+  }
+
+  if (metric.amount === null) {
+    return String(metric.count);
+  }
+
+  return `${Number(metric.count)} / ${money(metric.amount)}`;
+}
+
+function getCollectionAnchorRowKey(row, index) {
+  return String(row?.id || row?.payment_id || row?.source_id || `${index}`);
+}
+
+function getCollectionAnchorSalonLabel(row) {
+  return String(
+    row?.salon_name ||
+    row?.salon_slug ||
+    row?.salon?.name ||
+    row?.salon?.slug ||
+    row?.salon_id ||
+    "—"
+  ).trim() || "—";
+}
+
 function StatCard({ label, value, hint }) {
   return (
     <div style={styles.card}>
@@ -294,6 +411,9 @@ export default function MasterFinancePage() {
   const [lostProfit, setLostProfit] = useState(null);
   const [lostProfitLoading, setLostProfitLoading] = useState(true);
   const [lostProfitError, setLostProfitError] = useState("");
+  const [collectionAnchors, setCollectionAnchors] = useState(null);
+  const [collectionAnchorsLoading, setCollectionAnchorsLoading] = useState(true);
+  const [collectionAnchorsError, setCollectionAnchorsError] = useState("");
   const [rentObligations, setRentObligations] = useState([]);
   const [rentObligationsSummary, setRentObligationsSummary] = useState(null);
   const [rentObligationsLoading, setRentObligationsLoading] = useState(true);
@@ -472,6 +592,67 @@ export default function MasterFinancePage() {
     }
 
     void loadLostProfit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [masterSlug]);
+
+  async function fetchCollectionAnchors() {
+    if (!masterSlug) {
+      return { ok: false, error: "MASTER_SLUG_MISSING" };
+    }
+
+    return getMasterCollectionAnchors(masterSlug, { limit: 100 });
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCollectionAnchors() {
+      if (!masterSlug) {
+        if (!cancelled) {
+          setCollectionAnchors(null);
+          setCollectionAnchorsLoading(false);
+          setCollectionAnchorsError("");
+        }
+        return;
+      }
+
+      try {
+        if (!cancelled) {
+          setCollectionAnchorsLoading(true);
+          setCollectionAnchorsError("");
+        }
+
+        const result = await fetchCollectionAnchors();
+
+        if (cancelled) return;
+
+        if (result?.ok) {
+          setCollectionAnchors(result);
+        }
+        else {
+          setCollectionAnchors(null);
+          setCollectionAnchorsError("Не удалось загрузить оплаты за мои услуги.");
+        }
+      }
+      catch (e) {
+        console.error("MASTER_COLLECTION_ANCHORS_LOAD_FAILED", e);
+
+        if (!cancelled) {
+          setCollectionAnchors(null);
+          setCollectionAnchorsError("Не удалось загрузить оплаты за мои услуги.");
+        }
+      }
+      finally {
+        if (!cancelled) {
+          setCollectionAnchorsLoading(false);
+        }
+      }
+    }
+
+    void loadCollectionAnchors();
 
     return () => {
       cancelled = true;
@@ -662,6 +843,8 @@ export default function MasterFinancePage() {
   const moneyCoreOwnerId = moneyCoreSummary?.owner?.id || null;
   const lostProfitSummary = lostProfit?.summary || null;
   const lostProfitMonthly = Array.isArray(lostProfit?.monthly) ? lostProfit.monthly : [];
+  const collectionAnchorsSummary = collectionAnchors?.summary || null;
+  const collectionAnchorRows = getCollectionAnchorRows(collectionAnchors);
 
   const lastSettlement = useMemo(() => {
     if (!settlements.length) return null;
@@ -771,6 +954,67 @@ export default function MasterFinancePage() {
                 <EmptyState
                   title="Недополученная прибыль пока не найдена"
                   text="Для выбранного периода нет отменённых записей."
+                />
+              )}
+            </Panel>
+
+            <Panel
+              title="Оплаты за мои услуги"
+              subtitle="Только просмотр. Деньги по моим услугам без действий."
+            >
+              {collectionAnchorsError ? (
+                <div style={{ marginBottom: 12, fontSize: 13, color: "#b42318", background: "#fff5f5", border: "1px solid #f5c2c7", borderRadius: 12, padding: 12 }}>
+                  {collectionAnchorsError}
+                </div>
+              ) : null}
+
+              {collectionAnchorsLoading ? (
+                <EmptyState
+                  title="Оплаты за мои услуги загружаются"
+                  text="Считаем деньги по моим услугам и распределение по статусам."
+                />
+              ) : collectionAnchors?.ok && collectionAnchorRows.length ? (
+                <div style={{ display: "grid", gap: 16 }}>
+                  <section style={styles.grid}>
+                    <StatCard label="Сумма" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["total_paid_for_my_services", "collected_by_master", "paid_for_my_services"])} hint="Деньги по моим услугам" />
+                    <StatCard label="У мастера" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["collected_by_master"])} hint="Уже закреплено за мной" />
+                    <StatCard label="У салона" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["open_at_salon", "open_to_transfer"])} hint="Пока у салона" />
+                    <StatCard label="Закрыто" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["closed_by_salon", "closed_transfers"])} hint="Передача завершена" />
+                    <StatCard label="Не определено" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["unknown"])} hint="Требует проверки" />
+                    <StatCard label="Конфликт" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["conflict"])} hint="Нужна сверка" />
+                  </section>
+
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {collectionAnchorRows.slice(0, 12).map((row, index) => {
+                      const amount = Number(row?.amount || row?.payment_amount || row?.price_snapshot || 0);
+                      const masterLabel = String(
+                        row?.master_name ||
+                        row?.master_slug ||
+                        row?.master?.name ||
+                        row?.master?.slug ||
+                        row?.master_id ||
+                        row?.beneficiary_master_id ||
+                        "—"
+                      ).trim() || "—";
+                      const salonLabel = getCollectionAnchorSalonLabel(row);
+                      const rowKey = getCollectionAnchorRowKey(row, index);
+
+                      return (
+                        <PreviewRow
+                          key={rowKey}
+                          title={`Оплата #${row?.payment_id || "—"}`}
+                          meta={`Запись #${row?.booking_id || "—"} · Салон: ${salonLabel} · Мастер: ${masterLabel} · Источник: ${String(row?.source_type || row?.source || "—").trim() || "—"}`}
+                          value={money(amount)}
+                          status={`${getCollectionAnchorOwnerLabel(row?.collector_owner_type)} · ${getCollectionAnchorStatusLabel(row?.anchor_status)}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <EmptyState
+                  title="Оплаты за мои услуги пока не найдены"
+                  text="Для выбранного периода нет данных."
                 />
               )}
             </Panel>

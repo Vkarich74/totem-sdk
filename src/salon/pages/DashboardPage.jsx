@@ -7,7 +7,9 @@ import OwnerPushOptInCard from "../../components/OwnerPushOptInCard"
 import {
   confirmOwnerQrPayment,
   confirmSalonCashPayment,
+  closeSalonCollectionAnchors,
   getBookings as getSalonBookings,
+  getSalonCollectionAnchors,
   getSalonMetrics,
   getSalonRentObligations,
   getSalonSalaryObligations,
@@ -97,6 +99,141 @@ function getOwnerQrPaymentAmount(payment){
   const value = payment?.amount ?? payment?.payment_amount ?? payment?.price_snapshot ?? 0
   const amount = Number(value || 0)
   return Number.isFinite(amount) ? amount : 0
+}
+
+function getCollectionAnchorOwnerLabel(value){
+  const status = String(value || "").trim().toLowerCase()
+
+  if(status === "master") return "У мастера"
+  if(status === "salon") return "У салона"
+  if(status === "unknown") return "Не определено"
+  if(status === "conflict") return "Конфликт"
+  return status ? status : "—"
+}
+
+function getCollectionAnchorStatusLabel(value){
+  const status = String(value || "").trim().toLowerCase()
+
+  if(status === "open") return "Открыто"
+  if(status === "closed") return "Закрыто"
+  if(status === "not_needed") return "Не требуется"
+  if(status === "unknown") return "Не определено"
+  if(status === "conflict") return "Конфликт"
+  return status ? status : "—"
+}
+
+function getCollectionAnchorRows(payload){
+  if(Array.isArray(payload)) return payload
+  if(Array.isArray(payload?.rows)) return payload.rows
+  if(Array.isArray(payload?.items)) return payload.items
+  if(Array.isArray(payload?.anchors)) return payload.anchors
+  return []
+}
+
+function readCollectionAnchorMetric(summary, keys = []){
+  const source = summary && typeof summary === "object" ? summary : {}
+
+  for(const key of keys){
+    const raw = source?.[key]
+    if(raw && typeof raw === "object"){
+      const count = Number(
+        raw.count ??
+        raw.total_count ??
+        raw.items_count ??
+        raw.row_count ??
+        raw.anchor_count ??
+        raw.value ??
+        0
+      )
+      const amount = Number(
+        raw.amount ??
+        raw.total_amount ??
+        raw.amount_total ??
+        raw.sum ??
+        0
+      )
+      return {
+        count: Number.isFinite(count) ? count : null,
+        amount: Number.isFinite(amount) ? amount : null
+      }
+    }
+  }
+
+  for(const key of keys){
+    const countKey = `${key}_count`
+    const amountKey = `${key}_amount`
+
+    if(Object.prototype.hasOwnProperty.call(source, countKey) || Object.prototype.hasOwnProperty.call(source, amountKey)){
+      const count = Number(source?.[countKey] ?? 0)
+      const amount = Number(source?.[amountKey] ?? 0)
+      return {
+        count: Number.isFinite(count) ? count : null,
+        amount: Number.isFinite(amount) ? amount : null
+      }
+    }
+  }
+
+  for(const key of keys){
+    if(Object.prototype.hasOwnProperty.call(source, key)){
+      const amount = Number(source?.[key])
+      if(Number.isFinite(amount)){
+        return { count: null, amount }
+      }
+    }
+  }
+
+  return { count: null, amount: null }
+}
+
+function formatCollectionAnchorMetric(summary, keys = []){
+  const metric = readCollectionAnchorMetric(summary, keys)
+
+  if(metric.amount === null && metric.count === null){
+    return "—"
+  }
+
+  if(metric.count === null){
+    return money(metric.amount)
+  }
+
+  if(metric.amount === null){
+    return String(metric.count)
+  }
+
+  return `${Number(metric.count)} / ${money(metric.amount)}`
+}
+
+function formatCollectionAnchorCount(summary, keys = []){
+  const metric = readCollectionAnchorMetric(summary, keys)
+  if(metric.count === null) return "—"
+  return String(Number(metric.count))
+}
+
+function getCollectionAnchorMasterLabel(row){
+  return String(
+    row?.master_name ||
+    row?.master_slug ||
+    row?.master?.name ||
+    row?.master?.slug ||
+    row?.master_id ||
+    row?.beneficiary_master_id ||
+    "—"
+  ).trim() || "—"
+}
+
+function getCollectionAnchorSaloonLabel(row){
+  return String(
+    row?.salon_name ||
+    row?.salon_slug ||
+    row?.salon?.name ||
+    row?.salon?.slug ||
+    row?.salon_id ||
+    "—"
+  ).trim() || "—"
+}
+
+function getCollectionAnchorRowKey(row, index){
+  return String(row?.id || row?.payment_id || row?.source_id || `${index}`)
 }
 
 const DEFAULT_BUSINESS_TIME_ZONE = "Asia/Bishkek"
@@ -647,6 +784,11 @@ export default function DashboardPage(){
   const [ownerQrError, setOwnerQrError] = useState("")
   const [ownerQrActionError, setOwnerQrActionError] = useState("")
   const [ownerQrActionLoadingId, setOwnerQrActionLoadingId] = useState("")
+  const [collectionAnchors, setCollectionAnchors] = useState(null)
+  const [collectionAnchorsLoading, setCollectionAnchorsLoading] = useState(true)
+  const [collectionAnchorsError, setCollectionAnchorsError] = useState("")
+  const [collectionAnchorsNotice, setCollectionAnchorsNotice] = useState("")
+  const [closingAnchorId, setClosingAnchorId] = useState("")
   const [notifications, setNotifications] = useState([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationsError, setNotificationsError] = useState("")
@@ -825,6 +967,68 @@ export default function DashboardPage(){
 
   useEffect(() => {
     loadOwnerQrPayments()
+  }, [slug])
+
+  async function fetchCollectionAnchors(){
+    if(!slug){
+      return { ok:false, error:"SALON_SLUG_MISSING" }
+    }
+
+    return getSalonCollectionAnchors(slug, { limit: 100 })
+  }
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCollectionAnchors(){
+      if(!slug){
+        if(!cancelled){
+          setCollectionAnchors(null)
+          setCollectionAnchorsLoading(false)
+          setCollectionAnchorsError("")
+          setCollectionAnchorsNotice("")
+        }
+        return
+      }
+
+      try{
+        if(!cancelled){
+          setCollectionAnchorsLoading(true)
+          setCollectionAnchorsError("")
+          setCollectionAnchorsNotice("")
+        }
+
+        const result = await fetchCollectionAnchors()
+
+        if(cancelled){
+          return
+        }
+
+        if(result?.ok){
+          setCollectionAnchors(result)
+        }else{
+          setCollectionAnchors(null)
+          setCollectionAnchorsError("Не удалось загрузить деньги к передаче мастерам.")
+        }
+      }catch(error){
+        console.error("SALON DASHBOARD COLLECTION ANCHORS LOAD ERROR", error)
+
+        if(!cancelled){
+          setCollectionAnchors(null)
+          setCollectionAnchorsError("Не удалось загрузить деньги к передаче мастерам.")
+        }
+      }finally{
+        if(!cancelled){
+          setCollectionAnchorsLoading(false)
+        }
+      }
+    }
+
+    void loadCollectionAnchors()
+
+    return () => {
+      cancelled = true
+    }
   }, [slug])
 
   useEffect(() => {
@@ -1018,6 +1222,61 @@ export default function DashboardPage(){
     }
   }
 
+  async function closeCollectionAnchor(row){
+    const anchorId = String(row?.id || "").trim()
+    const paymentId = Number(row?.payment_id || row?.paymentId || 0)
+    const actionKey = anchorId || String(Number.isFinite(paymentId) && paymentId > 0 ? paymentId : "")
+
+    if(!actionKey){
+      return
+    }
+
+    const confirmed = typeof window !== "undefined"
+      ? window.confirm("Закрыть передачу денег мастеру по этой оплате?")
+      : false
+
+    if(!confirmed){
+      return
+    }
+
+    setClosingAnchorId(actionKey)
+    setCollectionAnchorsError("")
+    setCollectionAnchorsNotice("")
+
+    try{
+      const payload = anchorId
+        ? {
+            anchor_ids: [anchorId],
+            payment_ids: [],
+            close_note: "Закрыто из кабинета салона"
+          }
+        : {
+            anchor_ids: [],
+            payment_ids: [paymentId],
+            close_note: "Закрыто из кабинета салона"
+          }
+
+      const result = await closeSalonCollectionAnchors(slug, payload)
+
+      if(!result?.ok){
+        throw new Error(result?.error || "SALON_COLLECTION_ANCHORS_CLOSE_FAILED")
+      }
+
+      const refreshed = await fetchCollectionAnchors()
+      if(refreshed?.ok){
+        setCollectionAnchors(refreshed)
+      }
+
+      setCollectionAnchorsNotice("Передача денег мастеру закрыта")
+    }catch(error){
+      console.error("SALON COLLECTION ANCHORS CLOSE ERROR", error)
+      setCollectionAnchorsNotice("")
+      setCollectionAnchorsError(error?.message || "Не удалось закрыть передачу денег мастеру.")
+    }finally{
+      setClosingAnchorId("")
+    }
+  }
+
   async function loadSalonNotifications(){
     if(!slug){
       setUnreadCount(0)
@@ -1090,6 +1349,9 @@ export default function DashboardPage(){
     () => getBillingUi(billingAccess, billingBlockReason),
     [billingAccess, billingBlockReason]
   )
+  const collectionAnchorSummary = collectionAnchors?.summary || null
+  const collectionAnchorRows = getCollectionAnchorRows(collectionAnchors)
+  const collectionAnchorByMaster = Array.isArray(collectionAnchors?.by_master) ? collectionAnchors.by_master : []
 
   if(error){
     return (
@@ -1561,6 +1823,245 @@ export default function DashboardPage(){
         title="Push-уведомления"
         subtitle="Браузерные уведомления о записях, деньгах и важных событиях салона."
       />
+
+      <PageSection title="Деньги к передаче мастерам">
+        <div style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: "14px",
+          background: "#fff",
+          padding: "16px"
+        }}>
+          <div style={{ fontSize: "13px", color: "#4b5563", lineHeight: 1.5, marginBottom: "12px" }}>
+            Только просмотр. Здесь видно, что уже собрано салоном, что закрыто и что ещё требует передачи мастерам.
+          </div>
+
+          {collectionAnchorsError ? (
+            <div style={{
+              border: "1px solid #fca5a5",
+              borderRadius: "14px",
+              background: "#fff5f5",
+              color: "#b91c1c",
+              padding: "12px",
+              fontSize: "13px",
+              marginBottom: "12px"
+            }}>
+              {collectionAnchorsError}
+            </div>
+          ) : null}
+
+          {collectionAnchorsNotice ? (
+            <div style={{
+              border: "1px solid #86efac",
+              borderRadius: "14px",
+              background: "#f0fdf4",
+              color: "#166534",
+              padding: "12px",
+              fontSize: "13px",
+              marginBottom: "12px"
+            }}>
+              {collectionAnchorsNotice}
+            </div>
+          ) : null}
+
+          {collectionAnchorsLoading ? (
+            <div style={{ fontSize: "13px", color: "#6b7280" }}>
+              Загружаем деньги к передаче мастерам…
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: "16px" }}>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "12px"
+              }}>
+                <SummaryCard
+                  title="У салона"
+                  value={formatCollectionAnchorMetric(collectionAnchorSummary, ["collected_by_salon", "open_to_transfer"])}
+                  note="Собрано салоном и ждёт передачи"
+                />
+                <SummaryCard
+                  title="У мастера"
+                  value={formatCollectionAnchorMetric(collectionAnchorSummary, ["collected_by_master"])}
+                  note="Деньги уже у мастера"
+                />
+                <SummaryCard
+                  title="Не определено"
+                  value={formatCollectionAnchorMetric(collectionAnchorSummary, ["unknown"])}
+                  note="Статус нуждается в проверке"
+                />
+                <SummaryCard
+                  title="Конфликт"
+                  value={formatCollectionAnchorMetric(collectionAnchorSummary, ["conflict"])}
+                  note="Нужна ручная сверка"
+                />
+                <SummaryCard
+                  title="Закрыто"
+                  value={formatCollectionAnchorMetric(collectionAnchorSummary, ["closed_transfers"])}
+                  note="Передача завершена"
+                />
+              </div>
+
+              {collectionAnchorByMaster.length ? (
+                <div style={{ display: "grid", gap: "10px" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#374151" }}>По мастерам</div>
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    {collectionAnchorByMaster.slice(0, 12).map((item, index) => (
+                      <div
+                        key={item?.master_id || item?.master_slug || item?.master_name || index}
+                        style={{
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "14px",
+                          background: "#fff",
+                          padding: "12px",
+                          display: "grid",
+                          gap: "8px"
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+                              {item?.master_name || item?.master_slug || `Мастер ${index + 1}`}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                              {item?.master_slug || "—"}{item?.master_id ? ` · ID ${item.master_id}` : ""}
+                            </div>
+                          </div>
+
+                          <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
+                            <span style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              padding: "5px 9px",
+                              borderRadius: "999px",
+                              background: "#eff6ff",
+                              color: "#1d4ed8",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              border: "1px solid #bfdbfe"
+                            }}>
+                              {item?.collector_owner_type === "master" ? "У мастера" : item?.collector_owner_type === "salon" ? "У салона" : getCollectionAnchorOwnerLabel(item?.collector_owner_type)}
+                            </span>
+                            <span style={{ fontSize: "13px", fontWeight: 800, color: "#111827" }}>
+                              {money(item?.amount || item?.total_amount || item?.amount_total || 0)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}>
+                          {Number(item?.count || item?.anchor_count || item?.total_count || 0) > 0
+                            ? `${Number(item?.count || item?.anchor_count || item?.total_count || 0)} записей`
+                            : "—"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {collectionAnchorRows.length ? (
+                <div style={{ display: "grid", gap: "10px" }}>
+                  {collectionAnchorRows.map((row, index) => {
+                    const key = getCollectionAnchorRowKey(row, index)
+                    const rowAmount = Number(row?.amount || row?.payment_amount || row?.price_snapshot || 0)
+                    const canClose = String(row?.collector_owner_type || "").toLowerCase() === "salon" && String(row?.anchor_status || "").toLowerCase() === "open"
+                    const isClosing = closingAnchorId === key
+                    const masterLabel = getCollectionAnchorMasterLabel(row)
+                    const sourceType = String(row?.source_type || row?.source || "—").trim() || "—"
+                    const sourceId = String(row?.source_id || row?.payment_id || row?.booking_id || "—").trim() || "—"
+
+                    return (
+                      <div
+                        key={key}
+                        style={{
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "14px",
+                          background: "#fff",
+                          padding: "12px",
+                          display: "grid",
+                          gap: "10px"
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", alignItems: "flex-start" }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+                              Оплата #{row?.payment_id || "—"}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                              {row?.booking_id ? `Запись #${row.booking_id}` : "Запись —"} · {masterLabel}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                              Источник: {sourceType} · {sourceId}
+                            </div>
+                          </div>
+
+                          <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
+                            <span style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              padding: "5px 9px",
+                              borderRadius: "999px",
+                              background: "#f8fafc",
+                              color: "#334155",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              border: "1px solid #e2e8f0"
+                            }}>
+                              {getCollectionAnchorOwnerLabel(row?.collector_owner_type)}
+                            </span>
+                            <span style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              padding: "5px 9px",
+                              borderRadius: "999px",
+                              background: "#eff6ff",
+                              color: "#1d4ed8",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              border: "1px solid #bfdbfe"
+                            }}>
+                              {getCollectionAnchorStatusLabel(row?.anchor_status)}
+                            </span>
+                            <span style={{ fontSize: "13px", fontWeight: 800, color: "#111827" }}>
+                              {money(rowAmount)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {canClose ? (
+                          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                            <button
+                              type="button"
+                              onClick={() => closeCollectionAnchor(row)}
+                              disabled={isClosing}
+                              style={{
+                                minHeight: "40px",
+                                padding: "0 14px",
+                                borderRadius: "10px",
+                                border: "1px solid #1d4ed8",
+                                background: isClosing ? "#dbeafe" : "#1d4ed8",
+                                color: "#fff",
+                                fontSize: "13px",
+                                fontWeight: 800,
+                                cursor: isClosing ? "default" : "pointer"
+                              }}
+                            >
+                              {isClosing ? "Закрываем…" : "Закрыть передачу мастеру"}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                  Деньги к передаче мастерам пока не найдены.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </PageSection>
 
       <PageSection title={(
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
