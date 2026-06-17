@@ -1230,6 +1230,30 @@ export async function confirmSalonCashPayment(payload = {}){
   return { ok:true, result: j };
 }
 
+export async function confirmSalonRentPayment(salonSlug = getSalonSlug(), payload = {}){
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const r = await safeInternalJson(`/salons/${safeSlug}/rent-payments/confirm`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"SALON_RENT_PAYMENT_CONFIRM_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_RENT_PAYMENT_CONFIRM_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
+export async function confirmSalonSalaryObligation(salonSlug = getSalonSlug(), payload = {}){
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const r = await safeInternalJson(`/salons/${safeSlug}/salary-obligations/confirm`, {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+  if(!r.ok) return { ok:false, error:"SALON_SALARY_OBLIGATION_CONFIRM_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"SALON_SALARY_OBLIGATION_CONFIRM_API_NOT_OK", detail:j };
+  return { ok:true, result: j };
+}
+
 export async function confirmMasterCashPayment(payload = {}){
   const r = await safeInternalJson(`/payments/direct/master/confirm-cash`, {
     method: "POST",

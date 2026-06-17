@@ -1,7 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug, buildSalonPath } from "../SalonContext"
-import { acceptContract as acceptContractApi, archiveContract as archiveContractApi, createSalonContract, getSalonContracts, getSalonMasters, getSalonRentObligations, getSalonSalaryObligations } from "../../api/internal"
+import {
+  acceptContract as acceptContractApi,
+  archiveContract as archiveContractApi,
+  confirmSalonRentPayment,
+  confirmSalonSalaryObligation,
+  createSalonContract,
+  getSalonContracts,
+  getSalonMasters,
+  getSalonRentObligations,
+  getSalonSalaryObligations
+} from "../../api/internal"
 
 function SectionBlock({ title, hint, right, children, style = {} }) {
   return (
@@ -225,6 +235,7 @@ export default function SalonContractsPage() {
   const [createContractSuccess, setCreateContractSuccess] = useState("")
 
   const [contractActionLoadingId, setContractActionLoadingId] = useState("")
+  const [obligationActionPendingKey, setObligationActionPendingKey] = useState("")
   const [contractActionError, setContractActionError] = useState("")
   const [contractActionSuccess, setContractActionSuccess] = useState("")
   const [archivedContractsExpanded, setArchivedContractsExpanded] = useState(false)
@@ -886,6 +897,46 @@ export default function SalonContractsPage() {
     return String(value || "").trim().toLowerCase()
   }
 
+  function canConfirmObligation(row) {
+    const status = normalizeObligationStatus(row?.status)
+    return status === "open" || status === "overdue"
+  }
+
+  function buildObligationActionKey(kind, row) {
+    const obligationId = String(row?.id || row?.obligation_id || row?.obligationId || "").trim()
+    const rawId = obligationId || String(row?.contract_id || row?.period_start || "").trim()
+    return `${kind}:${rawId || "unknown"}`
+  }
+
+  function buildObligationIdempotencyKey(kind, row) {
+    const obligationId = String(row?.id || row?.obligation_id || row?.obligationId || "").trim()
+    return `c14f-${kind}-${String(obligationId || row?.contract_id || "unknown").trim()}-${Date.now()}`
+  }
+
+  function buildObligationConfirmPayload(row, kind) {
+    const obligationId = String(row?.id || row?.obligation_id || row?.obligationId || "").trim()
+    const rawAmount = Number(row?.amount)
+    const currencyCode = String(row?.currency || "KGS").trim().toUpperCase()
+
+    if (!obligationId || !Number.isFinite(rawAmount) || rawAmount <= 0 || !currencyCode) {
+      return null
+    }
+
+    const payload = {
+      obligation_id: obligationId,
+      amount: Math.trunc(rawAmount),
+      currency: currencyCode,
+      idempotency_key: buildObligationIdempotencyKey(kind, row)
+    }
+
+    if (kind === "rent") {
+      payload.provider = "manual"
+      payload.payment_method = "cash"
+    }
+
+    return payload
+  }
+
   function getObligationMasterId(item) {
     const value = item?.master_id ?? item?.masterId ?? item?.contract_master_id ?? item?.contractMasterId ?? item?.master?.id ?? item?.master?.master_id
     return value == null || value === "" ? "" : String(value)
@@ -1387,6 +1438,82 @@ export default function SalonContractsPage() {
     }
   }
 
+  async function handleConfirmRentObligation(row) {
+    const actionKey = buildObligationActionKey("rent", row)
+
+    if (obligationActionPendingKey || !canConfirmObligation(row)) {
+      return
+    }
+
+    const payload = buildObligationConfirmPayload(row, "rent")
+    if (!payload) {
+      setContractActionError("Не удалось подтвердить получение аренды")
+      return
+    }
+
+    resetMessages()
+    setObligationActionPendingKey(actionKey)
+
+    try {
+      const result = await confirmSalonRentPayment(salonSlug, payload)
+      const backendError = result?.detail?.json?.error || result?.detail?.json?.message || result?.error || ""
+
+      if (!result?.ok) {
+        setContractActionError(backendError ? `Не удалось подтвердить получение аренды: ${backendError}` : "Не удалось подтвердить получение аренды")
+        return
+      }
+
+      setContractActionSuccess("Аренда подтверждена")
+      await refreshContracts()
+    }
+    catch (err) {
+      console.error("Confirm rent obligation error:", err)
+      const backendError = err?.detail?.json?.error || err?.message || ""
+      setContractActionError(backendError ? `Не удалось подтвердить получение аренды: ${backendError}` : "Не удалось подтвердить получение аренды")
+    }
+    finally {
+      setObligationActionPendingKey("")
+    }
+  }
+
+  async function handleConfirmSalaryObligation(row) {
+    const actionKey = buildObligationActionKey("salary", row)
+
+    if (obligationActionPendingKey || !canConfirmObligation(row)) {
+      return
+    }
+
+    const payload = buildObligationConfirmPayload(row, "salary")
+    if (!payload) {
+      setContractActionError("Не удалось подтвердить выплату зарплаты")
+      return
+    }
+
+    resetMessages()
+    setObligationActionPendingKey(actionKey)
+
+    try {
+      const result = await confirmSalonSalaryObligation(salonSlug, payload)
+      const backendError = result?.detail?.json?.error || result?.detail?.json?.message || result?.error || ""
+
+      if (!result?.ok) {
+        setContractActionError(backendError ? `Не удалось подтвердить выплату зарплаты: ${backendError}` : "Не удалось подтвердить выплату зарплаты")
+        return
+      }
+
+      setContractActionSuccess("Выплата зарплаты подтверждена")
+      await refreshContracts()
+    }
+    catch (err) {
+      console.error("Confirm salary obligation error:", err)
+      const backendError = err?.detail?.json?.error || err?.message || ""
+      setContractActionError(backendError ? `Не удалось подтвердить выплату зарплаты: ${backendError}` : "Не удалось подтвердить выплату зарплаты")
+    }
+    finally {
+      setObligationActionPendingKey("")
+    }
+  }
+
   const activeContracts = useMemo(
     () => contracts.filter((c) => c.status === "active"),
     [contracts]
@@ -1799,11 +1926,15 @@ export default function SalonContractsPage() {
                                       <th style={tableHeadCellStyle}>Сумма</th>
                                       <th style={tableHeadCellStyle}>Статус</th>
                                       <th style={tableHeadCellStyle}>Срок оплаты</th>
+                                      <th style={tableHeadCellStyle}>Действия</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {selectedObligationMaster.rent.map((item, index) => {
                                       const isLast = index === selectedObligationMaster.rent.length - 1
+                                      const itemKey = buildObligationActionKey("rent", item)
+                                      const isPending = obligationActionPendingKey === itemKey
+                                      const canConfirm = canConfirmObligation(item)
                                       return (
                                         <tr key={item?.id || `${item?.contract_id || "rent-obligation"}-${index}`}>
                                           {renderCell(
@@ -1824,6 +1955,28 @@ export default function SalonContractsPage() {
                                           )}
                                           {renderCell(
                                             formatDateTime(item?.due_at, item),
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                          {renderCell(
+                                            canConfirm ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleConfirmRentObligation(item)}
+                                                disabled={isPending}
+                                                style={{
+                                                  ...secondaryButtonStyle,
+                                                  padding: "8px 12px",
+                                                  fontSize: 12,
+                                                  opacity: isPending ? 0.7 : 1,
+                                                  cursor: isPending ? "not-allowed" : "pointer",
+                                                  whiteSpace: "nowrap"
+                                                }}
+                                              >
+                                                {isPending ? "Подтверждаем..." : "Подтвердить получение аренды"}
+                                              </button>
+                                            ) : (
+                                              "—"
+                                            ),
                                             isLast ? { borderBottom: "none" } : {}
                                           )}
                                         </tr>
@@ -1850,11 +2003,15 @@ export default function SalonContractsPage() {
                                       <th style={tableHeadCellStyle}>Сумма</th>
                                       <th style={tableHeadCellStyle}>Статус</th>
                                       <th style={tableHeadCellStyle}>Срок выплаты</th>
+                                      <th style={tableHeadCellStyle}>Действия</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {selectedObligationMaster.salary.map((item, index) => {
                                       const isLast = index === selectedObligationMaster.salary.length - 1
+                                      const itemKey = buildObligationActionKey("salary", item)
+                                      const isPending = obligationActionPendingKey === itemKey
+                                      const canConfirm = canConfirmObligation(item)
                                       return (
                                         <tr key={item?.id || `${item?.contract_id || "salary-obligation"}-${index}`}>
                                           {renderCell(
@@ -1875,6 +2032,28 @@ export default function SalonContractsPage() {
                                           )}
                                           {renderCell(
                                             formatDateTime(item?.due_at, item),
+                                            isLast ? { borderBottom: "none" } : {}
+                                          )}
+                                          {renderCell(
+                                            canConfirm ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleConfirmSalaryObligation(item)}
+                                                disabled={isPending}
+                                                style={{
+                                                  ...secondaryButtonStyle,
+                                                  padding: "8px 12px",
+                                                  fontSize: 12,
+                                                  opacity: isPending ? 0.7 : 1,
+                                                  cursor: isPending ? "not-allowed" : "pointer",
+                                                  whiteSpace: "nowrap"
+                                                }}
+                                              >
+                                                {isPending ? "Подтверждаем..." : "Подтвердить выплату зарплаты"}
+                                              </button>
+                                            ) : (
+                                              "—"
+                                            ),
                                             isLast ? { borderBottom: "none" } : {}
                                           )}
                                         </tr>
