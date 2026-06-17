@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { getMoneyCoreDestinationProviders, getSalonContracts, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
+import { getMoneyCoreDestinationProviders, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -200,6 +200,9 @@ export default function SalonFinancePage(){
   const [payouts, setPayouts] = useState([])
   const [moneyCoreSummary, setMoneyCoreSummary] = useState(null)
   const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null)
+  const [lostProfit, setLostProfit] = useState(null)
+  const [lostProfitLoading, setLostProfitLoading] = useState(true)
+  const [lostProfitError, setLostProfitError] = useState("")
   const [moneyCoreDestinationProviders, setMoneyCoreDestinationProviders] = useState([])
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([])
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null)
@@ -277,6 +280,54 @@ export default function SalonFinancePage(){
     }
 
     loadFinance()
+
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadLostProfit(){
+      if(!slug){
+        if(!cancelled){
+          setLostProfit(null)
+          setLostProfitLoading(false)
+          setLostProfitError("")
+        }
+        return
+      }
+
+      try{
+        setLostProfitLoading(true)
+        setLostProfitError("")
+
+        const result = await getSalonLostProfit(undefined, { limit: 50 })
+
+        if(cancelled) return
+
+        if(result?.ok){
+          setLostProfit(result.result || null)
+        }else{
+          setLostProfit(null)
+          setLostProfitError("Недополученная прибыль временно недоступна")
+        }
+      }catch(error){
+        console.error("SALON_LOST_PROFIT_LOAD_ERROR", error)
+
+        if(!cancelled){
+          setLostProfit(null)
+          setLostProfitError("Недополученная прибыль временно недоступна")
+        }
+      }finally{
+        if(!cancelled){
+          setLostProfitLoading(false)
+        }
+      }
+    }
+
+    void loadLostProfit()
 
     return () => {
       cancelled = true
@@ -372,6 +423,10 @@ export default function SalonFinancePage(){
     bookingsToday: Number(metrics?.bookings_today || 0)
   }
 
+  const lostProfitSummary = lostProfit?.summary || null
+  const lostProfitByMaster = Array.isArray(lostProfit?.by_master) ? lostProfit.by_master : []
+  const lostProfitMonthly = Array.isArray(lostProfit?.monthly) ? lostProfit.monthly : []
+
   const pageLoading = contextLoading || loading
   const pageError = !pageLoading && (contextError || error)
   const showEmpty = !pageLoading && !pageError && !contracts.length && !settlements.length && !payouts.length && !walletBalance && !Number(paymentProjectionSummary?.history_amount || 0)
@@ -425,6 +480,71 @@ export default function SalonFinancePage(){
           <StatCard title="История оплат" value={money(paymentProjectionSummary?.history_amount)} note={`Строк в истории: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
           <StatCard title="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} note={`Открытых строк: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
         </section>
+
+        <Panel
+          title="Недополученная прибыль"
+          note="Аналитика отменённых записей. Не влияет на баланс, выплаты и договоры."
+        >
+          {lostProfitError ? (
+            <div style={{ marginBottom: 12, fontSize: 13, color: "#b42318", background: "#fff5f5", border: "1px solid #f5c2c7", borderRadius: 12, padding: 12 }}>
+              {lostProfitError}
+            </div>
+          ) : null}
+
+          {lostProfitLoading ? (
+            <EmptyState
+              title="Недополученная прибыль загружается"
+              text="Считаем отменённые записи и суммы по мастерам."
+            />
+          ) : lostProfitSummary ? (
+            <div style={{ display: "grid", gap: 16 }}>
+              <div style={styles.statsGrid}>
+                <StatCard title="Сумма" value={money(lostProfitSummary.lost_profit_amount)} note="Недополученная прибыль" />
+                <StatCard title="Отменённые записи" value={String(Number(lostProfitSummary.cancelled_count || 0))} note="Записи в выборке" />
+                {Number(lostProfitSummary.missing_price_count || 0) > 0 ? (
+                  <StatCard title="Без цены" value={String(Number(lostProfitSummary.missing_price_count || 0))} note="Записи без price_snapshot" />
+                ) : null}
+              </div>
+
+              {lostProfitByMaster.length ? (
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>Breakdown по мастерам</div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {lostProfitByMaster.map((item) => (
+                      <PreviewRow
+                        key={`${item.master_id}-${item.master_slug || "master"}`}
+                        title={item.master_name || item.master_slug || `Мастер #${item.master_id}`}
+                        meta={`${item.master_slug || "—"} · ${Number(item.cancelled_count || 0)} записей`}
+                        value={money(item.lost_profit_amount)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {lostProfitMonthly.length ? (
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>История по месяцам</div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {lostProfitMonthly.map((item) => (
+                      <PreviewRow
+                        key={item.month}
+                        title={item.month || "—"}
+                        meta={`${Number(item.cancelled_count || 0)} отменённых записей`}
+                        value={money(item.lost_profit_amount)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <EmptyState
+              title="Недополученная прибыль пока не найдена"
+              text="Для выбранного периода нет отменённых записей."
+            />
+          )}
+        </Panel>
 
             <Panel
               title="Money Core: баланс и вывод"

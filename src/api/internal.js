@@ -2243,3 +2243,45 @@ export async function getMasterPaymentProjections(masterSlug = getMasterSlug(), 
     return { ok:false, error:'MASTER_PAYMENT_PROJECTIONS_ERROR', message:e?.message || String(e) };
   }
 }
+
+function buildLostProfitQuery(params = {}, allowed = ["from", "to", "master_id", "master_slug", "limit"]){
+  const query = new URLSearchParams();
+
+  allowed.forEach((key) => {
+    const value = params && params[key];
+    if(value !== undefined && value !== null && String(value).trim() !== ""){
+      query.set(key, String(value).trim());
+    }
+  });
+
+  const qs = query.toString();
+  return qs ? "?" + qs : "";
+}
+
+export async function getSalonLostProfit(salonSlug = getSalonSlug(), params = {}){
+  try{
+    const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+    const query = buildLostProfitQuery(params, ["from", "to", "master_id", "master_slug", "limit"]);
+    const r = await safeInternalJson("/salons/" + safeSlug + "/lost-profit" + query, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"SALON_LOST_PROFIT_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_LOST_PROFIT_API_NOT_OK", detail:j };
+    return { ok:true, result:j };
+  }catch(e){
+    return { ok:false, error:"SALON_LOST_PROFIT_FETCH_FAILED", message:e?.message || String(e) };
+  }
+}
+
+export async function getMasterLostProfit(masterSlug = getMasterSlug(), params = {}){
+  try{
+    const safeSlug = encodeURIComponent(String(masterSlug || "").trim());
+    const query = buildLostProfitQuery(params, ["from", "to", "limit"]);
+    const r = await safeInternalJson("/masters/" + safeSlug + "/lost-profit" + query, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MASTER_LOST_PROFIT_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_LOST_PROFIT_API_NOT_OK", detail:j };
+    return { ok:true, result:j };
+  }catch(e){
+    return { ok:false, error:"MASTER_LOST_PROFIT_FETCH_FAILED", message:e?.message || String(e) };
+  }
+}

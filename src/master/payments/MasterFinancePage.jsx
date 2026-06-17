@@ -6,6 +6,7 @@ import {
   getMoneyCoreDestinationProviders,
   getMasterActiveContract,
   getMasterContractHistory,
+  getMasterLostProfit,
   getMasterMoneyCoreSummary,
   getMasterPaymentProjections,
   getMasterPayouts,
@@ -290,6 +291,9 @@ export default function MasterFinancePage() {
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([]);
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null);
   const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([]);
+  const [lostProfit, setLostProfit] = useState(null);
+  const [lostProfitLoading, setLostProfitLoading] = useState(true);
+  const [lostProfitError, setLostProfitError] = useState("");
   const [rentObligations, setRentObligations] = useState([]);
   const [rentObligationsSummary, setRentObligationsSummary] = useState(null);
   const [rentObligationsLoading, setRentObligationsLoading] = useState(true);
@@ -417,6 +421,57 @@ export default function MasterFinancePage() {
     }
 
     loadFinance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [masterSlug]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLostProfit() {
+      if (!masterSlug) {
+        if (!cancelled) {
+          setLostProfit(null);
+          setLostProfitLoading(false);
+          setLostProfitError("");
+        }
+        return;
+      }
+
+      try {
+        setLostProfitLoading(true);
+        setLostProfitError("");
+
+        const result = await getMasterLostProfit(undefined, { limit: 50 });
+
+        if (cancelled) return;
+
+        if (result?.ok) {
+          setLostProfit(result.result || null);
+        }
+        else {
+          setLostProfit(null);
+          setLostProfitError("Недополученная прибыль временно недоступна");
+        }
+      }
+      catch (e) {
+        console.error("MASTER_LOST_PROFIT_LOAD_FAILED", e);
+
+        if (!cancelled) {
+          setLostProfit(null);
+          setLostProfitError("Недополученная прибыль временно недоступна");
+        }
+      }
+      finally {
+        if (!cancelled) {
+          setLostProfitLoading(false);
+        }
+      }
+    }
+
+    void loadLostProfit();
 
     return () => {
       cancelled = true;
@@ -605,6 +660,8 @@ export default function MasterFinancePage() {
   const moneyCoreZones = moneyCoreSummary || {};
   const moneyCoreOwnerType = moneyCoreSummary?.owner?.type || null;
   const moneyCoreOwnerId = moneyCoreSummary?.owner?.id || null;
+  const lostProfitSummary = lostProfit?.summary || null;
+  const lostProfitMonthly = Array.isArray(lostProfit?.monthly) ? lostProfit.monthly : [];
 
   const lastSettlement = useMemo(() => {
     if (!settlements.length) return null;
@@ -668,6 +725,55 @@ export default function MasterFinancePage() {
               <StatCard label="История оплат" value={money(paymentProjectionSummary?.history_amount)} hint={`Строк: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
               <StatCard label="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} hint={`Открыто: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
             </section>
+
+            <Panel
+              title="Недополученная прибыль"
+              subtitle="Только отменённые записи этого мастера. Не влияет на выплаты."
+            >
+              {lostProfitError ? (
+                <div style={{ marginBottom: 12, fontSize: 13, color: "#b42318", background: "#fff5f5", border: "1px solid #f5c2c7", borderRadius: 12, padding: 12 }}>
+                  {lostProfitError}
+                </div>
+              ) : null}
+
+              {lostProfitLoading ? (
+                <EmptyState
+                  title="Недополученная прибыль загружается"
+                  text="Считаем отменённые записи и суммы по этому мастеру."
+                />
+              ) : lostProfitSummary ? (
+                <div style={{ display: "grid", gap: 16 }}>
+                  <section style={styles.grid}>
+                    <StatCard label="Сумма" value={money(lostProfitSummary.lost_profit_amount)} hint="Недополученная прибыль" />
+                    <StatCard label="Отменённые записи" value={String(Number(lostProfitSummary.cancelled_count || 0))} hint="Записи в выборке" />
+                    {Number(lostProfitSummary.missing_price_count || 0) > 0 ? (
+                      <StatCard label="Без цены" value={String(Number(lostProfitSummary.missing_price_count || 0))} hint="Записи без price_snapshot" />
+                    ) : null}
+                  </section>
+
+                  {lostProfitMonthly.length ? (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>История по месяцам</div>
+                      <div style={{ display: "grid", gap: 8 }}>
+                        {lostProfitMonthly.map((item) => (
+                          <PreviewRow
+                            key={item.month}
+                            title={item.month || "—"}
+                            meta={`${Number(item.cancelled_count || 0)} отменённых записей`}
+                            value={money(item.lost_profit_amount)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <EmptyState
+                  title="Недополученная прибыль пока не найдена"
+                  text="Для выбранного периода нет отменённых записей."
+                />
+              )}
+            </Panel>
 
             <Panel
               title="Money Core: баланс и вывод"
