@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react"
-import { useLocation, useParams } from "react-router-dom"
+import { Link, useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug, buildSalonPath } from "../SalonContext"
 import {
   acceptContract as acceptContractApi,
@@ -172,8 +172,8 @@ async function safeReadJson(response) {
 
 function FinanceTab({ href, label, active = false }) {
   return (
-    <a
-      href={href}
+    <Link
+      to={href}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -189,7 +189,7 @@ function FinanceTab({ href, label, active = false }) {
       }}
     >
       {label}
-    </a>
+    </Link>
   )
 }
 
