@@ -4,6 +4,7 @@ import { useMaster } from "../MasterContext";
 
 import {
   getMoneyCoreDestinationProviders,
+  createMasterWithdrawDestination,
   getMasterActiveContract,
   getMasterContractHistory,
   getMasterCollectionAnchors,
@@ -159,6 +160,56 @@ function buildWithdrawDestinationPreview(providers, draft) {
     isReady: errors.length === 0 && Boolean(selectedProvider),
     payloadPreview
   };
+}
+
+function buildWithdrawDestinationCreatePayload(preview) {
+  if (!preview?.selectedProvider || !preview?.method) {
+    return null;
+  }
+
+  const payload = {
+    method: preview.method,
+    provider_code: preview.selectedProvider.code,
+    destination_relation: preview.destinationRelation,
+  };
+
+  if (preview.method === "wallet") {
+    payload.wallet_provider = preview.selectedProvider.code;
+  }
+
+  if (preview.accountHolder) {
+    payload.account_holder = preview.accountHolder;
+  }
+
+  if (preview.phone) {
+    payload.phone = preview.phone;
+  }
+
+  if (preview.method === "bank_account" && preview.bankName) {
+    payload.bank_name = preview.bankName;
+  }
+
+  if (preview.method === "bank_account" && preview.accountMasked) {
+    payload.account_masked = preview.accountMasked;
+  }
+
+  if (preview.method === "card" && preview.accountMasked) {
+    payload.account_masked = preview.accountMasked;
+  }
+
+  if (preview.method === "card" && preview.cardLast4) {
+    payload.card_last4 = preview.cardLast4;
+  }
+
+  if (preview.method === "manual_other" && preview.accountMasked) {
+    payload.account_masked = preview.accountMasked;
+  }
+
+  if (preview.note) {
+    payload.payload = { note: preview.note };
+  }
+
+  return payload;
 }
 
 const DEFAULT_BUSINESS_TIME_ZONE = "Asia/Bishkek";
@@ -552,6 +603,8 @@ export default function MasterFinancePage() {
   const [cardLast4, setCardLast4] = useState("");
   const [destinationRelation, setDestinationRelation] = useState("self");
   const [note, setNote] = useState("");
+  const [destinationSaving, setDestinationSaving] = useState(false);
+  const [destinationSaveStatus, setDestinationSaveStatus] = useState(null);
   const [lostProfit, setLostProfit] = useState(null);
   const [lostProfitLoading, setLostProfitLoading] = useState(true);
   const [lostProfitError, setLostProfitError] = useState("");
@@ -999,6 +1052,13 @@ export default function MasterFinancePage() {
       moneyCoreFlagsData.MONEY_CORE_WRITE_ENABLED === true &&
       moneyCoreFlagsData.WITHDRAW_REQUESTS_V2_ENABLED === true
   );
+  const moneyCoreDestinationWriteOpen = Boolean(
+    moneyCoreFlagsData &&
+      moneyCoreFlagsData.MONEY_CORE_ENABLED === true &&
+      moneyCoreFlagsData.MONEY_CORE_READ_ONLY === false &&
+      moneyCoreFlagsData.MONEY_CORE_WRITE_ENABLED === true &&
+      moneyCoreFlagsData.WITHDRAW_DESTINATIONS_WRITE_ENABLED === true
+  );
   const moneyCoreWithdrawPanelNote = moneyCoreOpen
     ? "Текущий режим Money Core"
     : "Текущий режим Money Core без возможности записи";
@@ -1014,9 +1074,9 @@ export default function MasterFinancePage() {
   const moneyCoreCreateRequestText = moneyCoreOpen
     ? "Создание заявки доступно в рабочем режиме Money Core."
     : "Создание заявки будет доступно после controlled write-smoke и включения Money Core write-флагов.";
-  const moneyCoreAddRequisitesText = moneyCoreOpen
-    ? "Добавление реквизитов доступно в рабочем режиме Money Core."
-    : "Добавление реквизитов будет доступно после включения Money Core write-флагов.";
+  const moneyCoreAddRequisitesText = moneyCoreDestinationWriteOpen
+    ? "Сохранение реквизитов доступно. Данные вводятся вручную и сохраняются только по нажатию кнопки."
+    : "Сохранение реквизитов закрыто флагом WITHDRAW_DESTINATIONS_WRITE_ENABLED.";
   const selectedWithdrawProvider = useMemo(
     () => buildWithdrawDestinationPreview(moneyCoreDestinationProviders, {
       selectedProviderCode,
@@ -1040,6 +1100,90 @@ export default function MasterFinancePage() {
       note,
     ]
   );
+  const destinationSaveReady = Boolean(
+    moneyCoreDestinationWriteOpen &&
+      selectedWithdrawProvider.isReady &&
+      !destinationSaving
+  );
+
+  async function handleSaveWithdrawDestination() {
+    if (!moneyCoreDestinationWriteOpen) {
+      setDestinationSaveStatus({
+        tone: "error",
+        text: "Сохранение реквизитов сейчас закрыто.",
+      });
+      return;
+    }
+
+    if (!selectedWithdrawProvider.isReady) {
+      setDestinationSaveStatus({
+        tone: "error",
+        text: selectedWithdrawProvider.errors[0] || "Проверьте поля формы.",
+      });
+      return;
+    }
+
+    const payload = buildWithdrawDestinationCreatePayload(selectedWithdrawProvider);
+
+    if (!payload) {
+      setDestinationSaveStatus({
+        tone: "error",
+        text: "Не удалось собрать payload для сохранения.",
+      });
+      return;
+    }
+
+    setDestinationSaving(true);
+    setDestinationSaveStatus(null);
+
+    try {
+      const result = await createMasterWithdrawDestination(masterSlug, payload);
+
+      if (result?.ok && result.destination) {
+        const refreshed = await getMasterWithdrawDestinations(masterSlug);
+        if (refreshed?.ok && Array.isArray(refreshed.destinations)) {
+          setMoneyCoreWithdrawDestinations(refreshed.destinations);
+        } else {
+          setMoneyCoreWithdrawDestinations((current) => {
+            const currentList = Array.isArray(current) ? current : [];
+            return [result.destination, ...currentList.filter((item) => item?.id !== result.destination.id)];
+          });
+        }
+
+        setSelectedProviderCode("");
+        setAccountHolder("");
+        setPhone("");
+        setBankName("");
+        setAccountMasked("");
+        setCardLast4("");
+        setDestinationRelation("self");
+        setNote("");
+        setDestinationSaveStatus({
+          tone: "success",
+          text: "Реквизиты сохранены.",
+        });
+        return;
+      }
+
+      const blockedByFlag =
+        result?.detail?.error === "MONEY_CORE_WITHDRAW_DESTINATIONS_WRITE_DISABLED" ||
+        result?.detail?.statusCode === 403;
+
+      setDestinationSaveStatus({
+        tone: "error",
+        text: blockedByFlag
+          ? "Сохранение реквизитов сейчас закрыто."
+          : result?.detail?.message || result?.message || result?.error || "Не удалось сохранить реквизиты.",
+      });
+    } catch (error) {
+      setDestinationSaveStatus({
+        tone: "error",
+        text: error?.message || "Не удалось сохранить реквизиты.",
+      });
+    } finally {
+      setDestinationSaving(false);
+    }
+  }
   const moneyCoreOwnerType = moneyCoreSummary?.owner?.type || null;
   const moneyCoreOwnerId = moneyCoreSummary?.owner?.id || null;
   const lostProfitSummary = lostProfit?.summary || null;
@@ -1298,18 +1442,18 @@ export default function MasterFinancePage() {
                         <label style={{ display: "grid", gap: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Способ вывода</span>
                           <select
-                            disabled={!moneyCoreOpen}
+                            disabled={!moneyCoreDestinationWriteOpen}
                             value={selectedProviderCode}
                             onChange={(event) => setSelectedProviderCode(event.target.value)}
                             style={{
                               width: "100%",
                               border: "1px solid #d1d5db",
                               borderRadius: 12,
-                              background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
-                              color: moneyCoreOpen ? "#111827" : "#6b7280",
+                              background: moneyCoreDestinationWriteOpen ? "#ffffff" : "#f9fafb",
+                              color: moneyCoreDestinationWriteOpen ? "#111827" : "#6b7280",
                               padding: "12px 14px",
                               fontSize: 14,
-                              cursor: moneyCoreOpen ? "pointer" : "not-allowed"
+                              cursor: moneyCoreDestinationWriteOpen ? "pointer" : "not-allowed"
                             }}
                           >
                             <option value="">Выберите способ вывода</option>
@@ -1324,7 +1468,7 @@ export default function MasterFinancePage() {
                         <label style={{ display: "grid", gap: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Получатель</span>
                           <input
-                            disabled={!moneyCoreOpen}
+                            disabled={!moneyCoreDestinationWriteOpen}
                             value={accountHolder}
                             onChange={(event) => setAccountHolder(event.target.value)}
                             placeholder="Имя получателя"
@@ -1332,11 +1476,11 @@ export default function MasterFinancePage() {
                               width: "100%",
                               border: "1px solid #d1d5db",
                               borderRadius: 12,
-                              background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
-                              color: moneyCoreOpen ? "#111827" : "#6b7280",
+                              background: moneyCoreDestinationWriteOpen ? "#ffffff" : "#f9fafb",
+                              color: moneyCoreDestinationWriteOpen ? "#111827" : "#6b7280",
                               padding: "12px 14px",
                               fontSize: 14,
-                              cursor: moneyCoreOpen ? "text" : "not-allowed"
+                              cursor: moneyCoreDestinationWriteOpen ? "text" : "not-allowed"
                             }}
                           />
                         </label>
@@ -1344,7 +1488,7 @@ export default function MasterFinancePage() {
                         <label style={{ display: "grid", gap: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Телефон</span>
                           <input
-                            disabled={!moneyCoreOpen}
+                            disabled={!moneyCoreDestinationWriteOpen}
                             value={phone}
                             onChange={(event) => setPhone(event.target.value)}
                             placeholder="+996..."
@@ -1352,11 +1496,11 @@ export default function MasterFinancePage() {
                               width: "100%",
                               border: "1px solid #d1d5db",
                               borderRadius: 12,
-                              background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
-                              color: moneyCoreOpen ? "#111827" : "#6b7280",
+                              background: moneyCoreDestinationWriteOpen ? "#ffffff" : "#f9fafb",
+                              color: moneyCoreDestinationWriteOpen ? "#111827" : "#6b7280",
                               padding: "12px 14px",
                               fontSize: 14,
-                              cursor: moneyCoreOpen ? "text" : "not-allowed"
+                              cursor: moneyCoreDestinationWriteOpen ? "text" : "not-allowed"
                             }}
                           />
                         </label>
@@ -1364,7 +1508,7 @@ export default function MasterFinancePage() {
                         <label style={{ display: "grid", gap: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Банк</span>
                           <input
-                            disabled={!moneyCoreOpen}
+                            disabled={!moneyCoreDestinationWriteOpen}
                             value={bankName}
                             onChange={(event) => setBankName(event.target.value)}
                             placeholder="Название банка"
@@ -1372,11 +1516,11 @@ export default function MasterFinancePage() {
                               width: "100%",
                               border: "1px solid #d1d5db",
                               borderRadius: 12,
-                              background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
-                              color: moneyCoreOpen ? "#111827" : "#6b7280",
+                              background: moneyCoreDestinationWriteOpen ? "#ffffff" : "#f9fafb",
+                              color: moneyCoreDestinationWriteOpen ? "#111827" : "#6b7280",
                               padding: "12px 14px",
                               fontSize: 14,
-                              cursor: moneyCoreOpen ? "text" : "not-allowed"
+                              cursor: moneyCoreDestinationWriteOpen ? "text" : "not-allowed"
                             }}
                           />
                         </label>
@@ -1384,7 +1528,7 @@ export default function MasterFinancePage() {
                         <label style={{ display: "grid", gap: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Маска счёта / карты</span>
                           <input
-                            disabled={!moneyCoreOpen}
+                            disabled={!moneyCoreDestinationWriteOpen}
                             value={accountMasked}
                             onChange={(event) => setAccountMasked(event.target.value)}
                             placeholder="**** 1234"
@@ -1392,11 +1536,11 @@ export default function MasterFinancePage() {
                               width: "100%",
                               border: "1px solid #d1d5db",
                               borderRadius: 12,
-                              background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
-                              color: moneyCoreOpen ? "#111827" : "#6b7280",
+                              background: moneyCoreDestinationWriteOpen ? "#ffffff" : "#f9fafb",
+                              color: moneyCoreDestinationWriteOpen ? "#111827" : "#6b7280",
                               padding: "12px 14px",
                               fontSize: 14,
-                              cursor: moneyCoreOpen ? "text" : "not-allowed"
+                              cursor: moneyCoreDestinationWriteOpen ? "text" : "not-allowed"
                             }}
                           />
                         </label>
@@ -1404,7 +1548,7 @@ export default function MasterFinancePage() {
                         <label style={{ display: "grid", gap: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Последние 4 цифры карты</span>
                           <input
-                            disabled={!moneyCoreOpen}
+                            disabled={!moneyCoreDestinationWriteOpen}
                             value={cardLast4}
                             onChange={(event) => setCardLast4(event.target.value)}
                             placeholder="1234"
@@ -1412,11 +1556,11 @@ export default function MasterFinancePage() {
                               width: "100%",
                               border: "1px solid #d1d5db",
                               borderRadius: 12,
-                              background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
-                              color: moneyCoreOpen ? "#111827" : "#6b7280",
+                              background: moneyCoreDestinationWriteOpen ? "#ffffff" : "#f9fafb",
+                              color: moneyCoreDestinationWriteOpen ? "#111827" : "#6b7280",
                               padding: "12px 14px",
                               fontSize: 14,
-                              cursor: moneyCoreOpen ? "text" : "not-allowed"
+                              cursor: moneyCoreDestinationWriteOpen ? "text" : "not-allowed"
                             }}
                           />
                         </label>
@@ -1424,18 +1568,18 @@ export default function MasterFinancePage() {
                         <label style={{ display: "grid", gap: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Отношение к владельцу</span>
                           <select
-                            disabled={!moneyCoreOpen}
+                            disabled={!moneyCoreDestinationWriteOpen}
                             value={destinationRelation}
                             onChange={(event) => setDestinationRelation(event.target.value)}
                             style={{
                               width: "100%",
                               border: "1px solid #d1d5db",
                               borderRadius: 12,
-                              background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
-                              color: moneyCoreOpen ? "#111827" : "#6b7280",
+                              background: moneyCoreDestinationWriteOpen ? "#ffffff" : "#f9fafb",
+                              color: moneyCoreDestinationWriteOpen ? "#111827" : "#6b7280",
                               padding: "12px 14px",
                               fontSize: 14,
-                              cursor: moneyCoreOpen ? "pointer" : "not-allowed"
+                              cursor: moneyCoreDestinationWriteOpen ? "pointer" : "not-allowed"
                             }}
                           >
                             {WITHDRAW_DESTINATION_RELATION_OPTIONS.map((relation) => (
@@ -1450,7 +1594,7 @@ export default function MasterFinancePage() {
                       <label style={{ display: "grid", gap: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Примечание</span>
                         <textarea
-                          disabled={!moneyCoreOpen}
+                          disabled={!moneyCoreDestinationWriteOpen}
                           value={note}
                           onChange={(event) => setNote(event.target.value)}
                           placeholder="Необязательная заметка для заявки"
@@ -1459,12 +1603,12 @@ export default function MasterFinancePage() {
                             width: "100%",
                             border: "1px solid #d1d5db",
                             borderRadius: 12,
-                            background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
-                            color: moneyCoreOpen ? "#111827" : "#6b7280",
+                            background: moneyCoreDestinationWriteOpen ? "#ffffff" : "#f9fafb",
+                            color: moneyCoreDestinationWriteOpen ? "#111827" : "#6b7280",
                             padding: "12px 14px",
                             fontSize: 14,
                             resize: "vertical",
-                            cursor: moneyCoreOpen ? "text" : "not-allowed"
+                            cursor: moneyCoreDestinationWriteOpen ? "text" : "not-allowed"
                           }}
                         />
                       </label>
@@ -1490,28 +1634,29 @@ export default function MasterFinancePage() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        disabled
-                        style={{
-                          border: "1px solid #cbd5e1",
-                          borderRadius: 12,
-                          background: "#e5e7eb",
-                          color: "#6b7280",
-                          padding: "12px 16px",
-                          fontWeight: 700,
-                          opacity: 0.55,
-                          cursor: "not-allowed",
-                          justifySelf: "start"
-                        }}
-                      >
-                        Добавить реквизиты
-                      </button>
-                      <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
-                        Форма подготовлена. Запись реквизитов будет включена после controlled write-window.
-                      </div>
+                    <button
+                      type="button"
+                      disabled={!destinationSaveReady}
+                      onClick={handleSaveWithdrawDestination}
+                      style={{
+                        border: "1px solid #cbd5e1",
+                        borderRadius: 12,
+                        background: destinationSaveReady ? "#f8fafc" : "#e5e7eb",
+                        color: destinationSaveReady ? "#111827" : "#6b7280",
+                        padding: "12px 16px",
+                        fontWeight: 700,
+                        opacity: destinationSaveReady ? 1 : 0.55,
+                        cursor: destinationSaveReady ? "pointer" : "not-allowed",
+                        justifySelf: "start"
+                      }}
+                    >
+                      Добавить реквизиты
+                    </button>
+                    <div style={{ fontSize: 12, color: destinationSaveStatus?.tone === "error" ? "#b91c1c" : destinationSaveStatus?.tone === "success" ? "#065f46" : "#6b7280", lineHeight: 1.5 }}>
+                      {destinationSaveStatus?.text || moneyCoreAddRequisitesText}
                     </div>
-                  </Panel>
+                  </div>
+                </Panel>
 
                   <Panel title="Настройки вывода" subtitle={moneyCoreWithdrawPanelNote}>
                     {moneyCoreWithdrawSettings ? (
@@ -1624,16 +1769,16 @@ export default function MasterFinancePage() {
 
                       <button
                         type="button"
-                        disabled={!moneyCoreOpen}
+                        disabled
                         style={{
                           border: "1px solid #cbd5e1",
                           borderRadius: 12,
-                          background: moneyCoreOpen ? "#f8fafc" : "#e5e7eb",
-                          color: moneyCoreOpen ? "#111827" : "#6b7280",
+                          background: "#e5e7eb",
+                          color: "#6b7280",
                           padding: "12px 16px",
                           fontWeight: 700,
-                          opacity: moneyCoreOpen ? 1 : 0.55,
-                          cursor: moneyCoreOpen ? "pointer" : "not-allowed",
+                          opacity: 0.55,
+                          cursor: "not-allowed",
                           justifySelf: "start"
                         }}
                       >
