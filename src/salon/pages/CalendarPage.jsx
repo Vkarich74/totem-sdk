@@ -465,6 +465,10 @@ export default function CalendarPage(){
 
   const currentDayLabel = formatDateLabel(selectedDay)
   const todayLabel = formatDateLabel(todayDate)
+  const masterColumnCount = Math.max(1, masters.length)
+  const gridTemplateColumns = masterColumnCount <= 1
+    ? "110px minmax(0, 1fr)"
+    : `110px repeat(${masterColumnCount}, minmax(180px, 1fr))`
 
   function selectDay(nextDay){
     const normalized = normalizeCalendarDateKey(nextDay)
@@ -606,7 +610,7 @@ export default function CalendarPage(){
         )
       ) : (
         <div style={styles.desktopWrap}>
-          <div style={{ ...styles.grid, gridTemplateColumns: `110px repeat(${Math.max(1, masters.length)}, minmax(180px, 1fr))` }}>
+          <div style={{ ...styles.grid, gridTemplateColumns }}>
             <div style={styles.cornerCell}>
               <div style={styles.cornerTitle}>Время</div>
               <div style={styles.cornerSubtitle}>{currentDayLabel}</div>
@@ -850,14 +854,17 @@ const styles = {
     width: "fit-content"
   },
   desktopWrap: {
-    overflow: "auto",
+    maxWidth: "100%",
+    overflowX: "auto",
+    overflowY: "visible",
     border: "1px solid #e5e7eb",
     borderRadius: 16,
     background: "#ffffff"
   },
   grid: {
     display: "grid",
-    minWidth: 960
+    width: "100%",
+    minWidth: 0
   },
   cornerCell: {
     position: "sticky",
@@ -882,7 +889,8 @@ const styles = {
     fontWeight: 700,
     color: "#111827",
     display: "grid",
-    gap: 4
+    gap: 4,
+    minWidth: 0
   },
   masterName: {
     fontSize: 14,
@@ -913,7 +921,8 @@ const styles = {
     padding: "12px 10px",
     fontSize: 13,
     color: "#374151",
-    fontWeight: 600
+    fontWeight: 600,
+    minWidth: 0
   },
   slotCell: {
     border: "none",
@@ -923,7 +932,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "default"
+    cursor: "default",
+    minWidth: 0
   },
   bookingCell: {
     display: "grid",
