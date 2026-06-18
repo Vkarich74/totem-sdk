@@ -8,6 +8,7 @@ import {
   getMasterContractHistory,
   getMasterCollectionAnchors,
   getMasterLostProfit,
+  getMoneyCoreFlags,
   getMasterMoneyCoreSummary,
   getMasterPaymentProjections,
   getMasterPayouts,
@@ -406,6 +407,7 @@ export default function MasterFinancePage() {
   const [settlements, setSettlements] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [moneyCoreSummary, setMoneyCoreSummary] = useState(null);
+  const [moneyCoreFlags, setMoneyCoreFlags] = useState(null);
   const [paymentProjectionSummary, setPaymentProjectionSummary] = useState(null);
   const [moneyCoreDestinationProviders, setMoneyCoreDestinationProviders] = useState([]);
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([]);
@@ -454,9 +456,10 @@ export default function MasterFinancePage() {
             historyResult,
             walletResult,
             settlementsResult,
-            payoutsResult,
-            paymentProjectionResult,
-            moneyCoreResult
+          payoutsResult,
+          paymentProjectionResult,
+          moneyCoreResult,
+          moneyCoreFlagsResult
           ] = await Promise.allSettled([
             getMasterActiveContract(masterSlug),
             getMasterContractHistory(masterSlug),
@@ -464,7 +467,8 @@ export default function MasterFinancePage() {
             getMasterSettlements(masterSlug),
             getMasterPayouts(masterSlug),
             getMasterPaymentProjections(masterSlug),
-            getMasterMoneyCoreSummary(masterSlug)
+            getMasterMoneyCoreSummary(masterSlug),
+            getMoneyCoreFlags()
           ]);
 
         if (cancelled) return;
@@ -513,6 +517,11 @@ export default function MasterFinancePage() {
           summarySource ||
           null;
         setMoneyCoreSummary(summary);
+        setMoneyCoreFlags(
+          moneyCoreFlagsResult.status === "fulfilled" && moneyCoreFlagsResult.value?.ok
+            ? moneyCoreFlagsResult.value.flags || moneyCoreFlagsResult.value.data || moneyCoreFlagsResult.value
+            : null
+        );
 
         if (
           (activeResult.status === "rejected" || !activeResult.value?.ok) &&
@@ -534,6 +543,7 @@ export default function MasterFinancePage() {
           setPayouts([]);
           setPaymentProjectionSummary(null);
           setMoneyCoreSummary(null);
+          setMoneyCoreFlags(null);
           setError("Не удалось загрузить finance overview");
         }
       } finally {
@@ -842,6 +852,32 @@ export default function MasterFinancePage() {
   const settlementTotal = useMemo(() => sumAmounts(settlements), [settlements]);
   const payoutTotal = useMemo(() => sumAmounts(payouts), [payouts]);
   const moneyCoreZones = moneyCoreSummary || {};
+  const moneyCoreFlagsData = moneyCoreFlags?.flags || moneyCoreFlags?.data || moneyCoreFlags || null;
+  const moneyCoreOpen = Boolean(
+    moneyCoreFlagsData &&
+      moneyCoreFlagsData.MONEY_CORE_ENABLED === true &&
+      moneyCoreFlagsData.MONEY_CORE_READ_ONLY === false &&
+      moneyCoreFlagsData.MONEY_CORE_WRITE_ENABLED === true &&
+      moneyCoreFlagsData.WITHDRAW_REQUESTS_V2_ENABLED === true
+  );
+  const moneyCoreWithdrawPanelNote = moneyCoreOpen
+    ? "Текущий режим Money Core"
+    : "Текущий режим Money Core без возможности записи";
+  const moneyCoreWithdrawStateText = moneyCoreOpen
+    ? "Money Core включён. Вывод работает в рабочем режиме."
+    : "Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.";
+  const moneyCoreWithdrawSettingsText = moneyCoreOpen
+    ? "Money Core включён. Используется текущая конфигурация вывода."
+    : "Пока используется дефолтная только просмотр конфигурация.";
+  const moneyCoreWithdrawRequestsText = moneyCoreOpen
+    ? "История выводов появится после первых операций Money Core."
+    : "История выводов появится после включения write-флагов.";
+  const moneyCoreCreateRequestText = moneyCoreOpen
+    ? "Создание заявки доступно в рабочем режиме Money Core."
+    : "Создание заявки будет доступно после controlled write-smoke и включения Money Core write-флагов.";
+  const moneyCoreAddRequisitesText = moneyCoreOpen
+    ? "Добавление реквизитов доступно в рабочем режиме Money Core."
+    : "Добавление реквизитов будет доступно после включения Money Core write-флагов.";
   const moneyCoreOwnerType = moneyCoreSummary?.owner?.type || null;
   const moneyCoreOwnerId = moneyCoreSummary?.owner?.id || null;
   const lostProfitSummary = lostProfit?.summary || null;
@@ -1024,10 +1060,10 @@ export default function MasterFinancePage() {
 
             <Panel
               title="Money Core: баланс и вывод"
-              subtitle="Новая модель вывода средств. Сейчас доступен только просмотр."
+              subtitle={moneyCoreOpen ? "Money Core включён" : "Новая модель вывода средств. Сейчас доступен только просмотр."}
             >
-              <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: "#fff7ed", border: "1px solid #fed7aa", color: "#92400e" }}>
-                Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
+              <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: moneyCoreOpen ? "#ecfdf3" : "#fff7ed", border: moneyCoreOpen ? "1px solid #abefc6" : "1px solid #fed7aa", color: moneyCoreOpen ? "#065f46" : "#92400e" }}>
+                {moneyCoreWithdrawStateText}
               </div>
 
               {moneyCoreSummary ? (
@@ -1093,7 +1129,7 @@ export default function MasterFinancePage() {
 
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb", display: "grid", gap: 12 }}>
                       <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                        Добавление реквизитов будет доступно после включения Money Core write-флагов.
+                        {moneyCoreAddRequisitesText}
                       </div>
 
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
@@ -1234,7 +1270,7 @@ export default function MasterFinancePage() {
                     </div>
                   </Panel>
 
-                  <Panel title="Настройки вывода" subtitle="Текущий режим Money Core без возможности записи">
+                  <Panel title="Настройки вывода" subtitle={moneyCoreWithdrawPanelNote}>
                     {moneyCoreWithdrawSettings ? (
                       <div style={styles.grid}>
                         <StatCard title="Режим" value={moneyCoreWithdrawSettings.mode || "—"} note="Текущий режим" />
@@ -1245,7 +1281,7 @@ export default function MasterFinancePage() {
                     ) : (
                       <EmptyState
                         title="Настройки вывода не заданы"
-                        text="Пока используется дефолтная только просмотр конфигурация."
+                        text={moneyCoreWithdrawSettingsText}
                       />
                     )}
                   </Panel>
@@ -1263,16 +1299,16 @@ export default function MasterFinancePage() {
                         ))}
                       </div>
                     ) : (
-                      <EmptyState
-                        title="Заявок пока нет"
-                        text="История выводов появится после включения write-флагов."
-                      />
-                    )}
+                    <EmptyState
+                      title="Заявок пока нет"
+                      text={moneyCoreWithdrawRequestsText}
+                    />
+                  )}
 
-                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb", display: "grid", gap: 12 }}>
-                      <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                        Создание заявки будет доступно после controlled write-smoke и включения Money Core write-флагов.
-                      </div>
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb", display: "grid", gap: 12 }}>
+                    <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+                        {moneyCoreCreateRequestText}
+                    </div>
 
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                         <div style={{ display: "grid", gap: 6 }}>
@@ -1345,16 +1381,16 @@ export default function MasterFinancePage() {
 
                       <button
                         type="button"
-                        disabled
+                        disabled={!moneyCoreOpen}
                         style={{
                           border: "1px solid #cbd5e1",
                           borderRadius: 12,
-                          background: "#e5e7eb",
-                          color: "#6b7280",
+                          background: moneyCoreOpen ? "#f8fafc" : "#e5e7eb",
+                          color: moneyCoreOpen ? "#111827" : "#6b7280",
                           padding: "12px 16px",
                           fontWeight: 700,
-                          opacity: 0.55,
-                          cursor: "not-allowed",
+                          opacity: moneyCoreOpen ? 1 : 0.55,
+                          cursor: moneyCoreOpen ? "pointer" : "not-allowed",
                           justifySelf: "start"
                         }}
                       >

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { getMoneyCoreDestinationProviders, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
+import { getMoneyCoreDestinationProviders, getMoneyCoreFlags, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -203,6 +203,7 @@ export default function SalonFinancePage(){
   const [lostProfit, setLostProfit] = useState(null)
   const [lostProfitLoading, setLostProfitLoading] = useState(true)
   const [lostProfitError, setLostProfitError] = useState("")
+  const [moneyCoreFlags, setMoneyCoreFlags] = useState(null)
   const [moneyCoreDestinationProviders, setMoneyCoreDestinationProviders] = useState([])
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([])
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null)
@@ -239,7 +240,8 @@ export default function SalonFinancePage(){
           settlementsRaw,
           payoutsRaw,
           paymentProjectionRaw,
-          moneyCoreRaw
+          moneyCoreRaw,
+          moneyCoreFlagsRaw
         ] = await Promise.all([
           getSalonMetrics(slug),
           getSalonWalletBalance(slug),
@@ -247,7 +249,8 @@ export default function SalonFinancePage(){
           getSalonSettlements(slug),
           getSalonPayouts(slug),
           getSalonPaymentProjections(slug),
-          getSalonMoneyCoreSummary(slug)
+          getSalonMoneyCoreSummary(slug),
+          getMoneyCoreFlags()
         ])
 
         if(cancelled) return
@@ -259,6 +262,7 @@ export default function SalonFinancePage(){
         setPayouts(normalizeList(payoutsRaw?.ok ? { payouts: payoutsRaw.payouts } : {}, ["payouts", "items"]))
         setPaymentProjectionSummary(paymentProjectionRaw?.ok ? paymentProjectionRaw.summary : null)
         setMoneyCoreSummary((moneyCoreRaw?.ok ? moneyCoreRaw.summary : null) || moneyCoreRaw?.data || moneyCoreRaw || null)
+        setMoneyCoreFlags((moneyCoreFlagsRaw?.ok ? moneyCoreFlagsRaw.flags : null) || moneyCoreFlagsRaw?.data || moneyCoreFlagsRaw || null)
       }catch(loadError){
         console.error("SALON FINANCE LOAD ERROR", loadError)
 
@@ -270,6 +274,7 @@ export default function SalonFinancePage(){
           setPayouts([])
           setPaymentProjectionSummary(null)
           setMoneyCoreSummary(null)
+          setMoneyCoreFlags(null)
           setError(loadError?.message || "SALON_FINANCE_LOAD_FAILED")
         }
       }finally{
@@ -431,6 +436,32 @@ export default function SalonFinancePage(){
   const pageError = !pageLoading && (contextError || error)
   const showEmpty = !pageLoading && !pageError && !contracts.length && !settlements.length && !payouts.length && !walletBalance && !Number(paymentProjectionSummary?.history_amount || 0)
   const moneyCoreZones = moneyCoreSummary || {}
+  const moneyCoreFlagsData = moneyCoreFlags?.flags || moneyCoreFlags?.data || moneyCoreFlags || null
+  const moneyCoreOpen = Boolean(
+    moneyCoreFlagsData &&
+    moneyCoreFlagsData.MONEY_CORE_ENABLED === true &&
+    moneyCoreFlagsData.MONEY_CORE_READ_ONLY === false &&
+    moneyCoreFlagsData.MONEY_CORE_WRITE_ENABLED === true &&
+    moneyCoreFlagsData.WITHDRAW_REQUESTS_V2_ENABLED === true
+  )
+  const moneyCoreWithdrawPanelNote = moneyCoreOpen
+    ? "Текущий режим Money Core"
+    : "Текущий режим Money Core без возможности записи"
+  const moneyCoreWithdrawStateText = moneyCoreOpen
+    ? "Money Core включён. Вывод работает в рабочем режиме."
+    : "Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов."
+  const moneyCoreWithdrawSettingsText = moneyCoreOpen
+    ? "Money Core включён. Используется текущая конфигурация вывода."
+    : "Пока используется дефолтная только просмотр конфигурация."
+  const moneyCoreWithdrawRequestsText = moneyCoreOpen
+    ? "История выводов появится после первых операций Money Core."
+    : "История выводов появится после включения write-флагов."
+  const moneyCoreCreateRequestText = moneyCoreOpen
+    ? "Создание заявки доступно в рабочем режиме Money Core."
+    : "Создание заявки будет доступно после controlled write-smoke и включения Money Core write-флагов."
+  const moneyCoreAddRequisitesText = moneyCoreOpen
+    ? "Добавление реквизитов доступно в рабочем режиме Money Core."
+    : "Добавление реквизитов будет доступно после включения Money Core write-флагов."
 
   return (
     <div style={styles.page}>
@@ -548,11 +579,17 @@ export default function SalonFinancePage(){
 
             <Panel
               title="Money Core: баланс и вывод"
-              note="Новая модель вывода средств. Сейчас доступен только только просмотр режим."
+              note={moneyCoreOpen ? "Money Core включён" : "Новая модель вывода средств. Сейчас доступен только просмотр."}
             >
-          <div style={{ marginBottom: 12, color: "#92400e", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: 12 }}>
-            Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
-          </div>
+          {moneyCoreOpen ? (
+            <div style={{ marginBottom: 12, color: "#065f46", background: "#ecfdf3", border: "1px solid #abefc6", borderRadius: 12, padding: 12 }}>
+              Money Core включён. Вывод работает в режиме записи.
+            </div>
+          ) : (
+            <div style={{ marginBottom: 12, color: "#92400e", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: 12 }}>
+              Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
+            </div>
+          )}
 
           {moneyCoreSummary ? (
             <div style={styles.statsGrid}>
@@ -614,10 +651,10 @@ export default function SalonFinancePage(){
                     />
                   )}
 
-                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eef2f7", display: "grid", gap: 12 }}>
-                    <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                      Добавление реквизитов будет доступно после включения Money Core write-флагов.
-                    </div>
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eef2f7", display: "grid", gap: 12 }}>
+                      <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+                      {moneyCoreAddRequisitesText}
+                      </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                       <label style={{ display: "grid", gap: 6 }}>
@@ -739,16 +776,16 @@ export default function SalonFinancePage(){
 
                     <button
                       type="button"
-                      disabled
+                      disabled={!moneyCoreOpen}
                       style={{
                         border: "1px solid #cbd5e1",
                         borderRadius: 12,
-                        background: "#e5e7eb",
-                        color: "#6b7280",
+                        background: moneyCoreOpen ? "#f8fafc" : "#e5e7eb",
+                        color: moneyCoreOpen ? "#111827" : "#6b7280",
                         padding: "12px 16px",
                         fontWeight: 700,
-                        opacity: 0.55,
-                        cursor: "not-allowed",
+                        opacity: moneyCoreOpen ? 1 : 0.55,
+                        cursor: moneyCoreOpen ? "pointer" : "not-allowed",
                         justifySelf: "start"
                       }}
                     >
@@ -757,7 +794,7 @@ export default function SalonFinancePage(){
                   </div>
                 </Panel>
 
-                <Panel title="Настройки вывода" note="Текущий режим Money Core без возможности записи">
+                <Panel title="Настройки вывода" note={moneyCoreWithdrawPanelNote}>
                   {moneyCoreWithdrawSettings ? (
                     <div style={styles.statsGrid}>
                       <StatCard title="Режим" value={moneyCoreWithdrawSettings.mode || "—"} note="Текущий режим" />
@@ -768,7 +805,7 @@ export default function SalonFinancePage(){
                   ) : (
                     <EmptyState
                       title="Настройки вывода не заданы"
-                      text="Пока используется дефолтная только просмотр конфигурация."
+                      text={moneyCoreWithdrawSettingsText}
                     />
                   )}
                 </Panel>
@@ -788,13 +825,13 @@ export default function SalonFinancePage(){
                   ) : (
                     <EmptyState
                       title="Заявок пока нет"
-                      text="История выводов появится после включения write-флагов."
+                      text={moneyCoreWithdrawRequestsText}
                     />
                   )}
 
                   <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eef2f7", display: "grid", gap: 12 }}>
                     <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                      Создание заявки будет доступно после controlled write-smoke и включения Money Core write-флагов.
+                      {moneyCoreCreateRequestText}
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>

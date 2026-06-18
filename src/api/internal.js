@@ -1558,6 +1558,18 @@ export async function getMasterMoneyCoreSummary(masterSlug = getMasterSlug()){
   }
 }
 
+export async function getMoneyCoreFlags(){
+  try{
+    const r = await safeInternalJson(`/money-core/flags`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MONEY_CORE_FLAGS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MONEY_CORE_FLAGS_API_NOT_OK", detail:j };
+    return { ok:true, flags: j.flags || j.data || j };
+  }catch(e){
+    return { ok:false, error:"MONEY_CORE_FLAGS_FETCH_FAILED", detail:e };
+  }
+}
+
 function normalizeOwnerBookingType(ownerType){
   const value = String(ownerType || "").trim().toLowerCase();
   if(value === "salon" || value === "master") return value;
