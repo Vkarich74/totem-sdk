@@ -204,10 +204,67 @@ function getAvailabilityLabel(row){
 }
 
 function getEmptySlotLabel(row){
+  return getEmptySlotState(row, null).label
+}
+
+function parseClockMinutes(value){
+  const text = String(value || "").trim()
+  if(!text) return null
+
+  const [hoursRaw, minutesRaw] = text.split(":")
+  const hours = Number(hoursRaw)
+  const minutes = Number(minutesRaw)
+
+  if(!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
+  if(hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null
+
+  return hours * 60 + minutes
+}
+
+function isConfiguredWorkingRow(row){
+  return getAvailabilityStatus(row) === "configured"
+}
+
+function isSlotInsideWorkingHours(slotTime, row){
+  if(!isConfiguredWorkingRow(row)) return false
+
+  const slotMinutes = parseClockMinutes(slotTime)
+  const startMinutes = parseClockMinutes(row?.start_time)
+  const endMinutes = parseClockMinutes(row?.end_time)
+
+  if(slotMinutes === null || startMinutes === null || endMinutes === null) return false
+
+  return slotMinutes >= startMinutes && slotMinutes < endMinutes
+}
+
+function getEmptySlotState(row, slotTime, occupiedEvent = null){
   const status = getAvailabilityStatus(row)
-  if(status === "configured") return "Свободно"
-  if(status === "unknown") return "График не задан"
-  return "Доступность неизвестна"
+
+  if(status === "configured"){
+    const canBook = !occupiedEvent && (slotTime ? isSlotInsideWorkingHours(slotTime, row) : true)
+    return {
+      canBook,
+      label: canBook ? "Свободно" : "Вне графика"
+    }
+  }
+
+  if(status === "unknown") return { canBook: false, label: "График не задан" }
+
+  return { canBook: false, label: "Доступность неизвестна" }
+}
+
+function buildBookingHash(salonSlug, masterId, date, time){
+  const params = new URLSearchParams()
+  if(salonSlug) params.set("salon", salonSlug)
+  if(masterId) params.set("master", String(masterId))
+  if(date) params.set("date", date)
+  if(time) params.set("time", time)
+  return `#/booking?${params.toString()}`
+}
+
+function openBookingForSlot(salonSlug, masterId, date, time){
+  const bookingHash = buildBookingHash(salonSlug, masterId, date, time)
+  window.location.hash = bookingHash
 }
 
 function eventStartsAtSlot(event, dayKey, time){
@@ -575,6 +632,7 @@ export default function CalendarPage(){
                   const masterEvents = eventsByMasterId.get(masterId) || []
                   const occupiedEvent = masterEvents.find((event) => isOccupiedEventStatus(event?.status) && eventOverlapsSlot(event, selectedDay, time))
                   const historyEvent = masterEvents.find((event) => isCancelledEventStatus(event?.status) && eventStartsAtSlot(event, selectedDay, time))
+                  const emptySlotState = getEmptySlotState(availabilityRow, time, occupiedEvent || historyEvent)
                   const cellTone = occupiedEvent ? "#2563eb" : historyEvent ? "#9ca3af" : "#e5e7eb"
 
                   return (
@@ -599,7 +657,22 @@ export default function CalendarPage(){
                         </div>
                       ) : (
                         <div style={styles.unknownSlotCell}>
-                          <div style={styles.unknownSlotTitle}>{getEmptySlotLabel(availabilityRow)}</div>
+                          <div style={styles.unknownSlotTitle}>{emptySlotState.label}</div>
+                          {emptySlotState.canBook ? (
+                            <button
+                              type="button"
+                              style={{
+                                ...styles.emptySlotAction,
+                                border: "none",
+                                background: "transparent",
+                                padding: 0,
+                                cursor: "pointer"
+                              }}
+                              onClick={() => openBookingForSlot(salonSlug, master.id || masterId, selectedDay, time)}
+                            >
+                              Добавить клиента
+                            </button>
+                          ) : null}
                         </div>
                       )}
                     </div>
