@@ -9,6 +9,7 @@ import {
   getMasterContractHistory,
   getMasterCollectionAnchors,
   getMasterLostProfit,
+  getMasterOwnerQrDestinations,
   getMoneyCoreFlags,
   getMasterMoneyCoreSummary,
   getMasterPaymentProjections,
@@ -29,6 +30,74 @@ import {
 function money(value) {
   const n = Number(value) || 0;
   return `${new Intl.NumberFormat("ru-RU").format(n)} сом`;
+}
+
+function toNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function cleanStatus(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function calculateProjectionStats(rows, destinations, withdrawRequests, ownerQr) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const safeDestinations = Array.isArray(destinations) ? destinations : [];
+  const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests : [];
+  const safeOwnerQr = Array.isArray(ownerQr) ? ownerQr : [];
+
+  const confirmedRows = safeRows.filter((row) => {
+    const paymentStatus = cleanStatus(row?.payment_status);
+    const bookingStatus = cleanStatus(row?.booking_status);
+    return paymentStatus === "confirmed" && bookingStatus !== "cancelled" && bookingStatus !== "canceled";
+  });
+
+  const rejectedOrCancelledRows = safeRows.filter((row) => {
+    const paymentStatus = cleanStatus(row?.payment_status);
+    const bookingStatus = cleanStatus(row?.booking_status);
+    return paymentStatus !== "confirmed" || bookingStatus === "cancelled" || bookingStatus === "canceled";
+  });
+
+  const confirmedGrossAmount = confirmedRows.reduce((sum, row) => {
+    const grossAmount = toNumber(row?.gross_amount);
+    if (grossAmount !== null) return sum + grossAmount;
+
+    const rawGrossAmount = toNumber(row?.raw_gross_amount);
+    if (rawGrossAmount !== null) return sum + rawGrossAmount;
+
+    return sum + Number(row?.salon_share || 0) + Number(row?.master_share || 0) + Number(row?.platform_share || 0);
+  }, 0);
+
+  const salonShare = confirmedRows.reduce((sum, row) => sum + Number(row?.salon_share || 0), 0);
+  const masterShare = confirmedRows.reduce((sum, row) => sum + Number(row?.master_share || 0), 0);
+  const platformShare = confirmedRows.reduce((sum, row) => sum + Number(row?.platform_share || 0), 0);
+
+  const openBalanceAmount = confirmedRows.reduce((sum, row) => {
+    const explicitOpenBalance = toNumber(row?.open_transfer_amount);
+    if (explicitOpenBalance !== null) {
+      return sum + explicitOpenBalance;
+    }
+
+    return row?.included_in_open_balance === true
+      ? sum + Number(row?.salon_share || 0) + Number(row?.master_share || 0) + Number(row?.platform_share || 0)
+      : sum;
+  }, 0);
+
+  return {
+    totalRows: safeRows.length,
+    confirmedRows: confirmedRows.length,
+    rejectedOrCancelledRows: rejectedOrCancelledRows.length,
+    confirmedGrossAmount,
+    salonShare,
+    masterShare,
+    platformShare,
+    openBalanceAmount,
+    collectorMissingCount: confirmedRows.filter((row) => !cleanStatus(row?.collector_owner_type)).length,
+    destinationsCount: safeDestinations.length,
+    withdrawRequestsCount: safeWithdrawRequests.length,
+    ownerQrCount: safeOwnerQr.length
+  };
 }
 
 const WITHDRAW_DESTINATION_RELATION_OPTIONS = [
@@ -595,6 +664,8 @@ export default function MasterFinancePage() {
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([]);
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null);
   const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([]);
+  const [moneyCoreOwnerQr, setMoneyCoreOwnerQr] = useState([]);
+  const [paymentProjectionRows, setPaymentProjectionRows] = useState([]);
   const [selectedProviderCode, setSelectedProviderCode] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
   const [phone, setPhone] = useState("");
@@ -638,6 +709,7 @@ export default function MasterFinancePage() {
             setSettlements([]);
             setPayouts([]);
             setPaymentProjectionSummary(null);
+            setPaymentProjectionRows([]);
             setError("Не найден master slug");
           }
           return;
@@ -700,6 +772,11 @@ export default function MasterFinancePage() {
             ? paymentProjectionResult.value.summary || null
             : null
         );
+        setPaymentProjectionRows(
+          paymentProjectionResult.status === "fulfilled" && paymentProjectionResult.value?.ok && Array.isArray(paymentProjectionResult.value?.rows)
+            ? paymentProjectionResult.value.rows
+            : []
+        );
 
         const summarySource =
           moneyCoreResult.status === "fulfilled" ? moneyCoreResult.value : null;
@@ -734,6 +811,7 @@ export default function MasterFinancePage() {
           setSettlements([]);
           setPayouts([]);
           setPaymentProjectionSummary(null);
+          setPaymentProjectionRows([]);
           setMoneyCoreSummary(null);
           setMoneyCoreFlags(null);
           setError("Не удалось загрузить finance overview");
@@ -925,15 +1003,16 @@ export default function MasterFinancePage() {
     async function loadMoneyCoreCabinet() {
       const masterSlugValue = masterSlug;
 
-      if (!masterSlugValue) {
-        if (!cancelled) {
-          setMoneyCoreDestinationProviders([]);
-          setMoneyCoreWithdrawDestinations([]);
-          setMoneyCoreWithdrawSettings(null);
-          setMoneyCoreWithdrawRequests([]);
+        if (!masterSlugValue) {
+          if (!cancelled) {
+            setMoneyCoreDestinationProviders([]);
+            setMoneyCoreWithdrawDestinations([]);
+            setMoneyCoreWithdrawSettings(null);
+            setMoneyCoreWithdrawRequests([]);
+            setMoneyCoreOwnerQr([]);
+          }
+          return;
         }
-        return;
-      }
 
       try {
         const [
@@ -941,11 +1020,13 @@ export default function MasterFinancePage() {
           destinationsResult,
           settingsResult,
           requestsResult,
+          ownerQrResult,
         ] = await Promise.all([
           getMoneyCoreDestinationProviders({ enabled: true }),
           getMasterWithdrawDestinations(masterSlugValue),
           getMasterWithdrawSettings(masterSlugValue),
           getMasterWithdrawRequests(masterSlugValue, { limit: 10, offset: 0 }),
+          getMasterOwnerQrDestinations(masterSlugValue),
         ]);
 
         if (cancelled) return;
@@ -954,12 +1035,14 @@ export default function MasterFinancePage() {
         setMoneyCoreWithdrawDestinations(Array.isArray(destinationsResult?.destinations) ? destinationsResult.destinations : []);
         setMoneyCoreWithdrawSettings(settingsResult?.settings || null);
         setMoneyCoreWithdrawRequests(Array.isArray(requestsResult?.requests) ? requestsResult.requests : []);
+        setMoneyCoreOwnerQr(Array.isArray(ownerQrResult?.destinations) ? ownerQrResult.destinations : []);
       } catch (e) {
         if (!cancelled) {
           setMoneyCoreDestinationProviders([]);
           setMoneyCoreWithdrawDestinations([]);
           setMoneyCoreWithdrawSettings(null);
           setMoneyCoreWithdrawRequests([]);
+          setMoneyCoreOwnerQr([]);
         }
       }
     }
@@ -1188,6 +1271,10 @@ export default function MasterFinancePage() {
   const moneyCoreOwnerId = moneyCoreSummary?.owner?.id || null;
   const lostProfitSummary = lostProfit?.summary || null;
   const lostProfitMonthly = Array.isArray(lostProfit?.monthly) ? lostProfit.monthly : [];
+  const financeStats = useMemo(
+    () => calculateProjectionStats(paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr),
+    [paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr]
+  );
   const collectionAnchorsSummary = collectionAnchors?.summary || null;
   const collectionAnchorRows = getCollectionAnchorRows(collectionAnchors);
 
@@ -1391,6 +1478,35 @@ export default function MasterFinancePage() {
                   text="Доступный вывод появится после подтверждённого settlement."
                 />
               )}
+
+              <Panel
+                title="Финансовая статистика"
+                subtitle="Projection rows, реквизиты, заявки и Owner QR без новой таблицы платежей."
+              >
+                <section style={styles.grid}>
+                  <StatCard label="Подтверждённая выручка" value={money(financeStats.confirmedGrossAmount)} hint="Только confirmed записи" />
+                  <StatCard label="Доля салона" value={money(financeStats.salonShare)} hint="Projection share салона" />
+                  <StatCard label="Доля мастера" value={money(financeStats.masterShare)} hint="Projection share мастера" />
+                  <StatCard label="Open balance" value={money(financeStats.openBalanceAmount)} hint="В Money Core ledger пока не проведено" />
+                  <StatCard label="Collector missing" value={`${financeStats.collectorMissingCount} платёж`} hint="confirmed rows без collector" />
+                  <StatCard label="Реквизиты / заявки" value={`${financeStats.destinationsCount} / ${financeStats.withdrawRequestsCount}`} hint="Withdraw surface" />
+                  <StatCard label="Owner QR" value={String(financeStats.ownerQrCount)} hint="Привязанные QR-реквизиты" />
+                </section>
+
+                <div style={{ display: "grid", gap: 8, marginTop: 14, fontSize: 13, lineHeight: 1.5, color: "#475569" }}>
+                  {financeStats.confirmedGrossAmount > 0 && financeStats.openBalanceAmount === 0 ? (
+                    <div>
+                      Оплата рассчитана в projection, но не включена в open balance: collector не определён или движение ещё не проведено в Money Core ledger.
+                    </div>
+                  ) : null}
+                  {financeStats.destinationsCount === 0 ? (
+                    <div>Реквизиты для вывода ещё не добавлены.</div>
+                  ) : null}
+                  {financeStats.withdrawRequestsCount === 0 ? (
+                    <div>Заявок на вывод пока нет.</div>
+                  ) : null}
+                </div>
+              </Panel>
 
               {moneyCoreOwnerType && moneyCoreOwnerId ? (
                 <div style={{ display: "grid", gap: 12, marginTop: 16 }}>

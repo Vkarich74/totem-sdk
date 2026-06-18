@@ -1,10 +1,78 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { createSalonWithdrawDestination, getMoneyCoreDestinationProviders, getMoneyCoreFlags, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
+import { createSalonWithdrawDestination, getMoneyCoreDestinationProviders, getMoneyCoreFlags, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonOwnerQrDestinations, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
+}
+
+function toNumber(value){
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function cleanStatus(value){
+  return String(value || "").trim().toLowerCase()
+}
+
+function calculateProjectionStats(rows, destinations, withdrawRequests, ownerQr){
+  const safeRows = Array.isArray(rows) ? rows : []
+  const safeDestinations = Array.isArray(destinations) ? destinations : []
+  const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests : []
+  const safeOwnerQr = Array.isArray(ownerQr) ? ownerQr : []
+
+  const confirmedRows = safeRows.filter((row) => {
+    const paymentStatus = cleanStatus(row?.payment_status)
+    const bookingStatus = cleanStatus(row?.booking_status)
+    return paymentStatus === "confirmed" && bookingStatus !== "cancelled" && bookingStatus !== "canceled"
+  })
+
+  const rejectedOrCancelledRows = safeRows.filter((row) => {
+    const paymentStatus = cleanStatus(row?.payment_status)
+    const bookingStatus = cleanStatus(row?.booking_status)
+    return paymentStatus !== "confirmed" || bookingStatus === "cancelled" || bookingStatus === "canceled"
+  })
+
+  const confirmedGrossAmount = confirmedRows.reduce((sum, row) => {
+    const grossAmount = toNumber(row?.gross_amount)
+    if (grossAmount !== null) return sum + grossAmount
+
+    const rawGrossAmount = toNumber(row?.raw_gross_amount)
+    if (rawGrossAmount !== null) return sum + rawGrossAmount
+
+    return sum + Number(row?.salon_share || 0) + Number(row?.master_share || 0) + Number(row?.platform_share || 0)
+  }, 0)
+
+  const salonShare = confirmedRows.reduce((sum, row) => sum + Number(row?.salon_share || 0), 0)
+  const masterShare = confirmedRows.reduce((sum, row) => sum + Number(row?.master_share || 0), 0)
+  const platformShare = confirmedRows.reduce((sum, row) => sum + Number(row?.platform_share || 0), 0)
+
+  const openBalanceAmount = confirmedRows.reduce((sum, row) => {
+    const explicitOpenBalance = toNumber(row?.open_transfer_amount)
+    if (explicitOpenBalance !== null) {
+      return sum + explicitOpenBalance
+    }
+
+    return row?.included_in_open_balance === true
+      ? sum + Number(row?.salon_share || 0) + Number(row?.master_share || 0) + Number(row?.platform_share || 0)
+      : sum
+  }, 0)
+
+  return {
+    totalRows: safeRows.length,
+    confirmedRows: confirmedRows.length,
+    rejectedOrCancelledRows: rejectedOrCancelledRows.length,
+    confirmedGrossAmount,
+    salonShare,
+    masterShare,
+    platformShare,
+    openBalanceAmount,
+    collectorMissingCount: confirmedRows.filter((row) => !cleanStatus(row?.collector_owner_type)).length,
+    destinationsCount: safeDestinations.length,
+    withdrawRequestsCount: safeWithdrawRequests.length,
+    ownerQrCount: safeOwnerQr.length
+  }
 }
 
 const WITHDRAW_DESTINATION_RELATION_OPTIONS = [
@@ -389,6 +457,8 @@ export default function SalonFinancePage(){
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([])
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null)
   const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([])
+  const [moneyCoreOwnerQr, setMoneyCoreOwnerQr] = useState([])
+  const [paymentProjectionRows, setPaymentProjectionRows] = useState([])
   const [selectedProviderCode, setSelectedProviderCode] = useState("")
   const [accountHolder, setAccountHolder] = useState("")
   const [phone, setPhone] = useState("")
@@ -414,6 +484,8 @@ export default function SalonFinancePage(){
           setSettlements([])
           setPayouts([])
           setPaymentProjectionSummary(null)
+          setPaymentProjectionRows([])
+          setMoneyCoreOwnerQr([])
           setError("SLUG_MISSING")
           setLoading(false)
         }
@@ -452,6 +524,7 @@ export default function SalonFinancePage(){
         setSettlements(normalizeList(settlementsRaw?.ok ? { settlements: settlementsRaw.settlements } : {}, ["settlements", "periods", "items"]))
         setPayouts(normalizeList(payoutsRaw?.ok ? { payouts: payoutsRaw.payouts } : {}, ["payouts", "items"]))
         setPaymentProjectionSummary(paymentProjectionRaw?.ok ? paymentProjectionRaw.summary : null)
+        setPaymentProjectionRows(Array.isArray(paymentProjectionRaw?.rows) ? paymentProjectionRaw.rows : [])
         setMoneyCoreSummary((moneyCoreRaw?.ok ? moneyCoreRaw.summary : null) || moneyCoreRaw?.data || moneyCoreRaw || null)
         setMoneyCoreFlags((moneyCoreFlagsRaw?.ok ? moneyCoreFlagsRaw.flags : null) || moneyCoreFlagsRaw?.data || moneyCoreFlagsRaw || null)
       }catch(loadError){
@@ -464,6 +537,7 @@ export default function SalonFinancePage(){
           setSettlements([])
           setPayouts([])
           setPaymentProjectionSummary(null)
+          setPaymentProjectionRows([])
           setMoneyCoreSummary(null)
           setMoneyCoreFlags(null)
           setError(loadError?.message || "SALON_FINANCE_LOAD_FAILED")
@@ -542,6 +616,7 @@ export default function SalonFinancePage(){
           setMoneyCoreWithdrawDestinations([])
           setMoneyCoreWithdrawSettings(null)
           setMoneyCoreWithdrawRequests([])
+          setMoneyCoreOwnerQr([])
         }
         return
       }
@@ -551,12 +626,14 @@ export default function SalonFinancePage(){
           providersRaw,
           destinationsRaw,
           settingsRaw,
-          requestsRaw
+          requestsRaw,
+          ownerQrRaw
         ] = await Promise.all([
           getMoneyCoreDestinationProviders({ enabled: true }),
           getSalonWithdrawDestinations(ownerSlug),
           getSalonWithdrawSettings(ownerSlug),
-          getSalonWithdrawRequests(ownerSlug, { limit: 10, offset: 0 })
+          getSalonWithdrawRequests(ownerSlug, { limit: 10, offset: 0 }),
+          getSalonOwnerQrDestinations(ownerSlug)
         ])
 
         if(cancelled) return
@@ -565,12 +642,14 @@ export default function SalonFinancePage(){
         setMoneyCoreWithdrawDestinations(Array.isArray(destinationsRaw?.destinations) ? destinationsRaw.destinations : [])
         setMoneyCoreWithdrawSettings(settingsRaw?.settings || null)
         setMoneyCoreWithdrawRequests(Array.isArray(requestsRaw?.requests) ? requestsRaw.requests : [])
+        setMoneyCoreOwnerQr(Array.isArray(ownerQrRaw?.destinations) ? ownerQrRaw.destinations : [])
       }catch(e){
         if(!cancelled){
           setMoneyCoreDestinationProviders([])
           setMoneyCoreWithdrawDestinations([])
           setMoneyCoreWithdrawSettings(null)
           setMoneyCoreWithdrawRequests([])
+          setMoneyCoreOwnerQr([])
         }
       }
     }
@@ -622,6 +701,10 @@ export default function SalonFinancePage(){
   const lostProfitSummary = lostProfit?.summary || null
   const lostProfitByMaster = Array.isArray(lostProfit?.by_master) ? lostProfit.by_master : []
   const lostProfitMonthly = Array.isArray(lostProfit?.monthly) ? lostProfit.monthly : []
+  const financeStats = useMemo(
+    () => calculateProjectionStats(paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr),
+    [paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr]
+  )
 
   const pageLoading = contextLoading || loading
   const pageError = !pageLoading && (contextError || error)
@@ -815,6 +898,35 @@ export default function SalonFinancePage(){
           <StatCard title="История оплат" value={money(paymentProjectionSummary?.history_amount)} note={`Строк в истории: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
           <StatCard title="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} note={`Открытых строк: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
         </section>
+
+        <Panel
+          title="Финансовая статистика"
+          note="Краткая сводка по projection rows, реквизитам, заявкам и Owner QR без отдельной таблицы платежей."
+        >
+          <section style={styles.statsGrid}>
+            <StatCard title="Подтверждённая выручка" value={money(financeStats.confirmedGrossAmount)} note="Только confirmed записи" />
+            <StatCard title="Доля салона" value={money(financeStats.salonShare)} note="Projection share салона" />
+            <StatCard title="Доля мастера" value={money(financeStats.masterShare)} note="Projection share мастера" />
+            <StatCard title="Open balance" value={money(financeStats.openBalanceAmount)} note="В Money Core ledger пока не проведено" />
+            <StatCard title="Collector missing" value={`${financeStats.collectorMissingCount} платёж`} note="confirmed rows без collector" />
+            <StatCard title="Реквизиты / заявки" value={`${financeStats.destinationsCount} / ${financeStats.withdrawRequestsCount}`} note="Withdraw surface" />
+            <StatCard title="Owner QR" value={String(financeStats.ownerQrCount)} note="Привязанные QR-реквизиты" />
+          </section>
+
+          <div style={{ display: "grid", gap: 8, marginTop: 14, fontSize: 13, lineHeight: 1.5, color: "#475569" }}>
+            {financeStats.confirmedGrossAmount > 0 && financeStats.openBalanceAmount === 0 ? (
+              <div>
+                Оплата рассчитана в projection, но не включена в open balance: collector не определён или движение ещё не проведено в Money Core ledger.
+              </div>
+            ) : null}
+            {financeStats.destinationsCount === 0 ? (
+              <div>Реквизиты для вывода ещё не добавлены.</div>
+            ) : null}
+            {financeStats.withdrawRequestsCount === 0 ? (
+              <div>Заявок на вывод пока нет.</div>
+            ) : null}
+          </div>
+        </Panel>
 
         <Panel
           title="Недополученная прибыль"
