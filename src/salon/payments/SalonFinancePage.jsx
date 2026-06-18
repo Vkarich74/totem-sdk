@@ -7,6 +7,137 @@ function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
 }
 
+const WITHDRAW_DESTINATION_RELATION_OPTIONS = [
+  "self",
+  "company_account",
+  "authorized_person",
+  "third_party",
+  "unknown"
+]
+
+const WITHDRAW_DESTINATION_METHOD_OPTIONS = new Set([
+  "wallet",
+  "card",
+  "bank_account",
+  "manual_other"
+])
+
+function cleanText(value){
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function buildWithdrawDestinationPreview(providers, draft){
+  const selectedProvider = Array.isArray(providers)
+    ? providers.find((item) => item?.code === draft.selectedProviderCode) || null
+    : null
+  const method = cleanText(selectedProvider?.method)
+  const destinationRelation = WITHDRAW_DESTINATION_RELATION_OPTIONS.includes(draft.destinationRelation)
+    ? draft.destinationRelation
+    : "unknown"
+  const note = cleanText(draft.note)
+  const accountHolder = cleanText(draft.accountHolder)
+  const phone = cleanText(draft.phone)
+  const bankName = cleanText(draft.bankName)
+  const accountMasked = cleanText(draft.accountMasked)
+  const cardLast4 = cleanText(draft.cardLast4)
+  const errors = []
+
+  if(!selectedProvider){
+    errors.push("Выберите способ вывода.")
+  }else if(!WITHDRAW_DESTINATION_METHOD_OPTIONS.has(method)){
+    errors.push("Выбран неподдерживаемый способ вывода.")
+  }
+
+  if(destinationRelation === "unknown" && draft.destinationRelation !== "unknown"){
+    errors.push("Выберите корректное отношение к владельцу.")
+  }
+
+  if(method === "bank_account"){
+    if(!bankName) errors.push("Для bank_account укажите банк.")
+    if(!accountMasked) errors.push("Для bank_account укажите маску счёта.")
+  }else if(method === "card"){
+    if(!accountMasked && !cardLast4) errors.push("Для card укажите маску счёта или последние 4 цифры карты.")
+  }else if(method === "wallet"){
+    if(!phone) errors.push("Для wallet укажите телефон.")
+    if(selectedProvider?.code !== draft.selectedProviderCode){
+      errors.push("wallet_provider должен совпадать с кодом выбранного провайдера.")
+    }
+  }else if(method === "manual_other"){
+    if(!accountHolder && !phone && !note && !accountMasked){
+      errors.push("Для manual_other заполните хотя бы одно безопасное поле.")
+    }
+  }
+
+  const payloadPreview = !selectedProvider
+    ? null
+    : method === "bank_account"
+      ? {
+          method: "bank_account",
+          provider_code: selectedProvider.code,
+          bank_name: bankName,
+          account_masked: accountMasked,
+          account_holder: accountHolder,
+          destination_relation: destinationRelation,
+          payload: { note }
+        }
+      : method === "card"
+        ? {
+            method: "card",
+            provider_code: selectedProvider.code,
+            account_masked: accountMasked,
+            card_last4: cardLast4,
+            account_holder: accountHolder,
+            destination_relation: destinationRelation,
+            payload: { note }
+          }
+        : method === "wallet"
+          ? {
+              method: "wallet",
+              provider_code: selectedProvider.code,
+              wallet_provider: selectedProvider.code,
+              phone,
+              account_holder: accountHolder,
+              destination_relation: destinationRelation,
+              payload: { note }
+            }
+          : method === "manual_other"
+            ? {
+                method: "manual_other",
+                provider_code: selectedProvider.code,
+                account_holder: accountHolder,
+                phone,
+                account_masked: accountMasked,
+                destination_relation: destinationRelation,
+                payload: { note }
+              }
+            : {
+                method,
+                provider_code: selectedProvider.code,
+                account_holder: accountHolder,
+                phone,
+                bank_name: bankName,
+                account_masked: accountMasked,
+                card_last4: cardLast4,
+                destination_relation: destinationRelation,
+                payload: { note }
+              }
+
+  return {
+    selectedProvider,
+    method,
+    destinationRelation,
+    accountHolder,
+    phone,
+    bankName,
+    accountMasked,
+    cardLast4,
+    note,
+    errors,
+    isReady: errors.length === 0 && Boolean(selectedProvider),
+    payloadPreview
+  }
+}
+
 function formatDateTime(value){
   if(!value) return "—"
 
@@ -208,6 +339,14 @@ export default function SalonFinancePage(){
   const [moneyCoreWithdrawDestinations, setMoneyCoreWithdrawDestinations] = useState([])
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null)
   const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([])
+  const [selectedProviderCode, setSelectedProviderCode] = useState("")
+  const [accountHolder, setAccountHolder] = useState("")
+  const [phone, setPhone] = useState("")
+  const [bankName, setBankName] = useState("")
+  const [accountMasked, setAccountMasked] = useState("")
+  const [cardLast4, setCardLast4] = useState("")
+  const [destinationRelation, setDestinationRelation] = useState("self")
+  const [note, setNote] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -462,6 +601,29 @@ export default function SalonFinancePage(){
   const moneyCoreAddRequisitesText = moneyCoreOpen
     ? "Добавление реквизитов доступно в рабочем режиме Money Core."
     : "Добавление реквизитов будет доступно после включения Money Core write-флагов."
+  const selectedWithdrawProvider = useMemo(
+    () => buildWithdrawDestinationPreview(moneyCoreDestinationProviders, {
+      selectedProviderCode,
+      accountHolder,
+      phone,
+      bankName,
+      accountMasked,
+      cardLast4,
+      destinationRelation,
+      note
+    }),
+    [
+      moneyCoreDestinationProviders,
+      selectedProviderCode,
+      accountHolder,
+      phone,
+      bankName,
+      accountMasked,
+      cardLast4,
+      destinationRelation,
+      note
+    ]
+  )
 
   return (
     <div style={styles.page}>
@@ -653,45 +815,52 @@ export default function SalonFinancePage(){
 
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eef2f7", display: "grid", gap: 12 }}>
                       <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                      {moneyCoreAddRequisitesText}
+                        {moneyCoreAddRequisitesText}
                       </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                       <label style={{ display: "grid", gap: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Способ вывода</span>
                         <select
-                          disabled
-                          defaultValue=""
+                          disabled={!moneyCoreOpen}
+                          value={selectedProviderCode}
+                          onChange={(event) => setSelectedProviderCode(event.target.value)}
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
                             borderRadius: 12,
-                            background: "#f9fafb",
-                            color: "#6b7280",
+                            background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
+                            color: moneyCoreOpen ? "#111827" : "#6b7280",
                             padding: "12px 14px",
                             fontSize: 14,
-                            cursor: "not-allowed"
+                            cursor: moneyCoreOpen ? "pointer" : "not-allowed"
                           }}
                         >
                           <option value="">Выберите способ вывода</option>
+                          {moneyCoreDestinationProviders.map((item) => (
+                            <option key={item.code} value={item.code}>
+                              {item.name || item.code} · {item.method || "—"}
+                            </option>
+                          ))}
                         </select>
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Получатель</span>
                         <input
-                          disabled
-                          defaultValue=""
+                          disabled={!moneyCoreOpen}
+                          value={accountHolder}
+                          onChange={(event) => setAccountHolder(event.target.value)}
                           placeholder="Имя получателя"
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
                             borderRadius: 12,
-                            background: "#f9fafb",
-                            color: "#6b7280",
+                            background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
+                            color: moneyCoreOpen ? "#111827" : "#6b7280",
                             padding: "12px 14px",
                             fontSize: 14,
-                            cursor: "not-allowed"
+                            cursor: moneyCoreOpen ? "text" : "not-allowed"
                           }}
                         />
                       </label>
@@ -699,18 +868,19 @@ export default function SalonFinancePage(){
                       <label style={{ display: "grid", gap: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Телефон</span>
                         <input
-                          disabled
-                          defaultValue=""
+                          disabled={!moneyCoreOpen}
+                          value={phone}
+                          onChange={(event) => setPhone(event.target.value)}
                           placeholder="+996..."
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
                             borderRadius: 12,
-                            background: "#f9fafb",
-                            color: "#6b7280",
+                            background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
+                            color: moneyCoreOpen ? "#111827" : "#6b7280",
                             padding: "12px 14px",
                             fontSize: 14,
-                            cursor: "not-allowed"
+                            cursor: moneyCoreOpen ? "text" : "not-allowed"
                           }}
                         />
                       </label>
@@ -718,18 +888,19 @@ export default function SalonFinancePage(){
                       <label style={{ display: "grid", gap: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Банк</span>
                         <input
-                          disabled
-                          defaultValue=""
+                          disabled={!moneyCoreOpen}
+                          value={bankName}
+                          onChange={(event) => setBankName(event.target.value)}
                           placeholder="Название банка"
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
                             borderRadius: 12,
-                            background: "#f9fafb",
-                            color: "#6b7280",
+                            background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
+                            color: moneyCoreOpen ? "#111827" : "#6b7280",
                             padding: "12px 14px",
                             fontSize: 14,
-                            cursor: "not-allowed"
+                            cursor: moneyCoreOpen ? "text" : "not-allowed"
                           }}
                         />
                       </label>
@@ -737,18 +908,39 @@ export default function SalonFinancePage(){
                       <label style={{ display: "grid", gap: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Маска счёта / карты</span>
                         <input
-                          disabled
-                          defaultValue=""
+                          disabled={!moneyCoreOpen}
+                          value={accountMasked}
+                          onChange={(event) => setAccountMasked(event.target.value)}
                           placeholder="**** 1234"
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
                             borderRadius: 12,
-                            background: "#f9fafb",
-                            color: "#6b7280",
+                            background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
+                            color: moneyCoreOpen ? "#111827" : "#6b7280",
                             padding: "12px 14px",
                             fontSize: 14,
-                            cursor: "not-allowed"
+                            cursor: moneyCoreOpen ? "text" : "not-allowed"
+                          }}
+                        />
+                      </label>
+
+                      <label style={{ display: "grid", gap: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Последние 4 цифры карты</span>
+                        <input
+                          disabled={!moneyCoreOpen}
+                          value={cardLast4}
+                          onChange={(event) => setCardLast4(event.target.value)}
+                          placeholder="1234"
+                          style={{
+                            width: "100%",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 12,
+                            background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
+                            color: moneyCoreOpen ? "#111827" : "#6b7280",
+                            padding: "12px 14px",
+                            fontSize: 14,
+                            cursor: moneyCoreOpen ? "text" : "not-allowed"
                           }}
                         />
                       </label>
@@ -756,41 +948,92 @@ export default function SalonFinancePage(){
                       <label style={{ display: "grid", gap: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Отношение к владельцу</span>
                         <select
-                          disabled
-                          defaultValue=""
+                          disabled={!moneyCoreOpen}
+                          value={destinationRelation}
+                          onChange={(event) => setDestinationRelation(event.target.value)}
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
                             borderRadius: 12,
-                            background: "#f9fafb",
-                            color: "#6b7280",
+                            background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
+                            color: moneyCoreOpen ? "#111827" : "#6b7280",
                             padding: "12px 14px",
                             fontSize: 14,
-                            cursor: "not-allowed"
+                            cursor: moneyCoreOpen ? "pointer" : "not-allowed"
                           }}
                         >
-                          <option value="">Выберите отношение</option>
+                          {WITHDRAW_DESTINATION_RELATION_OPTIONS.map((relation) => (
+                            <option key={relation} value={relation}>
+                              {relation}
+                            </option>
+                          ))}
                         </select>
                       </label>
                     </div>
 
+                    <label style={{ display: "grid", gap: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Примечание</span>
+                      <textarea
+                        disabled={!moneyCoreOpen}
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                        placeholder="Необязательная заметка для заявки"
+                        rows={3}
+                        style={{
+                          width: "100%",
+                          border: "1px solid #d1d5db",
+                          borderRadius: 12,
+                          background: moneyCoreOpen ? "#ffffff" : "#f9fafb",
+                          color: moneyCoreOpen ? "#111827" : "#6b7280",
+                          padding: "12px 14px",
+                          fontSize: 14,
+                          resize: "vertical",
+                          cursor: moneyCoreOpen ? "text" : "not-allowed"
+                        }}
+                      />
+                    </label>
+
+                    <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Payload preview</div>
+                      <div style={{ fontSize: 13, color: selectedWithdrawProvider.isReady ? "#065f46" : "#92400e", lineHeight: 1.5 }}>
+                        {selectedWithdrawProvider.isReady
+                          ? "Payload готов"
+                          : `Payload не готов${selectedWithdrawProvider.errors.length ? `: ${selectedWithdrawProvider.errors[0]}` : ""}`}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
+                        Метод: {selectedWithdrawProvider.method || "—"} · Провайдер: {selectedWithdrawProvider.selectedProvider?.code || "—"} · Отношение: {selectedWithdrawProvider.destinationRelation || "—"}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
+                        {selectedWithdrawProvider.method === "wallet"
+                          ? `wallet_provider: ${selectedWithdrawProvider.selectedProvider?.code || "—"}`
+                          : selectedWithdrawProvider.method === "bank_account"
+                            ? `bank_name: ${selectedWithdrawProvider.bankName || "—"}`
+                            : selectedWithdrawProvider.method === "card"
+                              ? `card_last4: ${selectedWithdrawProvider.cardLast4 || "—"}`
+                              : `safe fields: ${[selectedWithdrawProvider.accountHolder, selectedWithdrawProvider.phone, selectedWithdrawProvider.accountMasked, selectedWithdrawProvider.note].filter(Boolean).length}`}
+                      </div>
+                    </div>
+
                     <button
                       type="button"
-                      disabled={!moneyCoreOpen}
+                      disabled
                       style={{
                         border: "1px solid #cbd5e1",
                         borderRadius: 12,
-                        background: moneyCoreOpen ? "#f8fafc" : "#e5e7eb",
-                        color: moneyCoreOpen ? "#111827" : "#6b7280",
+                        background: "#e5e7eb",
+                        color: "#6b7280",
                         padding: "12px 16px",
                         fontWeight: 700,
-                        opacity: moneyCoreOpen ? 1 : 0.55,
-                        cursor: moneyCoreOpen ? "pointer" : "not-allowed",
+                        opacity: 0.55,
+                        cursor: "not-allowed",
                         justifySelf: "start"
                       }}
                     >
                       Добавить реквизиты
                     </button>
+                    <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
+                      Форма подготовлена. Запись реквизитов будет включена после controlled write-window.
+                    </div>
                   </div>
                 </Panel>
 
