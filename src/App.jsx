@@ -52,6 +52,7 @@ import AdminClientsPage from "./admin/pages/AdminClientsPage";
 import AdminOpenOwnerPage from "./admin/pages/AdminOpenOwnerPage";
 import AdminOwnersPage from "./admin/pages/AdminOwnersPage";
 import AdminFinancePage from "./admin/pages/AdminFinancePage";
+import AdminWithdrawalsPage from "./admin/pages/AdminWithdrawalsPage";
 import AdminMobilePage from "./admin/pages/AdminMobilePage";
 import AdminNotificationsPage from "./admin/pages/AdminNotificationsPage";
 
@@ -783,6 +784,10 @@ function AdminRouter() {
 
   if (adminRoute === "finance") {
     return <AdminFinancePage />;
+  }
+
+  if (adminRoute === "withdrawals") {
+    return <AdminWithdrawalsPage />;
   }
 
   if (adminRoute === "mobile") {

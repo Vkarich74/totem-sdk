@@ -42,6 +42,10 @@ export default function AdminNavigation(){
         Финансы
       </button>
       <span> | </span>
+      <button type="button" onClick={() => navigate("#/admin/withdrawals")}>
+        Центр вывода
+      </button>
+      <span> | </span>
       <button type="button" onClick={() => navigate("#/admin/mobile")}>
         Мобильное
       </button>

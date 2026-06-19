@@ -718,6 +718,56 @@ export async function getAdminPushSubscriptions(options = {}){
   return j;
 }
 
+export async function getAdminWithdrawRequestsSummary(){
+  const r = await safeInternalJson(`/money-core/admin/withdraw-requests-summary`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUESTS_SUMMARY_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUESTS_SUMMARY_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    summary:j.summary || {},
+    by_status:Array.isArray(j.by_status) ? j.by_status : [],
+    generated_at:j.generated_at || null,
+    result:j
+  };
+}
+
+export async function getAdminWithdrawRequests(options = {}){
+  const suffix = buildQuery({
+    limit: options.limit,
+    offset: options.offset,
+    status: options.status,
+    owner_type: options.owner_type,
+    owner_id: options.owner_id,
+    provider_code: options.provider_code,
+  });
+
+  const r = await safeInternalJson(`/money-core/admin/withdraw-requests${suffix}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUESTS_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUESTS_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    requests:Array.isArray(j.data) ? j.data : Array.isArray(j.requests) ? j.requests : [],
+    meta:j.meta || {},
+    result:j
+  };
+}
+
+export async function getAdminWithdrawRequestById(id){
+  const safeId = encodeURIComponent(String(id || "").trim());
+  const r = await safeInternalJson(`/money-core/admin/withdraw-requests/${safeId}`, { method: "GET" });
+  if(!r.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUEST_GET_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUEST_GET_API_NOT_OK", detail:j };
+  return {
+    ok:true,
+    request:j.data || j.request || null,
+    meta:j.meta || {},
+    result:j
+  };
+}
+
 /* ===============================
    SALON (OWNER) API
 ================================ */
