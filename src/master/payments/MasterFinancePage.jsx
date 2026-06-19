@@ -13,6 +13,7 @@ import {
   getMoneyCoreFlags,
   getMasterMoneyCoreSummary,
   getMasterPaymentProjections,
+  getMasterSplitAllocations,
   getMasterPayouts,
   getMasterSalaryObligations,
   getMasterRentObligations,
@@ -97,6 +98,14 @@ function calculateProjectionStats(rows, destinations, withdrawRequests, ownerQr)
     destinationsCount: safeDestinations.length,
     withdrawRequestsCount: safeWithdrawRequests.length,
     ownerQrCount: safeOwnerQr.length
+  };
+}
+
+function calculateSplitAllocatedStats(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  return {
+    splitAllocatedCount: safeRows.length,
+    splitAllocatedAmount: safeRows.reduce((sum, row) => sum + Number(row?.owner_net_amount || 0), 0),
   };
 }
 
@@ -665,6 +674,8 @@ export default function MasterFinancePage() {
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null);
   const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([]);
   const [moneyCoreOwnerQr, setMoneyCoreOwnerQr] = useState([]);
+  const [moneyCoreSplitAllocations, setMoneyCoreSplitAllocations] = useState([]);
+  const [moneyCoreSplitAllocationsError, setMoneyCoreSplitAllocationsError] = useState("");
   const [paymentProjectionRows, setPaymentProjectionRows] = useState([]);
   const [selectedProviderCode, setSelectedProviderCode] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
@@ -710,6 +721,8 @@ export default function MasterFinancePage() {
             setPayouts([]);
             setPaymentProjectionSummary(null);
             setPaymentProjectionRows([]);
+            setMoneyCoreSplitAllocations([]);
+            setMoneyCoreSplitAllocationsError("");
             setError("Не найден master slug");
           }
           return;
@@ -792,6 +805,20 @@ export default function MasterFinancePage() {
             : null
         );
 
+        const moneyCoreOwnerType = summary?.owner?.type || null;
+        const moneyCoreOwnerId = summary?.owner?.id || null;
+
+        if (moneyCoreOwnerType && moneyCoreOwnerId) {
+          const splitResult = await getMasterSplitAllocations(masterSlug, { owner_id: moneyCoreOwnerId });
+          if (!cancelled) {
+            setMoneyCoreSplitAllocations(splitResult?.ok && Array.isArray(splitResult.allocations) ? splitResult.allocations : []);
+            setMoneyCoreSplitAllocationsError(splitResult?.ok ? "" : "Распределено временно недоступно");
+          }
+        } else if (!cancelled) {
+          setMoneyCoreSplitAllocations([]);
+          setMoneyCoreSplitAllocationsError("");
+        }
+
         if (
           (activeResult.status === "rejected" || !activeResult.value?.ok) &&
           (historyResult.status === "rejected" || !historyResult.value?.ok) &&
@@ -814,6 +841,8 @@ export default function MasterFinancePage() {
           setPaymentProjectionRows([]);
           setMoneyCoreSummary(null);
           setMoneyCoreFlags(null);
+          setMoneyCoreSplitAllocations([]);
+          setMoneyCoreSplitAllocationsError("");
           setError("Не удалось загрузить finance overview");
         }
       } finally {
@@ -1275,6 +1304,10 @@ export default function MasterFinancePage() {
     () => calculateProjectionStats(paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr),
     [paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr]
   );
+  const splitAllocatedStats = useMemo(
+    () => calculateSplitAllocatedStats(moneyCoreSplitAllocations),
+    [moneyCoreSplitAllocations]
+  );
   const collectionAnchorsSummary = collectionAnchors?.summary || null;
   const collectionAnchorRows = getCollectionAnchorRows(collectionAnchors);
 
@@ -1487,6 +1520,7 @@ export default function MasterFinancePage() {
                   <StatCard label="Подтверждённая выручка" value={money(financeStats.confirmedGrossAmount)} hint="Только confirmed записи" />
                   <StatCard label="Доля салона" value={money(financeStats.salonShare)} hint="Projection share салона" />
                   <StatCard label="Доля мастера" value={money(financeStats.masterShare)} hint="Projection share мастера" />
+                  <StatCard label="Распределено" value={money(splitAllocatedStats.splitAllocatedAmount)} hint="Доли по подтверждённым provider settlement" />
                   <StatCard label="Open balance" value={money(financeStats.openBalanceAmount)} hint="В Money Core ledger пока не проведено" />
                   <StatCard label="Collector missing" value={`${financeStats.collectorMissingCount} платёж`} hint="confirmed rows без collector" />
                   <StatCard label="Реквизиты / заявки" value={`${financeStats.destinationsCount} / ${financeStats.withdrawRequestsCount}`} hint="Withdraw surface" />
@@ -1498,6 +1532,9 @@ export default function MasterFinancePage() {
                     <div>
                       Оплата рассчитана в projection, но не включена в open balance: collector не определён или движение ещё не проведено в Money Core ledger.
                     </div>
+                  ) : null}
+                  {moneyCoreSplitAllocationsError ? (
+                    <div>{moneyCoreSplitAllocationsError}</div>
                   ) : null}
                   {financeStats.destinationsCount === 0 ? (
                     <div>Реквизиты для вывода ещё не добавлены.</div>

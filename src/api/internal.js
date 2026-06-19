@@ -1570,6 +1570,84 @@ export async function getMoneyCoreFlags(){
   }
 }
 
+function buildMoneyCoreSplitAllocationsQuery(params = {}){
+  const query = new URLSearchParams();
+  const allowed = [
+    "provider_settlement_id",
+    "payment_id",
+    "booking_id",
+    "owner_type",
+    "owner_id",
+    "status",
+    "limit",
+    "offset"
+  ];
+
+  allowed.forEach((key) => {
+    const value = params?.[key];
+    if(value !== undefined && value !== null && String(value).trim() !== ""){
+      query.set(key, String(value).trim());
+    }
+  });
+
+  const qs = query.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function getSalonSplitAllocations(salonSlug = getSalonSlug(), params = {}){
+  try{
+    const safeSlug = String(salonSlug || "").trim();
+    if(!safeSlug){
+      return { ok:false, error:"SALON_SLUG_REQUIRED" };
+    }
+
+    const ownerId = params?.owner_id ?? params?.ownerId;
+    if(ownerId === undefined || ownerId === null || String(ownerId).trim() === ""){
+      return { ok:false, error:"SALON_OWNER_ID_REQUIRED" };
+    }
+
+    const query = buildMoneyCoreSplitAllocationsQuery({
+      ...params,
+      owner_type: "salon",
+      owner_id: ownerId
+    });
+    const r = await safeInternalJson(`/money-core/split-allocations${query}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"SALON_SPLIT_ALLOCATIONS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"SALON_SPLIT_ALLOCATIONS_API_NOT_OK", detail:j };
+    return { ok:true, allocations: Array.isArray(j.allocations) ? j.allocations : [] };
+  }catch(e){
+    return { ok:false, error:"SALON_SPLIT_ALLOCATIONS_FETCH_FAILED", detail:e };
+  }
+}
+
+export async function getMasterSplitAllocations(masterSlug = getMasterSlug(), params = {}){
+  try{
+    const safeSlug = String(masterSlug || "").trim();
+    if(!safeSlug){
+      return { ok:false, error:"MASTER_SLUG_REQUIRED" };
+    }
+
+    const ownerId = params?.owner_id ?? params?.ownerId;
+    if(ownerId === undefined || ownerId === null || String(ownerId).trim() === ""){
+      return { ok:false, error:"MASTER_OWNER_ID_REQUIRED" };
+    }
+
+    const query = buildMoneyCoreSplitAllocationsQuery({
+      ...params,
+      owner_type: "master",
+      owner_id: ownerId
+    });
+    const r = await safeInternalJson(`/money-core/split-allocations${query}`, { method: "GET" });
+    if(!r.ok) return { ok:false, error:"MASTER_SPLIT_ALLOCATIONS_FETCH_FAILED", detail:r };
+    const j = r.json;
+    if(!j || !j.ok) return { ok:false, error:"MASTER_SPLIT_ALLOCATIONS_API_NOT_OK", detail:j };
+    return { ok:true, allocations: Array.isArray(j.allocations) ? j.allocations : [] };
+  }catch(e){
+    return { ok:false, error:"MASTER_SPLIT_ALLOCATIONS_FETCH_FAILED", detail:e };
+  }
+}
+
 function normalizeOwnerBookingType(ownerType){
   const value = String(ownerType || "").trim().toLowerCase();
   if(value === "salon" || value === "master") return value;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
-import { createSalonWithdrawDestination, getMoneyCoreDestinationProviders, getMoneyCoreFlags, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonOwnerQrDestinations, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
+import { createSalonWithdrawDestination, getMoneyCoreDestinationProviders, getMoneyCoreFlags, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonOwnerQrDestinations, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonSplitAllocations, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
 
 function money(value){
   return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
@@ -72,6 +72,14 @@ function calculateProjectionStats(rows, destinations, withdrawRequests, ownerQr)
     destinationsCount: safeDestinations.length,
     withdrawRequestsCount: safeWithdrawRequests.length,
     ownerQrCount: safeOwnerQr.length
+  }
+}
+
+function calculateSplitAllocatedStats(rows){
+  const safeRows = Array.isArray(rows) ? rows : []
+  return {
+    splitAllocatedCount: safeRows.length,
+    splitAllocatedAmount: safeRows.reduce((sum, row) => sum + Number(row?.owner_net_amount || 0), 0),
   }
 }
 
@@ -458,6 +466,8 @@ export default function SalonFinancePage(){
   const [moneyCoreWithdrawSettings, setMoneyCoreWithdrawSettings] = useState(null)
   const [moneyCoreWithdrawRequests, setMoneyCoreWithdrawRequests] = useState([])
   const [moneyCoreOwnerQr, setMoneyCoreOwnerQr] = useState([])
+  const [moneyCoreSplitAllocations, setMoneyCoreSplitAllocations] = useState([])
+  const [moneyCoreSplitAllocationsError, setMoneyCoreSplitAllocationsError] = useState("")
   const [paymentProjectionRows, setPaymentProjectionRows] = useState([])
   const [selectedProviderCode, setSelectedProviderCode] = useState("")
   const [accountHolder, setAccountHolder] = useState("")
@@ -617,6 +627,18 @@ export default function SalonFinancePage(){
           setMoneyCoreWithdrawSettings(null)
           setMoneyCoreWithdrawRequests([])
           setMoneyCoreOwnerQr([])
+          setMoneyCoreSplitAllocations([])
+          setMoneyCoreSplitAllocationsError("")
+        }
+        return
+      }
+
+      const ownerId = moneyCoreSummary?.owner?.id || null
+
+      if(!ownerId){
+        if(!cancelled){
+          setMoneyCoreSplitAllocations([])
+          setMoneyCoreSplitAllocationsError("")
         }
         return
       }
@@ -627,13 +649,15 @@ export default function SalonFinancePage(){
           destinationsRaw,
           settingsRaw,
           requestsRaw,
-          ownerQrRaw
+          ownerQrRaw,
+          splitAllocationsRaw
         ] = await Promise.all([
           getMoneyCoreDestinationProviders({ enabled: true }),
           getSalonWithdrawDestinations(ownerSlug),
           getSalonWithdrawSettings(ownerSlug),
           getSalonWithdrawRequests(ownerSlug, { limit: 10, offset: 0 }),
-          getSalonOwnerQrDestinations(ownerSlug)
+          getSalonOwnerQrDestinations(ownerSlug),
+          getSalonSplitAllocations(ownerSlug, { owner_id: ownerId })
         ])
 
         if(cancelled) return
@@ -643,6 +667,8 @@ export default function SalonFinancePage(){
         setMoneyCoreWithdrawSettings(settingsRaw?.settings || null)
         setMoneyCoreWithdrawRequests(Array.isArray(requestsRaw?.requests) ? requestsRaw.requests : [])
         setMoneyCoreOwnerQr(Array.isArray(ownerQrRaw?.destinations) ? ownerQrRaw.destinations : [])
+        setMoneyCoreSplitAllocations(Array.isArray(splitAllocationsRaw?.allocations) ? splitAllocationsRaw.allocations : [])
+        setMoneyCoreSplitAllocationsError(splitAllocationsRaw?.ok ? "" : "Распределено временно недоступно")
       }catch(e){
         if(!cancelled){
           setMoneyCoreDestinationProviders([])
@@ -650,6 +676,8 @@ export default function SalonFinancePage(){
           setMoneyCoreWithdrawSettings(null)
           setMoneyCoreWithdrawRequests([])
           setMoneyCoreOwnerQr([])
+          setMoneyCoreSplitAllocations([])
+          setMoneyCoreSplitAllocationsError("Распределено временно недоступно")
         }
       }
     }
@@ -704,6 +732,10 @@ export default function SalonFinancePage(){
   const financeStats = useMemo(
     () => calculateProjectionStats(paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr),
     [paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr]
+  )
+  const splitAllocatedStats = useMemo(
+    () => calculateSplitAllocatedStats(moneyCoreSplitAllocations),
+    [moneyCoreSplitAllocations]
   )
 
   const pageLoading = contextLoading || loading
@@ -907,6 +939,7 @@ export default function SalonFinancePage(){
             <StatCard title="Подтверждённая выручка" value={money(financeStats.confirmedGrossAmount)} note="Только confirmed записи" />
             <StatCard title="Доля салона" value={money(financeStats.salonShare)} note="Projection share салона" />
             <StatCard title="Доля мастера" value={money(financeStats.masterShare)} note="Projection share мастера" />
+            <StatCard title="Распределено" value={money(splitAllocatedStats.splitAllocatedAmount)} note="Доли по подтверждённым provider settlement" />
             <StatCard title="Open balance" value={money(financeStats.openBalanceAmount)} note="В Money Core ledger пока не проведено" />
             <StatCard title="Collector missing" value={`${financeStats.collectorMissingCount} платёж`} note="confirmed rows без collector" />
             <StatCard title="Реквизиты / заявки" value={`${financeStats.destinationsCount} / ${financeStats.withdrawRequestsCount}`} note="Withdraw surface" />
@@ -918,6 +951,9 @@ export default function SalonFinancePage(){
               <div>
                 Оплата рассчитана в projection, но не включена в open balance: collector не определён или движение ещё не проведено в Money Core ledger.
               </div>
+            ) : null}
+            {moneyCoreSplitAllocationsError ? (
+              <div>{moneyCoreSplitAllocationsError}</div>
             ) : null}
             {financeStats.destinationsCount === 0 ? (
               <div>Реквизиты для вывода ещё не добавлены.</div>
