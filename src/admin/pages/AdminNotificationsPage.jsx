@@ -28,6 +28,122 @@ function shortText(value, maxLength = 160) {
   return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
 }
 
+function parseMaybeJson(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "object") {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const text = value.trim();
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function isWithdrawCenterActionUrl(actionUrl) {
+  return String(actionUrl || "").includes("#/admin/withdrawals");
+}
+
+function renderActionUrl(actionUrl) {
+  const url = String(actionUrl || "").trim();
+
+  if (!url) {
+    return "—";
+  }
+
+  const isWithdrawCenter = isWithdrawCenterActionUrl(url);
+  return (
+    <div style={{ display: "grid", gap: 6 }}>
+      {isWithdrawCenter ? (
+        <a
+          href={url}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 10,
+            border: "1px solid #cbd5e1",
+            background: "#fff",
+            color: "#0f172a",
+            padding: "8px 12px",
+            fontSize: 13,
+            fontWeight: 600,
+            textDecoration: "none",
+            width: "fit-content",
+          }}
+        >
+          Открыть Центр вывода
+        </a>
+      ) : (
+        <a
+          href={url}
+          style={{
+            color: "#2563eb",
+            textDecoration: "none",
+            fontSize: 13,
+            fontWeight: 600,
+            wordBreak: "break-word",
+          }}
+        >
+          {shortText(url, 48)}
+        </a>
+      )}
+      <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4, wordBreak: "break-word" }}>
+        {url}
+      </div>
+    </div>
+  );
+}
+
+function renderWithdrawPayloadSummary(payloadJson) {
+  const payload = parseMaybeJson(payloadJson);
+  const withdrawRequestId = Number(payload?.withdraw_request_id);
+
+  if (!Number.isFinite(withdrawRequestId) || withdrawRequestId <= 0) {
+    return "—";
+  }
+
+  const ownerType = String(payload?.owner_type || "").trim();
+  const ownerSlug = String(payload?.owner_slug || "").trim();
+  const ownerId = Number(payload?.owner_id);
+  const amount = payload?.amount ?? payload?.total_amount ?? payload?.sum;
+  const currency = String(payload?.currency || "").trim();
+  const status = String(payload?.status || "").trim();
+  const ownerDescriptor = ownerSlug
+    ? `${ownerType || "owner"} / ${ownerSlug}`
+    : Number.isFinite(ownerId) && ownerId > 0
+      ? `${ownerType || "owner"} / ID ${ownerId}`
+      : ownerType || "owner";
+  const amountLine =
+    amount !== undefined && amount !== null && String(amount).trim() !== ""
+      ? `${textValue(amount)}${currency ? ` ${currency}` : ""}`
+      : "—";
+
+  return (
+    <div style={{ display: "grid", gap: 4, lineHeight: 1.45 }}>
+      <div style={{ fontWeight: 700 }}>Заявка #{withdrawRequestId}</div>
+      <div style={{ color: "#374151", fontSize: 12, wordBreak: "break-word" }}>{ownerDescriptor}</div>
+      <div style={{ color: "#374151", fontSize: 12 }}>
+        {amountLine}
+        {status ? ` · ${status}` : ""}
+      </div>
+    </div>
+  );
+}
+
 function formatDateTime(value) {
   if (!value) {
     return "—";
@@ -248,6 +364,8 @@ const notificationsColumns = [
   },
   { key: "title_ru", title: "Заголовок", dataIndex: "title_ru", minWidth: 180, render: (_, row) => shortText(row.title_ru || row.title_en || row.title, 42) },
   { key: "body_ru", title: "Текст", dataIndex: "body_ru", minWidth: 240, render: (_, row) => shortText(row.body_ru || row.body_en || row.body, 80) },
+  { key: "action_url", title: "Переход", dataIndex: "action_url", minWidth: 220, render: (_, row) => renderActionUrl(row.action_url) },
+  { key: "payload_json", title: "Сводка заявки", dataIndex: "payload_json", minWidth: 220, render: (_, row) => renderWithdrawPayloadSummary(row.payload_json) },
   { key: "created_at", title: "Создано", dataIndex: "created_at", minWidth: 150, render: (_, row) => formatDateTime(row.created_at) },
 ];
 
