@@ -104,16 +104,28 @@ function getWithdrawRequestUserStatusLabel(status){
 function getWithdrawRequestHistoryDetails(item){
   const status = cleanStatus(item?.status)
   const details = []
-  const failureReason = cleanText(item?.failure_reason)
   const adminNote = cleanText(item?.admin_note)
 
   if(status) details.push(`raw: ${status}`)
-  if(failureReason && ["failed", "canceled", "rejected"].includes(status)){
-    details.push(`Причина: ${failureReason}`)
-  }
   if(adminNote){
     details.push(`Комментарий платформы: ${adminNote}`)
   }
+
+  return details.join(" · ")
+}
+
+function getWithdrawRequestPayoutResultDetails(item){
+  const payoutResult = parseMaybeJson(item?.payout_result) || (item?.payout_result && typeof item.payout_result === "object" ? item.payout_result : null) || null
+  const completedAt = cleanText(payoutResult?.completed_at || item?.completed_at)
+  const failedAt = cleanText(payoutResult?.failed_at || item?.failed_at)
+  const failureReason = cleanText(payoutResult?.failure_reason || item?.failure_reason)
+  const userMessage = cleanText(payoutResult?.user_message)
+  const details = []
+
+  if(completedAt) details.push(`Выполнено: ${formatDateTime(completedAt)}`)
+  if(failedAt) details.push(`Ошибка/отказ: ${formatDateTime(failedAt)}`)
+  if(failureReason) details.push(`Причина: ${failureReason}`)
+  if(userMessage) details.push(userMessage)
 
   return details.join(" · ")
 }
@@ -183,28 +195,29 @@ function maskPhone(value){
 
 function getWithdrawRequestDestinationSummary(item, destinationsById){
   const destinationId = Number(item?.destination_id || 0)
+  const destinationSummary = parseMaybeJson(item?.destination_summary) || (item?.destination_summary && typeof item.destination_summary === "object" ? item.destination_summary : null)
   const destinationByList = destinationsById instanceof Map && destinationId > 0 ? destinationsById.get(destinationId) || null : null
   const destinationSnapshot = parseMaybeJson(item?.destination_snapshot)
-  const destination = destinationByList || destinationSnapshot || null
+  const destination = destinationSummary || destinationByList || destinationSnapshot || null
 
   if(!destination && !destinationId){
     return "Реквизиты не указаны"
   }
 
   const method = cleanText(destination?.method)
-  const providerCode = cleanText(destination?.provider_code || destination?.wallet_provider)
+  const providerCode = cleanText(destination?.provider_code || destination?.provider || destination?.wallet_provider)
+  const walletProvider = cleanText(destination?.wallet_provider)
   const relation = cleanText(destination?.destination_relation)
-  const accountHolder = cleanText(destination?.account_holder)
   const bankName = cleanText(destination?.bank_name)
-  const phone = maskPhone(destination?.phone)
+  const phone = maskPhone(destination?.phone_masked || destination?.phone)
   const accountMasked = cleanText(destination?.account_masked)
   const cardLast4 = cleanText(destination?.card_last4)
 
   const parts = []
   if(method) parts.push(`Способ: ${WITHDRAW_DESTINATION_METHOD_LABELS[method] || method}`)
   if(providerCode) parts.push(`Провайдер: ${providerCode}`)
+  if(walletProvider && walletProvider !== providerCode) parts.push(`Wallet provider: ${walletProvider}`)
   if(relation) parts.push(`Отношение: ${WITHDRAW_DESTINATION_RELATION_LABELS[relation] || relation}`)
-  if(accountHolder) parts.push(`Получатель: ${accountHolder}`)
   if(bankName) parts.push(`Банк: ${bankName}`)
   if(phone) parts.push(`Телефон: ${phone}`)
   if(accountMasked) parts.push(`Счёт: ${accountMasked}`)
@@ -1475,13 +1488,14 @@ export default function SalonFinancePage(){
                       {moneyCoreWithdrawRequests.map((item) => {
                         const withdrawRequestStatus = getWithdrawRequestUserStatusLabel(item?.status) || "Статус неизвестен"
                         const withdrawRequestDetails = getWithdrawRequestHistoryDetails(item)
+                        const withdrawRequestPayoutResultDetails = getWithdrawRequestPayoutResultDetails(item)
                         const withdrawRequestDestinationDetails = getWithdrawRequestDestinationSummary(item, withdrawDestinationById)
 
                         return (
                         <PreviewRow
                           key={item.id}
                           title={withdrawRequestStatus}
-                          meta={`Заявка #${item.id || "—"} · ${formatDateTime(item.created_at)}${withdrawRequestDetails ? ` · ${withdrawRequestDetails}` : ""}${withdrawRequestDestinationDetails ? ` · ${withdrawRequestDestinationDetails}` : ""}`}
+                          meta={`Заявка #${item.id || "—"} · ${formatDateTime(item.created_at)}${withdrawRequestDetails ? ` · ${withdrawRequestDetails}` : ""}${withdrawRequestPayoutResultDetails ? ` · ${withdrawRequestPayoutResultDetails}` : ""}${withdrawRequestDestinationDetails ? ` · ${withdrawRequestDestinationDetails}` : ""}`}
                           value={money(item.amount)}
                           status={cleanStatus(item?.status) || null}
                         />
