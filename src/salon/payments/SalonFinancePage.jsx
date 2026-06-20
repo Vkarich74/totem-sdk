@@ -118,6 +118,19 @@ function getWithdrawRequestHistoryDetails(item){
   return details.join(" · ")
 }
 
+function parseMaybeJson(value){
+  if(!value) return null
+  if(typeof value === "object") return value
+  if(typeof value !== "string") return null
+  const text = value.trim()
+  if(!text) return null
+  try{
+    return JSON.parse(text)
+  }catch{
+    return null
+  }
+}
+
 const WITHDRAW_DESTINATION_RELATION_OPTIONS = [
   "self",
   "company_account",
@@ -133,8 +146,75 @@ const WITHDRAW_DESTINATION_METHOD_OPTIONS = new Set([
   "manual_other"
 ])
 
+const WITHDRAW_DESTINATION_METHOD_LABELS = Object.freeze({
+  wallet: "Кошелёк",
+  card: "Карта",
+  bank_account: "Банк",
+  manual_other: "Прочее"
+})
+
+const WITHDRAW_DESTINATION_RELATION_LABELS = Object.freeze({
+  self: "Свой счёт",
+  company_account: "Счёт компании",
+  authorized_person: "Уполномоченное лицо",
+  third_party: "Третье лицо",
+  unknown: "Не указано"
+})
+
 function cleanText(value){
   return typeof value === "string" ? value.trim() : ""
+}
+
+function maskPhone(value){
+  const text = cleanText(value)
+  if(!text) return ""
+  if(text.includes("*")) return text
+  const digits = text.replace(/\D/g, "")
+  if(digits.length <= 4) return text
+  const last4 = digits.slice(-4)
+  if(digits.startsWith("996")){
+    return `+996•••${last4}`
+  }
+  if(text.startsWith("+")){
+    return `+•••${last4}`
+  }
+  return `•••${last4}`
+}
+
+function getWithdrawRequestDestinationSummary(item, destinationsById){
+  const destinationId = Number(item?.destination_id || 0)
+  const destinationByList = destinationsById instanceof Map && destinationId > 0 ? destinationsById.get(destinationId) || null : null
+  const destinationSnapshot = parseMaybeJson(item?.destination_snapshot)
+  const destination = destinationByList || destinationSnapshot || null
+
+  if(!destination && !destinationId){
+    return "Реквизиты не указаны"
+  }
+
+  const method = cleanText(destination?.method)
+  const providerCode = cleanText(destination?.provider_code || destination?.wallet_provider)
+  const relation = cleanText(destination?.destination_relation)
+  const accountHolder = cleanText(destination?.account_holder)
+  const bankName = cleanText(destination?.bank_name)
+  const phone = maskPhone(destination?.phone)
+  const accountMasked = cleanText(destination?.account_masked)
+  const cardLast4 = cleanText(destination?.card_last4)
+
+  const parts = []
+  if(method) parts.push(`Способ: ${WITHDRAW_DESTINATION_METHOD_LABELS[method] || method}`)
+  if(providerCode) parts.push(`Провайдер: ${providerCode}`)
+  if(relation) parts.push(`Отношение: ${WITHDRAW_DESTINATION_RELATION_LABELS[relation] || relation}`)
+  if(accountHolder) parts.push(`Получатель: ${accountHolder}`)
+  if(bankName) parts.push(`Банк: ${bankName}`)
+  if(phone) parts.push(`Телефон: ${phone}`)
+  if(accountMasked) parts.push(`Счёт: ${accountMasked}`)
+  if(cardLast4) parts.push(`Карта: •••• ${cardLast4}`)
+
+  if(!parts.length){
+    return destinationId > 0 ? `Реквизиты #${destinationId}` : "Реквизиты не указаны"
+  }
+
+  return parts.join(" · ")
 }
 
 function buildWithdrawDestinationPreview(providers, draft){
@@ -768,6 +848,16 @@ export default function SalonFinancePage(){
     () => calculateProjectionStats(paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr),
     [paymentProjectionRows, moneyCoreWithdrawDestinations, moneyCoreWithdrawRequests, moneyCoreOwnerQr]
   )
+  const withdrawDestinationById = useMemo(() => {
+    const map = new Map()
+    for(const item of moneyCoreWithdrawDestinations){
+      const id = Number(item?.id || item?.destination_id || 0)
+      if(Number.isFinite(id) && id > 0){
+        map.set(id, item)
+      }
+    }
+    return map
+  }, [moneyCoreWithdrawDestinations])
   const splitAllocatedStats = useMemo(
     () => calculateSplitAllocatedStats(moneyCoreSplitAllocations),
     [moneyCoreSplitAllocations]
@@ -1385,12 +1475,13 @@ export default function SalonFinancePage(){
                       {moneyCoreWithdrawRequests.map((item) => {
                         const withdrawRequestStatus = getWithdrawRequestUserStatusLabel(item?.status) || "Статус неизвестен"
                         const withdrawRequestDetails = getWithdrawRequestHistoryDetails(item)
+                        const withdrawRequestDestinationDetails = getWithdrawRequestDestinationSummary(item, withdrawDestinationById)
 
                         return (
                         <PreviewRow
                           key={item.id}
                           title={withdrawRequestStatus}
-                          meta={`Заявка #${item.id || "—"} · ${formatDateTime(item.created_at)}${withdrawRequestDetails ? ` · ${withdrawRequestDetails}` : ""}`}
+                          meta={`Заявка #${item.id || "—"} · ${formatDateTime(item.created_at)}${withdrawRequestDetails ? ` · ${withdrawRequestDetails}` : ""}${withdrawRequestDestinationDetails ? ` · ${withdrawRequestDestinationDetails}` : ""}`}
                           value={money(item.amount)}
                           status={cleanStatus(item?.status) || null}
                         />
