@@ -832,6 +832,54 @@ export async function adminStartProcessingWithdrawRequest(id, payload = {}) {
   return { ok:true, ...j };
 }
 
+export async function adminCompleteWithdrawRequest(id, payload = {}) {
+  const safeId = encodeURIComponent(String(id || "").trim());
+  const body = {};
+
+  if (payload && typeof payload === "object") {
+    if (String(payload.external_ref || "").trim()) {
+      body.external_ref = String(payload.external_ref || "").trim();
+    }
+
+    if (String(payload.bank_reference || "").trim()) {
+      body.bank_reference = String(payload.bank_reference || "").trim();
+    }
+
+    if (String(payload.receipt_url || "").trim()) {
+      body.receipt_url = String(payload.receipt_url || "").trim();
+    }
+  }
+
+  const r = await safeInternalJson(`/money-core/admin/withdraw-requests/${safeId}/complete`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if(!r.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUEST_COMPLETE_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUEST_COMPLETE_API_NOT_OK", detail:j };
+  return { ok:true, ...j };
+}
+
+export async function adminFailWithdrawRequest(id, payload = {}) {
+  const safeId = encodeURIComponent(String(id || "").trim());
+  const body = {};
+
+  if (payload && typeof payload === "object" && String(payload.failure_reason || "").trim()) {
+    body.failure_reason = String(payload.failure_reason || "").trim();
+  }
+
+  const r = await safeInternalJson(`/money-core/admin/withdraw-requests/${safeId}/fail`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if(!r.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUEST_FAIL_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUEST_FAIL_API_NOT_OK", detail:j };
+  return { ok:true, ...j };
+}
+
 /* ===============================
    SALON (OWNER) API
 ================================ */

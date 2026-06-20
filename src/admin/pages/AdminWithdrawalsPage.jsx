@@ -5,8 +5,10 @@ import {
   getAdminWithdrawRequestsSummary,
   getAdminWithdrawRequestById,
   adminClaimWithdrawRequest,
+  adminCompleteWithdrawRequest,
   adminRejectWithdrawRequest,
   adminCommentWithdrawRequest,
+  adminFailWithdrawRequest,
   adminStartProcessingWithdrawRequest,
 } from "../../api/internal.js";
 
@@ -380,7 +382,18 @@ export default function AdminWithdrawalsPage() {
   const [actionLoading, setActionLoading] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
-  const [actionForm, setActionForm] = useState({ action: "", value: "", payoutProvider: "", internalNote: "" });
+  const [actionForm, setActionForm] = useState({
+    action: "",
+    value: "",
+    payoutProvider: "",
+    internalNote: "",
+    externalRef: "",
+    bankReference: "",
+    receiptUrl: "",
+    failureReason: "",
+    moneySentConfirmed: false,
+    moneyNotSentConfirmed: false,
+  });
 
   const loadSummaryAndRequests = useCallback(async () => {
     const token = getAuthToken();
@@ -474,9 +487,25 @@ export default function AdminWithdrawalsPage() {
   }, []);
 
   const selectedActionSet = useMemo(() => new Set(safeArray(selectedRequest?.admin_available_actions)), [selectedRequest]);
+  const completeExternalRef = String(actionForm.externalRef || "").trim();
+  const completeBankReference = String(actionForm.bankReference || "").trim();
+  const completeActionReady = Boolean(actionForm.moneySentConfirmed && (completeExternalRef || completeBankReference));
+  const failReason = String(actionForm.failureReason || "").trim();
+  const failActionReady = Boolean(actionForm.moneyNotSentConfirmed && failReason);
 
   function resetActionState() {
-    setActionForm({ action: "", value: "", payoutProvider: "", internalNote: "" });
+    setActionForm({
+      action: "",
+      value: "",
+      payoutProvider: "",
+      internalNote: "",
+      externalRef: "",
+      bankReference: "",
+      receiptUrl: "",
+      failureReason: "",
+      moneySentConfirmed: false,
+      moneyNotSentConfirmed: false,
+    });
     setActionError("");
     setActionSuccess("");
     setActionLoading("");
@@ -488,13 +517,30 @@ export default function AdminWithdrawalsPage() {
       value: "",
       payoutProvider: "",
       internalNote: "",
+      externalRef: "",
+      bankReference: "",
+      receiptUrl: "",
+      failureReason: "",
+      moneySentConfirmed: false,
+      moneyNotSentConfirmed: false,
     });
     setActionError("");
     setActionSuccess("");
   }
 
   function closeActionForm() {
-    setActionForm({ action: "", value: "", payoutProvider: "", internalNote: "" });
+    setActionForm({
+      action: "",
+      value: "",
+      payoutProvider: "",
+      internalNote: "",
+      externalRef: "",
+      bankReference: "",
+      receiptUrl: "",
+      failureReason: "",
+      moneySentConfirmed: false,
+      moneyNotSentConfirmed: false,
+    });
     setActionError("");
   }
 
@@ -606,6 +652,39 @@ export default function AdminWithdrawalsPage() {
           payout_provider: actionForm.payoutProvider,
           internal_note: actionForm.internalNote,
         });
+      } else if (action === "complete") {
+        const externalRef = String(actionForm.externalRef || "").trim();
+        const bankReference = String(actionForm.bankReference || "").trim();
+        if (!actionForm.moneySentConfirmed) {
+          setActionError("Подтвердите, что деньги отправлены.");
+          setActionLoading("");
+          return;
+        }
+        if (!externalRef && !bankReference) {
+          setActionError("Нужен external_ref или bank_reference.");
+          setActionLoading("");
+          return;
+        }
+        result = await adminCompleteWithdrawRequest(selectedRequestId, {
+          external_ref: externalRef,
+          bank_reference: bankReference,
+          receipt_url: actionForm.receiptUrl,
+        });
+      } else if (action === "fail") {
+        const failureReason = String(actionForm.failureReason || "").trim();
+        if (!actionForm.moneyNotSentConfirmed) {
+          setActionError("Подтвердите, что деньги НЕ отправлены / нужно вернуть locked balance.");
+          setActionLoading("");
+          return;
+        }
+        if (!failureReason) {
+          setActionError("Причина обязательна.");
+          setActionLoading("");
+          return;
+        }
+        result = await adminFailWithdrawRequest(selectedRequestId, {
+          failure_reason: failureReason,
+        });
       } else {
         throw new Error("ACTION_FORM_INVALID");
       }
@@ -618,6 +697,10 @@ export default function AdminWithdrawalsPage() {
         setActionSuccess("Заявка отклонена.");
       } else if (action === "comment") {
         setActionSuccess("Комментарий сохранён.");
+      } else if (action === "complete") {
+        setActionSuccess("Выплата отмечена как завершённая.");
+      } else if (action === "fail") {
+        setActionSuccess("Выплата отмечена как неуспешная.");
       } else {
         setActionSuccess("Заявка переведена в обработку.");
       }
@@ -1308,13 +1391,35 @@ export default function AdminWithdrawalsPage() {
                           {actionLoading === "start_processing" ? "Выполняется…" : "Начать обработку"}
                         </button>
                       ) : null}
+
+                      {selectedActionSet.has("complete") ? (
+                        <button
+                          type="button"
+                          onClick={() => openActionForm("complete")}
+                          disabled={Boolean(actionLoading)}
+                          style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #166534", background: "#16a34a", color: "#fff" }}
+                        >
+                          {actionLoading === "complete" ? "Выполняется…" : "Завершить выплату"}
+                        </button>
+                      ) : null}
+
+                      {selectedActionSet.has("fail") ? (
+                        <button
+                          type="button"
+                          onClick={() => openActionForm("fail")}
+                          disabled={Boolean(actionLoading)}
+                          style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #b91c1c", background: "#fee2e2", color: "#991b1b" }}
+                        >
+                          {actionLoading === "fail" ? "Выполняется…" : "Отметить как неуспешную"}
+                        </button>
+                      ) : null}
                     </div>
                   ) : (
                     <EmptyState title="Активных действий нет" subtitle="Для текущего статуса нет доступных безопасных admin actions." />
                   )}
 
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {["start_processing", "return_to_review", "complete", "fail"].map((action) => (
+                    {["start_processing", "return_to_review"].concat(selectedActionSet.has("complete") ? [] : ["complete"]).concat(selectedActionSet.has("fail") ? [] : ["fail"]).map((action) => (
                       <button
                         key={action}
                         type="button"
@@ -1388,6 +1493,115 @@ export default function AdminWithdrawalsPage() {
                               />
                             </label>
                           </>
+                        ) : actionForm.action === "complete" ? (
+                          <>
+                            <strong style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 12, color: "#166534" }}>
+                              Завершить выплату
+                            </strong>
+                            <div style={{ padding: 12, borderRadius: 12, background: "#ecfdf5", color: "#166534", border: "1px solid #bbf7d0", fontSize: 13, lineHeight: 1.5 }}>
+                              Это изменит ledger/balance.
+                            </div>
+                            <label style={{ display: "grid", gap: 6 }}>
+                              <span style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>external_ref</span>
+                              <input
+                                value={actionForm.externalRef}
+                                onChange={(event) => setActionForm((current) => ({ ...current, externalRef: event.target.value }))}
+                                placeholder="Внешний референс платежа"
+                                disabled={Boolean(actionLoading)}
+                                style={{
+                                  width: "100%",
+                                  borderRadius: 12,
+                                  border: "1px solid #cbd5e1",
+                                  padding: 12,
+                                  font: "inherit",
+                                }}
+                              />
+                            </label>
+                            <label style={{ display: "grid", gap: 6 }}>
+                              <span style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>bank_reference</span>
+                              <input
+                                value={actionForm.bankReference}
+                                onChange={(event) => setActionForm((current) => ({ ...current, bankReference: event.target.value }))}
+                                placeholder="Банковский reference"
+                                disabled={Boolean(actionLoading)}
+                                style={{
+                                  width: "100%",
+                                  borderRadius: 12,
+                                  border: "1px solid #cbd5e1",
+                                  padding: 12,
+                                  font: "inherit",
+                                }}
+                              />
+                            </label>
+                            <label style={{ display: "grid", gap: 6 }}>
+                              <span style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>receipt_url</span>
+                              <input
+                                value={actionForm.receiptUrl}
+                                onChange={(event) => setActionForm((current) => ({ ...current, receiptUrl: event.target.value }))}
+                                placeholder="Необязательно"
+                                disabled={Boolean(actionLoading)}
+                                style={{
+                                  width: "100%",
+                                  borderRadius: 12,
+                                  border: "1px solid #cbd5e1",
+                                  padding: 12,
+                                  font: "inherit",
+                                }}
+                              />
+                            </label>
+                            <label style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(actionForm.moneySentConfirmed)}
+                                onChange={(event) => setActionForm((current) => ({ ...current, moneySentConfirmed: event.target.checked }))}
+                                disabled={Boolean(actionLoading)}
+                                style={{ marginTop: 4 }}
+                              />
+                              <span style={{ fontSize: 13, lineHeight: 1.5, color: "#334155" }}>
+                                Деньги отправлены
+                              </span>
+                            </label>
+                          </>
+                        ) : actionForm.action === "fail" ? (
+                          <>
+                            <strong style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 12, color: "#991b1b" }}>
+                              Отметить как неуспешную
+                            </strong>
+                            <div style={{ padding: 12, borderRadius: 12, background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca", fontSize: 13, lineHeight: 1.5 }}>
+                              Это изменит ledger/balance.
+                            </div>
+                            <label style={{ display: "grid", gap: 6 }}>
+                              <span style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>failure_reason</span>
+                              <textarea
+                                value={actionForm.failureReason}
+                                onChange={(event) => setActionForm((current) => ({ ...current, failureReason: event.target.value }))}
+                                rows={4}
+                                placeholder="Причина неуспешной выплаты"
+                                disabled={Boolean(actionLoading)}
+                                style={{
+                                  width: "100%",
+                                  borderRadius: 12,
+                                  border: "1px solid #cbd5e1",
+                                  padding: 12,
+                                  font: "inherit",
+                                  resize: "vertical",
+                                  minHeight: 110,
+                                }}
+                              />
+                            </label>
+                            <label style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(actionForm.moneyNotSentConfirmed)}
+                                onChange={(event) => setActionForm((current) => ({ ...current, moneyNotSentConfirmed: event.target.checked }))}
+                                disabled={Boolean(actionLoading)}
+                                style={{ marginTop: 4 }}
+                              />
+                              <span style={{ fontSize: 13, lineHeight: 1.5, color: "#334155" }}>
+                                Деньги НЕ отправлены / нужно вернуть locked balance
+                              </span>
+                            </label>
+                          </>
                         ) : (
                           <>
                             <strong style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 12, color: "#334155" }}>
@@ -1416,7 +1630,7 @@ export default function AdminWithdrawalsPage() {
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                         <button
                           type="submit"
-                          disabled={Boolean(actionLoading)}
+                          disabled={Boolean(actionLoading) || (actionForm.action === "complete" ? !completeActionReady : actionForm.action === "fail" ? !failActionReady : false)}
                           style={{
                             padding: "10px 14px",
                             borderRadius: 12,
@@ -1425,7 +1639,15 @@ export default function AdminWithdrawalsPage() {
                             color: "#fff",
                           }}
                         >
-                          {actionLoading === actionForm.action ? "Сохранение…" : (actionForm.action === "start_processing" ? "Начать обработку" : "Сохранить")}
+                          {actionLoading === actionForm.action
+                            ? "Сохранение…"
+                            : actionForm.action === "start_processing"
+                              ? "Начать обработку"
+                              : actionForm.action === "complete"
+                                ? "Подтвердить выплату"
+                                : actionForm.action === "fail"
+                                  ? "Отметить как неуспешную"
+                                  : "Сохранить"}
                         </button>
                         <button
                           type="button"
