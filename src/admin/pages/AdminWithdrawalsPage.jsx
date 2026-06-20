@@ -7,6 +7,7 @@ import {
   adminClaimWithdrawRequest,
   adminRejectWithdrawRequest,
   adminCommentWithdrawRequest,
+  adminStartProcessingWithdrawRequest,
 } from "../../api/internal.js";
 
 const PAGE_LABEL = "Центр вывода средств";
@@ -379,7 +380,7 @@ export default function AdminWithdrawalsPage() {
   const [actionLoading, setActionLoading] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
-  const [actionForm, setActionForm] = useState({ action: "", value: "" });
+  const [actionForm, setActionForm] = useState({ action: "", value: "", payoutProvider: "", internalNote: "" });
 
   const loadSummaryAndRequests = useCallback(async () => {
     const token = getAuthToken();
@@ -475,20 +476,25 @@ export default function AdminWithdrawalsPage() {
   const selectedActionSet = useMemo(() => new Set(safeArray(selectedRequest?.admin_available_actions)), [selectedRequest]);
 
   function resetActionState() {
-    setActionForm({ action: "", value: "" });
+    setActionForm({ action: "", value: "", payoutProvider: "", internalNote: "" });
     setActionError("");
     setActionSuccess("");
     setActionLoading("");
   }
 
   function openActionForm(action) {
-    setActionForm({ action, value: "" });
+    setActionForm({
+      action,
+      value: "",
+      payoutProvider: "",
+      internalNote: "",
+    });
     setActionError("");
     setActionSuccess("");
   }
 
   function closeActionForm() {
-    setActionForm({ action: "", value: "" });
+    setActionForm({ action: "", value: "", payoutProvider: "", internalNote: "" });
     setActionError("");
   }
 
@@ -532,6 +538,39 @@ export default function AdminWithdrawalsPage() {
     }
   }
 
+  async function handleStartProcessingAction() {
+    if (!selectedRequestId || actionLoading) {
+      return;
+    }
+
+    try {
+      setActionLoading("start_processing");
+      setActionError("");
+      setActionSuccess("");
+
+      const payload = {};
+      if (String(actionForm.payoutProvider || "").trim()) {
+        payload.payout_provider = String(actionForm.payoutProvider || "").trim();
+      }
+      if (String(actionForm.internalNote || "").trim()) {
+        payload.internal_note = String(actionForm.internalNote || "").trim();
+      }
+
+      const result = await adminStartProcessingWithdrawRequest(selectedRequestId, payload);
+      if (!result.ok) {
+        throw new Error(result.error || "ADMIN_WITHDRAW_REQUEST_START_PROCESSING_FAILED");
+      }
+
+      setActionSuccess("Заявка переведена в обработку.");
+      closeActionForm();
+      await refreshSelectedRequest();
+    } catch (err) {
+      setActionError(err?.message || "ADMIN_WITHDRAW_REQUEST_START_PROCESSING_FAILED");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
   async function handleSubmitActionForm(event) {
     event.preventDefault();
 
@@ -540,13 +579,6 @@ export default function AdminWithdrawalsPage() {
     }
 
     const action = String(actionForm.action || "");
-    const value = String(actionForm.value || "").trim();
-
-    if (!value) {
-      setActionError(action === "comment" ? "Комментарий обязателен." : "Причина обязательна.");
-      return;
-    }
-
     try {
       setActionLoading(action);
       setActionError("");
@@ -554,9 +586,26 @@ export default function AdminWithdrawalsPage() {
 
       let result = null;
       if (action === "reject") {
+        const value = String(actionForm.value || "").trim();
+        if (!value) {
+          setActionError("Причина обязательна.");
+          setActionLoading("");
+          return;
+        }
         result = await adminRejectWithdrawRequest(selectedRequestId, value);
       } else if (action === "comment") {
+        const value = String(actionForm.value || "").trim();
+        if (!value) {
+          setActionError("Комментарий обязателен.");
+          setActionLoading("");
+          return;
+        }
         result = await adminCommentWithdrawRequest(selectedRequestId, value);
+      } else if (action === "start_processing") {
+        result = await adminStartProcessingWithdrawRequest(selectedRequestId, {
+          payout_provider: actionForm.payoutProvider,
+          internal_note: actionForm.internalNote,
+        });
       } else {
         throw new Error("ACTION_FORM_INVALID");
       }
@@ -565,7 +614,13 @@ export default function AdminWithdrawalsPage() {
         throw new Error(result.error || "ADMIN_WITHDRAW_REQUEST_ACTION_FAILED");
       }
 
-      setActionSuccess(action === "reject" ? "Заявка отклонена." : "Комментарий сохранён.");
+      if (action === "reject") {
+        setActionSuccess("Заявка отклонена.");
+      } else if (action === "comment") {
+        setActionSuccess("Комментарий сохранён.");
+      } else {
+        setActionSuccess("Заявка переведена в обработку.");
+      }
       closeActionForm();
       await refreshSelectedRequest();
     } catch (err) {
@@ -1242,6 +1297,17 @@ export default function AdminWithdrawalsPage() {
                           Комментарий
                         </button>
                       ) : null}
+
+                      {selectedActionSet.has("start_processing") ? (
+                        <button
+                          type="button"
+                          onClick={() => openActionForm("start_processing")}
+                          disabled={Boolean(actionLoading)}
+                          style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #1d4ed8", background: "#1d4ed8", color: "#fff" }}
+                        >
+                          {actionLoading === "start_processing" ? "Выполняется…" : "Начать обработку"}
+                        </button>
+                      ) : null}
                     </div>
                   ) : (
                     <EmptyState title="Активных действий нет" subtitle="Для текущего статуса нет доступных безопасных admin actions." />
@@ -1281,25 +1347,70 @@ export default function AdminWithdrawalsPage() {
                       }}
                     >
                       <div style={{ display: "grid", gap: 6 }}>
-                        <strong style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 12, color: "#334155" }}>
-                          {actionForm.action === "reject" ? "Причина отклонения" : "Комментарий"}
-                        </strong>
-                        <textarea
-                          value={actionForm.value}
-                          onChange={(event) => setActionForm((current) => ({ ...current, value: event.target.value }))}
-                          rows={4}
-                          placeholder={actionForm.action === "reject" ? "Опишите причину отклонения" : "Добавьте внутренний комментарий"}
-                          disabled={Boolean(actionLoading)}
-                          style={{
-                            width: "100%",
-                            borderRadius: 12,
-                            border: "1px solid #cbd5e1",
-                            padding: 12,
-                            font: "inherit",
-                            resize: "vertical",
-                            minHeight: 110,
-                          }}
-                        />
+                        {actionForm.action === "start_processing" ? (
+                          <>
+                            <strong style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 12, color: "#334155" }}>
+                              Начать обработку
+                            </strong>
+                            <label style={{ display: "grid", gap: 6 }}>
+                              <span style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>payout_provider</span>
+                              <input
+                                value={actionForm.payoutProvider}
+                                onChange={(event) => setActionForm((current) => ({ ...current, payoutProvider: event.target.value }))}
+                                placeholder="Например: manual"
+                                disabled={Boolean(actionLoading)}
+                                style={{
+                                  width: "100%",
+                                  borderRadius: 12,
+                                  border: "1px solid #cbd5e1",
+                                  padding: 12,
+                                  font: "inherit",
+                                }}
+                              />
+                            </label>
+                            <label style={{ display: "grid", gap: 6 }}>
+                              <span style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>internal_note</span>
+                              <textarea
+                                value={actionForm.internalNote}
+                                onChange={(event) => setActionForm((current) => ({ ...current, internalNote: event.target.value }))}
+                                rows={4}
+                                placeholder="Внутренняя заметка (необязательно)"
+                                disabled={Boolean(actionLoading)}
+                                style={{
+                                  width: "100%",
+                                  borderRadius: 12,
+                                  border: "1px solid #cbd5e1",
+                                  padding: 12,
+                                  font: "inherit",
+                                  resize: "vertical",
+                                  minHeight: 110,
+                                }}
+                              />
+                            </label>
+                          </>
+                        ) : (
+                          <>
+                            <strong style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 12, color: "#334155" }}>
+                              {actionForm.action === "reject" ? "Причина отклонения" : "Комментарий"}
+                            </strong>
+                            <textarea
+                              value={actionForm.value}
+                              onChange={(event) => setActionForm((current) => ({ ...current, value: event.target.value }))}
+                              rows={4}
+                              placeholder={actionForm.action === "reject" ? "Опишите причину отклонения" : "Добавьте внутренний комментарий"}
+                              disabled={Boolean(actionLoading)}
+                              style={{
+                                width: "100%",
+                                borderRadius: 12,
+                                border: "1px solid #cbd5e1",
+                                padding: 12,
+                                font: "inherit",
+                                resize: "vertical",
+                                minHeight: 110,
+                              }}
+                            />
+                          </>
+                        )}
                       </div>
 
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -1314,7 +1425,7 @@ export default function AdminWithdrawalsPage() {
                             color: "#fff",
                           }}
                         >
-                          {actionLoading === actionForm.action ? "Сохранение…" : "Сохранить"}
+                          {actionLoading === actionForm.action ? "Сохранение…" : (actionForm.action === "start_processing" ? "Начать обработку" : "Сохранить")}
                         </button>
                         <button
                           type="button"

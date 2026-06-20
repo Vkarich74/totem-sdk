@@ -803,6 +803,35 @@ export async function adminCommentWithdrawRequest(id, comment){
   );
 }
 
+export async function adminStartProcessingWithdrawRequest(id, payload = {}) {
+  const safeId = encodeURIComponent(String(id || "").trim());
+  const body = {};
+
+  if (payload && typeof payload === "object") {
+    if (String(payload.payout_provider || "").trim()) {
+      body.payout_provider = String(payload.payout_provider || "").trim();
+    }
+
+    if (String(payload.internal_note || "").trim()) {
+      body.internal_note = String(payload.internal_note || "").trim();
+    }
+
+    if (String(payload.reason || "").trim()) {
+      body.reason = String(payload.reason || "").trim();
+    }
+  }
+
+  const r = await safeInternalJson(`/money-core/admin/withdraw-requests/${safeId}/start-processing`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if(!r.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUEST_START_PROCESSING_FETCH_FAILED", detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:"ADMIN_WITHDRAW_REQUEST_START_PROCESSING_API_NOT_OK", detail:j };
+  return { ok:true, ...j };
+}
+
 /* ===============================
    SALON (OWNER) API
 ================================ */
