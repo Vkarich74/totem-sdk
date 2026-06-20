@@ -109,6 +109,41 @@ function calculateSplitAllocatedStats(rows) {
   };
 }
 
+const WITHDRAW_REQUEST_USER_STATUS_LABELS = Object.freeze({
+  pending_validation: "Новая",
+  requires_review: "В процессе",
+  locked: "В процессе",
+  queued_for_payout: "В процессе",
+  bank_processing: "В процессе",
+  completed: "Выполнена",
+  failed: "Ошибка выплаты",
+  canceled: "Отклонена",
+  rejected: "Отклонена"
+});
+
+function getWithdrawRequestUserStatusLabel(status) {
+  const normalizedStatus = cleanStatus(status);
+  if (!normalizedStatus) return null;
+  return WITHDRAW_REQUEST_USER_STATUS_LABELS[normalizedStatus] || null;
+}
+
+function getWithdrawRequestHistoryDetails(item) {
+  const status = cleanStatus(item?.status);
+  const details = [];
+  const failureReason = cleanText(item?.failure_reason);
+  const adminNote = cleanText(item?.admin_note);
+
+  if (status) details.push(`raw: ${status}`);
+  if (failureReason && ["failed", "canceled", "rejected"].includes(status)) {
+    details.push(`Причина: ${failureReason}`);
+  }
+  if (adminNote) {
+    details.push(`Комментарий платформы: ${adminNote}`);
+  }
+
+  return details.join(" · ");
+}
+
 const WITHDRAW_DESTINATION_RELATION_OPTIONS = [
   "self",
   "company_account",
@@ -1830,14 +1865,20 @@ export default function MasterFinancePage() {
                   <Panel title="История заявок" subtitle="Последние заявки на вывод по Money Core">
                     {moneyCoreWithdrawRequests.length ? (
                       <div style={{ display: "grid", gap: 8 }}>
-                        {moneyCoreWithdrawRequests.map((item) => (
-                          <PreviewRow
-                            key={item.id}
-                            title={`Заявка #${item.id}`}
-                            meta={`${item.status || "—"} · ${formatDateTime(item.created_at)}`}
-                            value={money(item.amount)}
-                          />
-                        ))}
+                        {moneyCoreWithdrawRequests.map((item) => {
+                          const withdrawRequestStatus = getWithdrawRequestUserStatusLabel(item?.status) || "Статус неизвестен";
+                          const withdrawRequestDetails = getWithdrawRequestHistoryDetails(item);
+
+                          return (
+                            <PreviewRow
+                              key={item.id}
+                              title={withdrawRequestStatus}
+                              meta={`Заявка #${item.id || "—"} · ${formatDateTime(item.created_at)}${withdrawRequestDetails ? ` · ${withdrawRequestDetails}` : ""}`}
+                              value={money(item.amount)}
+                              status={cleanStatus(item?.status) || null}
+                            />
+                          );
+                        })}
                       </div>
                     ) : (
                     <EmptyState
