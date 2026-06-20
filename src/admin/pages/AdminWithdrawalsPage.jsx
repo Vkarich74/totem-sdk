@@ -4,6 +4,9 @@ import {
   getAdminWithdrawRequests,
   getAdminWithdrawRequestsSummary,
   getAdminWithdrawRequestById,
+  adminClaimWithdrawRequest,
+  adminRejectWithdrawRequest,
+  adminCommentWithdrawRequest,
 } from "../../api/internal.js";
 
 const PAGE_LABEL = "Центр вывода средств";
@@ -373,6 +376,10 @@ export default function AdminWithdrawalsPage() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [actionLoading, setActionLoading] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
+  const [actionForm, setActionForm] = useState({ action: "", value: "" });
 
   const loadSummaryAndRequests = useCallback(async () => {
     const token = getAuthToken();
@@ -465,6 +472,109 @@ export default function AdminWithdrawalsPage() {
     }
   }, []);
 
+  const selectedActionSet = useMemo(() => new Set(safeArray(selectedRequest?.admin_available_actions)), [selectedRequest]);
+
+  function resetActionState() {
+    setActionForm({ action: "", value: "" });
+    setActionError("");
+    setActionSuccess("");
+    setActionLoading("");
+  }
+
+  function openActionForm(action) {
+    setActionForm({ action, value: "" });
+    setActionError("");
+    setActionSuccess("");
+  }
+
+  function closeActionForm() {
+    setActionForm({ action: "", value: "" });
+    setActionError("");
+  }
+
+  async function refreshSelectedRequest() {
+    if (!selectedRequestId) {
+      await loadSummaryAndRequests();
+      return;
+    }
+
+    await Promise.all([
+      loadSummaryAndRequests(),
+      loadDetail(selectedRequestId),
+    ]);
+  }
+
+  async function handleClaimAction() {
+    if (!selectedRequestId || actionLoading) {
+      return;
+    }
+
+    const confirmed = window.confirm("Подтвердить перевод заявки в проверку?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setActionLoading("claim");
+      setActionError("");
+      setActionSuccess("");
+      const result = await adminClaimWithdrawRequest(selectedRequestId);
+      if (!result.ok) {
+        throw new Error(result.error || "ADMIN_WITHDRAW_REQUEST_CLAIM_FAILED");
+      }
+      setActionSuccess("Заявка переведена в проверку.");
+      closeActionForm();
+      await refreshSelectedRequest();
+    } catch (err) {
+      setActionError(err?.message || "ADMIN_WITHDRAW_REQUEST_CLAIM_FAILED");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function handleSubmitActionForm(event) {
+    event.preventDefault();
+
+    if (!selectedRequestId || actionLoading) {
+      return;
+    }
+
+    const action = String(actionForm.action || "");
+    const value = String(actionForm.value || "").trim();
+
+    if (!value) {
+      setActionError(action === "comment" ? "Комментарий обязателен." : "Причина обязательна.");
+      return;
+    }
+
+    try {
+      setActionLoading(action);
+      setActionError("");
+      setActionSuccess("");
+
+      let result = null;
+      if (action === "reject") {
+        result = await adminRejectWithdrawRequest(selectedRequestId, value);
+      } else if (action === "comment") {
+        result = await adminCommentWithdrawRequest(selectedRequestId, value);
+      } else {
+        throw new Error("ACTION_FORM_INVALID");
+      }
+
+      if (!result.ok) {
+        throw new Error(result.error || "ADMIN_WITHDRAW_REQUEST_ACTION_FAILED");
+      }
+
+      setActionSuccess(action === "reject" ? "Заявка отклонена." : "Комментарий сохранён.");
+      closeActionForm();
+      await refreshSelectedRequest();
+    } catch (err) {
+      setActionError(err?.message || "ADMIN_WITHDRAW_REQUEST_ACTION_FAILED");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
   useEffect(() => {
     void loadSummaryAndRequests();
   }, [loadSummaryAndRequests]);
@@ -474,9 +584,11 @@ export default function AdminWithdrawalsPage() {
       setSelectedRequest(null);
       setDetailError("");
       setDetailLoading(false);
+      resetActionState();
       return;
     }
 
+    resetActionState();
     void loadDetail(selectedRequestId);
   }, [selectedRequestId, loadDetail]);
 
@@ -1080,20 +1192,148 @@ export default function AdminWithdrawalsPage() {
               </SectionCard>
 
               <SectionCard
-                title="Available actions preview"
-                subtitle="Действия будут включены следующим этапом."
+                title="Действия администратора"
+                subtitle="Безопасные действия: claim, reject, comment. Деньги не меняются."
               >
-                {selectedActions.length ? (
+                <div style={{ display: "grid", gap: 14 }}>
+                  {actionError ? (
+                    <div style={{ padding: 12, borderRadius: 12, background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" }}>
+                      {actionError}
+                    </div>
+                  ) : null}
+
+                  {actionSuccess ? (
+                    <div style={{ padding: 12, borderRadius: 12, background: "#ecfdf5", color: "#166534", border: "1px solid #bbf7d0" }}>
+                      {actionSuccess}
+                    </div>
+                  ) : null}
+
+                  {selectedActionSet.size ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                      {selectedActionSet.has("claim") ? (
+                        <button
+                          type="button"
+                          onClick={handleClaimAction}
+                          disabled={Boolean(actionLoading)}
+                          style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #0f766e", background: "#0f766e", color: "#fff" }}
+                        >
+                          {actionLoading === "claim" ? "Выполняется…" : "Взять в проверку"}
+                        </button>
+                      ) : null}
+
+                      {selectedActionSet.has("reject") ? (
+                        <button
+                          type="button"
+                          onClick={() => openActionForm("reject")}
+                          disabled={Boolean(actionLoading)}
+                          style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #b91c1c", background: "#fff", color: "#b91c1c" }}
+                        >
+                          Отклонить
+                        </button>
+                      ) : null}
+
+                      {selectedActionSet.has("comment") ? (
+                        <button
+                          type="button"
+                          onClick={() => openActionForm("comment")}
+                          disabled={Boolean(actionLoading)}
+                          style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #334155", background: "#fff", color: "#334155" }}
+                        >
+                          Комментарий
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <EmptyState title="Активных действий нет" subtitle="Для текущего статуса нет доступных безопасных admin actions." />
+                  )}
+
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {selectedActions.map((action) => (
-                      <Badge key={action} tone="slate">
+                    {["start_processing", "return_to_review", "complete", "fail"].map((action) => (
+                      <button
+                        key={action}
+                        type="button"
+                        disabled
+                        title="Сейчас недоступно"
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: 12,
+                          border: "1px dashed #cbd5e1",
+                          background: "#f8fafc",
+                          color: "#64748b",
+                          cursor: "not-allowed",
+                        }}
+                      >
                         {action}
-                      </Badge>
+                      </button>
                     ))}
                   </div>
-                ) : (
-                  <EmptyState title="Действия недоступны" subtitle="Для этого статуса нет доступных admin actions." />
-                )}
+
+                  {actionForm.action ? (
+                    <form
+                      onSubmit={handleSubmitActionForm}
+                      style={{
+                        display: "grid",
+                        gap: 12,
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 16,
+                        padding: 16,
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <strong style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 12, color: "#334155" }}>
+                          {actionForm.action === "reject" ? "Причина отклонения" : "Комментарий"}
+                        </strong>
+                        <textarea
+                          value={actionForm.value}
+                          onChange={(event) => setActionForm((current) => ({ ...current, value: event.target.value }))}
+                          rows={4}
+                          placeholder={actionForm.action === "reject" ? "Опишите причину отклонения" : "Добавьте внутренний комментарий"}
+                          disabled={Boolean(actionLoading)}
+                          style={{
+                            width: "100%",
+                            borderRadius: 12,
+                            border: "1px solid #cbd5e1",
+                            padding: 12,
+                            font: "inherit",
+                            resize: "vertical",
+                            minHeight: 110,
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        <button
+                          type="submit"
+                          disabled={Boolean(actionLoading)}
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 12,
+                            border: "1px solid #1d4ed8",
+                            background: "#1d4ed8",
+                            color: "#fff",
+                          }}
+                        >
+                          {actionLoading === actionForm.action ? "Сохранение…" : "Сохранить"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={closeActionForm}
+                          disabled={Boolean(actionLoading)}
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 12,
+                            border: "1px solid #cbd5e1",
+                            background: "#fff",
+                            color: "#334155",
+                          }}
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+                </div>
               </SectionCard>
             </div>
           )}

@@ -768,6 +768,41 @@ export async function getAdminWithdrawRequestById(id){
   };
 }
 
+async function adminWithdrawRequestAction(path, body = {}, errorPrefix = "ADMIN_WITHDRAW_REQUEST_ACTION"){
+  const r = await safeInternalJson(path, {
+    method: "POST",
+    body: JSON.stringify(body || {})
+  });
+
+  if(!r.ok) return { ok:false, error:`${errorPrefix}_FETCH_FAILED`, detail:r };
+  const j = r.json;
+  if(!j || !j.ok) return { ok:false, error:`${errorPrefix}_API_NOT_OK`, detail:j };
+  return { ok:true, ...j };
+}
+
+export async function adminClaimWithdrawRequest(id){
+  const safeId = encodeURIComponent(String(id || "").trim());
+  return adminWithdrawRequestAction(`/money-core/admin/withdraw-requests/${safeId}/claim`, {}, "ADMIN_WITHDRAW_REQUEST_CLAIM");
+}
+
+export async function adminRejectWithdrawRequest(id, reason){
+  const safeId = encodeURIComponent(String(id || "").trim());
+  return adminWithdrawRequestAction(
+    `/money-core/admin/withdraw-requests/${safeId}/reject`,
+    { reason: String(reason || "").trim() },
+    "ADMIN_WITHDRAW_REQUEST_REJECT"
+  );
+}
+
+export async function adminCommentWithdrawRequest(id, comment){
+  const safeId = encodeURIComponent(String(id || "").trim());
+  return adminWithdrawRequestAction(
+    `/money-core/admin/withdraw-requests/${safeId}/comment`,
+    { comment: String(comment || "").trim() },
+    "ADMIN_WITHDRAW_REQUEST_COMMENT"
+  );
+}
+
 /* ===============================
    SALON (OWNER) API
 ================================ */
