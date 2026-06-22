@@ -245,14 +245,17 @@ export default function SalonContractsPage() {
 
   const salonSlug = resolveSalonSlug(routeSlug)
 
-  const financeTabs = [
-    { key: "finance", label: "Финансы", href: buildSalonPath(salonSlug, "finance") },
-    { key: "money", label: "Доход", href: buildSalonPath(salonSlug, "money") },
-    { key: "settlements", label: "Сеты", href: buildSalonPath(salonSlug, "settlements") },
-    { key: "payouts", label: "Выплаты", href: buildSalonPath(salonSlug, "payouts") },
-    { key: "transactions", label: "Транзакции", href: buildSalonPath(salonSlug, "transactions") },
-    { key: "contracts", label: "Контракты", href: buildSalonPath(salonSlug, "contracts") }
-  ]
+  const financeTabs = useMemo(
+    () => [
+      { key: "finance", label: "Финансы", href: buildSalonPath(salonSlug, "finance") },
+      { key: "money", label: "Доход", href: buildSalonPath(salonSlug, "money") },
+      { key: "settlements", label: "Сеты", href: buildSalonPath(salonSlug, "settlements") },
+      { key: "payouts", label: "Выплаты", href: buildSalonPath(salonSlug, "payouts") },
+      { key: "transactions", label: "Транзакции", href: buildSalonPath(salonSlug, "transactions") },
+      { key: "contracts", label: "Контракты", href: buildSalonPath(salonSlug, "contracts") }
+    ],
+    [salonSlug]
+  )
 
   const pageStyle = {
     minHeight: "100%",
@@ -1529,10 +1532,14 @@ export default function SalonContractsPage() {
     [contracts]
   )
 
-  const visibleArchivedContracts = archivedContractsExpanded
-    ? archivedContracts
-    : archivedContracts.slice(0, 1)
-  const hiddenArchivedContractsCount = Math.max(archivedContracts.length - 1, 0)
+  const visibleArchivedContracts = useMemo(
+    () => (archivedContractsExpanded ? archivedContracts : archivedContracts.slice(0, 1)),
+    [archivedContractsExpanded, archivedContracts]
+  )
+  const hiddenArchivedContractsCount = useMemo(
+    () => Math.max(archivedContracts.length - 1, 0),
+    [archivedContracts.length]
+  )
 
   const latestActiveContract = useMemo(
     () => [...activeContracts].sort((a, b) => new Date(b.effective_from || 0) - new Date(a.effective_from || 0))[0] || null,
@@ -1550,6 +1557,15 @@ export default function SalonContractsPage() {
   const isSalaryModel = contractModel === "salary"
   const isHybridModel = contractModel === "hybrid"
   const hasMasters = masters.length > 0
+  const contractModelOptions = useMemo(
+    () => [
+      { value: "percentage", label: "Процентный" },
+      { value: "fixed_rent", label: "Фиксированная аренда" },
+      { value: "salary", label: "Зарплата" },
+      { value: "hybrid", label: "Гибридный" }
+    ],
+    []
+  )
   const salonObligationsModel = useMemo(
     () => buildSalonObligationsModel(rentObligations, salaryObligations, masters),
     [rentObligations, salaryObligations, masters]
@@ -2375,12 +2391,7 @@ export default function SalonContractsPage() {
                   <div style={fieldBlockStyle}>
                     <label style={labelStyle}>Модель договора</label>
                     <div style={modelGridStyle}>
-                      {[
-                        { value: "percentage", label: "Процентный" },
-                        { value: "fixed_rent", label: "Фиксированная аренда" },
-                        { value: "salary", label: "Зарплата" },
-                        { value: "hybrid", label: "Гибридный" }
-                      ].map((item) => {
+                      {contractModelOptions.map((item) => {
                         const isActive = contractModel === item.value
 
                         return (
