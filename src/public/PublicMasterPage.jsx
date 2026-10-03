@@ -383,6 +383,9 @@ export default function PublicMasterPage({ slug }) {
       : "",
     resolvedSlug ? `https://app.totemv.com/#/booking?master=${encodeURIComponent(resolvedSlug)}` : "",
   );
+  const cabinetLoginUrl = resolvedSlug
+    ? `https://app.totemv.com/#/auth/login?role=master&slug=${encodeURIComponent(resolvedSlug)}`
+    : "";
   const bookingLabel = pickFirstString(view.bookingLabel, "Записаться к мастеру");
   const servicesLabel = pickFirstString(view.servicesLabel, "Смотреть услуги");
   const toSamePageHref = (value) => {
@@ -614,9 +617,14 @@ export default function PublicMasterPage({ slug }) {
                 </div>
               </div>
 
-              <ActionLink href={bookingUrl} style={primaryButtonStyle}>
-                {bookingLabel}
-              </ActionLink>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "flex-end" }}>
+                <ActionLink href={bookingUrl} style={primaryButtonStyle}>
+                  {bookingLabel}
+                </ActionLink>
+                <ActionLink href={cabinetLoginUrl} style={secondaryButtonStyle}>
+                  Войти в кабинет
+                </ActionLink>
+              </div>
             </div>
           </div>
         </section>
