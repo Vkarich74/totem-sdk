@@ -1529,8 +1529,12 @@ export default function BookingPage() {
                   value={clientPhone}
                   inputMode="tel"
                   autoComplete="tel"
-                  maxLength={16}
-                  onChange={(e) => setClientPhone(normalizeKgPhone(e.target.value))}
+                  maxLength={20}
+                  onChange={(e) => { setClientPhone(e.target.value); if (error) setError(""); }}
+                  onBlur={() => {
+                    const normalized = normalizeKgPhone(clientPhone);
+                    if (validatePhone(normalized)) setClientPhone(normalized);
+                  }}
                   style={styles.input}
                 />
               </div>
