@@ -56,6 +56,11 @@ function addDaysISO(dateStr, days = 1) {
 }
 
 function getAvailabilitySlotTime(slot) {
+  const localTime = String(slot?.local_time || "").trim();
+  if (/^\d{2}:\d{2}$/.test(localTime)) {
+    return localTime;
+  }
+
   const startAt = String(slot?.start_at || "").trim();
   const match = startAt.match(/T(\d{2}:\d{2})/);
   return match?.[1] || "";
