@@ -343,6 +343,12 @@ export async function authStart({ login = "", purpose = "", role = "", slug = ""
     purpose: String(purpose || "").trim() || "login"
   };
 
+  if(normalizedLogin.includes("@")){
+    payload.email = normalizedLogin;
+  }else if(normalizedLogin){
+    payload.phone = normalizedLogin;
+  }
+
   if(String(role || "").trim()){
     payload.role = String(role).trim();
   }
