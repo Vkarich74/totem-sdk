@@ -3,6 +3,7 @@ import "./core/dev-bootstrap.js"
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
+import { MarketContextProvider } from "./market/MarketContext.jsx";
 
 function resolveContext() {
 
@@ -123,9 +124,11 @@ if (!ctx && !isAuthRoute && !isAdminRoute) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App
-      slug={ctx ? ctx.slug : null}
-      mode={ctx ? ctx.mode : null}
-    />
+    <MarketContextProvider salonSlug={ctx?.mode === "salon" ? ctx.slug : null}>
+      <App
+        slug={ctx ? ctx.slug : null}
+        mode={ctx ? ctx.mode : null}
+      />
+    </MarketContextProvider>
   </React.StrictMode>
 );
