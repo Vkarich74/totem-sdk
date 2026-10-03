@@ -49,14 +49,21 @@ function roundUpToStepHHMM(hhmm, stepMin) {
   return `${hh}:${mm}`;
 }
 
-function generateTimeOptions(stepMin = 15) {
-  const out = [];
-  for (let minutes = 0; minutes < 24 * 60; minutes += stepMin) {
-    const hh = String(Math.floor(minutes / 60)).padStart(2, "0");
-    const mm = String(minutes % 60).padStart(2, "0");
-    out.push(`${hh}:${mm}`);
+function addDaysISO(dateStr, days = 1) {
+  const [year, month, day] = String(dateStr || "").split("-").map(Number);
+  if (!year || !month || !day) return "";
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function getAvailabilitySlotTime(slot) {
+  const localTime = String(slot?.local_time || "").trim();
+  if (/^\d{2}:\d{2}$/.test(localTime)) {
+    return localTime;
   }
-  return out;
+
+  const startAt = String(slot?.start_at || "").trim();
+  const match = startAt.match(/T(\d{2}:\d{2})/);
+  return match?.[1] || "";
 }
 
 function formatDateRu(dateStr) {
@@ -406,6 +413,10 @@ export default function BookingPage() {
 
   const [masters, setMasters] = useState([]);
   const [services, setServices] = useState([]);
+  const [salonName, setSalonName] = useState("");
+  const [availabilitySlots, setAvailabilitySlots] = useState([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
 
   const [selectedMaster, setSelectedMaster] = useState("");
   const [selectedMasterName, setSelectedMasterName] = useState("");
@@ -477,17 +488,24 @@ export default function BookingPage() {
     async function loadData() {
       try {
         setInitLoading(true);
-        const [mastersRes, servicesRes] = await Promise.all([
+        const [salonRes, mastersRes, servicesRes] = await Promise.all([
+          fetch(`${API_BASE}/public/salons/${slug}`),
           fetch(`${API_BASE}/public/salons/${slug}/masters`),
           fetch(`${API_BASE}/public/salons/${slug}/services`)
         ]);
 
+        const salonData = await salonRes.json();
         const mastersData = await mastersRes.json();
         const servicesData = await servicesRes.json();
+
+        if (!salonRes.ok || salonData?.ok !== true || !salonData?.salon) {
+          throw new Error(salonData?.error || "SALON_PROFILE_LOAD_FAILED");
+        }
 
         const loadedMasters = mastersData.masters || [];
         const loadedServices = normalizeServicesPayload(servicesData);
 
+        setSalonName(String(salonData.salon.name || "").trim());
         setMasters(loadedMasters);
         setServices(loadedServices);
 
@@ -616,16 +634,77 @@ export default function BookingPage() {
 
   const servicesAreLoading = Boolean(initLoading);
 
-  const timeOptions = useMemo(() => {
-    const options = generateTimeOptions(15);
-    if (!date) return options;
+  useEffect(() => {
+    let active = true;
 
+    if (!slug || !selectedMaster || !selectedService || !date) {
+      setAvailabilitySlots([]);
+      setAvailabilityError("");
+      setAvailabilityLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    async function loadAvailability() {
+      try {
+        setAvailabilityLoading(true);
+        setAvailabilityError("");
+        setAvailabilitySlots([]);
+
+        const nextDate = addDaysISO(date, 1);
+        const query = new URLSearchParams({
+          service_id: String(selectedService),
+          from: `${date}T00:00:00.000Z`,
+          to: `${nextDate}T00:00:00.000Z`,
+          step_min: "15"
+        });
+
+        const response = await fetch(
+          `${API_BASE}/public/salons/${encodeURIComponent(slug)}/masters/${encodeURIComponent(selectedMaster)}/availability?${query.toString()}`
+        );
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok || payload?.ok !== true || !Array.isArray(payload?.slots)) {
+          throw new Error(payload?.error || `HTTP_${response.status}`);
+        }
+
+        const uniqueSlots = [...new Set(
+          payload.slots.map(getAvailabilitySlotTime).filter(Boolean)
+        )];
+
+        if (active) {
+          setAvailabilitySlots(uniqueSlots);
+        }
+      } catch (err) {
+        if (active) {
+          setAvailabilitySlots([]);
+          setAvailabilityError(err?.message || "AVAILABILITY_LOAD_FAILED");
+        }
+      } finally {
+        if (active) {
+          setAvailabilityLoading(false);
+        }
+      }
+    }
+
+    loadAvailability();
+
+    return () => {
+      active = false;
+    };
+  }, [slug, selectedMaster, selectedService, date]);
+
+  const timeOptions = useMemo(() => {
+    if (!date) return [];
+
+    const options = [...availabilitySlots];
     const today = todayISO();
     if (date !== today) return options;
 
     const min = roundUpToStepHHMM(currentTimeHHMM(), 15);
     return options.filter((t) => t >= min);
-  }, [date]);
+  }, [availabilitySlots, date]);
 
   useEffect(() => {
     if (!time) return;
@@ -993,7 +1072,7 @@ export default function BookingPage() {
         <div style={bookingStackStyle}>
           <MobileTopBar
             title="TOTEM"
-            subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+            subtitle={`Запись · ${formatSalonDisplayName(salonName || successData?.salonName, slug)}`}
             style={bookingTopBarStyle}
             right={<MobileBadge tone="neutral">загрузка</MobileBadge>}
           />
@@ -1042,7 +1121,7 @@ export default function BookingPage() {
         <div style={bookingStackStyle}>
           <MobileTopBar
             title="TOTEM"
-            subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+            subtitle={`Запись · ${formatSalonDisplayName(salonName || successData?.salonName, slug)}`}
             style={bookingTopBarStyle}
             right={<MobileBadge tone="success">запись создана</MobileBadge>}
           />
@@ -1475,7 +1554,7 @@ export default function BookingPage() {
       <div style={bookingStackStyle}>
         <MobileTopBar
           title="TOTEM"
-          subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+          subtitle={`Запись · ${formatSalonDisplayName(salonName || successData?.salonName, slug)}`}
           style={bookingTopBarStyle}
           right={<MobileBadge tone="primary">запись</MobileBadge>}
         />
@@ -1487,7 +1566,7 @@ export default function BookingPage() {
             style={bookingHeroStyle}
             actions={
               <div style={bookingHeroChipsStyle}>
-                <MobilePill tone="neutral" style={bookingChipStyle}>{formatSalonDisplayName(null, slug)}</MobilePill>
+                <MobilePill tone="neutral" style={bookingChipStyle}>{formatSalonDisplayName(salonName || successData?.salonName, slug)}</MobilePill>
                 <MobilePill tone="primary" style={bookingChipStyle}>24h запись</MobilePill>
                 <MobilePill tone="neutral" style={bookingChipStyle}>Контакты</MobilePill>
                 <MobilePill tone="success" style={bookingChipStyle}>Подтверждение</MobilePill>
@@ -1639,10 +1718,22 @@ export default function BookingPage() {
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                   style={styles.input}
-                  disabled={!date}
+                  disabled={!selectedMaster || !selectedService || !date || availabilityLoading}
                 >
                   <option value="">
-                    {date ? "Выберите время" : "Сначала выберите дату"}
+                    {!selectedMaster
+                      ? "Сначала выберите мастера"
+                      : !selectedService
+                        ? "Сначала выберите услугу"
+                        : !date
+                          ? "Сначала выберите дату"
+                          : availabilityLoading
+                            ? "Загружаем доступное время..."
+                            : availabilityError
+                              ? "Не удалось загрузить время"
+                              : timeOptions.length
+                                ? "Выберите время"
+                                : "Нет свободного времени"}
                   </option>
                   {timeOptions.map((t) => (
                     <option key={t} value={t}>
@@ -1650,6 +1741,11 @@ export default function BookingPage() {
                     </option>
                   ))}
                 </select>
+                {availabilityError ? (
+                  <div style={{ fontSize: 12, lineHeight: 1.4, color: "#b91c1c" }}>
+                    Не удалось загрузить доступное время. Обновите дату или выберите мастера и услугу заново.
+                  </div>
+                ) : null}
               </div>
             </MobileCard>
           </MobileSection>
