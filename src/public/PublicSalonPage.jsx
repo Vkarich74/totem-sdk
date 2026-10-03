@@ -260,6 +260,9 @@ function resolvePublicSlug(slug) {
 export default function PublicSalonPage({ slug }) {
   const resolvedSlug = resolvePublicSlug(slug);
   const navigate = useNavigate();
+  const cabinetLoginUrl = resolvedSlug
+    ? `https://app.totemv.com/#/auth/login?role=salon_admin&slug=${encodeURIComponent(resolvedSlug)}`
+    : "";
 
   const [salon, setSalon] = useState(null);
   const [masters, setMasters] = useState([]);
@@ -285,6 +288,38 @@ export default function PublicSalonPage({ slug }) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    if (!cabinetLoginUrl || typeof document === "undefined") return undefined;
+
+    const loginLinks = Array.from(document.querySelectorAll("a")).filter((link) => {
+      try {
+        const url = new URL(link.href, window.location.href);
+        return url.pathname === "/web/login";
+      } catch {
+        return false;
+      }
+    });
+
+    const originals = loginLinks.map((link) => ({
+      link,
+      href: link.getAttribute("href"),
+    }));
+
+    for (const { link } of originals) {
+      link.setAttribute("href", cabinetLoginUrl);
+    }
+
+    return () => {
+      for (const { link, href } of originals) {
+        if (href == null) {
+          link.removeAttribute("href");
+        } else {
+          link.setAttribute("href", href);
+        }
+      }
+    };
+  }, [cabinetLoginUrl]);
 
   useEffect(() => {
     if (!resolvedSlug) return;
@@ -1010,6 +1045,20 @@ export default function PublicSalonPage({ slug }) {
                   <button onClick={goToBooking} style={primaryButton}>
                     {bookingLabel}
                   </button>
+
+                  <a
+                    href={cabinetLoginUrl}
+                    style={{
+                      ...secondaryButton,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textDecoration: "none",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    Войти в кабинет
+                  </a>
 
                   <button
                     onClick={() => scrollToSection(servicesAnchor)}
