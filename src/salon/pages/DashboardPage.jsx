@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
+import EmptyState from "../../cabinet/EmptyState"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import OwnerPushOptInCard from "../../components/OwnerPushOptInCard"
 import {
@@ -2381,7 +2382,7 @@ export default function DashboardPage(){
             </div>
 
             {!contractObligations.rent.length && !contractObligations.salary.length ? (
-              <EmptyState text="Обязательства мастер-салон пока не найдены." />
+              <EmptyState message="Обязательства мастер-салон пока не найдены." />
             ) : (
               <div style={{ display: "grid", gap: "12px" }}>
                 {contractObligations.summary?.priority_obligation ? (
