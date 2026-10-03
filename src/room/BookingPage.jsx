@@ -406,6 +406,7 @@ export default function BookingPage() {
 
   const [masters, setMasters] = useState([]);
   const [services, setServices] = useState([]);
+  const [salonName, setSalonName] = useState("");
 
   const [selectedMaster, setSelectedMaster] = useState("");
   const [selectedMasterName, setSelectedMasterName] = useState("");
@@ -417,6 +418,9 @@ export default function BookingPage() {
 
   const [date, setDate] = useState(() => (isValidBookingDate(repeatDate) ? repeatDate : ""));
   const [time, setTime] = useState(() => (isValidBookingTime(repeatTime) ? repeatTime : ""));
+  const [availabilitySlots, setAvailabilitySlots] = useState([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
 
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
@@ -477,17 +481,24 @@ export default function BookingPage() {
     async function loadData() {
       try {
         setInitLoading(true);
-        const [mastersRes, servicesRes] = await Promise.all([
+        const [salonRes, mastersRes, servicesRes] = await Promise.all([
+          fetch(`${API_BASE}/public/salons/${slug}`),
           fetch(`${API_BASE}/public/salons/${slug}/masters`),
           fetch(`${API_BASE}/public/salons/${slug}/services`)
         ]);
 
+        const salonData = await salonRes.json();
         const mastersData = await mastersRes.json();
         const servicesData = await servicesRes.json();
+
+        if (!salonRes.ok || !mastersRes.ok || !servicesRes.ok) {
+          throw new Error("BOOKING_CONTEXT_FETCH_FAILED");
+        }
 
         const loadedMasters = mastersData.masters || [];
         const loadedServices = normalizeServicesPayload(servicesData);
 
+        setSalonName(String(salonData?.salon?.name || "").trim());
         setMasters(loadedMasters);
         setServices(loadedServices);
 
@@ -616,21 +627,68 @@ export default function BookingPage() {
 
   const servicesAreLoading = Boolean(initLoading);
 
-  const timeOptions = useMemo(() => {
-    const options = generateTimeOptions(15);
-    if (!date) return options;
-
-    const today = todayISO();
-    if (date !== today) return options;
-
-    const min = roundUpToStepHHMM(currentTimeHHMM(), 15);
-    return options.filter((t) => t >= min);
-  }, [date]);
-
   useEffect(() => {
-    if (!time) return;
-    if (!timeOptions.includes(time)) setTime("");
-  }, [time, timeOptions]);
+    let active = true;
+    const controller = new AbortController();
+
+    if (!slug || !selectedMaster || !selectedService || !date) {
+      setAvailabilitySlots([]);
+      setAvailabilityError("");
+      setAvailabilityLoading(false);
+      setTime("");
+      return () => controller.abort();
+    }
+
+    async function loadAvailability() {
+      try {
+        setAvailabilityLoading(true);
+        setAvailabilityError("");
+
+        const qs = new URLSearchParams({
+          service_id: String(selectedService),
+          date,
+          step_min: "15"
+        });
+
+        const response = await fetch(
+          `${API_BASE}/public/salons/${slug}/masters/${selectedMaster}/availability?${qs.toString()}`,
+          { signal: controller.signal }
+        );
+        const payload = await response.json().catch(() => null);
+
+        if (!active) return;
+
+        if (!response.ok || payload?.ok !== true) {
+          throw new Error(payload?.error || "AVAILABILITY_FETCH_FAILED");
+        }
+
+        const nextSlots = (Array.isArray(payload?.slots) ? payload.slots : [])
+          .map((slot) => String(slot?.local_time || "").trim())
+          .filter((value) => /^\d{2}:\d{2}$/.test(value));
+
+        setAvailabilitySlots(nextSlots);
+        setTime((current) => nextSlots.includes(current) ? current : "");
+      } catch (err) {
+        if (!active || err?.name === "AbortError") return;
+        setAvailabilitySlots([]);
+        setTime("");
+        setAvailabilityError(err?.message || "AVAILABILITY_FETCH_FAILED");
+      } finally {
+        if (active) {
+          setAvailabilityLoading(false);
+        }
+      }
+    }
+
+    loadAvailability();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [slug, selectedMaster, selectedService, date]);
+
+  const timeOptions = availabilitySlots;
 
   function handleBookingSubmit(e) {
     e.preventDefault();
@@ -694,6 +752,7 @@ export default function BookingPage() {
       const nextSuccessData = {
         bookingId: data.booking_id || data?.booking?.id,
         masterName: selectedMasterName,
+        salonName,
         date,
         time,
         clientName: normalizedName,
@@ -993,7 +1052,7 @@ export default function BookingPage() {
         <div style={bookingStackStyle}>
           <MobileTopBar
             title="TOTEM"
-            subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+            subtitle={`Запись · ${formatSalonDisplayName(salonName, slug)}`}
             style={bookingTopBarStyle}
             right={<MobileBadge tone="neutral">загрузка</MobileBadge>}
           />
@@ -1042,7 +1101,7 @@ export default function BookingPage() {
         <div style={bookingStackStyle}>
           <MobileTopBar
             title="TOTEM"
-            subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+            subtitle={`Запись · ${formatSalonDisplayName(salonName, slug)}`}
             style={bookingTopBarStyle}
             right={<MobileBadge tone="success">запись создана</MobileBadge>}
           />
@@ -1475,7 +1534,7 @@ export default function BookingPage() {
       <div style={bookingStackStyle}>
         <MobileTopBar
           title="TOTEM"
-          subtitle={`Запись · ${formatSalonDisplayName(null, slug)}`}
+          subtitle={`Запись · ${formatSalonDisplayName(salonName, slug)}`}
           style={bookingTopBarStyle}
           right={<MobileBadge tone="primary">запись</MobileBadge>}
         />
@@ -1487,7 +1546,7 @@ export default function BookingPage() {
             style={bookingHeroStyle}
             actions={
               <div style={bookingHeroChipsStyle}>
-                <MobilePill tone="neutral" style={bookingChipStyle}>{formatSalonDisplayName(null, slug)}</MobilePill>
+                <MobilePill tone="neutral" style={bookingChipStyle}>{formatSalonDisplayName(salonName, slug)}</MobilePill>
                 <MobilePill tone="primary" style={bookingChipStyle}>24h запись</MobilePill>
                 <MobilePill tone="neutral" style={bookingChipStyle}>Контакты</MobilePill>
                 <MobilePill tone="success" style={bookingChipStyle}>Подтверждение</MobilePill>
@@ -1639,10 +1698,18 @@ export default function BookingPage() {
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                   style={styles.input}
-                  disabled={!date}
+                  disabled={!date || !selectedMaster || !selectedService || availabilityLoading}
                 >
                   <option value="">
-                    {date ? "Выберите время" : "Сначала выберите дату"}
+                    {!date
+                      ? "Сначала выберите дату"
+                      : !selectedMaster || !selectedService
+                        ? "Сначала выберите мастера и услугу"
+                        : availabilityLoading
+                          ? "Загружаем доступное время..."
+                          : timeOptions.length
+                            ? "Выберите время"
+                            : "Нет свободного времени"}
                   </option>
                   {timeOptions.map((t) => (
                     <option key={t} value={t}>
@@ -1650,6 +1717,13 @@ export default function BookingPage() {
                     </option>
                   ))}
                 </select>
+
+                {availabilityError ? (
+                  <MobileEmptyState
+                    title="Не удалось загрузить доступное время"
+                    description="Обновите дату или выберите мастера и услугу ещё раз."
+                  />
+                ) : null}
               </div>
             </MobileCard>
           </MobileSection>
