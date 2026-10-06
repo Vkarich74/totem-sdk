@@ -1,3 +1,4 @@
+import { UiValue, uiTemplate } from "../i18n/uiMessages.js";
 import React from "react";
 
 export default function TableSection({
@@ -8,23 +9,23 @@ export default function TableSection({
   className = "",
 }) {
   return (
-    <section className={`table-section ${className}`.trim()}>
+    <section className={uiTemplate(["table-section ",""], [className]).trim()}>
       {(title || subtitle || actions) && (
         <div className="table-section__header">
           <div className="table-section__head">
-            {title ? <h3 className="table-section__title">{title}</h3> : null}
+            {title ? <h3 className="table-section__title"><UiValue value={title} /></h3> : null}
             {subtitle ? (
-              <div className="table-section__subtitle">{subtitle}</div>
+              <div className="table-section__subtitle"><UiValue value={subtitle} /></div>
             ) : null}
           </div>
 
           {actions ? (
-            <div className="table-section__actions">{actions}</div>
+            <div className="table-section__actions"><UiValue value={actions} /></div>
           ) : null}
         </div>
       )}
 
-      <div className="table-section__body">{children}</div>
+      <div className="table-section__body"><UiValue value={children} /></div>
 
       <style>{`
         .table-section {

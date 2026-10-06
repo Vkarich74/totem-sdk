@@ -1,3 +1,4 @@
+import { UiValue, uiMessage } from "../i18n/uiMessages.js";
 import { NavLink } from "react-router-dom"
 import { buildSalonPath } from "./SalonContext"
 
@@ -26,11 +27,11 @@ function SectionTitle({ children, note }){
         letterSpacing: "0.08em",
         fontWeight: 700
       }}>
-        {children}
+        <UiValue value={children} />
       </div>
       {note ? (
         <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: "4px", lineHeight: 1.35 }}>
-          {note}
+          <UiValue value={note} />
         </div>
       ) : null}
     </div>
@@ -53,32 +54,32 @@ export default function SalonSidebar({ slug }) {
       alignSelf: "flex-start"
     }}>
       <div style={{ marginBottom: "24px" }}>
-        <strong style={{ fontSize: "16px" }}>Кабинет салона</strong>
+        <strong style={{ fontSize: "16px" }}><UiValue value={uiMessage("salon.s0020")} /></strong>
         <div style={{ fontSize: "12px", color: "#777", marginTop: "6px", wordBreak: "break-word" }}>
-          {slug || "—"}
+          <UiValue value={slug || "—"} />
         </div>
       </div>
 
-      <SectionTitle note="Операционка, мастера и ежедневная работа">Основное</SectionTitle>
+      <SectionTitle note={uiMessage("salon.s0021")}><UiValue value={uiMessage("salon.s0022")} /></SectionTitle>
       <nav>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "dashboard")}>Главная</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "masters")}>Мастера</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "bookings")}>Записи</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "calendar")}>Расписание</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "clients")}>Клиенты</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "services")}>Услуги</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "settings")}>Настройки</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "template")}>Шаблон страницы</NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "dashboard")}><UiValue value={uiMessage("salon.s0013")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "masters")}><UiValue value={uiMessage("salon.s0015")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "bookings")}><UiValue value={uiMessage("salon.s0014")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "calendar")}><UiValue value={uiMessage("salon.s0023")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "clients")}><UiValue value={uiMessage("salon.s0016")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "services")}><UiValue value={uiMessage("salon.s0024")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "settings")}><UiValue value={uiMessage("salon.s0025")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "template")}><UiValue value={uiMessage("salon.s0026")} /></NavLink>
       </nav>
 
-      <SectionTitle note="Деньги, расчёты и договорный контур">Финансы</SectionTitle>
+      <SectionTitle note={uiMessage("salon.s0027")}><UiValue value={uiMessage("salon.s0017")} /></SectionTitle>
       <nav>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "finance")}>Финансы</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "money")}>Доход</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "settlements")}>Сеты</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "payouts")}>Выплаты</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "transactions")}>Транзакции</NavLink>
-        <NavLink style={menuStyle} to={buildSalonPath(slug, "contracts")}>Контракты</NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "finance")}><UiValue value={uiMessage("salon.s0017")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "money")}><UiValue value={uiMessage("salon.s0028")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "settlements")}><UiValue value={uiMessage("salon.s0029")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "payouts")}><UiValue value={uiMessage("salon.s0030")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "transactions")}><UiValue value={uiMessage("salon.s0031")} /></NavLink>
+        <NavLink style={menuStyle} to={buildSalonPath(slug, "contracts")}><UiValue value={uiMessage("salon.s0032")} /></NavLink>
       </nav>
 
       <div style={{
@@ -88,10 +89,8 @@ export default function SalonSidebar({ slug }) {
         background: "#fff",
         padding: "12px"
       }}>
-        <div style={{ fontSize: "12px", fontWeight: 700, color: "#111827", marginBottom: "6px" }}>Логика кабинета</div>
-        <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}>
-          Стартуй с dashboard. Операционные задачи и мастеров держи в верхнем блоке, деньги, расчёты и контракты — в нижнем.
-        </div>
+        <div style={{ fontSize: "12px", fontWeight: 700, color: "#111827", marginBottom: "6px" }}><UiValue value={uiMessage("salon.s0033")} /></div>
+        <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}><UiValue value={uiMessage("salon.s0034")} /></div>
       </div>
     </div>
   )

@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMaster } from "../MasterContext";
@@ -6,30 +7,13 @@ import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
 import { getMasterSettlements } from "../../api/internal";
 
-function money(value) {
-  const n = Number(value) || 0;
-  return `${new Intl.NumberFormat("ru-RU").format(n)} сом`;
-}
+function money(value, currency) { return uiMoney(value, currency); }
 
-function formatDate(iso) {
-  if (!iso) return "—";
-
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-
-  return (
-    d.toLocaleDateString("ru-RU") +
-    " " +
-    d.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit"
-    })
-  );
-}
+function formatDate(iso) { if (!iso) return "—"; return uiDate(iso, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
 function getStatusLabel(status) {
-  if (status === "open") return "Открыт";
-  if (status === "closed") return "Закрыт";
+  if (status === "open") return uiMessage("salon.s0879");
+  if (status === "closed") return uiMessage("salon.s0880");
   return status || "—";
 }
 
@@ -45,20 +29,20 @@ function normalizeSettlements(payload) {
 function SummaryCard({ label, value, hint }) {
   return (
     <div style={styles.summaryCard}>
-      <div style={styles.summaryLabel}>{label}</div>
-      <div style={styles.summaryValue}>{value}</div>
-      {hint ? <div style={styles.summaryHint}>{hint}</div> : null}
+      <div style={styles.summaryLabel}><UiValue value={label} /></div>
+      <div style={styles.summaryValue}><UiValue value={value} /></div>
+      {hint ? <div style={styles.summaryHint}><UiValue value={hint} /></div> : null}
     </div>
   );
 }
 
 function FinanceNav({ masterSlug, active }) {
   const items = [
-    { key: "finance", label: "Финансы", note: "overview", to: `/master/${masterSlug}/finance` },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: `/master/${masterSlug}/money` },
-    { key: "settlements", label: "Сеты", note: "расчётные периоды", to: `/master/${masterSlug}/settlements` },
-    { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: `/master/${masterSlug}/payouts` },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: `/master/${masterSlug}/transactions` }
+    { key: "finance", label: uiMessage("salon.s0017"), note: uiMessage("salon.s1070"), to: uiTemplate(["/master/","/finance"], [masterSlug]) },
+    { key: "money", label: uiMessage("salon.s0412"), note: uiMessage("salon.s0902"), to: uiTemplate(["/master/","/money"], [masterSlug]) },
+    { key: "settlements", label: uiMessage("salon.s0029"), note: uiMessage("salon.s1071"), to: uiTemplate(["/master/","/settlements"], [masterSlug]) },
+    { key: "payouts", label: uiMessage("salon.s0030"), note: uiMessage("salon.s1072"), to: uiTemplate(["/master/","/payouts"], [masterSlug]) },
+    { key: "transactions", label: uiMessage("salon.s0031"), note: uiMessage("salon.s1073"), to: uiTemplate(["/master/","/transactions"], [masterSlug]) }
   ];
 
   return (
@@ -75,8 +59,8 @@ function FinanceNav({ masterSlug, active }) {
               background: isActive ? "#eff6ff" : "#ffffff"
             }}
           >
-            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}>{item.label}</div>
-            <div style={styles.navNote}>{item.note}</div>
+            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}><UiValue value={item.label} /></div>
+            <div style={styles.navNote}><UiValue value={item.note} /></div>
           </Link>
         );
       })}
@@ -103,7 +87,7 @@ export default function MasterSettlementsPage() {
         if (!masterSlug) {
           if (!cancelled) {
             setPeriods([]);
-            setError("Не найден master slug");
+            setError(uiError(uiMessage("master.s0201")));
           }
           return;
         }
@@ -120,7 +104,7 @@ export default function MasterSettlementsPage() {
 
         if (!cancelled) {
           setPeriods([]);
-          setError("Не удалось загрузить расчетные периоды");
+          setError(uiError(uiMessage("master.s0886")));
         }
       } finally {
         if (!cancelled) {
@@ -148,58 +132,58 @@ export default function MasterSettlementsPage() {
     <div style={{ padding: "14px 14px 20px" }}>
       {masterSlug ? <FinanceNav masterSlug={masterSlug} active="settlements" /> : null}
 
-      <PageSection title="Сеты">
-        {loading && <div>Загрузка...</div>}
+      <PageSection title={uiMessage("salon.s0029")}>
+        {loading && <div><UiValue value={uiMessage("salon.s0118")} /></div>}
 
         {!loading && error && (
           <EmptyState
-            title="Ошибка загрузки"
+            title={uiMessage("salon.s1036")}
             message={error}
           />
         )}
 
         {!loading && !error && periods.length === 0 && (
           <EmptyState
-            title="Сеты отсутствуют"
-            message="Расчетные периоды появятся после транзакций"
+            title={uiMessage("salon.s1154")}
+            message={uiMessage("master.s0888")}
           />
         )}
 
         {!loading && !error && periods.length > 0 && (
           <>
             <div style={styles.summaryGrid}>
-              <SummaryCard label="Кол-во сетов" value={periods.length} />
-              <SummaryCard label="Общая сумма" value={money(totalAmount)} />
-              <SummaryCard label="Открытые" value={openCount} hint="Текущие незакрытые периоды" />
+              <SummaryCard label={uiMessage("master.s0889")} value={periods.length} />
+              <SummaryCard label={uiMessage("salon.s1118")} value={money(totalAmount)} />
+              <SummaryCard label={uiMessage("salon.s1147")} value={openCount} hint={uiMessage("master.s0892")} />
             </div>
 
             <div style={styles.cardsList}>
               {periods.map((item, index) => (
                 <div key={item?.id || index} style={styles.itemCard}>
                   <div style={styles.itemTop}>
-                    <strong>{item?.id || `Сет ${index + 1}`}</strong>
-                    <span style={styles.statusBadge}>{getStatusLabel(item?.status)}</span>
+                    <strong><UiValue value={item?.id || uiMessage("salon.s1111", {p0: index + 1})} /></strong>
+                    <span style={styles.statusBadge}><UiValue value={getStatusLabel(item?.status)} /></span>
                   </div>
 
                   <div style={styles.metaGrid}>
                     <div>
-                      <div style={styles.metaLabel}>Начало</div>
-                      <div style={styles.metaValue}>{formatDate(item?.period_start || item?.start_date)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s1099")} /></div>
+                      <div style={styles.metaValue}><UiValue value={formatDate(item?.period_start || item?.start_date)} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Конец</div>
-                      <div style={styles.metaValue}>{formatDate(item?.period_end || item?.end_date)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s1100")} /></div>
+                      <div style={styles.metaValue}><UiValue value={formatDate(item?.period_end || item?.end_date)} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Сумма</div>
-                      <div style={styles.metaValue}>{money(item?.amount)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0147")} /></div>
+                      <div style={styles.metaValue}><UiValue value={money(item?.amount, item?.currency_code || item?.currency)} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Создан</div>
-                      <div style={styles.metaValue}>{formatDate(item?.created_at)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s1160")} /></div>
+                      <div style={styles.metaValue}><UiValue value={formatDate(item?.created_at)} /></div>
                     </div>
                   </div>
                 </div>

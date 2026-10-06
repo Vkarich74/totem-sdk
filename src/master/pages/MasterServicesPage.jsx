@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import {
@@ -36,15 +37,7 @@ function normalizeServicesResponse(payload) {
   return []
 }
 
-function formatPrice(value) {
-  const numberValue = Number(value)
-
-  if (!Number.isFinite(numberValue)) {
-    return "—"
-  }
-
-  return `${numberValue.toLocaleString("ru-RU")} сом`
-}
+function formatPrice(value, currency) { return uiMoney(value, currency); }
 
 function formatDuration(value) {
   const numberValue = Number(value)
@@ -53,14 +46,15 @@ function formatDuration(value) {
     return "—"
   }
 
-  return `${numberValue} мин`
+  return uiMessage("salon.s0735", {p0: numberValue})
 }
 
 function getServiceKey(service, index) {
-  return service?.id || service?.service_id || `${service?.name || "service"}-${index}`
+  return service?.id || service?.service_id || uiTemplate(["","-",""], [service?.name || "service", index])
 }
 
 export default function MasterServicesPage() {
+  const { renderUi } = useUiMessages();
   const { master, slug: contextSlug } = useMaster() || {}
 
   const slug = useMemo(() => {
@@ -95,7 +89,7 @@ export default function MasterServicesPage() {
     if (!slug) {
       setServices([])
       setLoading(false)
-      setError("Не найден master slug")
+      setError(uiError(uiMessage("master.s0201")))
       return
     }
 
@@ -107,7 +101,7 @@ export default function MasterServicesPage() {
       const normalized = normalizeServicesResponse(response)
       setServices(normalized)
     } catch (e) {
-      setError(e?.message || "Не удалось загрузить услуги")
+      setError(uiError(e?.message || uiMessage("master.s0202")))
       setServices([])
     } finally {
       setLoading(false)
@@ -118,7 +112,7 @@ export default function MasterServicesPage() {
     if (!slug) {
       setServices([])
       setLoading(false)
-      setError("Не найден master slug")
+      setError(uiError(uiMessage("master.s0201")))
       return
     }
 
@@ -160,15 +154,15 @@ export default function MasterServicesPage() {
     const price = Number(form.price)
 
     if (!name) {
-      return "Укажи название услуги"
+      return uiMessage("master.s0203")
     }
 
     if (!Number.isFinite(duration) || duration <= 0) {
-      return "Укажи корректную длительность"
+      return uiMessage("master.s0204")
     }
 
     if (!Number.isFinite(price) || price < 0) {
-      return "Укажи корректную цену"
+      return uiMessage("master.s0205")
     }
 
     return ""
@@ -180,13 +174,13 @@ export default function MasterServicesPage() {
     const validationError = validate()
 
     if (validationError) {
-      setError(validationError)
+      setError(uiError(validationError))
       setSuccess("")
       return
     }
 
     if (!slug) {
-      setError("Не найден master slug")
+      setError(uiError(uiMessage("master.s0201")))
       setSuccess("")
       return
     }
@@ -204,16 +198,16 @@ export default function MasterServicesPage() {
 
       if (editingId) {
         await updateMasterService(slug, editingId, payload)
-        setSuccess("Услуга обновлена")
+        setSuccess(uiMessage("master.s0206"))
       } else {
         await createMasterService(slug, payload)
-        setSuccess("Услуга добавлена")
+        setSuccess(uiMessage("master.s0207"))
       }
 
       resetForm()
       await loadServices()
     } catch (e) {
-      setError(e?.message || "Не удалось сохранить услугу")
+      setError(uiError(e?.message || uiMessage("master.s0208")))
     } finally {
       setSaving(false)
     }
@@ -235,13 +229,13 @@ export default function MasterServicesPage() {
     const serviceId = service?.id || service?.service_id
 
     if (!serviceId) {
-      setError("Не найден id услуги")
+      setError(uiError(uiMessage("master.s0209")))
       setSuccess("")
       return
     }
 
     if (!slug) {
-      setError("Не найден master slug")
+      setError(uiError(uiMessage("master.s0201")))
       setSuccess("")
       return
     }
@@ -255,10 +249,10 @@ export default function MasterServicesPage() {
         active: !(service?.active ?? service?.is_active ?? true)
       })
 
-      setSuccess("Статус услуги обновлён")
+      setSuccess(uiMessage("master.s0210"))
       await loadServices()
     } catch (e) {
-      setError(e?.message || "Не удалось изменить статус услуги")
+      setError(uiError(e?.message || uiMessage("master.s0211")))
     } finally {
       setTogglingId(null)
     }
@@ -268,19 +262,19 @@ export default function MasterServicesPage() {
     const serviceId = service?.id || service?.service_id
 
     if (!serviceId) {
-      setError("Не найден id услуги")
+      setError(uiError(uiMessage("master.s0209")))
       setSuccess("")
       return
     }
 
     if (!slug) {
-      setError("Не найден master slug")
+      setError(uiError(uiMessage("master.s0201")))
       setSuccess("")
       return
     }
 
     const confirmed = window.confirm(
-      `Удалить услугу "${service?.name || "Без названия"}"?`
+      renderUi(uiMessage("master.s0212", {p0: service?.name || uiMessage("salon.s0773")}))
     )
 
     if (!confirmed) {
@@ -298,10 +292,10 @@ export default function MasterServicesPage() {
         resetForm()
       }
 
-      setSuccess("Услуга удалена")
+      setSuccess(uiMessage("master.s0214"))
       await loadServices()
     } catch (e) {
-      setError(e?.message || "Не удалось удалить услугу")
+      setError(uiError(e?.message || uiMessage("master.s0215")))
     } finally {
       setDeletingId(null)
     }
@@ -323,9 +317,7 @@ export default function MasterServicesPage() {
             fontSize: "28px",
             lineHeight: 1.2
           }}
-        >
-          Услуги
-        </h1>
+        ><UiValue value={uiMessage("master.s0216")} /></h1>
 
         <div
           style={{
@@ -333,9 +325,7 @@ export default function MasterServicesPage() {
             marginTop: "8px",
             fontSize: "14px"
           }}
-        >
-          Управляй реальными услугами мастера: добавляй, смотри список и поддерживай актуальный каталог для профиля.
-        </div>
+        ><UiValue value={uiMessage("master.s0217")} /></div>
       </div>
 
       <div
@@ -355,9 +345,7 @@ export default function MasterServicesPage() {
             fontWeight: "600",
             color: "#111"
           }}
-        >
-          Быстро заполнить
-        </div>
+        ><UiValue value={uiMessage("master.s0218")} /></div>
 
         <div
           style={{
@@ -383,7 +371,7 @@ export default function MasterServicesPage() {
                 fontWeight: "500"
               }}
             >
-              {template.name}
+              <UiValue value={QUICK_TEMPLATE_LABELS[template.name] || template.name} />
             </button>
           ))}
         </div>
@@ -393,9 +381,7 @@ export default function MasterServicesPage() {
             fontSize: "12px",
             color: "#777"
           }}
-        >
-          Шаблон только заполняет форму. В систему сохраняется реальная услуга после нажатия кнопки добавления.
-        </div>
+        ><UiValue value={uiMessage("master.s0219")} /></div>
       </div>
 
       <form
@@ -417,7 +403,7 @@ export default function MasterServicesPage() {
             color: "#111"
           }}
         >
-          {editingId ? "Редактировать услугу" : "Добавить услугу"}
+          <UiValue value={editingId ? uiMessage("master.s0220") : uiMessage("salon.s0601")} />
         </div>
 
         <div
@@ -434,15 +420,13 @@ export default function MasterServicesPage() {
                 color: "#666",
                 marginBottom: "6px"
               }}
-            >
-              Название
-            </div>
+            ><UiValue value={uiMessage("master.s0222")} /></div>
 
             <input
               type="text"
               value={form.name}
               onChange={(e) => updateForm("name", e.target.value)}
-              placeholder="Например, Окрашивание"
+              placeholder={renderUi(uiMessage("master.s0223"))}
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -461,9 +445,7 @@ export default function MasterServicesPage() {
                 color: "#666",
                 marginBottom: "6px"
               }}
-            >
-              Длительность, мин
-            </div>
+            ><UiValue value={uiMessage("master.s0224")} /></div>
 
             <input
               type="number"
@@ -471,7 +453,7 @@ export default function MasterServicesPage() {
               step="1"
               value={form.duration_min}
               onChange={(e) => updateForm("duration_min", e.target.value)}
-              placeholder="Например, 60"
+              placeholder={renderUi(uiMessage("master.s0225"))}
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -490,9 +472,7 @@ export default function MasterServicesPage() {
                 color: "#666",
                 marginBottom: "6px"
               }}
-            >
-              Цена
-            </div>
+            ><UiValue value={uiMessage("salon.s0779")} /></div>
 
             <input
               type="number"
@@ -500,7 +480,7 @@ export default function MasterServicesPage() {
               step="1"
               value={form.price}
               onChange={(e) => updateForm("price", e.target.value)}
-              placeholder="Например, 1500"
+              placeholder={renderUi(uiMessage("master.s0227"))}
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -520,7 +500,7 @@ export default function MasterServicesPage() {
               fontSize: "14px"
             }}
           >
-            {error}
+            <UiValue value={uiError(error)} />
           </div>
         )}
 
@@ -531,7 +511,7 @@ export default function MasterServicesPage() {
               fontSize: "14px"
             }}
           >
-            {success}
+            <UiValue value={success} />
           </div>
         )}
 
@@ -555,7 +535,7 @@ export default function MasterServicesPage() {
               fontWeight: "600"
             }}
           >
-            {saving ? "Сохраняем..." : editingId ? "Сохранить изменения" : "Добавить услугу"}
+            <UiValue value={saving ? uiMessage("master.s0228") : editingId ? uiMessage("master.s0229") : uiMessage("salon.s0601")} />
           </button>
 
           <button
@@ -572,7 +552,7 @@ export default function MasterServicesPage() {
               fontWeight: "600"
             }}
           >
-            {editingId ? "Отмена" : "Очистить"}
+            <UiValue value={editingId ? uiMessage("master.s0230") : uiMessage("master.s0231")} />
           </button>
         </div>
       </form>
@@ -602,9 +582,7 @@ export default function MasterServicesPage() {
               fontWeight: "600",
               color: "#111"
             }}
-          >
-            Мои услуги
-          </div>
+          ><UiValue value={uiMessage("master.s0232")} /></div>
 
           <button
             type="button"
@@ -620,7 +598,7 @@ export default function MasterServicesPage() {
               fontWeight: "600"
             }}
           >
-            {loading ? "Обновляем..." : "Обновить список"}
+            <UiValue value={loading ? uiMessage("salon.s0431") : uiMessage("master.s0234")} />
           </button>
         </div>
 
@@ -630,18 +608,14 @@ export default function MasterServicesPage() {
               color: "#666",
               fontSize: "14px"
             }}
-          >
-            Загружаем услуги...
-          </div>
+          ><UiValue value={uiMessage("master.s0235")} /></div>
         ) : visibleServices.length === 0 ? (
           <div
             style={{
               color: "#666",
               fontSize: "14px"
             }}
-          >
-            Пока нет ни одной услуги. Добавь первую услугу через форму выше.
-          </div>
+          ><UiValue value={uiMessage("master.s0236")} /></div>
         ) : (
           <div
             style={{
@@ -652,7 +626,7 @@ export default function MasterServicesPage() {
             {visibleServices.map((service, index) => {
               const serviceId = service?.id || service?.service_id
               const key = getServiceKey(service, index)
-              const name = service?.name || "Без названия"
+              const name = service?.name || uiMessage("salon.s0773")
               const duration = service?.duration_min ?? service?.duration ?? service?.minutes
               const price = service?.price ?? service?.base_price ?? 0
               const statusValue = service?.active ?? service?.is_active
@@ -688,7 +662,7 @@ export default function MasterServicesPage() {
                         color: "#111"
                       }}
                     >
-                      {name}
+                      <UiValue value={name} />
                     </div>
 
                     <div
@@ -701,7 +675,7 @@ export default function MasterServicesPage() {
                         border: isActive ? "1px solid #abefc6" : "1px solid #d0d5dd"
                       }}
                     >
-                      {isActive ? "Активна" : "Скрыта"}
+                      <UiValue value={isActive ? uiMessage("salon.s0627") : uiMessage("master.s0238")} />
                     </div>
                   </div>
 
@@ -714,8 +688,8 @@ export default function MasterServicesPage() {
                       fontSize: "14px"
                     }}
                   >
-                    <div>Длительность: {formatDuration(duration)}</div>
-                    <div>Цена: {formatPrice(price)}</div>
+                    <div><UiValue value={uiMessage("master.s0239")} /><UiValue value={formatDuration(duration)} /></div>
+                    <div><UiValue value={uiMessage("master.s0240")} /><UiValue value={formatPrice(price, service?.currency_code || service?.currency)} /></div>
                   </div>
 
                   <div
@@ -738,9 +712,7 @@ export default function MasterServicesPage() {
                         cursor: isDeleting || isToggling || saving ? "not-allowed" : "pointer",
                         fontWeight: "600"
                       }}
-                    >
-                      Редактировать
-                    </button>
+                    ><UiValue value={uiMessage("master.s0241")} /></button>
 
                     <button
                       type="button"
@@ -756,11 +728,11 @@ export default function MasterServicesPage() {
                         fontWeight: "600"
                       }}
                     >
-                      {isToggling
-                        ? "Сохраняем..."
+                      <UiValue value={isToggling
+                        ? uiMessage("master.s0228")
                         : isActive
-                          ? "Скрыть"
-                          : "Активировать"}
+                          ? uiMessage("master.s0242")
+                          : uiMessage("salon.s0430")} />
                     </button>
 
                     <button
@@ -777,7 +749,7 @@ export default function MasterServicesPage() {
                         fontWeight: "600"
                       }}
                     >
-                      {isDeleting ? "Удаляем..." : "Удалить"}
+                      <UiValue value={isDeleting ? uiMessage("master.s0244") : uiMessage("salon.s0594")} />
                     </button>
                   </div>
                 </div>
@@ -789,3 +761,5 @@ export default function MasterServicesPage() {
     </div>
   )
 }
+
+const QUICK_TEMPLATE_LABELS = { "Женская стрижка": uiMessage("master.s0193"), "Мужская стрижка": uiMessage("master.s0194"), "Окрашивание": uiMessage("master.s0195"), "Укладка": uiMessage("master.s0196"), "Уход за волосами": uiMessage("master.s0197"), "Мелирование": uiMessage("master.s0198") };

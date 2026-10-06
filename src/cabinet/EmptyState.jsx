@@ -1,25 +1,26 @@
+import { UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
 import React from "react";
 
 export default function EmptyState({
-  title = "Нет данных",
+  title = uiMessage("salon.s0002"),
   message,
   action,
   icon,
   className = "",
 }) {
   return (
-    <div className={`empty-state ${className}`.trim()}>
-      {icon ? <div className="empty-state__icon">{icon}</div> : null}
+    <div className={uiTemplate(["empty-state ",""], [className]).trim()}>
+      {icon ? <div className="empty-state__icon"><UiValue value={icon} /></div> : null}
 
       <div className="empty-state__content">
-        <div className="empty-state__title">{title}</div>
+        <div className="empty-state__title"><UiValue value={title} /></div>
 
         {message ? (
-          <div className="empty-state__message">{message}</div>
+          <div className="empty-state__message"><UiValue value={message} /></div>
         ) : null}
 
         {action ? (
-          <div className="empty-state__action">{action}</div>
+          <div className="empty-state__action"><UiValue value={action} /></div>
         ) : null}
       </div>
 

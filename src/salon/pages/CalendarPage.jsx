@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug } from "../SalonContext"
@@ -48,10 +49,10 @@ function normalizeStatus(status){
 
 function statusText(status){
   const value = normalizeStatus(status)
-  if(value === "reserved" || value === "pending") return "Ожидает"
-  if(value === "confirmed") return "Подтверждена"
-  if(value === "completed") return "Завершена"
-  if(value === "cancelled") return "Отменена"
+  if(value === "reserved" || value === "pending") return uiMessage("salon.s0042")
+  if(value === "confirmed") return uiMessage("salon.s0204")
+  if(value === "completed") return uiMessage("salon.s0205")
+  if(value === "cancelled") return uiMessage("salon.s0206")
   return status || "—"
 }
 
@@ -69,7 +70,7 @@ function pad(value){
 }
 
 function toLocalDateKey(date){
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  return uiTemplate(["","-","-",""], [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())])
 }
 
 function parseLocalDateKey(value){
@@ -113,38 +114,9 @@ function isPastSlot(dayKey, time){
   return slotDate.getTime() < Date.now()
 }
 
-function formatDateLabel(value){
-  if(!value) return "—"
+function formatDateLabel(value){ if (!value) return "—"; const normalized = String(value).trim(); const localDate = normalized.includes(" ") ? normalized.split(" ")[0] : normalized; return uiDate(localDate, { day: "2-digit", month: "2-digit", year: "numeric" }); }
 
-  const normalized = String(value || "").trim()
-  const localStamp = normalized.includes(" ") ? normalized.split(" ")[0] : normalized
-  const date = parseLocalDateKey(localStamp) || new Date(normalized)
-  if(Number.isNaN(date.getTime())) return "—"
-
-  return date.toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  })
-}
-
-function formatTimeLabel(value){
-  if(!value) return "—"
-
-  const normalized = String(value || "").trim()
-  const timePart = normalized.includes(" ") ? normalized.split(" ")[1] : ""
-  if(timePart && /^\d{2}:\d{2}/.test(timePart)){
-    return timePart.slice(0, 5)
-  }
-
-  const date = new Date(normalized)
-  if(Number.isNaN(date.getTime())) return "—"
-
-  return date.toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit"
-  })
-}
+function formatTimeLabel(value){ if (!value) return "—"; const normalized = String(value).trim(); const timePart = normalized.includes(" ") ? normalized.split(" ")[1] : ""; if (timePart && /^\d{2}:\d{2}/.test(timePart)) return timePart.slice(0, 5); return uiDate(value, { hour: "2-digit", minute: "2-digit" }); }
 
 function normalizeCalendarDateKey(value){
   const text = String(value || "").trim()
@@ -198,9 +170,9 @@ function getAvailabilityStatus(row){
 
 function getAvailabilityLabel(row){
   const status = getAvailabilityStatus(row)
-  if(status === "unknown") return "График не задан"
-  if(status === "configured") return "График задан"
-  return "Доступность неизвестна"
+  if(status === "unknown") return uiMessage("salon.s0238")
+  if(status === "configured") return uiMessage("salon.s0239")
+  return uiMessage("salon.s0240")
 }
 
 function getEmptySlotLabel(row){
@@ -244,13 +216,13 @@ function getEmptySlotState(row, slotTime, occupiedEvent = null){
     const canBook = !occupiedEvent && (slotTime ? isSlotInsideWorkingHours(slotTime, row) : true)
     return {
       canBook,
-      label: canBook ? "Свободно" : "Вне графика"
+      label: canBook ? uiMessage("salon.s0241") : uiMessage("salon.s0242")
     }
   }
 
-  if(status === "unknown") return { canBook: false, label: "График не задан" }
+  if(status === "unknown") return { canBook: false, label: uiMessage("salon.s0238") }
 
-  return { canBook: false, label: "Доступность неизвестна" }
+  return { canBook: false, label: uiMessage("salon.s0240") }
 }
 
 function buildBookingHash(salonSlug, masterId, date, time){
@@ -259,7 +231,7 @@ function buildBookingHash(salonSlug, masterId, date, time){
   if(masterId) params.set("master", String(masterId))
   if(date) params.set("date", date)
   if(time) params.set("time", time)
-  return `#/booking?${params.toString()}`
+  return uiTemplate(["#/booking?",""], [params.toString()])
 }
 
 function openBookingForSlot(salonSlug, masterId, date, time){
@@ -291,7 +263,7 @@ function formatLocalRange(startValue, endValue){
   if(start === "—" && end === "—") return "—"
   if(end === "—") return start
   if(start === "—") return end
-  return `${start} — ${end}`
+  return uiTemplate([""," — ",""], [start, end])
 }
 
 function normalizeBooking(raw){
@@ -299,8 +271,8 @@ function normalizeBooking(raw){
   return {
     ...raw,
     start_at: startAt,
-    client_name: raw?.client_name || raw?.client || "Клиент",
-    master_name: raw?.master_name || raw?.master || "Мастер",
+    client_name: raw?.client_name || raw?.client || uiMessage("salon.s0229"),
+    master_name: raw?.master_name || raw?.master || uiMessage("salon.s0094"),
     phone: raw?.phone || raw?.client_phone || "",
     status: normalizeStatus(raw?.status),
     service_name: raw?.service_name || raw?.service || ""
@@ -331,9 +303,9 @@ function buildDayOptions(bookings){
 function SummaryCard({ label, value, hint }){
   return (
     <div style={styles.summaryCard}>
-      <div style={styles.summaryLabel}>{label}</div>
-      <div style={styles.summaryValue}>{value}</div>
-      {hint ? <div style={styles.summaryHint}>{hint}</div> : null}
+      <div style={styles.summaryLabel}><UiValue value={label} /></div>
+      <div style={styles.summaryValue}><UiValue value={value} /></div>
+      {hint ? <div style={styles.summaryHint}><UiValue value={hint} /></div> : null}
     </div>
   )
 }
@@ -349,16 +321,10 @@ function isPendingCashBooking(booking){
 }
 
 function getPaymentLabelRu(booking){
-  const explicit = String(booking?.payment_label_ru || "").trim()
-  if(explicit) return explicit
-
-  return isPendingCashBooking(booking) ? "Наличные ожидают подтверждения" : "Оплата не выбрана"
+  return isPendingCashBooking(booking) ? uiMessage("salon.s0243") : uiMessage("salon.s0244")
 }
 
-function formatCurrency(value){
-  const amount = Number(value || 0)
-  return Number.isFinite(amount) ? new Intl.NumberFormat("ru-RU").format(amount) + " сом" : "0 сом"
-}
+function formatCurrency(value, currency) { return uiMoney(value, currency); }
 
 export default function CalendarPage(){
   const { slug: routeSlug } = useParams()
@@ -381,7 +347,7 @@ export default function CalendarPage(){
   async function load(){
     if(!salonSlug){
       setCalendarResponse(null)
-      setError("SALON_SLUG_MISSING")
+      setError(uiError("SALON_SLUG_MISSING"))
       setLoading(false)
       return
     }
@@ -404,7 +370,7 @@ export default function CalendarPage(){
     }catch(loadError){
       console.error("SALON CALENDAR LOAD ERROR", loadError)
       setCalendarResponse(null)
-      setError(loadError?.message || "SALON_CALENDAR_LOAD_FAILED")
+      setError(uiError(loadError?.message || "SALON_CALENDAR_LOAD_FAILED"))
     }finally{
       setLoading(false)
     }
@@ -468,7 +434,7 @@ export default function CalendarPage(){
   const masterColumnCount = Math.max(1, masters.length)
   const gridTemplateColumns = masterColumnCount <= 1
     ? "110px minmax(0, 1fr)"
-    : `110px repeat(${masterColumnCount}, minmax(180px, 1fr))`
+    : uiTemplate(["110px repeat(",", minmax(180px, 1fr))"], [masterColumnCount])
 
   function selectDay(nextDay){
     const normalized = normalizeCalendarDateKey(nextDay)
@@ -480,51 +446,51 @@ export default function CalendarPage(){
     const occupied = isOccupiedEventStatus(event?.status)
     const cancelled = isCancelledEventStatus(event?.status)
     const tone = occupied ? "#2563eb" : cancelled ? "#9ca3af" : "#7c3aed"
-    const text = occupied ? "Занято" : cancelled ? "Отменена" : statusText(event?.status)
+    const text = occupied ? uiMessage("salon.s0247") : cancelled ? uiMessage("salon.s0206") : statusText(event?.status)
 
     return (
       <div
-        key={`${event?.booking_id || event?.booking_code || event?.master_id || "event"}-${event?.start_local || event?.start_at || ""}`}
+        key={uiTemplate(["","-",""], [event?.booking_id || event?.booking_code || event?.master_id || "event", event?.start_local || event?.start_at || ""])}
         style={{
           ...styles.mobileCard,
-          borderColor: `${tone}33`
+          borderColor: uiTemplate(["","33"], [tone])
         }}
       >
         <div style={styles.mobileCardHeader}>
           <div>
-            <div style={styles.mobileTitle}>{event?.client_name || "Клиент"}</div>
-            <div style={styles.mobileMeta}>{event?.master_name || "Мастер"}</div>
+            <div style={styles.mobileTitle}><UiValue value={event?.client_name || uiMessage("salon.s0229")} /></div>
+            <div style={styles.mobileMeta}><UiValue value={event?.master_name || uiMessage("salon.s0094")} /></div>
           </div>
           <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
-            <span style={{ ...styles.statusBadge, background: `${tone}18`, color: tone }}>{text}</span>
+            <span style={{ ...styles.statusBadge, background: uiTemplate(["","18"], [tone]), color: tone }}><UiValue value={text} /></span>
           </div>
         </div>
         <div style={styles.mobileMetaRow}>
-          <span>{formatLocalRange(event?.start_local || event?.start_at, event?.end_local || event?.end_at)}</span>
-          <span>{selectedDay ? currentDayLabel : "—"}</span>
+          <span><UiValue value={formatLocalRange(event?.start_local || event?.start_at, event?.end_local || event?.end_at)} /></span>
+          <span><UiValue value={selectedDay ? currentDayLabel : "—"} /></span>
         </div>
-        {event?.service_name ? <div style={styles.mobileService}>{event.service_name}</div> : null}
-        {event?.client_phone ? <div style={styles.mobilePhone}>{event.client_phone}</div> : null}
-        {event?.price !== null && event?.price !== undefined ? <div style={styles.mobilePaymentLabel}>{formatCurrency(event.price)}</div> : null}
+        {event?.service_name ? <div style={styles.mobileService}><UiValue value={event.service_name} /></div> : null}
+        {event?.client_phone ? <div style={styles.mobilePhone}><UiValue value={event.client_phone} /></div> : null}
+        {event?.price !== null && event?.price !== undefined ? <div style={styles.mobilePaymentLabel}><UiValue value={formatCurrency(event.price, event?.currency_code || event?.currency)} /></div> : null}
       </div>
     )
   }
 
   if(loading){
     return (
-      <PageSection title="Расписание салона">
-        <div style={styles.feedbackCard}>Загрузка календаря…</div>
+      <PageSection title={uiMessage("salon.s0248")}>
+        <div style={styles.feedbackCard}><UiValue value={uiMessage("salon.s0249")} /></div>
       </PageSection>
     )
   }
 
   if(error){
     return (
-      <PageSection title="Расписание салона">
+      <PageSection title={uiMessage("salon.s0248")}>
         <div style={styles.errorCard}>
-          <div style={styles.errorTitle}>Не удалось загрузить календарь</div>
-          <div style={styles.errorText}>{error}</div>
-          <button style={styles.primaryButton} onClick={load}>Повторить</button>
+          <div style={styles.errorTitle}><UiValue value={uiMessage("salon.s0250")} /></div>
+          <div style={styles.errorText}><UiValue value={error} /></div>
+          <button style={styles.primaryButton} onClick={load}><UiValue value={uiMessage("salon.s0251")} /></button>
         </div>
       </PageSection>
     )
@@ -532,21 +498,21 @@ export default function CalendarPage(){
 
   if(!masters.length){
     return (
-      <PageSection title="Расписание салона">
-        <EmptyState title="Нет активных мастеров" description="Backend не вернул мастеров для календаря." />
+      <PageSection title={uiMessage("salon.s0248")}>
+        <EmptyState title={uiMessage("salon.s0252")} description={uiMessage("salon.s0253")} />
       </PageSection>
     )
   }
 
   return (
-    <PageSection title="Расписание салона">
-      <div style={styles.pageHint}>Backend-календарь салона по таймзоне салона и активным мастерам</div>
+    <PageSection title={uiMessage("salon.s0248")}>
+      <div style={styles.pageHint}><UiValue value={uiMessage("salon.s0254")} /></div>
 
       <div style={styles.summaryGrid}>
-        <SummaryCard label="Мастеров" value={activeMastersCount} hint="Только активные мастера" />
-        <SummaryCard label="Записей на день" value={eventsCount} hint={currentDayLabel} />
-        <SummaryCard label="Подтверждены" value={occupiedCount} hint="Активные записи" />
-        <SummaryCard label="Ожидают" value={pendingCount} hint="Требуют внимания" />
+        <SummaryCard label={uiMessage("salon.s0255")} value={activeMastersCount} hint={uiMessage("salon.s0256")} />
+        <SummaryCard label={uiMessage("salon.s0257")} value={eventsCount} hint={currentDayLabel} />
+        <SummaryCard label={uiMessage("salon.s0258")} value={occupiedCount} hint={uiMessage("salon.s0259")} />
+        <SummaryCard label={uiMessage("salon.s0220")} value={pendingCount} hint={uiMessage("salon.s0126")} />
       </div>
 
       <div style={styles.toolbar}>
@@ -564,9 +530,7 @@ export default function CalendarPage(){
             style={styles.navButton}
             onClick={() => selectDay(todayDate)}
             disabled={!todayDate}
-          >
-            Сегодня
-          </button>
+          ><UiValue value={uiMessage("salon.s0261")} /></button>
           <button
             type="button"
             style={styles.navButton}
@@ -578,7 +542,7 @@ export default function CalendarPage(){
         </div>
 
         <div style={styles.fieldGroup}>
-          <label style={styles.label}>Дата</label>
+          <label style={styles.label}><UiValue value={uiMessage("salon.s0233")} /></label>
           <input
             type="date"
             value={selectedDay}
@@ -589,46 +553,46 @@ export default function CalendarPage(){
       </div>
 
       <div style={styles.calendarMetaRow}>
-        <div>Выбранный день: <b>{currentDayLabel}</b></div>
-        <div>Сегодня в салоне: <b>{todayLabel}</b></div>
+        <div><UiValue value={uiMessage("salon.s0263")} /><b><UiValue value={currentDayLabel} /></b></div>
+        <div><UiValue value={uiMessage("salon.s0264")} /><b><UiValue value={todayLabel} /></b></div>
       </div>
 
       {workingHours.some((row) => getAvailabilityStatus(row) === "unknown") ? (
-        <div style={styles.availabilityNote}>Доступность неизвестна: график мастера не задан.</div>
+        <div style={styles.availabilityNote}><UiValue value={uiMessage("salon.s0265")} /></div>
       ) : null}
 
       {isMobile ? (
         dayEvents.length === 0 ? (
           <EmptyState
-            title="На этот день записей нет"
-            description="Календарь показывает только backend-события и не создаёт запись из пустого слота."
+            title={uiMessage("salon.s0266")}
+            description={uiMessage("salon.s0267")}
           />
         ) : (
           <div style={styles.mobileList}>
-            {dayEvents.map((event) => renderEventCard(event))}
+            <UiValue value={dayEvents.map((event) => renderEventCard(event))} />
           </div>
         )
       ) : (
         <div style={styles.desktopWrap}>
           <div style={{ ...styles.grid, gridTemplateColumns }}>
             <div style={styles.cornerCell}>
-              <div style={styles.cornerTitle}>Время</div>
-              <div style={styles.cornerSubtitle}>{currentDayLabel}</div>
+              <div style={styles.cornerTitle}><UiValue value={uiMessage("salon.s0268")} /></div>
+              <div style={styles.cornerSubtitle}><UiValue value={currentDayLabel} /></div>
             </div>
 
             {masters.map((master) => {
               const availabilityRow = workingHoursByMasterId.get(String(master.id || ""))
               return (
                 <div key={master.id} style={styles.masterHeader}>
-                  <div style={styles.masterName}>{master.name}</div>
-                  <div style={styles.masterAvailability}>{getAvailabilityLabel(availabilityRow)}</div>
+                  <div style={styles.masterName}><UiValue value={master.name} /></div>
+                  <div style={styles.masterAvailability}><UiValue value={getAvailabilityLabel(availabilityRow)} /></div>
                 </div>
               )
             })}
 
             {slots.map((time) => (
               <div key={time} style={{ display: "contents" }}>
-                <div style={styles.timeCell}>{time}</div>
+                <div style={styles.timeCell}><UiValue value={time} /></div>
 
                 {masters.map((master) => {
                   const masterId = String(master?.id || "")
@@ -641,7 +605,7 @@ export default function CalendarPage(){
 
                   return (
                     <div
-                      key={`${masterId}-${time}`}
+                      key={uiTemplate(["","-",""], [masterId, time])}
                       style={{
                         ...styles.slotCell,
                         background: occupiedEvent ? "#eff6ff" : historyEvent ? "#f8fafc" : "#ffffff",
@@ -650,18 +614,18 @@ export default function CalendarPage(){
                     >
                       {occupiedEvent ? (
                         <div style={styles.bookingCell}>
-                          <div style={{ ...styles.bookingClient, color: cellTone }}>{occupiedEvent.client_name || "Занято"}</div>
-                          <div style={styles.bookingMeta}>{occupiedEvent.service_name || statusText(occupiedEvent.status)}</div>
-                          <div style={styles.bookingCashMeta}>{formatLocalRange(occupiedEvent.start_local || occupiedEvent.start_at, occupiedEvent.end_local || occupiedEvent.end_at)}</div>
+                          <div style={{ ...styles.bookingClient, color: cellTone }}><UiValue value={occupiedEvent.client_name || uiMessage("salon.s0247")} /></div>
+                          <div style={styles.bookingMeta}><UiValue value={occupiedEvent.service_name || statusText(occupiedEvent.status)} /></div>
+                          <div style={styles.bookingCashMeta}><UiValue value={formatLocalRange(occupiedEvent.start_local || occupiedEvent.start_at, occupiedEvent.end_local || occupiedEvent.end_at)} /></div>
                         </div>
                       ) : historyEvent ? (
                         <div style={styles.historyCell}>
-                          <div style={styles.historyTitle}>Отменена</div>
-                          <div style={styles.historyMeta}>{historyEvent.client_name || "Клиент"}</div>
+                          <div style={styles.historyTitle}><UiValue value={uiMessage("salon.s0206")} /></div>
+                          <div style={styles.historyMeta}><UiValue value={historyEvent.client_name || uiMessage("salon.s0229")} /></div>
                         </div>
                       ) : (
                         <div style={styles.unknownSlotCell}>
-                          <div style={styles.unknownSlotTitle}>{emptySlotState.label}</div>
+                          <div style={styles.unknownSlotTitle}><UiValue value={emptySlotState.label} /></div>
                           {emptySlotState.canBook ? (
                             <button
                               type="button"
@@ -673,9 +637,7 @@ export default function CalendarPage(){
                                 cursor: "pointer"
                               }}
                               onClick={() => openBookingForSlot(salonSlug, master.id || masterId, selectedDay, time)}
-                            >
-                              Добавить клиента
-                            </button>
+                            ><UiValue value={uiMessage("salon.s0269")} /></button>
                           ) : null}
                         </div>
                       )}

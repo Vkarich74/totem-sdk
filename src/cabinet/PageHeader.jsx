@@ -1,3 +1,4 @@
+import { UiValue } from "../i18n/uiMessages.js";
 import React from "react"
 
 export default function PageHeader({
@@ -11,18 +12,19 @@ return(
 <div style={{
 display:"flex",
 alignItems:"center",
+flexWrap:"wrap",
 gap:"16px",
 marginBottom:"20px"
 }}>
 
-<div style={{flex:1}}>
+<div style={{flex:"1 1 220px", minWidth:0}}>
 
 <div style={{
 fontSize:"22px",
 fontWeight:"700",
 lineHeight:"26px"
 }}>
-{title}
+<UiValue value={title} />
 </div>
 
 {subtitle && (
@@ -32,7 +34,7 @@ fontSize:"13px",
 color:"#6b7280",
 marginTop:"4px"
 }}>
-{subtitle}
+<UiValue value={subtitle} />
 </div>
 
 )}
@@ -43,9 +45,11 @@ marginTop:"4px"
 
 <div style={{
 display:"flex",
-gap:"8px"
+gap:"8px",
+flexWrap:"wrap",
+maxWidth:"100%"
 }}>
-{actions}
+<UiValue value={actions} />
 </div>
 
 )}

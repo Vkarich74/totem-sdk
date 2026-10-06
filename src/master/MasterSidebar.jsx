@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
 import { NavLink } from "react-router-dom"
 
 function buildMenuStyle(isActive) {
@@ -28,11 +29,11 @@ function SectionTitle({ children, note }) {
           fontWeight: 700,
         }}
       >
-        {children}
+        <UiValue value={children} />
       </div>
       {note ? (
         <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: "4px", lineHeight: 1.35 }}>
-          {note}
+          <UiValue value={note} />
         </div>
       ) : null}
     </div>
@@ -47,7 +48,7 @@ function buildMasterPath(slug, tail = "") {
     return ""
   }
 
-  return safeTail ? `/master/${safeSlug}/${safeTail}` : `/master/${safeSlug}`
+  return safeTail ? uiTemplate(["/master/","/",""], [safeSlug, safeTail]) : uiTemplate(["/master/",""], [safeSlug])
 }
 
 function renderMenu(items, menuStyle) {
@@ -55,7 +56,7 @@ function renderMenu(items, menuStyle) {
     <nav>
       {items.map((item) => (
         <NavLink key={item.to} style={menuStyle} to={item.to}>
-          {item.label}
+          <UiValue value={item.label} />
         </NavLink>
       ))}
     </nav>
@@ -70,25 +71,25 @@ export default function MasterSidebar({ slug }) {
   const menuStyle = ({ isActive }) => buildMenuStyle(isActive)
 
   const mainItems = [
-    { to: buildMasterPath(slug, "dashboard"), label: "Главная" },
-    { to: buildMasterPath(slug, "bookings"), label: "Записи" },
-    { to: buildMasterPath(slug, "schedule"), label: "Расписание" },
-    { to: buildMasterPath(slug, "clients"), label: "Клиенты" },
-    { to: buildMasterPath(slug, "services"), label: "Услуги" },
-    { to: buildMasterPath(slug, "settings"), label: "Настройки" },
-    { to: buildMasterPath(slug, "template"), label: "Шаблон страницы" },
+    { to: buildMasterPath(slug, "dashboard"), label: uiMessage("salon.s0013") },
+    { to: buildMasterPath(slug, "bookings"), label: uiMessage("salon.s0014") },
+    { to: buildMasterPath(slug, "schedule"), label: uiMessage("salon.s0023") },
+    { to: buildMasterPath(slug, "clients"), label: uiMessage("salon.s0016") },
+    { to: buildMasterPath(slug, "services"), label: uiMessage("salon.s0024") },
+    { to: buildMasterPath(slug, "settings"), label: uiMessage("salon.s0025") },
+    { to: buildMasterPath(slug, "template"), label: uiMessage("salon.s0026") },
   ]
 
   const showcaseItems = [
-    { to: buildMasterPath(slug, "template"), label: "Шаблон страницы" },
+    { to: buildMasterPath(slug, "template"), label: uiMessage("salon.s0026") },
   ]
 
   const financeItems = [
-    { to: buildMasterPath(slug, "finance"), label: "Финансы" },
-    { to: buildMasterPath(slug, "money"), label: "Доход" },
-    { to: buildMasterPath(slug, "settlements"), label: "Сеты" },
-    { to: buildMasterPath(slug, "payouts"), label: "Выплаты" },
-    { to: buildMasterPath(slug, "transactions"), label: "Транзакции" },
+    { to: buildMasterPath(slug, "finance"), label: uiMessage("salon.s0017") },
+    { to: buildMasterPath(slug, "money"), label: uiMessage("salon.s0028") },
+    { to: buildMasterPath(slug, "settlements"), label: uiMessage("salon.s0029") },
+    { to: buildMasterPath(slug, "payouts"), label: uiMessage("salon.s0030") },
+    { to: buildMasterPath(slug, "transactions"), label: uiMessage("salon.s0031") },
   ]
 
   return (
@@ -106,18 +107,18 @@ export default function MasterSidebar({ slug }) {
       }}
     >
       <div style={{ marginBottom: "24px" }}>
-        <strong style={{ fontSize: "16px" }}>Кабинет мастера</strong>
+        <strong style={{ fontSize: "16px" }}><UiValue value={uiMessage("master.s0021")} /></strong>
         <div style={{ fontSize: "12px", color: "#777", marginTop: "6px", wordBreak: "break-word" }}>
-          {slug}
+          <UiValue value={slug} />
         </div>
       </div>
 
-      <SectionTitle note="Операционка и ежедневная работа">Основное</SectionTitle>
-      {renderMenu(mainItems, menuStyle)}
+      <SectionTitle note={uiMessage("master.s0022")}><UiValue value={uiMessage("salon.s0022")} /></SectionTitle>
+      <UiValue value={renderMenu(mainItems, menuStyle)} />
 
 
-      <SectionTitle note="Деньги, расчёты и выплаты">Финансы</SectionTitle>
-      {renderMenu(financeItems, menuStyle)}
+      <SectionTitle note={uiMessage("master.s0024")}><UiValue value={uiMessage("salon.s0017")} /></SectionTitle>
+      <UiValue value={renderMenu(financeItems, menuStyle)} />
 
       <div
         style={{
@@ -128,12 +129,8 @@ export default function MasterSidebar({ slug }) {
           padding: "12px",
         }}
       >
-        <div style={{ fontSize: "12px", fontWeight: 700, color: "#111827", marginBottom: "6px" }}>
-          Логика кабинета
-        </div>
-        <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}>
-          Стартуй с dashboard. Операционные задачи держи в верхнем блоке, шаблон и публикацию — в витрине, деньги и расчёты — в нижнем блоке.
-        </div>
+        <div style={{ fontSize: "12px", fontWeight: 700, color: "#111827", marginBottom: "6px" }}><UiValue value={uiMessage("master.s0025")} /></div>
+        <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}><UiValue value={uiMessage("master.s0026")} /></div>
       </div>
     </div>
   )

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import ErrorBoundary from "./core/ErrorBoundary";
+import { MarketContextProvider, useMarketContext } from "./market/MarketContext.jsx";
+import LanguageSelector from "./i18n/LanguageSelector.jsx";
 
 import PublicSalonPage from "./public/PublicSalonPage";
 import PublicMasterPage from "./public/PublicMasterPage";
@@ -411,6 +413,7 @@ function PublicPathRouter() {
 }
 
 function AuthBootstrapGate({ children }){
+  const { t } = useMarketContext();
   const [state, setState] = useState({
     loading: true
   });
@@ -472,7 +475,7 @@ function AuthBootstrapGate({ children }){
           font: "16px/1.5 Arial, sans-serif"
         }}
       >
-        Проверка сессии…
+        {t("checkingSession")}
       </div>
     );
   }
@@ -801,11 +804,18 @@ function AdminRouter() {
   return <AdminDashboardPage />;
 }
 
+function LocaleControls() {
+  const location = useLocation();
+  if (!/^\/(auth|salon|master)(\/|$)/.test(location.pathname)) return null;
+  return <div style={{ padding: "8px 20px", background: "#fafafa" }}><LanguageSelector /></div>;
+}
+
 export default function App() {
   if (isAdminRoute()) {
     return (
       <ErrorBoundary>
         <HashRouter>
+          <MarketContextProvider>
           {isAdminLoginRoute() ? (
             <AdminRouter />
           ) : (
@@ -813,6 +823,7 @@ export default function App() {
               <AdminRouter />
             </AdminAuthGate>
           )}
+          </MarketContextProvider>
         </HashRouter>
       </ErrorBoundary>
     );
@@ -823,10 +834,14 @@ export default function App() {
   return (
     <ErrorBoundary>
       <HashRouter>
+        <MarketContextProvider>
+        <LocaleControls />
         <AuthBootstrapGate>
           {publicRoute ? <PublicPathRouter /> : <CabinetRouter />}
         </AuthBootstrapGate>
+        </MarketContextProvider>
       </HashRouter>
     </ErrorBoundary>
   );
 }
+

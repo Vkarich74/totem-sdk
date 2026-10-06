@@ -1,3 +1,4 @@
+import { uiError, UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
 import { Outlet } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { MasterProvider, useMaster } from "./MasterContext"
@@ -35,11 +36,8 @@ function BillingBanner({ billingAccess, billingBlockReason, canWrite, canWithdra
       fontWeight: 700,
       fontSize: "14px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
-    }}>
-      Внимание: истекает подписка. Пополните баланс.
-      {billingBlockReason ? ` ${billingBlockReason}` : ""}
-      <span style={{ display: "inline-block", marginLeft: "10px", fontWeight: 500 }}>
-        Запись: {canWrite ? "доступна" : "ограничена"} · Выплаты: {canWithdraw ? "доступны" : "ограничены"}
+    }}><UiValue value={uiMessage("salon.s0004")} /><UiValue value={billingBlockReason ? uiTemplate([" ",""], [uiError(billingBlockReason)]) : ""} />
+      <span style={{ display: "inline-block", marginLeft: "10px", fontWeight: 500 }}><UiValue value={uiMessage("salon.s0005")} /><UiValue value={canWrite ? uiMessage("salon.s0006") : uiMessage("salon.s0007")} /><UiValue value={uiMessage("salon.s0008")} /><UiValue value={canWithdraw ? uiMessage("salon.s0009") : uiMessage("salon.s0010")} />
       </span>
     </div>
   )
@@ -73,10 +71,10 @@ function BillingOverlay({ billingAccess, billingBlockReason }){
       padding: "24px"
     }}>
       <div>
-        <div>Доступ ограничен. Оплатите подписку.</div>
+        <div><UiValue value={uiMessage("salon.s0011")} /></div>
         {billingBlockReason && (
           <div style={{ marginTop: "10px", fontSize: "14px", fontWeight: "normal" }}>
-            {billingBlockReason}
+            <UiValue value={uiError(billingBlockReason)} />
           </div>
         )}
       </div>
@@ -143,7 +141,7 @@ function SessionGate({ slug, children }){
         const params = new URLSearchParams()
         params.set("role", "master")
         if(slug) params.set("slug", slug)
-        window.location.hash = `/auth/login?${params.toString()}`
+        window.location.hash = uiTemplate(["/auth/login?",""], [params.toString()])
 
         if(active){
           setState({ loading: false, allowed: false })
@@ -167,7 +165,7 @@ function SessionGate({ slug, children }){
     const params = new URLSearchParams()
     params.set("role","master")
     if(slug) params.set("slug",slug)
-    window.location.hash = `/auth/login?${params.toString()}`
+    window.location.hash = uiTemplate(["/auth/login?",""], [params.toString()])
   }, [state, slug])
 
   if(state.loading){
@@ -180,9 +178,7 @@ function SessionGate({ slug, children }){
         background: "#f9fafb",
         color: "#111827",
         font: "16px/1.5 Arial, sans-serif"
-      }}>
-        Проверка сессии кабинета…
-      </div>
+      }}><UiValue value={uiMessage("salon.s0012")} /></div>
     )
   }
 
@@ -237,7 +233,7 @@ function MasterLayoutInner(){
     const params = new URLSearchParams()
     params.set("role", "master")
     if(slug) params.set("slug", slug)
-    window.location.hash = `/auth/login?${params.toString()}`
+    window.location.hash = uiTemplate(["/auth/login?",""], [params.toString()])
   }
 
   return (
@@ -266,28 +262,28 @@ function MasterLayoutInner(){
               items={[
                 {
                   key: "dashboard",
-                  label: "Главная",
-                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/dashboard`,
+                  label: uiMessage("salon.s0013"),
+                  href: uiTemplate(["#/master/","/dashboard"], [encodeURIComponent(String(slug || "").trim())]),
                 },
                 {
                   key: "bookings",
-                  label: "Записи",
-                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/bookings`,
+                  label: uiMessage("salon.s0014"),
+                  href: uiTemplate(["#/master/","/bookings"], [encodeURIComponent(String(slug || "").trim())]),
                 },
                 {
                   key: "schedule",
-                  label: "Расписание",
-                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/schedule`,
+                  label: uiMessage("salon.s0023"),
+                  href: uiTemplate(["#/master/","/schedule"], [encodeURIComponent(String(slug || "").trim())]),
                 },
                 {
                   key: "clients",
-                  label: "Клиенты",
-                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/clients`,
+                  label: uiMessage("salon.s0016"),
+                  href: uiTemplate(["#/master/","/clients"], [encodeURIComponent(String(slug || "").trim())]),
                 },
                 {
                   key: "finance",
-                  label: "Финансы",
-                  href: `#/master/${encodeURIComponent(String(slug || "").trim())}/finance`,
+                  label: uiMessage("salon.s0017"),
+                  href: uiTemplate(["#/master/","/finance"], [encodeURIComponent(String(slug || "").trim())]),
                 },
               ]}
             />

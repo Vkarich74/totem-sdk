@@ -1,11 +1,10 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiJoin, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 import { createSalonWithdrawDestination, getMoneyCoreDestinationProviders, getMoneyCoreFlags, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonOwnerQrDestinations, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonSplitAllocations, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
 
-function money(value){
-  return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
-}
+function money(value, currency) { return uiMoney(value, currency); }
 
 function toNumber(value){
   const numeric = Number(value)
@@ -84,15 +83,15 @@ function calculateSplitAllocatedStats(rows){
 }
 
 const WITHDRAW_REQUEST_USER_STATUS_LABELS = Object.freeze({
-  pending_validation: "Новая",
-  requires_review: "В процессе",
-  locked: "В процессе",
-  queued_for_payout: "В процессе",
-  bank_processing: "В процессе",
-  completed: "Выполнена",
-  failed: "Ошибка выплаты",
-  canceled: "Отклонена",
-  rejected: "Отклонена"
+  pending_validation: uiMessage("salon.s0839"),
+  requires_review: uiMessage("salon.s0840"),
+  locked: uiMessage("salon.s0840"),
+  queued_for_payout: uiMessage("salon.s0840"),
+  bank_processing: uiMessage("salon.s0840"),
+  completed: uiMessage("salon.s0841"),
+  failed: uiMessage("salon.s0842"),
+  canceled: uiMessage("salon.s0843"),
+  rejected: uiMessage("salon.s0843")
 })
 
 function getWithdrawRequestUserStatusLabel(status){
@@ -106,12 +105,12 @@ function getWithdrawRequestHistoryDetails(item){
   const details = []
   const adminNote = cleanText(item?.admin_note)
 
-  if(status) details.push(`raw: ${status}`)
+  if(status) details.push(uiTemplate(["raw: ",""], [status]))
   if(adminNote){
-    details.push(`Комментарий платформы: ${adminNote}`)
+    details.push(uiMessage("salon.s0844", {p0: adminNote}))
   }
 
-  return details.join(" · ")
+  return uiJoin(details, " · ")
 }
 
 function getWithdrawRequestPayoutResultDetails(item){
@@ -122,12 +121,12 @@ function getWithdrawRequestPayoutResultDetails(item){
   const userMessage = cleanText(payoutResult?.user_message)
   const details = []
 
-  if(completedAt) details.push(`Выполнено: ${formatDateTime(completedAt)}`)
-  if(failedAt) details.push(`Ошибка/отказ: ${formatDateTime(failedAt)}`)
-  if(failureReason) details.push(`Причина: ${failureReason}`)
+  if(completedAt) details.push(uiMessage("salon.s0845", {p0: formatDateTime(completedAt)}))
+  if(failedAt) details.push(uiMessage("salon.s0846", {p0: formatDateTime(failedAt)}))
+  if(failureReason) details.push(uiMessage("salon.s0847", {p0: failureReason}))
   if(userMessage) details.push(userMessage)
 
-  return details.join(" · ")
+  return uiJoin(details, " · ")
 }
 
 function parseMaybeJson(value){
@@ -159,18 +158,18 @@ const WITHDRAW_DESTINATION_METHOD_OPTIONS = new Set([
 ])
 
 const WITHDRAW_DESTINATION_METHOD_LABELS = Object.freeze({
-  wallet: "Кошелёк",
-  card: "Карта",
-  bank_account: "Банк",
-  manual_other: "Прочее"
+  wallet: uiMessage("salon.s0848"),
+  card: uiMessage("salon.s0478"),
+  bank_account: uiMessage("salon.s0849"),
+  manual_other: uiMessage("salon.s0850")
 })
 
 const WITHDRAW_DESTINATION_RELATION_LABELS = Object.freeze({
-  self: "Свой счёт",
-  company_account: "Счёт компании",
-  authorized_person: "Уполномоченное лицо",
-  third_party: "Третье лицо",
-  unknown: "Не указано"
+  self: uiMessage("salon.s0851"),
+  company_account: uiMessage("salon.s0852"),
+  authorized_person: uiMessage("salon.s0853"),
+  third_party: uiMessage("salon.s0854"),
+  unknown: uiMessage("salon.s0855")
 })
 
 function cleanText(value){
@@ -185,12 +184,12 @@ function maskPhone(value){
   if(digits.length <= 4) return text
   const last4 = digits.slice(-4)
   if(digits.startsWith("996")){
-    return `+996•••${last4}`
+    return uiTemplate(["+996•••",""], [last4])
   }
   if(text.startsWith("+")){
-    return `+•••${last4}`
+    return uiTemplate(["+•••",""], [last4])
   }
-  return `•••${last4}`
+  return uiTemplate(["•••",""], [last4])
 }
 
 function getWithdrawRequestDestinationSummary(item, destinationsById){
@@ -201,7 +200,7 @@ function getWithdrawRequestDestinationSummary(item, destinationsById){
   const destination = destinationSummary || destinationByList || destinationSnapshot || null
 
   if(!destination && !destinationId){
-    return "Реквизиты не указаны"
+    return uiMessage("salon.s0856")
   }
 
   const method = cleanText(destination?.method)
@@ -214,20 +213,20 @@ function getWithdrawRequestDestinationSummary(item, destinationsById){
   const cardLast4 = cleanText(destination?.card_last4)
 
   const parts = []
-  if(method) parts.push(`Способ: ${WITHDRAW_DESTINATION_METHOD_LABELS[method] || method}`)
-  if(providerCode) parts.push(`Провайдер: ${providerCode}`)
-  if(walletProvider && walletProvider !== providerCode) parts.push(`Wallet provider: ${walletProvider}`)
-  if(relation) parts.push(`Отношение: ${WITHDRAW_DESTINATION_RELATION_LABELS[relation] || relation}`)
-  if(bankName) parts.push(`Банк: ${bankName}`)
-  if(phone) parts.push(`Телефон: ${phone}`)
-  if(accountMasked) parts.push(`Счёт: ${accountMasked}`)
-  if(cardLast4) parts.push(`Карта: •••• ${cardLast4}`)
+  if(method) parts.push(uiMessage("salon.s0857", {p0: WITHDRAW_DESTINATION_METHOD_LABELS[method] || method}))
+  if(providerCode) parts.push(uiMessage("salon.s0858", {p0: providerCode}))
+  if(walletProvider && walletProvider !== providerCode) parts.push(uiTemplate(["Wallet provider: ",""], [walletProvider]))
+  if(relation) parts.push(uiMessage("salon.s0859", {p0: WITHDRAW_DESTINATION_RELATION_LABELS[relation] || relation}))
+  if(bankName) parts.push(uiMessage("salon.s0860", {p0: bankName}))
+  if(phone) parts.push(uiMessage("salon.s0861", {p0: phone}))
+  if(accountMasked) parts.push(uiMessage("salon.s0862", {p0: accountMasked}))
+  if(cardLast4) parts.push(uiMessage("salon.s0863", {p0: cardLast4}))
 
   if(!parts.length){
-    return destinationId > 0 ? `Реквизиты #${destinationId}` : "Реквизиты не указаны"
+    return destinationId > 0 ? uiMessage("salon.s0864", {p0: destinationId}) : uiMessage("salon.s0856")
   }
 
-  return parts.join(" · ")
+  return uiJoin(parts, " · ")
 }
 
 function buildWithdrawDestinationPreview(providers, draft){
@@ -247,28 +246,28 @@ function buildWithdrawDestinationPreview(providers, draft){
   const errors = []
 
   if(!selectedProvider){
-    errors.push("Выберите способ вывода.")
+    errors.push(uiMessage("salon.s0865"))
   }else if(!WITHDRAW_DESTINATION_METHOD_OPTIONS.has(method)){
-    errors.push("Выбран неподдерживаемый способ вывода.")
+    errors.push(uiMessage("salon.s0866"))
   }
 
   if(destinationRelation === "unknown" && draft.destinationRelation !== "unknown"){
-    errors.push("Выберите корректное отношение к владельцу.")
+    errors.push(uiMessage("salon.s0867"))
   }
 
   if(method === "bank_account"){
-    if(!bankName) errors.push("Для bank_account укажите банк.")
-    if(!accountMasked) errors.push("Для bank_account укажите маску счёта.")
+    if(!bankName) errors.push(uiMessage("salon.s0868"))
+    if(!accountMasked) errors.push(uiMessage("salon.s0869"))
   }else if(method === "card"){
-    if(!accountMasked && !cardLast4) errors.push("Для card укажите маску счёта или последние 4 цифры карты.")
+    if(!accountMasked && !cardLast4) errors.push(uiMessage("salon.s0870"))
   }else if(method === "wallet"){
-    if(!phone) errors.push("Для wallet укажите телефон.")
+    if(!phone) errors.push(uiMessage("salon.s0871"))
     if(selectedProvider?.code !== draft.selectedProviderCode){
-      errors.push("wallet_provider должен совпадать с кодом выбранного провайдера.")
+      errors.push(uiMessage("salon.s0872"))
     }
   }else if(method === "manual_other"){
     if(!accountHolder && !phone && !note && !accountMasked){
-      errors.push("Для manual_other заполните хотя бы одно безопасное поле.")
+      errors.push(uiMessage("salon.s0873"))
     }
   }
 
@@ -392,23 +391,7 @@ function buildWithdrawDestinationCreatePayload(preview){
   return payload
 }
 
-function formatDateTime(value){
-  if(!value) return "—"
-
-  const date = new Date(value)
-
-  if(Number.isNaN(date.getTime())){
-    return "—"
-  }
-
-  return date.toLocaleString("ru-RU", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  })
-}
+function formatDateTime(value){ if (!value) return "—"; return uiDate(value, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
 function normalizeList(payload, keys){
   if(Array.isArray(payload)) return payload
@@ -444,55 +427,55 @@ function getBillingUi(billingAccess, billingBlockReason){
 
   if(state === "blocked"){
     return {
-      title: "Доступ ограничен",
+      title: uiMessage("salon.s0300"),
       tone: "#b42318",
       bg: "#fff5f5",
       border: "#f5c2c7",
-      note: billingBlockReason || "Финансовые действия временно ограничены"
+      note: uiError(billingBlockReason, uiMessage("salon.s0874"))
     }
   }
 
   if(state === "grace"){
     return {
-      title: "Льготный период",
+      title: uiMessage("salon.s0302"),
       tone: "#9a6700",
       bg: "#fff8db",
       border: "#facc15",
-      note: billingBlockReason || "Доступ открыт, но скоро потребуется продление"
+      note: uiError(billingBlockReason, uiMessage("salon.s0875"))
     }
   }
 
   return {
-    title: "Доступ активен",
+    title: uiMessage("salon.s0304"),
     tone: "#027a48",
     bg: "#ecfdf3",
     border: "#abefc6",
-    note: "Финансовый модуль работает без ограничений"
+    note: uiMessage("salon.s0876")
   }
 }
 
 function getContractStatusLabel(value){
   const status = String(value || "").toLowerCase()
-  if(status === "active") return "Активный"
-  if(status === "pending") return "Ожидает"
-  if(status === "archived") return "Архивный"
+  if(status === "active") return uiMessage("salon.s0041")
+  if(status === "pending") return uiMessage("salon.s0042")
+  if(status === "archived") return uiMessage("salon.s0043")
   return value || "—"
 }
 
 function getPayoutStatusLabel(value){
   const status = String(value || "").toLowerCase()
-  if(status === "paid" || status === "completed") return "Выплачено"
-  if(status === "pending") return "Ожидает"
-  if(status === "processing") return "Обрабатывается"
-  if(status === "failed") return "Ошибка"
+  if(status === "paid" || status === "completed") return uiMessage("salon.s0877")
+  if(status === "pending") return uiMessage("salon.s0042")
+  if(status === "processing") return uiMessage("salon.s0878")
+  if(status === "failed") return uiMessage("salon.s0506")
   return value || "—"
 }
 
 function getSettlementStatusLabel(value){
   const status = String(value || "").toLowerCase()
-  if(status === "open") return "Открыт"
-  if(status === "closed") return "Закрыт"
-  if(status === "pending") return "Ожидает"
+  if(status === "open") return uiMessage("salon.s0879")
+  if(status === "closed") return uiMessage("salon.s0880")
+  if(status === "pending") return uiMessage("salon.s0042")
   return value || "—"
 }
 
@@ -504,7 +487,7 @@ function FinanceNavCard({ to, title, note, active = false }){
         display: "block",
         textDecoration: "none",
         color: "inherit",
-        border: `1px solid ${active ? "#dbeafe" : "#e5e7eb"}`,
+        border: uiTemplate(["1px solid ",""], [active ? "#dbeafe" : "#e5e7eb"]),
         borderRadius: 14,
         background: active ? "#eff6ff" : "#ffffff",
         padding: 14,
@@ -512,8 +495,8 @@ function FinanceNavCard({ to, title, note, active = false }){
         boxShadow: "0 1px 2px rgba(16,24,40,0.04)"
       }}
     >
-      <div style={{ fontSize: 14, fontWeight: 800, color: active ? "#1d4ed8" : "#111827", marginBottom: 6 }}>{title}</div>
-      <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.45 }}>{note}</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: active ? "#1d4ed8" : "#111827", marginBottom: 6 }}><UiValue value={title} /></div>
+      <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.45 }}><UiValue value={note} /></div>
     </Link>
   )
 }
@@ -522,10 +505,10 @@ function Panel({ title, note, children }){
   return (
     <section style={styles.panel}>
       <div style={styles.sectionHeader}>
-        <h2 style={styles.panelTitle}>{title}</h2>
-        {note ? <p style={styles.panelNote}>{note}</p> : null}
+        <h2 style={styles.panelTitle}><UiValue value={title} /></h2>
+        {note ? <p style={styles.panelNote}><UiValue value={note} /></p> : null}
       </div>
-      <div style={{ marginTop: 14 }}>{children}</div>
+      <div style={{ marginTop: 14 }}><UiValue value={children} /></div>
     </section>
   )
 }
@@ -533,9 +516,9 @@ function Panel({ title, note, children }){
 function StatCard({ title, value, note }){
   return (
     <article style={styles.statCard}>
-      <div style={styles.statLabel}>{title}</div>
-      <div style={styles.statValue}>{value}</div>
-      {note ? <div style={styles.statNote}>{note}</div> : null}
+      <div style={styles.statLabel}><UiValue value={title} /></div>
+      <div style={styles.statValue}><UiValue value={value} /></div>
+      {note ? <div style={styles.statNote}><UiValue value={note} /></div> : null}
     </article>
   )
 }
@@ -543,8 +526,8 @@ function StatCard({ title, value, note }){
 function EmptyState({ title, text }){
   return (
     <div style={styles.emptyBox}>
-      <h3 style={styles.emptyTitle}>{title}</h3>
-      <p style={styles.emptyText}>{text}</p>
+      <h3 style={styles.emptyTitle}><UiValue value={title} /></h3>
+      <p style={styles.emptyText}><UiValue value={text} /></p>
     </div>
   )
 }
@@ -553,19 +536,20 @@ function PreviewRow({ title, meta, value, status }){
   return (
     <article style={styles.previewRow}>
       <div style={{ minWidth: 0, flex: "1 1 240px" }}>
-        <h3 style={styles.previewTitle}>{title}</h3>
-        {meta ? <p style={styles.previewMeta}>{meta}</p> : null}
+        <h3 style={styles.previewTitle}><UiValue value={title} /></h3>
+        {meta ? <p style={styles.previewMeta}><UiValue value={meta} /></p> : null}
       </div>
 
       <div style={styles.previewAside}>
-        {typeof value !== "undefined" ? <div style={styles.previewValue}>{value}</div> : null}
-        {status ? <div style={styles.previewStatus}>{status}</div> : null}
+        {typeof value !== "undefined" ? <div style={styles.previewValue}><UiValue value={value} /></div> : null}
+        {status ? <div style={styles.previewStatus}><UiValue value={status} /></div> : null}
       </div>
     </article>
   )
 }
 
 export default function SalonFinancePage(){
+  const { renderUi } = useUiMessages();
   const { slug: routeSlug } = useParams()
   const slug = resolveSalonSlug(routeSlug)
 
@@ -624,7 +608,7 @@ export default function SalonFinancePage(){
           setPaymentProjectionSummary(null)
           setPaymentProjectionRows([])
           setMoneyCoreOwnerQr([])
-          setError("SLUG_MISSING")
+          setError(uiError("SLUG_MISSING"))
           setLoading(false)
         }
         return
@@ -678,7 +662,7 @@ export default function SalonFinancePage(){
           setPaymentProjectionRows([])
           setMoneyCoreSummary(null)
           setMoneyCoreFlags(null)
-          setError(loadError?.message || "SALON_FINANCE_LOAD_FAILED")
+          setError(uiError(loadError?.message || "SALON_FINANCE_LOAD_FAILED"))
         }
       }finally{
         if(!cancelled){
@@ -719,14 +703,14 @@ export default function SalonFinancePage(){
           setLostProfit(result.result || null)
         }else{
           setLostProfit(null)
-          setLostProfitError("Недополученная прибыль временно недоступна")
+          setLostProfitError(uiError(uiMessage("salon.s0881")))
         }
       }catch(error){
         console.error("SALON_LOST_PROFIT_LOAD_ERROR", error)
 
         if(!cancelled){
           setLostProfit(null)
-          setLostProfitError("Недополученная прибыль временно недоступна")
+          setLostProfitError(uiError(uiMessage("salon.s0881")))
         }
       }finally{
         if(!cancelled){
@@ -796,7 +780,7 @@ export default function SalonFinancePage(){
         setMoneyCoreWithdrawRequests(Array.isArray(requestsRaw?.requests) ? requestsRaw.requests : [])
         setMoneyCoreOwnerQr(Array.isArray(ownerQrRaw?.destinations) ? ownerQrRaw.destinations : [])
         setMoneyCoreSplitAllocations(Array.isArray(splitAllocationsRaw?.allocations) ? splitAllocationsRaw.allocations : [])
-        setMoneyCoreSplitAllocationsError(splitAllocationsRaw?.ok ? "" : "Распределено временно недоступно")
+        setMoneyCoreSplitAllocationsError(uiError(splitAllocationsRaw?.ok ? "" : uiMessage("salon.s0882")))
       }catch(e){
         if(!cancelled){
           setMoneyCoreDestinationProviders([])
@@ -805,7 +789,7 @@ export default function SalonFinancePage(){
           setMoneyCoreWithdrawRequests([])
           setMoneyCoreOwnerQr([])
           setMoneyCoreSplitAllocations([])
-          setMoneyCoreSplitAllocationsError("Распределено временно недоступно")
+          setMoneyCoreSplitAllocationsError(uiError(uiMessage("salon.s0882")))
         }
       }
     }
@@ -896,23 +880,23 @@ export default function SalonFinancePage(){
     moneyCoreFlagsData.WITHDRAW_DESTINATIONS_WRITE_ENABLED === true
   )
   const moneyCoreWithdrawPanelNote = moneyCoreOpen
-    ? "Текущий режим Money Core"
-    : "Текущий режим Money Core без возможности записи"
+    ? uiMessage("salon.s0883")
+    : uiMessage("salon.s0884")
   const moneyCoreWithdrawStateText = moneyCoreOpen
-    ? "Money Core включён. Вывод работает в рабочем режиме."
-    : "Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов."
+    ? uiMessage("salon.s0885")
+    : uiMessage("salon.s0886")
   const moneyCoreWithdrawSettingsText = moneyCoreOpen
-    ? "Money Core включён. Используется текущая конфигурация вывода."
-    : "Пока используется дефолтная только просмотр конфигурация."
+    ? uiMessage("salon.s0887")
+    : uiMessage("salon.s0888")
   const moneyCoreWithdrawRequestsText = moneyCoreOpen
-    ? "История выводов появится после первых операций Money Core."
-    : "История выводов появится после включения write-флагов."
+    ? uiMessage("salon.s0889")
+    : uiMessage("salon.s0890")
   const moneyCoreCreateRequestText = moneyCoreOpen
-    ? "Создание заявки доступно в рабочем режиме Money Core."
-    : "Создание заявки будет доступно после controlled write-smoke и включения Money Core write-флагов."
+    ? uiMessage("salon.s0891")
+    : uiMessage("salon.s0892")
   const moneyCoreAddRequisitesText = moneyCoreDestinationWriteOpen
-    ? "Сохранение реквизитов доступно. Данные вводятся вручную и сохраняются только по нажатию кнопки."
-    : "Сохранение реквизитов закрыто флагом WITHDRAW_DESTINATIONS_WRITE_ENABLED."
+    ? uiMessage("salon.s0893")
+    : uiMessage("salon.s0894")
   const selectedWithdrawProvider = useMemo(
     () => buildWithdrawDestinationPreview(moneyCoreDestinationProviders, {
       selectedProviderCode,
@@ -946,7 +930,7 @@ export default function SalonFinancePage(){
     if (!moneyCoreDestinationWriteOpen) {
       setDestinationSaveStatus({
         tone: "error",
-        text: "Сохранение реквизитов сейчас закрыто."
+        text: uiMessage("salon.s0895")
       })
       return
     }
@@ -954,7 +938,7 @@ export default function SalonFinancePage(){
     if (!selectedWithdrawProvider.isReady) {
       setDestinationSaveStatus({
         tone: "error",
-        text: selectedWithdrawProvider.errors[0] || "Проверьте поля формы."
+        text: selectedWithdrawProvider.errors[0] || uiMessage("salon.s0896")
       })
       return
     }
@@ -964,7 +948,7 @@ export default function SalonFinancePage(){
     if (!payload) {
       setDestinationSaveStatus({
         tone: "error",
-        text: "Не удалось собрать payload для сохранения."
+        text: uiMessage("salon.s0897")
       })
       return
     }
@@ -997,7 +981,7 @@ export default function SalonFinancePage(){
         setNote("")
         setDestinationSaveStatus({
           tone: "success",
-          text: "Реквизиты сохранены."
+          text: uiMessage("salon.s0898")
         })
         return
       }
@@ -1007,13 +991,13 @@ export default function SalonFinancePage(){
       setDestinationSaveStatus({
         tone: "error",
         text: blockedByFlag
-          ? "Сохранение реквизитов сейчас закрыто."
-          : result?.detail?.message || result?.message || result?.error || "Не удалось сохранить реквизиты."
+          ? uiMessage("salon.s0895")
+          : uiError(result?.detail?.message || result?.message || result?.error, uiMessage("salon.s0899"))
       })
     } catch (error) {
       setDestinationSaveStatus({
         tone: "error",
-        text: error?.message || "Не удалось сохранить реквизиты."
+        text: uiError(error?.message, uiMessage("salon.s0899"))
       })
     } finally {
       setDestinationSaving(false)
@@ -1024,22 +1008,20 @@ export default function SalonFinancePage(){
     <div style={styles.page}>
       <div style={styles.container}>
         {slug ? (
-          <nav aria-label="Финансовые разделы" style={styles.navGrid}>
-            <FinanceNavCard to={buildSalonPath(slug, "finance")} title="Финансы" note="Общий обзор" active />
-            <FinanceNavCard to={buildSalonPath(slug, "money")} title="Кошелёк и вывод" note="Баланс, расчёты и вывод" />
-            <FinanceNavCard to={buildSalonPath(slug, "settlements")} title="Сеты" note="Расчётные периоды" />
-            <FinanceNavCard to={buildSalonPath(slug, "payouts")} title="Выплаты" note="Фактические выплаты" />
-            <FinanceNavCard to={buildSalonPath(slug, "transactions")} title="Транзакции" note="История операций" />
-            <FinanceNavCard to={buildSalonPath(slug, "contracts")} title="Контракты" note="Договорный модуль" />
+          <nav aria-label={renderUi(uiMessage("salon.s0900"))} style={styles.navGrid}>
+            <FinanceNavCard to={buildSalonPath(slug, "finance")} title={uiMessage("salon.s0017")} note={uiMessage("salon.s0901")} active />
+            <FinanceNavCard to={buildSalonPath(slug, "money")} title={uiMessage("salon.s0412")} note={uiMessage("salon.s0902")} />
+            <FinanceNavCard to={buildSalonPath(slug, "settlements")} title={uiMessage("salon.s0029")} note={uiMessage("salon.s0903")} />
+            <FinanceNavCard to={buildSalonPath(slug, "payouts")} title={uiMessage("salon.s0030")} note={uiMessage("salon.s0904")} />
+            <FinanceNavCard to={buildSalonPath(slug, "transactions")} title={uiMessage("salon.s0031")} note={uiMessage("salon.s0905")} />
+            <FinanceNavCard to={buildSalonPath(slug, "contracts")} title={uiMessage("salon.s0032")} note={uiMessage("salon.s0906")} />
           </nav>
         ) : null}
 
         <header style={styles.pageHeader}>
-          <p style={styles.eyebrow}>Salon finance / mobile</p>
-          <h1 style={styles.pageTitle}>Финансы салона</h1>
-          <p style={styles.pageSubtitle}>
-            Центральный обзор денег, доступа и переходов в расчёты, выплаты, транзакции и договоры. Верхний слой страницы стабилен для mobile-first использования.
-          </p>
+          <p style={styles.eyebrow}><UiValue value={uiMessage("salon.s0907")} /></p>
+          <h1 style={styles.pageTitle}><UiValue value={uiMessage("salon.s0908")} /></h1>
+          <p style={styles.pageSubtitle}><UiValue value={uiMessage("salon.s0909")} /></p>
         </header>
 
         <section
@@ -1051,92 +1033,90 @@ export default function SalonFinancePage(){
           }}
         >
           <div style={styles.alertMain}>
-            <h2 style={{ ...styles.alertTitle, color: billingUi.tone }}>{billingUi.title}</h2>
-            <p style={styles.alertText}>{billingUi.note}</p>
+            <h2 style={{ ...styles.alertTitle, color: billingUi.tone }}><UiValue value={billingUi.title} /></h2>
+            <p style={styles.alertText}><UiValue value={billingUi.note} /></p>
           </div>
           <div style={styles.alertMeta}>
-            <div>Запись: {canWrite ? "разрешена" : "ограничена"}</div>
-            <div>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</div>
+            <div><UiValue value={uiMessage("salon.s0005")} /><UiValue value={canWrite ? uiMessage("salon.s0910") : uiMessage("salon.s0007")} /></div>
+            <div><UiValue value={uiMessage("salon.s0911")} /><UiValue value={canWithdraw ? uiMessage("salon.s0912") : uiMessage("salon.s0913")} /></div>
           </div>
         </section>
 
         <section style={styles.statsGrid}>
-          <StatCard title="Баланс кошелька" value={money(walletBalance)} note="Текущий wallet balance салона" />
-          <StatCard title="Доход сегодня" value={money(paymentProjectionSummary?.history_amount)} note="Операционная выручка за день" />
-          <StatCard title="Доход за месяц" value={money(paymentProjectionSummary?.history_amount)} note="Главный срез по текущей выручке" />
-          <StatCard title="Активные контракты" value={String(activeContracts.length)} note="Связка с мастерами и правила расчётов" />
-          <StatCard title="История оплат" value={money(paymentProjectionSummary?.history_amount)} note={`Строк в истории: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
-          <StatCard title="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} note={`Открытых строк: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
+          <StatCard title={uiMessage("salon.s0914")} value={money(walletBalance)} note={uiMessage("salon.s0915")} />
+          <StatCard title={uiMessage("salon.s0335")} value={money(paymentProjectionSummary?.history_amount)} note={uiMessage("salon.s0916")} />
+          <StatCard title={uiMessage("salon.s0337")} value={money(paymentProjectionSummary?.history_amount)} note={uiMessage("salon.s0917")} />
+          <StatCard title={uiMessage("salon.s0918")} value={String(activeContracts.length)} note={uiMessage("salon.s0919")} />
+          <StatCard title={uiMessage("salon.s0920")} value={money(paymentProjectionSummary?.history_amount)} note={uiMessage("salon.s0921", {p0: Number(paymentProjectionSummary?.history_count || 0)})} />
+          <StatCard title={uiMessage("salon.s0922")} value={money(paymentProjectionSummary?.open_balance_amount)} note={uiMessage("salon.s0923", {p0: Number(paymentProjectionSummary?.open_balance_count || 0)})} />
         </section>
 
         <Panel
-          title="Финансовая статистика"
-          note="Краткая сводка по projection rows, реквизитам, заявкам и Owner QR без отдельной таблицы платежей."
+          title={uiMessage("salon.s0924")}
+          note={uiMessage("salon.s0925")}
         >
           <section style={styles.statsGrid}>
-            <StatCard title="Подтверждённая выручка" value={money(financeStats.confirmedGrossAmount)} note="Только confirmed записи" />
-            <StatCard title="Доля салона" value={money(financeStats.salonShare)} note="Projection share салона" />
-            <StatCard title="Доля мастера" value={money(financeStats.masterShare)} note="Projection share мастера" />
-            <StatCard title="Распределено" value={money(splitAllocatedStats.splitAllocatedAmount)} note="Доли по подтверждённым provider settlement" />
-            <StatCard title="Open balance" value={money(financeStats.openBalanceAmount)} note="В Money Core ledger пока не проведено" />
-            <StatCard title="Collector missing" value={`${financeStats.collectorMissingCount} платёж`} note="confirmed rows без collector" />
-            <StatCard title="Реквизиты / заявки" value={`${financeStats.destinationsCount} / ${financeStats.withdrawRequestsCount}`} note="Withdraw surface" />
-            <StatCard title="Owner QR" value={String(financeStats.ownerQrCount)} note="Привязанные QR-реквизиты" />
+            <StatCard title={uiMessage("salon.s0926")} value={money(financeStats.confirmedGrossAmount)} note={uiMessage("salon.s0927")} />
+            <StatCard title={uiMessage("salon.s0928")} value={money(financeStats.salonShare)} note={uiMessage("salon.s0929")} />
+            <StatCard title={uiMessage("salon.s0930")} value={money(financeStats.masterShare)} note={uiMessage("salon.s0931")} />
+            <StatCard title={uiMessage("salon.s0932")} value={money(splitAllocatedStats.splitAllocatedAmount)} note={uiMessage("salon.s0933")} />
+            <StatCard title={uiMessage("salon.s0934")} value={money(financeStats.openBalanceAmount)} note={uiMessage("salon.s0935")} />
+            <StatCard title={uiMessage("salon.s0936")} value={uiMessage("salon.s0937", {p0: financeStats.collectorMissingCount})} note={uiMessage("salon.s0938")} />
+            <StatCard title={uiMessage("salon.s0939")} value={uiTemplate([""," / ",""], [financeStats.destinationsCount, financeStats.withdrawRequestsCount])} note={uiMessage("salon.s0940")} />
+            <StatCard title={uiMessage("salon.s0941")} value={String(financeStats.ownerQrCount)} note={uiMessage("salon.s0942")} />
           </section>
 
           <div style={{ display: "grid", gap: 8, marginTop: 14, fontSize: 13, lineHeight: 1.5, color: "#475569" }}>
             {financeStats.confirmedGrossAmount > 0 && financeStats.openBalanceAmount === 0 ? (
-              <div>
-                Оплата рассчитана в projection, но не включена в open balance: collector не определён или движение ещё не проведено в Money Core ledger.
-              </div>
+              <div><UiValue value={uiMessage("salon.s0943")} /></div>
             ) : null}
             {moneyCoreSplitAllocationsError ? (
-              <div>{moneyCoreSplitAllocationsError}</div>
+              <div><UiValue value={moneyCoreSplitAllocationsError} /></div>
             ) : null}
             {financeStats.destinationsCount === 0 ? (
-              <div>Реквизиты для вывода ещё не добавлены.</div>
+              <div><UiValue value={uiMessage("salon.s0944")} /></div>
             ) : null}
             {financeStats.withdrawRequestsCount === 0 ? (
-              <div>Заявок на вывод пока нет.</div>
+              <div><UiValue value={uiMessage("salon.s0945")} /></div>
             ) : null}
           </div>
         </Panel>
 
         <Panel
-          title="Недополученная прибыль"
-          note="Аналитика отменённых записей. Не влияет на баланс, выплаты и договоры."
+          title={uiMessage("salon.s0946")}
+          note={uiMessage("salon.s0947")}
         >
           {lostProfitError ? (
             <div style={{ marginBottom: 12, fontSize: 13, color: "#b42318", background: "#fff5f5", border: "1px solid #f5c2c7", borderRadius: 12, padding: 12 }}>
-              {lostProfitError}
+              <UiValue value={lostProfitError} />
             </div>
           ) : null}
 
           {lostProfitLoading ? (
             <EmptyState
-              title="Недополученная прибыль загружается"
-              text="Считаем отменённые записи и суммы по мастерам."
+              title={uiMessage("salon.s0948")}
+              text={uiMessage("salon.s0949")}
             />
           ) : lostProfitSummary ? (
             <div style={{ display: "grid", gap: 16 }}>
               <div style={styles.statsGrid}>
-                <StatCard title="Сумма" value={money(lostProfitSummary.lost_profit_amount)} note="Недополученная прибыль" />
-                <StatCard title="Отменённые записи" value={String(Number(lostProfitSummary.cancelled_count || 0))} note="Записи в выборке" />
+                <StatCard title={uiMessage("salon.s0147")} value={money(lostProfitSummary.lost_profit_amount, lostProfitSummary?.currency_code || lostProfitSummary?.currency)} note={uiMessage("salon.s0946")} />
+                <StatCard title={uiMessage("salon.s0950")} value={String(Number(lostProfitSummary.cancelled_count || 0))} note={uiMessage("salon.s0951")} />
                 {Number(lostProfitSummary.missing_price_count || 0) > 0 ? (
-                  <StatCard title="Без цены" value={String(Number(lostProfitSummary.missing_price_count || 0))} note="Записи без price_snapshot" />
+                  <StatCard title={uiMessage("salon.s0952")} value={String(Number(lostProfitSummary.missing_price_count || 0))} note={uiMessage("salon.s0953")} />
                 ) : null}
               </div>
 
               {lostProfitByMaster.length ? (
                 <div style={{ display: "grid", gap: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>Breakdown по мастерам</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0954")} /></div>
                   <div style={{ display: "grid", gap: 8 }}>
                     {lostProfitByMaster.map((item) => (
                       <PreviewRow
-                        key={`${item.master_id}-${item.master_slug || "master"}`}
-                        title={item.master_name || item.master_slug || `Мастер #${item.master_id}`}
-                        meta={`${item.master_slug || "—"} · ${Number(item.cancelled_count || 0)} записей`}
-                        value={money(item.lost_profit_amount)}
+                        key={uiTemplate(["","-",""], [item.master_id, item.master_slug || "master"])}
+                        title={item.master_name || item.master_slug || uiMessage("salon.s0427", {p0: item.master_id})}
+                        meta={uiMessage("salon.s0955", {p0: item.master_slug || "—", p1: Number(item.cancelled_count || 0)})}
+                        value={money(item.lost_profit_amount, item?.currency_code || item?.currency)}
                       />
                     ))}
                   </div>
@@ -1145,14 +1125,14 @@ export default function SalonFinancePage(){
 
               {lostProfitMonthly.length ? (
                 <div style={{ display: "grid", gap: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>История по месяцам</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0956")} /></div>
                   <div style={{ display: "grid", gap: 8 }}>
                     {lostProfitMonthly.map((item) => (
                       <PreviewRow
                         key={item.month}
                         title={item.month || "—"}
-                        meta={`${Number(item.cancelled_count || 0)} отменённых записей`}
-                        value={money(item.lost_profit_amount)}
+                        meta={uiMessage("salon.s0957", {p0: Number(item.cancelled_count || 0)})}
+                        value={money(item.lost_profit_amount, item?.currency_code || item?.currency)}
                       />
                     ))}
                   </div>
@@ -1161,94 +1141,90 @@ export default function SalonFinancePage(){
             </div>
           ) : (
             <EmptyState
-              title="Недополученная прибыль пока не найдена"
-              text="Для выбранного периода нет отменённых записей."
+              title={uiMessage("salon.s0958")}
+              text={uiMessage("salon.s0959")}
             />
           )}
         </Panel>
 
             <Panel
-              title="Money Core: баланс и вывод"
-              note={moneyCoreOpen ? "Money Core включён" : "Новая модель вывода средств. Сейчас доступен только просмотр."}
+              title={uiMessage("salon.s0960")}
+              note={moneyCoreOpen ? uiMessage("salon.s0961") : uiMessage("salon.s0962")}
             >
           {moneyCoreOpen ? (
-            <div style={{ marginBottom: 12, color: "#065f46", background: "#ecfdf3", border: "1px solid #abefc6", borderRadius: 12, padding: 12 }}>
-              Money Core включён. Вывод работает в режиме записи.
-            </div>
+            <div style={{ marginBottom: 12, color: "#065f46", background: "#ecfdf3", border: "1px solid #abefc6", borderRadius: 12, padding: 12 }}><UiValue value={uiMessage("salon.s0963")} /></div>
           ) : (
-            <div style={{ marginBottom: 12, color: "#92400e", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: 12 }}>
-              Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.
-            </div>
+            <div style={{ marginBottom: 12, color: "#92400e", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: 12 }}><UiValue value={uiMessage("salon.s0964")} /></div>
           )}
 
           {moneyCoreSummary ? (
             <div style={styles.statsGrid}>
-              <StatCard title="Резерв у провайдера" value={money(moneyCoreZones.provider_hold)} note="Резерв у провайдера" />
-              <StatCard title="Ожидает расчёта" value={money(moneyCoreZones.pending_settlement)} note="Ожидает расчёта" />
-              <StatCard title="available" value={money(moneyCoreZones.available)} note="Доступно к выводу" />
-              <StatCard title="locked" value={money(moneyCoreZones.locked)} note="Заблокировано под выплаты" />
-              <StatCard title="paid_out" value={money(moneyCoreZones.paid_out)} note="Уже выплачено" />
-              <StatCard title="Возвраты" value={money(moneyCoreZones.refunded)} note="Возвраты" />
-              <StatCard title="Отменённые операции" value={money(moneyCoreZones.reversed)} note="Отмены" />
-              <StatCard title="Требует проверки" value={money(moneyCoreZones.requires_review)} note="Требует проверки" />
-              <StatCard title="Комиссия сервиса" value={money(moneyCoreZones.commission)} note="Комиссия" />
-              <StatCard title="Резерв комиссии" value={money(moneyCoreZones.fee_reserved)} note="Резерв комиссии" />
+              <StatCard title={uiMessage("salon.s0965")} value={money(moneyCoreZones.provider_hold)} note={uiMessage("salon.s0965")} />
+              <StatCard title={uiMessage("salon.s0966")} value={money(moneyCoreZones.pending_settlement)} note={uiMessage("salon.s0966")} />
+              <StatCard title={uiMessage("salon.s0967")} value={money(moneyCoreZones.available)} note={uiMessage("salon.s0968")} />
+              <StatCard title={uiMessage("salon.s0969")} value={money(moneyCoreZones.locked)} note={uiMessage("salon.s0970")} />
+              <StatCard title={uiMessage("salon.s0971")} value={money(moneyCoreZones.paid_out)} note={uiMessage("salon.s0972")} />
+              <StatCard title={uiMessage("salon.s0973")} value={money(moneyCoreZones.refunded)} note={uiMessage("salon.s0973")} />
+              <StatCard title={uiMessage("salon.s0974")} value={money(moneyCoreZones.reversed)} note={uiMessage("salon.s0975")} />
+              <StatCard title={uiMessage("salon.s0976")} value={money(moneyCoreZones.requires_review)} note={uiMessage("salon.s0976")} />
+              <StatCard title={uiMessage("salon.s0977")} value={money(moneyCoreZones.commission)} note={uiMessage("salon.s0978")} />
+              <StatCard title={uiMessage("salon.s0979")} value={money(moneyCoreZones.fee_reserved)} note={uiMessage("salon.s0979")} />
             </div>
               ) : (
                 <EmptyState
-                  title="Money Core баланс пока не сформирован"
-                  text="Доступный вывод появится после подтверждённого settlement."
+                  title={uiMessage("salon.s0980")}
+                  text={uiMessage("salon.s0981")}
                 />
               )}
 
               <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
-                <Panel title="Способы вывода" note="Доступные провайдеры вывода для Money Core">
+                <Panel title={uiMessage("salon.s0982")} note={uiMessage("salon.s0983")}>
                   {moneyCoreDestinationProviders.length ? (
                     <div style={{ display: "grid", gap: 8 }}>
                       {moneyCoreDestinationProviders.map((item) => (
                         <PreviewRow
                           key={item.code}
                           title={item.name || item.code}
-                          meta={`${item.code} · ${item.method || "—"}`}
-                          status={item.enabled ? "Доступен" : "Отключён"}
+                          meta={uiTemplate([""," · ",""], [item.code, item.method || "—"])}
+                          status={item.enabled ? uiMessage("salon.s0984") : uiMessage("salon.s0421")}
                         />
                       ))}
                     </div>
                   ) : (
                     <EmptyState
-                      title="Провайдеры не настроены"
-                      text="Список способов вывода пока пуст."
+                      title={uiMessage("salon.s0985")}
+                      text={uiMessage("salon.s0986")}
                     />
                   )}
                 </Panel>
 
-                <Panel title="Мои реквизиты" note="Сохранённые реквизиты для вывода средств">
+                <Panel title={uiMessage("salon.s0987")} note={uiMessage("salon.s0988")}>
                   {moneyCoreWithdrawDestinations.length ? (
                     <div style={{ display: "grid", gap: 8 }}>
                       {moneyCoreWithdrawDestinations.map((item) => (
                         <PreviewRow
                           key={item.id}
                           title={item.method || "—"}
-                          meta={`${item.status || "—"} · ${item.destination_relation || "—"}`}
+                          meta={uiTemplate([""," · ",""], [item.status || "—", item.destination_relation || "—"])}
                           value={item.phone || item.bank_name || item.account_masked || item.card_last4 || "—"}
                         />
                       ))}
                     </div>
                   ) : (
                     <EmptyState
-                      title="Реквизиты ещё не добавлены"
-                      text="Для этого владельца пока нет сохранённых реквизитов."
+                      title={uiMessage("salon.s0989")}
+                      text={uiMessage("salon.s0990")}
                     />
                   )}
 
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eef2f7", display: "grid", gap: 12 }}>
                       <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                        {moneyCoreAddRequisitesText}
+                        <UiValue value={moneyCoreAddRequisitesText} />
                       </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Способ вывода</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0991")} /></span>
                         <select
                           disabled={!moneyCoreDestinationWriteOpen}
                           value={selectedProviderCode}
@@ -1264,22 +1240,22 @@ export default function SalonFinancePage(){
                             cursor: moneyCoreDestinationWriteOpen ? "pointer" : "not-allowed"
                           }}
                         >
-                          <option value="">Выберите способ вывода</option>
+                          <option value=""><UiValue value={uiMessage("salon.s0992")} /></option>
                           {moneyCoreDestinationProviders.map((item) => (
                             <option key={item.code} value={item.code}>
-                              {item.name || item.code} · {item.method || "—"}
+                              <UiValue value={item.name || item.code} /> · <UiValue value={item.method || "—"} />
                             </option>
                           ))}
                         </select>
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Получатель</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0993")} /></span>
                         <input
                           disabled={!moneyCoreDestinationWriteOpen}
                           value={accountHolder}
                           onChange={(event) => setAccountHolder(event.target.value)}
-                          placeholder="Имя получателя"
+                          placeholder={renderUi(uiMessage("salon.s0994"))}
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
@@ -1294,7 +1270,7 @@ export default function SalonFinancePage(){
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Телефон</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0230")} /></span>
                         <input
                           disabled={!moneyCoreDestinationWriteOpen}
                           value={phone}
@@ -1314,12 +1290,12 @@ export default function SalonFinancePage(){
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Банк</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0849")} /></span>
                         <input
                           disabled={!moneyCoreDestinationWriteOpen}
                           value={bankName}
                           onChange={(event) => setBankName(event.target.value)}
-                          placeholder="Название банка"
+                          placeholder={renderUi(uiMessage("salon.s0996"))}
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
@@ -1334,7 +1310,7 @@ export default function SalonFinancePage(){
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Маска счёта / карты</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0997")} /></span>
                         <input
                           disabled={!moneyCoreDestinationWriteOpen}
                           value={accountMasked}
@@ -1354,7 +1330,7 @@ export default function SalonFinancePage(){
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Последние 4 цифры карты</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0999")} /></span>
                         <input
                           disabled={!moneyCoreDestinationWriteOpen}
                           value={cardLast4}
@@ -1374,7 +1350,7 @@ export default function SalonFinancePage(){
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Отношение к владельцу</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1001")} /></span>
                         <select
                           disabled={!moneyCoreDestinationWriteOpen}
                           value={destinationRelation}
@@ -1392,7 +1368,7 @@ export default function SalonFinancePage(){
                         >
                           {WITHDRAW_DESTINATION_RELATION_OPTIONS.map((relation) => (
                             <option key={relation} value={relation}>
-                              {relation}
+                              <UiValue value={relation} />
                             </option>
                           ))}
                         </select>
@@ -1400,12 +1376,12 @@ export default function SalonFinancePage(){
                     </div>
 
                     <label style={{ display: "grid", gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Примечание</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1002")} /></span>
                       <textarea
                         disabled={!moneyCoreDestinationWriteOpen}
                         value={note}
                         onChange={(event) => setNote(event.target.value)}
-                        placeholder="Необязательная заметка для заявки"
+                        placeholder={renderUi(uiMessage("salon.s1003"))}
                         rows={3}
                         style={{
                           width: "100%",
@@ -1422,23 +1398,22 @@ export default function SalonFinancePage(){
                     </label>
 
                     <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Payload preview</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1004")} /></div>
                       <div style={{ fontSize: 13, color: selectedWithdrawProvider.isReady ? "#065f46" : "#92400e", lineHeight: 1.5 }}>
-                        {selectedWithdrawProvider.isReady
-                          ? "Payload готов"
-                          : `Payload не готов${selectedWithdrawProvider.errors.length ? `: ${selectedWithdrawProvider.errors[0]}` : ""}`}
+                        <UiValue value={selectedWithdrawProvider.isReady
+                          ? uiMessage("salon.s1005")
+                          : uiMessage("salon.s1006", {p0: selectedWithdrawProvider.errors.length ? uiTemplate([": ",""], [selectedWithdrawProvider.errors[0]]) : ""})} />
+                      </div>
+                      <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}><UiValue value={uiMessage("salon.s1007")} /><UiValue value={selectedWithdrawProvider.method || "—"} /><UiValue value={uiMessage("salon.s1008")} /><UiValue value={selectedWithdrawProvider.selectedProvider?.code || "—"} /><UiValue value={uiMessage("salon.s1009")} /><UiValue value={selectedWithdrawProvider.destinationRelation || "—"} />
                       </div>
                       <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
-                        Метод: {selectedWithdrawProvider.method || "—"} · Провайдер: {selectedWithdrawProvider.selectedProvider?.code || "—"} · Отношение: {selectedWithdrawProvider.destinationRelation || "—"}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
-                        {selectedWithdrawProvider.method === "wallet"
-                          ? `wallet_provider: ${selectedWithdrawProvider.selectedProvider?.code || "—"}`
+                        <UiValue value={selectedWithdrawProvider.method === "wallet"
+                          ? uiTemplate(["wallet_provider: ",""], [selectedWithdrawProvider.selectedProvider?.code || "—"])
                           : selectedWithdrawProvider.method === "bank_account"
-                            ? `bank_name: ${selectedWithdrawProvider.bankName || "—"}`
+                            ? uiTemplate(["bank_name: ",""], [selectedWithdrawProvider.bankName || "—"])
                             : selectedWithdrawProvider.method === "card"
-                              ? `card_last4: ${selectedWithdrawProvider.cardLast4 || "—"}`
-                              : `safe fields: ${[selectedWithdrawProvider.accountHolder, selectedWithdrawProvider.phone, selectedWithdrawProvider.accountMasked, selectedWithdrawProvider.note].filter(Boolean).length}`}
+                              ? uiTemplate(["card_last4: ",""], [selectedWithdrawProvider.cardLast4 || "—"])
+                              : uiTemplate(["safe fields: ",""], [[selectedWithdrawProvider.accountHolder, selectedWithdrawProvider.phone, selectedWithdrawProvider.accountMasked, selectedWithdrawProvider.note].filter(Boolean).length])} />
                       </div>
                     </div>
 
@@ -1457,36 +1432,34 @@ export default function SalonFinancePage(){
                         cursor: destinationSaveReady ? "pointer" : "not-allowed",
                         justifySelf: "start"
                       }}
-                    >
-                      Добавить реквизиты
-                    </button>
+                    ><UiValue value={uiMessage("salon.s1010")} /></button>
                     <div style={{ fontSize: 12, color: destinationSaveStatus?.tone === "error" ? "#b91c1c" : destinationSaveStatus?.tone === "success" ? "#065f46" : "#6b7280", lineHeight: 1.5 }}>
-                      {destinationSaveStatus?.text || moneyCoreAddRequisitesText}
+                      <UiValue value={destinationSaveStatus?.text || moneyCoreAddRequisitesText} />
                     </div>
                   </div>
                 </Panel>
 
-                <Panel title="Настройки вывода" note={moneyCoreWithdrawPanelNote}>
+                <Panel title={uiMessage("salon.s1011")} note={moneyCoreWithdrawPanelNote}>
                   {moneyCoreWithdrawSettings ? (
                     <div style={styles.statsGrid}>
-                      <StatCard title="Режим" value={moneyCoreWithdrawSettings.mode || "—"} note="Текущий режим" />
-                      <StatCard title="Автозаявки" value={String(Boolean(moneyCoreWithdrawSettings.auto_submit_enabled))} note="Автоматизация" />
-                      <StatCard title="Проверка админом" value={String(Boolean(moneyCoreWithdrawSettings.requires_admin_review))} note="Контроль" />
-                      <StatCard title="Способ суммы" value={moneyCoreWithdrawSettings.amount_mode || "—"} note="Модель суммы" />
+                      <StatCard title={uiMessage("salon.s1012")} value={moneyCoreWithdrawSettings.mode || "—"} note={uiMessage("salon.s1013")} />
+                      <StatCard title={uiMessage("salon.s1014")} value={String(Boolean(moneyCoreWithdrawSettings.auto_submit_enabled))} note={uiMessage("salon.s1015")} />
+                      <StatCard title={uiMessage("salon.s1016")} value={String(Boolean(moneyCoreWithdrawSettings.requires_admin_review))} note={uiMessage("salon.s1017")} />
+                      <StatCard title={uiMessage("salon.s1018")} value={moneyCoreWithdrawSettings.amount_mode || "—"} note={uiMessage("salon.s1019")} />
                     </div>
                   ) : (
                     <EmptyState
-                      title="Настройки вывода не заданы"
+                      title={uiMessage("salon.s1020")}
                       text={moneyCoreWithdrawSettingsText}
                     />
                   )}
                 </Panel>
 
-                <Panel title="История заявок" note="Последние заявки на вывод по Money Core">
+                <Panel title={uiMessage("salon.s1021")} note={uiMessage("salon.s1022")}>
                   {moneyCoreWithdrawRequests.length ? (
                     <div style={{ display: "grid", gap: 8 }}>
                       {moneyCoreWithdrawRequests.map((item) => {
-                        const withdrawRequestStatus = getWithdrawRequestUserStatusLabel(item?.status) || "Статус неизвестен"
+                        const withdrawRequestStatus = getWithdrawRequestUserStatusLabel(item?.status) || uiMessage("salon.s1023")
                         const withdrawRequestDetails = getWithdrawRequestHistoryDetails(item)
                         const withdrawRequestPayoutResultDetails = getWithdrawRequestPayoutResultDetails(item)
                         const withdrawRequestDestinationDetails = getWithdrawRequestDestinationSummary(item, withdrawDestinationById)
@@ -1495,8 +1468,8 @@ export default function SalonFinancePage(){
                         <PreviewRow
                           key={item.id}
                           title={withdrawRequestStatus}
-                          meta={`Заявка #${item.id || "—"} · ${formatDateTime(item.created_at)}${withdrawRequestDetails ? ` · ${withdrawRequestDetails}` : ""}${withdrawRequestPayoutResultDetails ? ` · ${withdrawRequestPayoutResultDetails}` : ""}${withdrawRequestDestinationDetails ? ` · ${withdrawRequestDestinationDetails}` : ""}`}
-                          value={money(item.amount)}
+                          meta={uiMessage("salon.s1024", {p0: item.id || "—", p1: formatDateTime(item.created_at), p2: withdrawRequestDetails ? uiTemplate([" · ",""], [withdrawRequestDetails]) : "", p3: withdrawRequestPayoutResultDetails ? uiTemplate([" · ",""], [withdrawRequestPayoutResultDetails]) : "", p4: withdrawRequestDestinationDetails ? uiTemplate([" · ",""], [withdrawRequestDestinationDetails]) : ""})}
+                          value={money(item.amount, item?.currency_code || item?.currency)}
                           status={cleanStatus(item?.status) || null}
                         />
                           )
@@ -1504,30 +1477,30 @@ export default function SalonFinancePage(){
                     </div>
                   ) : (
                     <EmptyState
-                      title="Заявок пока нет"
+                      title={uiMessage("salon.s1025")}
                       text={moneyCoreWithdrawRequestsText}
                     />
                   )}
 
                   <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eef2f7", display: "grid", gap: 12 }}>
                     <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                      {moneyCoreCreateRequestText}
+                      <UiValue value={moneyCoreCreateRequestText} />
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                       <div style={{ display: "grid", gap: 6 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Доступно к выводу</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0968")} /></div>
                         <div style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 12, background: "#f9fafb", padding: "12px 14px", fontSize: 14, color: "#111827" }}>
-                          {money(moneyCoreZones.available)}
+                          <UiValue value={money(moneyCoreZones.available)} />
                         </div>
                       </div>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Сумма вывода</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1026")} /></span>
                         <input
                           disabled
                           defaultValue=""
-                          placeholder="0 сом"
+                          placeholder={renderUi(uiMessage("salon.s0246"))}
                           style={{
                             width: "100%",
                             border: "1px solid #d1d5db",
@@ -1542,7 +1515,7 @@ export default function SalonFinancePage(){
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Реквизиты</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1027")} /></span>
                         <select
                           disabled
                           defaultValue=""
@@ -1557,16 +1530,16 @@ export default function SalonFinancePage(){
                             cursor: "not-allowed"
                           }}
                         >
-                          <option value="">Выберите реквизиты</option>
+                          <option value=""><UiValue value={uiMessage("salon.s1028")} /></option>
                         </select>
                       </label>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Комментарий</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1029")} /></span>
                         <textarea
                           disabled
                           defaultValue=""
-                          placeholder="Комментарий к заявке"
+                          placeholder={renderUi(uiMessage("salon.s1030"))}
                           rows={3}
                           style={{
                             width: "100%",
@@ -1597,9 +1570,7 @@ export default function SalonFinancePage(){
                         cursor: "not-allowed",
                         justifySelf: "start"
                       }}
-                    >
-                      Создать заявку на вывод
-                    </button>
+                    ><UiValue value={uiMessage("salon.s1031")} /></button>
                   </div>
                 </Panel>
               </div>
@@ -1607,127 +1578,121 @@ export default function SalonFinancePage(){
 
         <div style={styles.mainStack}>
           <Panel
-            title="Короткий статус модуля"
-            note="Overview держит единый каркас: header, billing, summary и компактные превью дочерних финансовых разделов."
+            title={uiMessage("salon.s1032")}
+            note={uiMessage("salon.s1033")}
           >
-            {pageLoading ? <div style={styles.infoText}>Загрузка финансового обзора...</div> : null}
+            {pageLoading ? <div style={styles.infoText}><UiValue value={uiMessage("salon.s1034")} /></div> : null}
 
             {pageError ? (
               <EmptyState
-                title={contextError ? "Ошибка shell-слоя" : "Ошибка загрузки"}
-                text={contextError ? "Не удалось определить состояние кабинета салона" : "Не удалось загрузить финансовый модуль"}
+                title={contextError ? uiMessage("salon.s1035") : uiMessage("salon.s1036")}
+                text={contextError ? uiMessage("salon.s1037") : uiMessage("salon.s1038")}
               />
             ) : null}
 
             {showEmpty ? (
               <EmptyState
-                title="Финансовые данные пока не наполнены"
-                text="Как только появятся движения денег, контракты или расчётные периоды, обзор заполнится автоматически. Каркас страницы уже готов под production mobile UI."
+                title={uiMessage("salon.s1039")}
+                text={uiMessage("salon.s1040")}
               />
             ) : null}
 
             {!pageLoading && !pageError && !showEmpty ? (
               <div style={styles.infoGrid}>
                 <div style={styles.infoItem}>
-                  <div style={styles.infoLabel}>Платежей всего</div>
-                  <div style={styles.infoValue}>{Number(paymentProjectionSummary?.history_count || 0)}</div>
+                  <div style={styles.infoLabel}><UiValue value={uiMessage("salon.s1041")} /></div>
+                  <div style={styles.infoValue}><UiValue value={Number(paymentProjectionSummary?.history_count || 0)} /></div>
                 </div>
                 <div style={styles.infoItem}>
-                  <div style={styles.infoLabel}>Записей сегодня</div>
-                  <div style={styles.infoValue}>{metricsView.bookingsToday}</div>
+                  <div style={styles.infoLabel}><UiValue value={uiMessage("salon.s0327")} /></div>
+                  <div style={styles.infoValue}><UiValue value={metricsView.bookingsToday} /></div>
                 </div>
                 <div style={styles.infoItem}>
-                  <div style={styles.infoLabel}>Сетов</div>
-                  <div style={styles.infoValue}>{settlements.length}</div>
+                  <div style={styles.infoLabel}><UiValue value={uiMessage("salon.s1042")} /></div>
+                  <div style={styles.infoValue}><UiValue value={settlements.length} /></div>
                 </div>
                 <div style={styles.infoItem}>
-                  <div style={styles.infoLabel}>Выплат</div>
-                  <div style={styles.infoValue}>{payouts.length}</div>
+                  <div style={styles.infoLabel}><UiValue value={uiMessage("salon.s1043")} /></div>
+                  <div style={styles.infoValue}><UiValue value={payouts.length} /></div>
                 </div>
               </div>
             ) : null}
           </Panel>
 
           <Panel
-            title="Финансовая навигация"
-            note="Обзор остаётся главным экраном, а глубокие действия вынесены на отдельные finance-страницы с тем же мобильным контрактом."
+            title={uiMessage("salon.s1044")}
+            note={uiMessage("salon.s1045")}
           >
             {slug ? (
               <div style={styles.navOverviewGrid}>
-                <FinanceNavCard to={buildSalonPath(slug, "finance")} title="Финансы" note="Общий обзор" active />
-                <FinanceNavCard to={buildSalonPath(slug, "money")} title="Кошелёк и вывод" note="Баланс, расчёты и вывод" />
-                <FinanceNavCard to={buildSalonPath(slug, "settlements")} title="Сеты" note="Расчётные периоды" />
-                <FinanceNavCard to={buildSalonPath(slug, "payouts")} title="Выплаты" note="Фактические выплаты" />
-                <FinanceNavCard to={buildSalonPath(slug, "transactions")} title="Транзакции" note="История операций" />
-                <FinanceNavCard to={buildSalonPath(slug, "contracts")} title="Контракты" note="Договорный модуль" />
+                <FinanceNavCard to={buildSalonPath(slug, "finance")} title={uiMessage("salon.s0017")} note={uiMessage("salon.s0901")} active />
+                <FinanceNavCard to={buildSalonPath(slug, "money")} title={uiMessage("salon.s0412")} note={uiMessage("salon.s0902")} />
+                <FinanceNavCard to={buildSalonPath(slug, "settlements")} title={uiMessage("salon.s0029")} note={uiMessage("salon.s0903")} />
+                <FinanceNavCard to={buildSalonPath(slug, "payouts")} title={uiMessage("salon.s0030")} note={uiMessage("salon.s0904")} />
+                <FinanceNavCard to={buildSalonPath(slug, "transactions")} title={uiMessage("salon.s0031")} note={uiMessage("salon.s0905")} />
+                <FinanceNavCard to={buildSalonPath(slug, "contracts")} title={uiMessage("salon.s0032")} note={uiMessage("salon.s0906")} />
               </div>
             ) : (
-              <EmptyState title="Навигация недоступна" text="Не найден salon slug для переходов между финансовыми разделами." />
+              <EmptyState title={uiMessage("salon.s1046")} text={uiMessage("salon.s1047")} />
             )}
           </Panel>
 
           {!pageLoading && !pageError && !showEmpty ? (
             <div style={styles.previewGrid}>
-              <Panel title="Контрактный статус" note="Здесь только краткий обзор. Полная работа с договорами остаётся на странице контрактов.">
+              <Panel title={uiMessage("salon.s1048")} note={uiMessage("salon.s1049")}>
                 {activeContracts.length === 0 ? (
-                  <EmptyState title="Активных контрактов пока нет" text="Когда появятся рабочие договоры с мастерами, блок заполнится автоматически." />
+                  <EmptyState title={uiMessage("salon.s1050")} text={uiMessage("salon.s1051")} />
                 ) : (
                   activeContracts.slice(0, 3).map((contract, index) => (
                     <PreviewRow
                       key={contract?.id || index}
-                      title={contract?.master_name || contract?.master_slug || contract?.master_id || "Мастер"}
-                      meta={contract?.billing_model || contract?.contract_type || "Условия заданы в контракте"}
-                      value={money(contract?.amount || 0)}
+                      title={contract?.master_name || contract?.master_slug || contract?.master_id || uiMessage("salon.s0094")}
+                      meta={contract?.billing_model || contract?.contract_type || uiMessage("salon.s1052")}
+                      value={money(contract?.amount || 0, contract?.currency_code || contract?.currency)}
                       status={getContractStatusLabel(contract?.status)}
                     />
                   ))
                 )}
                 <div style={styles.linkRow}>
-                  <Link to={buildSalonPath(slug, "contracts")} style={styles.inlineLink}>
-                    Открыть все контракты →
-                  </Link>
+                  <Link to={buildSalonPath(slug, "contracts")} style={styles.inlineLink}><UiValue value={uiMessage("salon.s1053")} /></Link>
                 </div>
               </Panel>
 
-              <Panel title="Последние расчётные периоды" note="Компактный preview без перегрузки overview-страницы.">
+              <Panel title={uiMessage("salon.s1054")} note={uiMessage("salon.s1055")}>
                 {recentSettlements.length === 0 ? (
-                  <EmptyState title="Расчётные периоды пока не сформированы" text="Сеты появятся после накопления транзакций и закрытия операций." />
+                  <EmptyState title={uiMessage("salon.s1056")} text={uiMessage("salon.s1057")} />
                 ) : (
                   recentSettlements.map((settlement, index) => (
                     <PreviewRow
                       key={settlement?.id || index}
-                      title={`Период ${formatDateTime(settlement?.period_start)} — ${formatDateTime(settlement?.period_end)}`}
-                      meta={settlement?.closed_at ? `Закрыт: ${formatDateTime(settlement.closed_at)}` : "Период ещё открыт"}
-                      value={money(settlement?.amount || settlement?.total_amount || 0)}
+                      title={uiMessage("salon.s1058", {p0: formatDateTime(settlement?.period_start), p1: formatDateTime(settlement?.period_end)})}
+                      meta={settlement?.closed_at ? uiMessage("salon.s1059", {p0: formatDateTime(settlement.closed_at)}) : uiMessage("salon.s1060")}
+                      value={money(settlement?.amount || settlement?.total_amount || 0, settlement?.currency_code || settlement?.currency)}
                       status={getSettlementStatusLabel(settlement?.status)}
                     />
                   ))
                 )}
                 <div style={styles.linkRow}>
-                  <Link to={buildSalonPath(slug, "settlements")} style={styles.inlineLink}>
-                    Открыть все сеты →
-                  </Link>
+                  <Link to={buildSalonPath(slug, "settlements")} style={styles.inlineLink}><UiValue value={uiMessage("salon.s1061")} /></Link>
                 </div>
               </Panel>
 
-              <Panel title="Последние выплаты" note="Здесь только краткая лента. Полная история и статусы — на странице выплат.">
+              <Panel title={uiMessage("salon.s1062")} note={uiMessage("salon.s1063")}>
                 {recentPayouts.length === 0 ? (
-                  <EmptyState title="Выплат пока нет" text="Блок автоматически наполнится после появления payout-записей." />
+                  <EmptyState title={uiMessage("salon.s1064")} text={uiMessage("salon.s1065")} />
                 ) : (
                   recentPayouts.map((payout, index) => (
                     <PreviewRow
                       key={payout?.id || index}
-                      title={payout?.destination || payout?.reference || payout?.reference_id || "Выплата"}
+                      title={payout?.destination || payout?.reference || payout?.reference_id || uiMessage("salon.s1066")}
                       meta={formatDateTime(payout?.paid_at || payout?.created_at)}
-                      value={money(payout?.amount || 0)}
+                      value={money(payout?.amount || 0, payout?.currency_code || payout?.currency)}
                       status={getPayoutStatusLabel(payout?.status)}
                     />
                   ))
                 )}
                 <div style={styles.linkRow}>
-                  <Link to={buildSalonPath(slug, "payouts")} style={styles.inlineLink}>
-                    Открыть все выплаты →
-                  </Link>
+                  <Link to={buildSalonPath(slug, "payouts")} style={styles.inlineLink}><UiValue value={uiMessage("salon.s1067")} /></Link>
                 </div>
               </Panel>
             </div>

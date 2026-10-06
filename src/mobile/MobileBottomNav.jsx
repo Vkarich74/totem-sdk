@@ -1,14 +1,16 @@
+import { UiValue, uiMessage, useUiMessages } from "../i18n/uiMessages.js";
 export default function MobileBottomNav({ items = [], activeKey = "" }) {
+  const { renderUi } = useUiMessages();
   if (!Array.isArray(items) || items.length === 0) {
     return null;
   }
 
   return (
-    <nav style={navStyle} aria-label="Мобильная навигация">
+    <nav style={navStyle} aria-label={renderUi(uiMessage("salon.s0003"))}>
       <div style={innerStyle}>
         {items.map((item) => {
           const key = String(item?.key || "").trim();
-          const label = String(item?.label || "").trim();
+          const label = String(renderUi(item?.label) || "").trim();
           const href = String(item?.href || "").trim();
           const isActive = key && String(activeKey || "") === key;
 
@@ -26,7 +28,7 @@ export default function MobileBottomNav({ items = [], activeKey = "" }) {
                 fontWeight: isActive ? 800 : 600,
               }}
             >
-              <span style={labelStyle}>{label}</span>
+              <span style={labelStyle}><UiValue value={label} /></span>
             </a>
           );
         })}

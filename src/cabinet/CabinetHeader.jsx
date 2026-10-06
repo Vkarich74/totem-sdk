@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
 function getPublicTarget(slug) {
   const safeSlug = String(slug || "").trim();
 
@@ -13,11 +14,11 @@ function getPublicTarget(slug) {
   const pathParts = pathname.split("/").filter(Boolean);
 
   if (hashParts[0] === "master" || pathParts[0] === "master") {
-    return `/master/${safeSlug}`;
+    return uiTemplate(["/master/",""], [safeSlug]);
   }
 
   if (hashParts[0] === "salon" || pathParts[0] === "salon") {
-    return `/salon/${safeSlug}`;
+    return uiTemplate(["/salon/",""], [safeSlug]);
   }
 
   const storedMasterSlug =
@@ -26,10 +27,10 @@ function getPublicTarget(slug) {
     window.sessionStorage.getItem("totem_master_slug");
 
   if (storedMasterSlug && storedMasterSlug === safeSlug) {
-    return `/master/${safeSlug}`;
+    return uiTemplate(["/master/",""], [safeSlug]);
   }
 
-  return `/salon/${safeSlug}`;
+  return uiTemplate(["/salon/",""], [safeSlug]);
 }
 
 export default function CabinetHeader({ slug, onLogout }) {
@@ -56,9 +57,7 @@ export default function CabinetHeader({ slug, onLogout }) {
           cursor: "pointer",
         }}
         onClick={handleLogoClick}
-      >
-        TOTEM
-      </div>
+      ><UiValue value={uiMessage("salon.s0000")} /></div>
 
       <div
         style={{
@@ -73,7 +72,7 @@ export default function CabinetHeader({ slug, onLogout }) {
             color: "#555",
           }}
         >
-          {slug}
+          <UiValue value={slug} />
         </div>
 
         <button
@@ -84,9 +83,7 @@ export default function CabinetHeader({ slug, onLogout }) {
             padding: "5px 10px",
             cursor: "pointer",
           }}
-        >
-          Выйти
-        </button>
+        ><UiValue value={uiMessage("salon.s0001")} /></button>
       </div>
     </div>
   );

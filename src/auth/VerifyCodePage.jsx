@@ -1,3 +1,4 @@
+import { useMarketContext } from "../market/MarketContext.jsx";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { verifyAuth } from "../api/internal";
@@ -41,6 +42,7 @@ function resolveRedirectTarget(effectiveRole, effectiveSlug){
 }
 
 export default function VerifyCodePage(){
+  const { t } = useMarketContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -65,7 +67,7 @@ export default function VerifyCodePage(){
     e.preventDefault();
 
     if(!login || !effectiveRole || !effectiveSlug){
-      setError("Ошибка контекста подтверждения");
+      setError("auth.verifyContextError");
       return;
     }
 
@@ -84,7 +86,7 @@ export default function VerifyCodePage(){
       const res = await verifyAuth(payload);
 
       if(!res?.ok || !res?.access_token){
-        setError("Неверный или просроченный код");
+        setError("auth.invalidCode");
         setLoading(false);
         return;
       }
@@ -95,7 +97,7 @@ export default function VerifyCodePage(){
       );
       navigate(target, { replace: true });
     }catch(e){
-      setError("Ошибка подтверждения кода");
+      setError("auth.verifyError");
     }finally{
       setLoading(false);
     }
@@ -122,19 +124,19 @@ export default function VerifyCodePage(){
           boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
         }}
       >
-        <h2 style={{ margin: "0 0 12px 0", fontSize: "24px" }}>Подтверждение кода</h2>
+        <h2 style={{ margin: "0 0 12px 0", fontSize: "24px" }}>{t("auth.verifyTitle")}</h2>
         <p style={{ margin: "0 0 16px 0", color: "#4b5563", fontSize: "14px" }}>
-          Введите код подтверждения для входа.
+          {t("auth.verifyInfo")}
         </p>
 
         <form onSubmit={handleSubmit}>
           <label style={{ display: "block", marginBottom: "12px" }}>
-            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Логин</div>
+            <div style={{ marginBottom: "6px", fontSize: "14px" }}>{t("auth.login")}</div>
             <input
               type="text"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
-              placeholder="Email или телефон"
+              placeholder={t("auth.loginPlaceholder")}
               style={{
                 width: "100%",
                 height: "42px",
@@ -147,12 +149,12 @@ export default function VerifyCodePage(){
           </label>
 
           <label style={{ display: "block", marginBottom: "12px" }}>
-            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Код</div>
+            <div style={{ marginBottom: "6px", fontSize: "14px" }}>{t("auth.code")}</div>
             <input
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="6 цифр"
+              placeholder={t("auth.codePlaceholder")}
               style={{
                 width: "100%",
                 height: "42px",
@@ -166,8 +168,8 @@ export default function VerifyCodePage(){
           </label>
 
           {error ? (
-            <div style={{ color: "#b91c1c", marginBottom: "12px", fontSize: "14px" }}>
-              {error}
+            <div role="alert" style={{ color: "#b91c1c", marginBottom: "12px", fontSize: "14px" }}>
+              {t(error)}
             </div>
           ) : null}
 
@@ -185,10 +187,11 @@ export default function VerifyCodePage(){
               cursor: loading ? "default" : "pointer"
             }}
           >
-            {loading ? "Проверяем..." : "Подтвердить"}
+            {loading ? t("auth.checking") : t("auth.confirm")}
           </button>
         </form>
       </div>
     </div>
   );
 }
+

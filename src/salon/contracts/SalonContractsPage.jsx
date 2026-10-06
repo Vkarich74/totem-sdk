@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiConcat, uiError } from "../../i18n/uiMessages.js";
 import React, { useEffect, useMemo, useState } from "react"
 import { Link, useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug, buildSalonPath } from "../SalonContext"
@@ -35,7 +36,7 @@ function SectionBlock({ title, hint, right, children, style = {} }) {
               color: "#111827"
             }}
           >
-            {title}
+            <UiValue value={title} />
           </h2>
 
           {hint && (
@@ -48,15 +49,15 @@ function SectionBlock({ title, hint, right, children, style = {} }) {
                 maxWidth: 760
               }}
             >
-              {hint}
+              <UiValue value={hint} />
             </p>
           )}
         </div>
 
-        {right && <div>{right}</div>}
+        {right && <div><UiValue value={right} /></div>}
       </div>
 
-      {children}
+      <UiValue value={children} />
     </section>
   )
 }
@@ -74,7 +75,7 @@ function Card({ children, soft = false, style = {} }) {
         ...style
       }}
     >
-      {children}
+      <UiValue value={children} />
     </div>
   )
 }
@@ -97,7 +98,7 @@ function InfoBox({ label, value, note }) {
           color: "#6b7280"
         }}
       >
-        {label}
+        <UiValue value={label} />
       </p>
 
       <p
@@ -110,7 +111,7 @@ function InfoBox({ label, value, note }) {
           wordBreak: "break-word"
         }}
       >
-        {value}
+        <UiValue value={value} />
       </p>
 
       {note && (
@@ -122,7 +123,7 @@ function InfoBox({ label, value, note }) {
             lineHeight: 1.4
           }}
         >
-          {note}
+          <UiValue value={note} />
         </p>
       )}
     </div>
@@ -141,24 +142,12 @@ function EmptyState({ text }) {
         fontSize: 14
       }}
     >
-      {text}
+      <UiValue value={text} />
     </div>
   )
 }
 
-function formatMoney(value, currency = "USD") {
-  const amount = Number(value || 0)
-
-  if (Number.isNaN(amount)) {
-    return "-"
-  }
-
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: currency || "USD",
-    maximumFractionDigits: 0
-  }).format(amount)
-}
+function formatMoney(value, currency = "USD") { return uiMoney(value, currency); }
 
 async function safeReadJson(response) {
   try {
@@ -188,7 +177,7 @@ function FinanceTab({ href, label, active = false }) {
         whiteSpace: "nowrap"
       }}
     >
-      {label}
+      <UiValue value={label} />
     </Link>
   )
 }
@@ -247,12 +236,12 @@ export default function SalonContractsPage() {
 
   const financeTabs = useMemo(
     () => [
-      { key: "finance", label: "Финансы", href: buildSalonPath(salonSlug, "finance") },
-      { key: "money", label: "Доход", href: buildSalonPath(salonSlug, "money") },
-      { key: "settlements", label: "Сеты", href: buildSalonPath(salonSlug, "settlements") },
-      { key: "payouts", label: "Выплаты", href: buildSalonPath(salonSlug, "payouts") },
-      { key: "transactions", label: "Транзакции", href: buildSalonPath(salonSlug, "transactions") },
-      { key: "contracts", label: "Контракты", href: buildSalonPath(salonSlug, "contracts") }
+      { key: "finance", label: uiMessage("salon.s0017"), href: buildSalonPath(salonSlug, "finance") },
+      { key: "money", label: uiMessage("salon.s0028"), href: buildSalonPath(salonSlug, "money") },
+      { key: "settlements", label: uiMessage("salon.s0029"), href: buildSalonPath(salonSlug, "settlements") },
+      { key: "payouts", label: uiMessage("salon.s0030"), href: buildSalonPath(salonSlug, "payouts") },
+      { key: "transactions", label: uiMessage("salon.s0031"), href: buildSalonPath(salonSlug, "transactions") },
+      { key: "contracts", label: uiMessage("salon.s0032"), href: buildSalonPath(salonSlug, "contracts") }
     ],
     [salonSlug]
   )
@@ -501,14 +490,14 @@ export default function SalonContractsPage() {
       else {
         setRentObligations([])
         setRentObligationsSummary(null)
-        setRentObligationsError("Не удалось загрузить обязательства по аренде.")
+        setRentObligationsError(uiError(uiMessage("salon.s0035")))
       }
     }
     catch (err) {
       console.error("Rent obligations load error:", err)
       setRentObligations([])
       setRentObligationsSummary(null)
-      setRentObligationsError("Не удалось загрузить обязательства по аренде.")
+      setRentObligationsError(uiError(uiMessage("salon.s0035")))
     }
     finally {
       setRentObligationsLoading(false)
@@ -529,14 +518,14 @@ export default function SalonContractsPage() {
       else {
         setSalaryObligations([])
         setSalaryObligationsSummary(null)
-        setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.")
+        setSalaryObligationsError(uiError(uiMessage("salon.s0036")))
       }
     }
     catch (err) {
       console.error("Salary obligations load error:", err)
       setSalaryObligations([])
       setSalaryObligationsSummary(null)
-      setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.")
+      setSalaryObligationsError(uiError(uiMessage("salon.s0036")))
     }
     finally {
       setSalaryObligationsLoading(false)
@@ -605,10 +594,10 @@ export default function SalonContractsPage() {
   function getContractModelLabel(contract) {
     const model = typeof contract === "string" ? contract : getContractModel(contract)
 
-    if (model === "percentage") return "Процентный"
-    if (model === "fixed_rent") return "Фиксированная аренда"
-    if (model === "salary") return "Зарплата"
-    if (model === "hybrid") return "Гибридный"
+    if (model === "percentage") return uiMessage("salon.s0037")
+    if (model === "fixed_rent") return uiMessage("salon.s0038")
+    if (model === "salary") return uiMessage("salon.s0039")
+    if (model === "hybrid") return uiMessage("salon.s0040")
     return model || "-"
   }
 
@@ -632,49 +621,29 @@ export default function SalonContractsPage() {
   }
 
   function formatStatus(value) {
-    if (value === "active") return "Активный"
-    if (value === "pending") return "Ожидает"
-    if (value === "archived") return "Архивный"
-    if (value === "draft") return "Черновик"
+    if (value === "active") return uiMessage("salon.s0041")
+    if (value === "pending") return uiMessage("salon.s0042")
+    if (value === "archived") return uiMessage("salon.s0043")
+    if (value === "draft") return uiMessage("salon.s0044")
     return value || "-"
   }
 
   function formatObligationStatus(value) {
     const status = String(value || "").trim().toLowerCase()
 
-    if (status === "overdue") return "Просрочено"
-    if (status === "upcoming") return "Предстоящий"
-    if (status === "open") return "Открыто"
-    if (status === "paid") return "Оплачено"
-    if (status === "cancelled") return "Отменено"
-    if (status === "voided") return "Аннулировано"
-    if (status === "active") return "Активный"
-    if (status === "pending") return "Ожидает"
-    if (status === "archived") return "Архивный"
+    if (status === "overdue") return uiMessage("salon.s0045")
+    if (status === "upcoming") return uiMessage("salon.s0046")
+    if (status === "open") return uiMessage("salon.s0047")
+    if (status === "paid") return uiMessage("salon.s0048")
+    if (status === "cancelled") return uiMessage("salon.s0049")
+    if (status === "voided") return uiMessage("salon.s0050")
+    if (status === "active") return uiMessage("salon.s0041")
+    if (status === "pending") return uiMessage("salon.s0042")
+    if (status === "archived") return uiMessage("salon.s0043")
     return value || "-"
   }
 
-  function formatDateTime(value, source) {
-    if (!value) {
-      return "-"
-    }
-
-    const date = new Date(value)
-
-    if (Number.isNaN(date.getTime())) {
-      return value
-    }
-
-    return new Intl.DateTimeFormat("ru-RU", {
-      timeZone: resolveBusinessTimeZone(source),
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
-    }).format(date)
-  }
+  function formatDateTime(value, source) { if (!value) return "—"; return uiDate(value, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
   function getStatusStyle(status) {
     const normalizedStatus = String(status || "").trim().toLowerCase()
@@ -772,7 +741,7 @@ export default function SalonContractsPage() {
   function renderCell(content, extraStyle = {}) {
     return (
       <td style={{ ...tableCellStyle, ...extraStyle }}>
-        {content}
+        <UiValue value={content} />
       </td>
     )
   }
@@ -786,55 +755,47 @@ export default function SalonContractsPage() {
       const masterValue = terms.master_percent ?? "-"
       const salonValue = terms.salon_percent ?? "-"
       const platformValue = terms.platform_percent ?? "-"
-      return `Мастер ${masterValue}% · Салон ${salonValue}% · Платформа ${platformValue}%`
+      return uiMessage("salon.s0051", {p0: masterValue, p1: salonValue, p2: platformValue})
     }
 
     if (model === "fixed_rent") {
-      return `${formatMoney(terms.rent_amount, contractCurrency)} · ${formatPeriodLabel(terms.rent_period)} · ${formatSettlementModeLabel(terms.settlement_mode)}`
+      return uiTemplate([""," · "," · ",""], [formatMoney(terms.rent_amount, contractCurrency), formatPeriodLabel(terms.rent_period), formatSettlementModeLabel(terms.settlement_mode)])
     }
 
     if (model === "salary") {
-      const bonusLabel = terms.bonus_percent ? ` · Бонус ${terms.bonus_percent}%` : ""
-      return `${formatMoney(terms.salary_amount, contractCurrency)} · ${formatSalaryPeriodLabel(terms.salary_period)}${bonusLabel}`
+      const bonusLabel = terms.bonus_percent ? uiMessage("salon.s0052", {p0: terms.bonus_percent}) : ""
+      return uiTemplate([""," · ","",""], [formatMoney(terms.salary_amount, contractCurrency), formatSalaryPeriodLabel(terms.salary_period), bonusLabel])
     }
 
     if (model === "hybrid") {
-      const baseTypeLabel = terms.base_type === "fixed_rent" ? "Аренда" : "Зарплата"
-      return `${baseTypeLabel} ${formatMoney(terms.base_amount, contractCurrency)} + ${terms.master_percent ?? "-"}% мастеру`
+      const baseTypeLabel = terms.base_type === "fixed_rent" ? uiMessage("salon.s0053") : uiMessage("salon.s0039")
+      return uiMessage("salon.s0054", {p0: baseTypeLabel, p1: formatMoney(terms.base_amount, contractCurrency), p2: terms.master_percent ?? "-"})
     }
 
     return "-"
   }
 
   function formatPeriodLabel(value) {
-    if (value === "daily") return "в день"
-    if (value === "weekly") return "в неделю"
-    if (value === "monthly") return "в месяц"
+    if (value === "daily") return uiMessage("salon.s0055")
+    if (value === "weekly") return uiMessage("salon.s0056")
+    if (value === "monthly") return uiMessage("salon.s0057")
     return value || "-"
   }
 
   function formatSalaryPeriodLabel(value) {
-    if (value === "weekly") return "еженедельно"
-    if (value === "biweekly") return "раз в две недели"
-    if (value === "monthly") return "ежемесячно"
+    if (value === "weekly") return uiMessage("salon.s0058")
+    if (value === "biweekly") return uiMessage("salon.s0059")
+    if (value === "monthly") return uiMessage("salon.s0060")
     return value || "-"
   }
 
   function formatSettlementModeLabel(value) {
-    if (value === "prepaid") return "предоплата"
-    if (value === "accrued") return "по факту"
+    if (value === "prepaid") return uiMessage("salon.s0061")
+    if (value === "accrued") return uiMessage("salon.s0062")
     return value || "-"
   }
 
-  function formatCurrencyAmount(value, currencyCode = "KGS") {
-    const amount = Number(value || 0)
-
-    if (Number.isNaN(amount)) {
-      return "-"
-    }
-
-    return `${new Intl.NumberFormat("ru-RU").format(amount)} ${currencyCode}`
-  }
+  function formatCurrencyAmount(value, currencyCode = "KGS") { return uiMoney(value, currencyCode); }
 
   const DEFAULT_BUSINESS_TIME_ZONE = "Asia/Bishkek"
 
@@ -885,16 +846,7 @@ export default function SalonContractsPage() {
     return DEFAULT_BUSINESS_TIME_ZONE
   }
 
-  function formatSignedCurrency(value, sign, currencyCode = "KGS") {
-    const amount = Math.abs(Number(value || 0))
-
-    if (Number.isNaN(amount)) {
-      return "-"
-    }
-
-    const prefix = sign === "-" ? "-" : sign === "+" ? "+" : ""
-    return `${prefix}${new Intl.NumberFormat("ru-RU").format(amount)} ${currencyCode}`
-  }
+  function formatSignedCurrency(value, sign, currencyCode = "KGS") { const amount = Number(value); if (value == null || value === "" || !Number.isFinite(amount)) return String(value ?? ""); const prefix = sign === "-" ? "-" : sign === "+" ? "+" : ""; return uiConcat(prefix, uiMoney(Math.abs(amount), currencyCode)); }
 
   function normalizeObligationStatus(value) {
     return String(value || "").trim().toLowerCase()
@@ -908,12 +860,12 @@ export default function SalonContractsPage() {
   function buildObligationActionKey(kind, row) {
     const obligationId = String(row?.id || row?.obligation_id || row?.obligationId || "").trim()
     const rawId = obligationId || String(row?.contract_id || row?.period_start || "").trim()
-    return `${kind}:${rawId || "unknown"}`
+    return uiTemplate(["",":",""], [kind, rawId || "unknown"])
   }
 
   function buildObligationIdempotencyKey(kind, row) {
     const obligationId = String(row?.id || row?.obligation_id || row?.obligationId || "").trim()
-    return `c14f-${kind}-${String(obligationId || row?.contract_id || "unknown").trim()}-${Date.now()}`
+    return uiTemplate(["c14f-","-","-",""], [kind, String(obligationId || row?.contract_id || "unknown").trim(), Date.now()])
   }
 
   function buildObligationConfirmPayload(row, kind) {
@@ -1154,7 +1106,7 @@ export default function SalonContractsPage() {
         bucket.priority_rank = candidateRank
         bucket.priority_obligation = item
         bucket.priority_label = formatObligationStatus(item.status)
-        bucket.priority_note = `${item.obligation_type === "salary" ? "Зарплата" : "Аренда"} · ${formatDateTime(item?.due_at || item?.period_start || item?.paid_at || item?.created_at, item)}`
+        bucket.priority_note = uiTemplate([""," · ",""], [item.obligation_type === "salary" ? uiMessage("salon.s0039") : uiMessage("salon.s0053"), formatDateTime(item?.due_at || item?.period_start || item?.paid_at || item?.created_at, item)])
       }
     }
 
@@ -1241,7 +1193,7 @@ export default function SalonContractsPage() {
     const masterIdNumber = Number(selectedMasterId)
 
     if (!masterIdNumber) {
-      return "Выбери мастера"
+      return uiMessage("salon.s0067")
     }
 
     if (contractModel === "percentage") {
@@ -1254,11 +1206,11 @@ export default function SalonContractsPage() {
         Number.isNaN(salonValue) ||
         Number.isNaN(platformValue)
       ) {
-        return "Проценты должны быть числами"
+        return uiMessage("salon.s0068")
       }
 
       if (masterValue + salonValue + platformValue !== 100) {
-        return "Сумма процентов должна быть ровно 100"
+        return uiMessage("salon.s0069")
       }
     }
 
@@ -1266,7 +1218,7 @@ export default function SalonContractsPage() {
       const rentValue = Number(rentAmount)
 
       if (Number.isNaN(rentValue) || rentValue <= 0) {
-        return "Укажи корректную сумму аренды"
+        return uiMessage("salon.s0070")
       }
     }
 
@@ -1275,11 +1227,11 @@ export default function SalonContractsPage() {
       const bonusValue = bonusPercent === "" ? 0 : Number(bonusPercent)
 
       if (Number.isNaN(salaryValue) || salaryValue <= 0) {
-        return "Укажи корректную сумму зарплаты"
+        return uiMessage("salon.s0071")
       }
 
       if (Number.isNaN(bonusValue) || bonusValue < 0) {
-        return "Бонус должен быть числом 0 или больше"
+        return uiMessage("salon.s0072")
       }
     }
 
@@ -1290,7 +1242,7 @@ export default function SalonContractsPage() {
       const platformValue = Number(platformPercent)
 
       if (Number.isNaN(baseValue) || baseValue <= 0) {
-        return "Укажи корректную базовую сумму"
+        return uiMessage("salon.s0073")
       }
 
       if (
@@ -1298,11 +1250,11 @@ export default function SalonContractsPage() {
         Number.isNaN(salonValue) ||
         Number.isNaN(platformValue)
       ) {
-        return "Проценты гибридного договора должны быть числами"
+        return uiMessage("salon.s0074")
       }
 
       if (masterValue + salonValue + platformValue !== 100) {
-        return "Сумма процентов гибридного договора должна быть ровно 100"
+        return uiMessage("salon.s0075")
       }
     }
 
@@ -1321,7 +1273,7 @@ export default function SalonContractsPage() {
     const validationError = validateCreateForm()
 
     if (validationError) {
-      setCreateContractError(validationError)
+      setCreateContractError(uiError(validationError))
       return
     }
 
@@ -1340,17 +1292,17 @@ export default function SalonContractsPage() {
       const result = await createSalonContract(salonSlug, payload)
 
       if (!result?.ok) {
-        setCreateContractError(result?.error || result?.detail?.json?.error || "Не удалось создать контракт")
+        setCreateContractError(uiError(result?.error || result?.detail?.json?.error || uiMessage("salon.s0076")))
         return
       }
 
-      setCreateContractSuccess("Контракт создан в статусе ожидания")
+      setCreateContractSuccess(uiMessage("salon.s0077"))
       resetCreateForm()
       await refreshContracts()
     }
     catch (err) {
       console.error("Create contract error:", err)
-      setCreateContractError("Ошибка создания контракта")
+      setCreateContractError(uiError(uiMessage("salon.s0078")))
     }
     finally {
       setCreateContractLoading(false)
@@ -1369,16 +1321,16 @@ export default function SalonContractsPage() {
       const result = await acceptContractApi(contractId)
 
       if (!result?.ok) {
-        setContractActionError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || "Не удалось принять контракт")
+        setContractActionError(uiError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || uiMessage("salon.s0079")))
         return
       }
 
-      setContractActionSuccess("Контракт переведён в активный статус")
+      setContractActionSuccess(uiMessage("salon.s0080"))
       await refreshContracts()
     }
     catch (err) {
       console.error("Accept contract error:", err)
-      setContractActionError("Ошибка активации контракта")
+      setContractActionError(uiError(uiMessage("salon.s0081")))
     }
     finally {
       setContractActionLoadingId("")
@@ -1397,16 +1349,16 @@ export default function SalonContractsPage() {
       const result = await archiveContractApi(contractId)
 
       if (!result?.ok) {
-        setContractActionError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || "Не удалось архивировать контракт")
+        setContractActionError(uiError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || uiMessage("salon.s0082")))
         return
       }
 
-      setContractActionSuccess("Контракт переведён в архив")
+      setContractActionSuccess(uiMessage("salon.s0083"))
       await refreshContracts()
     }
     catch (err) {
       console.error("Archive contract error:", err)
-      setContractActionError("Ошибка архивации контракта")
+      setContractActionError(uiError(uiMessage("salon.s0084")))
     }
     finally {
       setContractActionLoadingId("")
@@ -1425,16 +1377,16 @@ export default function SalonContractsPage() {
       const result = await acceptContractApi(contractId)
 
       if (!result?.ok) {
-        setContractActionError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || "Не удалось восстановить контракт")
+        setContractActionError(uiError(result?.detail?.json?.message || result?.detail?.json?.error || result?.error || uiMessage("salon.s0085")))
         return
       }
 
-      setContractActionSuccess("Контракт восстановлен и переведён в активный статус")
+      setContractActionSuccess(uiMessage("salon.s0086"))
       await refreshContracts()
     }
     catch (err) {
       console.error("Restore contract error:", err)
-      setContractActionError("Ошибка восстановления контракта")
+      setContractActionError(uiError(uiMessage("salon.s0087")))
     }
     finally {
       setContractActionLoadingId("")
@@ -1450,7 +1402,7 @@ export default function SalonContractsPage() {
 
     const payload = buildObligationConfirmPayload(row, "rent")
     if (!payload) {
-      setContractActionError("Не удалось подтвердить получение аренды")
+      setContractActionError(uiError(uiMessage("salon.s0088")))
       return
     }
 
@@ -1462,17 +1414,17 @@ export default function SalonContractsPage() {
       const backendError = result?.detail?.json?.error || result?.detail?.json?.message || result?.error || ""
 
       if (!result?.ok) {
-        setContractActionError(backendError ? `Не удалось подтвердить получение аренды: ${backendError}` : "Не удалось подтвердить получение аренды")
+        setContractActionError(uiError(uiMessage("salon.s0088")))
         return
       }
 
-      setContractActionSuccess("Аренда подтверждена")
+      setContractActionSuccess(uiMessage("salon.s0090"))
       await refreshContracts()
     }
     catch (err) {
       console.error("Confirm rent obligation error:", err)
       const backendError = err?.detail?.json?.error || err?.message || ""
-      setContractActionError(backendError ? `Не удалось подтвердить получение аренды: ${backendError}` : "Не удалось подтвердить получение аренды")
+      setContractActionError(uiError(uiMessage("salon.s0088")))
     }
     finally {
       setObligationActionPendingKey("")
@@ -1488,7 +1440,7 @@ export default function SalonContractsPage() {
 
     const payload = buildObligationConfirmPayload(row, "salary")
     if (!payload) {
-      setContractActionError("Не удалось подтвердить выплату зарплаты")
+      setContractActionError(uiError(uiMessage("salon.s0091")))
       return
     }
 
@@ -1500,17 +1452,17 @@ export default function SalonContractsPage() {
       const backendError = result?.detail?.json?.error || result?.detail?.json?.message || result?.error || ""
 
       if (!result?.ok) {
-        setContractActionError(backendError ? `Не удалось подтвердить выплату зарплаты: ${backendError}` : "Не удалось подтвердить выплату зарплаты")
+        setContractActionError(uiError(uiMessage("salon.s0091")))
         return
       }
 
-      setContractActionSuccess("Выплата зарплаты подтверждена")
+      setContractActionSuccess(uiMessage("salon.s0093"))
       await refreshContracts()
     }
     catch (err) {
       console.error("Confirm salary obligation error:", err)
       const backendError = err?.detail?.json?.error || err?.message || ""
-      setContractActionError(backendError ? `Не удалось подтвердить выплату зарплаты: ${backendError}` : "Не удалось подтвердить выплату зарплаты")
+      setContractActionError(uiError(uiMessage("salon.s0091")))
     }
     finally {
       setObligationActionPendingKey("")
@@ -1559,10 +1511,10 @@ export default function SalonContractsPage() {
   const hasMasters = masters.length > 0
   const contractModelOptions = useMemo(
     () => [
-      { value: "percentage", label: "Процентный" },
-      { value: "fixed_rent", label: "Фиксированная аренда" },
-      { value: "salary", label: "Зарплата" },
-      { value: "hybrid", label: "Гибридный" }
+      { value: "percentage", label: uiMessage("salon.s0037") },
+      { value: "fixed_rent", label: uiMessage("salon.s0038") },
+      { value: "salary", label: uiMessage("salon.s0039") },
+      { value: "hybrid", label: uiMessage("salon.s0040") }
     ],
     []
   )
@@ -1609,25 +1561,25 @@ export default function SalonContractsPage() {
     const actionsLocked = Boolean(contractActionLoadingId)
 
     return (
-      <Card key={`${mode}-${contract.id}`} style={{ padding: 16 }}>
+      <Card key={uiTemplate(["","-",""], [mode, contract.id])} style={{ padding: 16 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Мастер</p>
-            <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 700, color: "#111827" }}>{getMasterName(contract)}</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}><UiValue value={uiMessage("salon.s0094")} /></p>
+            <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 700, color: "#111827" }}><UiValue value={getMasterName(contract)} /></p>
             <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-              {getContractModelLabel(contract)} · {getContractSummary(contract)}
+              <UiValue value={getContractModelLabel(contract)} /> · <UiValue value={getContractSummary(contract)} />
             </p>
           </div>
-          <span style={getStatusStyle(contract.status)}>{formatStatus(contract.status)}</span>
+          <span style={getStatusStyle(contract.status)}><UiValue value={formatStatus(contract.status)} /></span>
         </div>
 
         <div style={{ ...compactGridStyle, marginTop: 14 }}>
-          <InfoBox label="ID" value={contract.id || "-"} />
-          <InfoBox label="Дата начала" value={formatDateTime(contract.effective_from)} />
+          <InfoBox label={uiMessage("salon.s0096")} value={contract.id || "-"} />
+          <InfoBox label={uiMessage("salon.s0097")} value={formatDateTime(contract.effective_from)} />
           {mode === "archived" ? (
-            <InfoBox label="Архивирован" value={formatDateTime(contract.archived_at)} />
+            <InfoBox label={uiMessage("salon.s0098")} value={formatDateTime(contract.archived_at)} />
           ) : (
-            <InfoBox label="Модель" value={getContractModelLabel(contract)} />
+            <InfoBox label={uiMessage("salon.s0099")} value={getContractModelLabel(contract)} />
           )}
         </div>
 
@@ -1646,7 +1598,7 @@ export default function SalonContractsPage() {
                   cursor: actionsLocked ? "wait" : "pointer"
                 }}
               >
-                {isBusy ? "Обработка..." : "Принять"}
+                <UiValue value={isBusy ? uiMessage("salon.s0100") : uiMessage("salon.s0101")} />
               </button>
             )}
 
@@ -1660,7 +1612,7 @@ export default function SalonContractsPage() {
                 cursor: actionsLocked ? "wait" : "pointer"
               }}
             >
-              {isBusy ? "Обработка..." : "Архивировать"}
+              <UiValue value={isBusy ? uiMessage("salon.s0100") : uiMessage("salon.s0102")} />
             </button>
           </div>
         )}
@@ -1672,10 +1624,8 @@ export default function SalonContractsPage() {
     <div style={pageStyle}>
       <div style={shellStyle}>
         <div style={pageHeaderStyle}>
-          <h1 style={pageTitleStyle}>Контракты салона</h1>
-          <p style={pageSubtitleStyle}>
-            Контракты вынесены в отдельную ось: здесь видно текущее состояние договорённостей, историю и создание нового контракта без смешения с общими финансами.
-          </p>
+          <h1 style={pageTitleStyle}><UiValue value={uiMessage("salon.s0103")} /></h1>
+          <p style={pageSubtitleStyle}><UiValue value={uiMessage("salon.s0104")} /></p>
         </div>
 
         <div style={financeNavStyle}>
@@ -1690,8 +1640,8 @@ export default function SalonContractsPage() {
         </div>
 
         <SectionBlock
-          title="Контракты"
-          hint="Единый кабинет контрактов без разделения на две колонки."
+          title={uiMessage("salon.s0032")}
+          hint={uiMessage("salon.s0105")}
           right={
             <button
               type="button"
@@ -1703,7 +1653,7 @@ export default function SalonContractsPage() {
                 cursor: contractsLoading || contractActionLoadingId || createContractLoading ? "wait" : "pointer"
               }}
             >
-              {contractsLoading ? "Обновление..." : "Обновить"}
+              <UiValue value={contractsLoading ? uiMessage("salon.s0106") : uiMessage("salon.s0107")} />
             </button>
           }
           style={{ marginTop: 0 }}
@@ -1711,55 +1661,53 @@ export default function SalonContractsPage() {
           <div style={pageStackStyle}>
             <Card>
               <div style={{ marginBottom: 16 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
-                  Сводка по контрактам
-                </h3>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}><UiValue value={uiMessage("salon.s0108")} /></h3>
               </div>
 
               <div style={compactGridStyle}>
                 <InfoBox
-                  label="Активные"
+                  label={uiMessage("salon.s0109")}
                   value={contractsLoading ? "..." : activeContracts.length}
-                  note="Используются в текущих правилах расчётов"
+                  note={uiMessage("salon.s0110")}
                 />
 
                 <InfoBox
-                  label="Ожидающие"
+                  label={uiMessage("salon.s0111")}
                   value={contractsLoading ? "..." : pendingContracts.length}
-                  note="Ожидают активации"
+                  note={uiMessage("salon.s0112")}
                 />
 
                 <InfoBox
-                  label="Архивные"
+                  label={uiMessage("salon.s0113")}
                   value={contractsLoading ? "..." : archivedContracts.length}
-                  note="История завершённых договорённостей"
+                  note={uiMessage("salon.s0114")}
                 />
 
                 <InfoBox
-                  label="Всего"
+                  label={uiMessage("salon.s0115")}
                   value={contractsLoading ? "..." : contracts.length}
-                  note="Полная история контрактов салона"
+                  note={uiMessage("salon.s0116")}
                 />
               </div>
 
 
               <div style={{ ...compactGridStyle, marginTop: 12 }}>
                 <InfoBox
-                  label="Последний активный"
+                  label={uiMessage("salon.s0117")}
                   value={contractsLoading ? "..." : (latestActiveContract ? getMasterName(latestActiveContract) : "—")}
-                  note={contractsLoading ? "Загрузка..." : (latestActiveContract ? getContractSummary(latestActiveContract) : "Нет активных контрактов")}
+                  note={contractsLoading ? uiMessage("salon.s0118") : (latestActiveContract ? getContractSummary(latestActiveContract) : uiMessage("salon.s0119"))}
                 />
 
                 <InfoBox
-                  label="Последний архивный"
+                  label={uiMessage("salon.s0120")}
                   value={contractsLoading ? "..." : (latestArchivedContract ? getMasterName(latestArchivedContract) : "—")}
-                  note={contractsLoading ? "Загрузка..." : (latestArchivedContract ? formatDateTime(latestArchivedContract.archived_at) : "Архив пока пуст")}
+                  note={contractsLoading ? uiMessage("salon.s0118") : (latestArchivedContract ? formatDateTime(latestArchivedContract.archived_at) : uiMessage("salon.s0121"))}
                 />
               </div>
 
               <SectionBlock
-                title="Обязательства мастер-салон"
-                hint="Салон видит обязательства по мастерам, срокам и статусам. Аренда — к получению, зарплата — к выплате."
+                title={uiMessage("salon.s0122")}
+                hint={uiMessage("salon.s0123")}
                 style={{ marginTop: 16 }}
               >
                 {rentObligationsError ? (
@@ -1772,7 +1720,7 @@ export default function SalonContractsPage() {
                     color: "#92400e",
                     fontSize: 14
                   }}>
-                    {rentObligationsError}
+                    <UiValue value={rentObligationsError} />
                   </div>
                 ) : null}
 
@@ -1786,7 +1734,7 @@ export default function SalonContractsPage() {
                     color: "#92400e",
                     fontSize: 14
                   }}>
-                    {salaryObligationsError}
+                    <UiValue value={salaryObligationsError} />
                   </div>
                 ) : null}
 
@@ -1795,47 +1743,45 @@ export default function SalonContractsPage() {
                     marginBottom: 12,
                     color: "#6b7280",
                     fontSize: 14
-                  }}>
-                    Загружаем обязательства мастер-салон...
-                  </div>
+                  }}><UiValue value={uiMessage("salon.s0124")} /></div>
                 ) : null}
 
                 <div style={compactGridStyle}>
                   <InfoBox
-                    label="Открыто"
+                    label={uiMessage("salon.s0047")}
                     value={salonObligationsModel.summary ? Number(salonObligationsModel.summary.open_count ?? 0) : 0}
-                    note="Активные обязательства в работе"
+                    note={uiMessage("salon.s0125")}
                   />
                   <InfoBox
-                    label="Просрочено"
+                    label={uiMessage("salon.s0045")}
                     value={salonObligationsModel.summary ? Number(salonObligationsModel.summary.overdue_count ?? 0) : 0}
-                    note="Требуют внимания"
+                    note={uiMessage("salon.s0126")}
                   />
                   <InfoBox
-                    label="Аренда к получению"
+                    label={uiMessage("salon.s0127")}
                     value={formatSignedCurrency(salonObligationsModel.summary?.rent_receivable_amount ?? 0, "+")}
-                    note="Положительный поток для салона"
+                    note={uiMessage("salon.s0128")}
                   />
                   <InfoBox
-                    label="Зарплата к выплате"
+                    label={uiMessage("salon.s0129")}
                     value={formatSignedCurrency(salonObligationsModel.summary?.salary_payable_amount ?? 0, "-")}
-                    note="Отток в пользу мастеров"
+                    note={uiMessage("salon.s0130")}
                   />
                   <InfoBox
-                    label="Аренда получена"
+                    label={uiMessage("salon.s0131")}
                     value={formatSignedCurrency(salonObligationsModel.summary?.rent_received_amount ?? 0, "+")}
-                    note="Закрытые арендные периоды"
+                    note={uiMessage("salon.s0132")}
                   />
                   <InfoBox
-                    label="Зарплата выплачена"
+                    label={uiMessage("salon.s0133")}
                     value={formatSignedCurrency(salonObligationsModel.summary?.salary_paid_amount ?? 0, "+")}
-                    note="Закрытые зарплатные периоды"
+                    note={uiMessage("salon.s0134")}
                   />
                 </div>
 
                 {!rentObligationsLoading && !salaryObligationsLoading && !salonObligationsModel.masters.length ? (
                   <div style={{ marginTop: 12 }}>
-                    <EmptyState text="Обязательства мастер-салон пока не найдены." />
+                    <EmptyState text={uiMessage("salon.s0135")} />
                   </div>
                 ) : null}
 
@@ -1865,22 +1811,19 @@ export default function SalonContractsPage() {
                           >
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
                               <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>{master.master_name || "—"}</div>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}><UiValue value={master.master_name || "—"} /></div>
                                 <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                                  {master.priority_label || "—"} · {master.overdue_count || 0} просрочено
-                                </div>
+                                  <UiValue value={master.priority_label || "—"} /> · <UiValue value={master.overdue_count || 0} /><UiValue value={uiMessage("salon.s0136")} /></div>
                               </div>
                               <span style={getStatusStyle(master.priority_obligation?.status || "open")}>
-                                {master.priority_label || "—"}
+                                <UiValue value={master.priority_label || "—"} />
                               </span>
                             </div>
 
                             <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-                              <div style={{ fontSize: 13, color: "#374151" }}>
-                                Аренда к получению: <strong>{formatSignedCurrency(master.rent_receivable_amount || 0, "+")}</strong>
+                              <div style={{ fontSize: 13, color: "#374151" }}><UiValue value={uiMessage("salon.s0137")} /><strong><UiValue value={formatSignedCurrency(master.rent_receivable_amount || 0, "+")} /></strong>
                               </div>
-                              <div style={{ fontSize: 13, color: "#374151" }}>
-                                Зарплата к выплате: <strong>{formatSignedCurrency(master.salary_payable_amount || 0, "-")}</strong>
+                              <div style={{ fontSize: 13, color: "#374151" }}><UiValue value={uiMessage("salon.s0138")} /><strong><UiValue value={formatSignedCurrency(master.salary_payable_amount || 0, "-")} /></strong>
                               </div>
                             </div>
                           </button>
@@ -1892,57 +1835,55 @@ export default function SalonContractsPage() {
                       <Card soft style={{ padding: 16 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
                           <div>
-                            <div style={{ fontSize: 12, color: "#6b7280" }}>Выбранный мастер</div>
+                            <div style={{ fontSize: 12, color: "#6b7280" }}><UiValue value={uiMessage("salon.s0139")} /></div>
                             <div style={{ fontSize: 18, fontWeight: 800, color: "#111827", marginTop: 4 }}>
-                              {selectedObligationMaster.master_name || "—"}
+                              <UiValue value={selectedObligationMaster.master_name || "—"} />
                             </div>
                             <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
-                              {selectedObligationMaster.priority_note || "Список обязательств по мастеру"}
+                              <UiValue value={selectedObligationMaster.priority_note || uiMessage("salon.s0140")} />
                             </div>
                           </div>
                           <span style={getStatusStyle(selectedObligationMaster.priority_obligation?.status || "open")}>
-                            {selectedObligationMaster.priority_label || "Открыто"}
+                            <UiValue value={selectedObligationMaster.priority_label || uiMessage("salon.s0047")} />
                           </span>
                         </div>
 
                         <div style={compactGridStyle}>
                           <InfoBox
-                            label="Открыто"
+                            label={uiMessage("salon.s0047")}
                             value={selectedObligationMaster.open_count || 0}
-                            note="Активные или ожидающие периоды"
+                            note={uiMessage("salon.s0141")}
                           />
                           <InfoBox
-                            label="Просрочено"
+                            label={uiMessage("salon.s0045")}
                             value={selectedObligationMaster.overdue_count || 0}
-                            note="Требуют срочного действия"
+                            note={uiMessage("salon.s0142")}
                           />
                           <InfoBox
-                            label="Аренда к получению"
+                            label={uiMessage("salon.s0127")}
                             value={formatSignedCurrency(selectedObligationMaster.rent_receivable_amount || 0, "+")}
-                            note="Салон должен получить"
+                            note={uiMessage("salon.s0143")}
                           />
                           <InfoBox
-                            label="Зарплата к выплате"
+                            label={uiMessage("salon.s0129")}
                             value={formatSignedCurrency(selectedObligationMaster.salary_payable_amount || 0, "-")}
-                            note="Салон должен выплатить"
+                            note={uiMessage("salon.s0144")}
                           />
                         </div>
 
                         <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
                           <div>
-                            <div style={{ marginBottom: 10, fontSize: 15, fontWeight: 800, color: "#111827" }}>
-                              Аренда к получению
-                            </div>
+                            <div style={{ marginBottom: 10, fontSize: 15, fontWeight: 800, color: "#111827" }}><UiValue value={uiMessage("salon.s0145")} /></div>
                             {selectedObligationMaster.rent.length ? (
                               <div style={{ ...tableWrapStyle, minWidth: 0 }}>
                                 <table style={{ ...tableStyle, minWidth: 820 }}>
                                   <thead>
                                     <tr>
-                                      <th style={tableHeadCellStyle}>Период</th>
-                                      <th style={tableHeadCellStyle}>Сумма</th>
-                                      <th style={tableHeadCellStyle}>Статус</th>
-                                      <th style={tableHeadCellStyle}>Срок оплаты</th>
-                                      <th style={tableHeadCellStyle}>Действия</th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0146")} /></th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0147")} /></th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0148")} /></th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0149")} /></th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0150")} /></th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -1952,27 +1893,27 @@ export default function SalonContractsPage() {
                                       const isPending = obligationActionPendingKey === itemKey
                                       const canConfirm = canConfirmObligation(item)
                                       return (
-                                        <tr key={item?.id || `${item?.contract_id || "rent-obligation"}-${index}`}>
+                                        <tr key={item?.id || uiTemplate(["","-",""], [item?.contract_id || "rent-obligation", index])}>
                                           {renderCell(
                                             <div>
                                               <div style={{ fontWeight: 600, color: "#111827" }}>
-                                                {formatDateTime(item?.period_start, item)} — {formatDateTime(item?.period_end, item)}
+                                                <UiValue value={formatDateTime(item?.period_start, item)} /> — <UiValue value={formatDateTime(item?.period_end, item)} />
                                               </div>
                                             </div>,
                                             isLast ? { borderBottom: "none" } : {}
                                           )}
                                           {renderCell(
-                                            <span style={{ fontWeight: 600 }}>{formatSignedCurrency(item?.amount, "+", item?.currency || "KGS")}</span>,
+                                            <span style={{ fontWeight: 600 }}><UiValue value={formatSignedCurrency(item?.amount, "+", item?.currency || "KGS")} /></span>,
                                             isLast ? { borderBottom: "none" } : {}
                                           )}
                                           {renderCell(
-                                            <span style={getStatusStyle(item?.status)}>{formatObligationStatus(item?.status)}</span>,
+                                            <span style={getStatusStyle(item?.status)}><UiValue value={formatObligationStatus(item?.status)} /></span>,
                                             isLast ? { borderBottom: "none" } : {}
                                           )}
-                                          {renderCell(
+                                          <UiValue value={renderCell(
                                             formatDateTime(item?.due_at, item),
                                             isLast ? { borderBottom: "none" } : {}
-                                          )}
+                                          )} />
                                           {renderCell(
                                             canConfirm ? (
                                               <button
@@ -1988,7 +1929,7 @@ export default function SalonContractsPage() {
                                                   whiteSpace: "nowrap"
                                                 }}
                                               >
-                                                {isPending ? "Подтверждаем..." : "Подтвердить получение аренды"}
+                                                <UiValue value={isPending ? uiMessage("salon.s0152") : uiMessage("salon.s0153")} />
                                               </button>
                                             ) : (
                                               "—"
@@ -2002,24 +1943,22 @@ export default function SalonContractsPage() {
                                 </table>
                               </div>
                             ) : (
-                              <EmptyState text="Аренда к получению пока не найдена." />
+                              <EmptyState text={uiMessage("salon.s0154")} />
                             )}
                           </div>
 
                           <div>
-                            <div style={{ marginBottom: 10, fontSize: 15, fontWeight: 800, color: "#111827" }}>
-                              Зарплата к выплате
-                            </div>
+                            <div style={{ marginBottom: 10, fontSize: 15, fontWeight: 800, color: "#111827" }}><UiValue value={uiMessage("salon.s0155")} /></div>
                             {selectedObligationMaster.salary.length ? (
                               <div style={{ ...tableWrapStyle, minWidth: 0 }}>
                                 <table style={{ ...tableStyle, minWidth: 820 }}>
                                   <thead>
                                     <tr>
-                                      <th style={tableHeadCellStyle}>Период</th>
-                                      <th style={tableHeadCellStyle}>Сумма</th>
-                                      <th style={tableHeadCellStyle}>Статус</th>
-                                      <th style={tableHeadCellStyle}>Срок выплаты</th>
-                                      <th style={tableHeadCellStyle}>Действия</th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0146")} /></th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0147")} /></th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0148")} /></th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0156")} /></th>
+                                      <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0150")} /></th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -2029,27 +1968,27 @@ export default function SalonContractsPage() {
                                       const isPending = obligationActionPendingKey === itemKey
                                       const canConfirm = canConfirmObligation(item)
                                       return (
-                                        <tr key={item?.id || `${item?.contract_id || "salary-obligation"}-${index}`}>
+                                        <tr key={item?.id || uiTemplate(["","-",""], [item?.contract_id || "salary-obligation", index])}>
                                           {renderCell(
                                             <div>
                                               <div style={{ fontWeight: 600, color: "#111827" }}>
-                                                {formatDateTime(item?.period_start, item)} — {formatDateTime(item?.period_end, item)}
+                                                <UiValue value={formatDateTime(item?.period_start, item)} /> — <UiValue value={formatDateTime(item?.period_end, item)} />
                                               </div>
                                             </div>,
                                             isLast ? { borderBottom: "none" } : {}
                                           )}
                                           {renderCell(
-                                            <span style={{ fontWeight: 600 }}>{formatSignedCurrency(item?.amount, "-", item?.currency || "KGS")}</span>,
+                                            <span style={{ fontWeight: 600 }}><UiValue value={formatSignedCurrency(item?.amount, "-", item?.currency || "KGS")} /></span>,
                                             isLast ? { borderBottom: "none" } : {}
                                           )}
                                           {renderCell(
-                                            <span style={getStatusStyle(item?.status)}>{formatObligationStatus(item?.status)}</span>,
+                                            <span style={getStatusStyle(item?.status)}><UiValue value={formatObligationStatus(item?.status)} /></span>,
                                             isLast ? { borderBottom: "none" } : {}
                                           )}
-                                          {renderCell(
+                                          <UiValue value={renderCell(
                                             formatDateTime(item?.due_at, item),
                                             isLast ? { borderBottom: "none" } : {}
-                                          )}
+                                          )} />
                                           {renderCell(
                                             canConfirm ? (
                                               <button
@@ -2065,7 +2004,7 @@ export default function SalonContractsPage() {
                                                   whiteSpace: "nowrap"
                                                 }}
                                               >
-                                                {isPending ? "Подтверждаем..." : "Подтвердить выплату зарплаты"}
+                                                <UiValue value={isPending ? uiMessage("salon.s0152") : uiMessage("salon.s0157")} />
                                               </button>
                                             ) : (
                                               "—"
@@ -2079,7 +2018,7 @@ export default function SalonContractsPage() {
                                 </table>
                               </div>
                             ) : (
-                              <EmptyState text="Зарплата к выплате пока не найдена." />
+                              <EmptyState text={uiMessage("salon.s0158")} />
                             )}
                           </div>
                         </div>
@@ -2101,7 +2040,7 @@ export default function SalonContractsPage() {
                     fontSize: 14
                   }}
                 >
-                  {contractActionError}
+                  <UiValue value={contractActionError} />
                 </div>
               )}
 
@@ -2117,21 +2056,19 @@ export default function SalonContractsPage() {
                     fontSize: 14
                   }}
                 >
-                  {contractActionSuccess}
+                  <UiValue value={contractActionSuccess} />
                 </div>
               )}
 
               <div style={{ marginTop: 18 }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
-                  Активные контракты
-                </h3>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}><UiValue value={uiMessage("salon.s0159")} /></h3>
 
                 {contractsLoading && (
-                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
+                  <div style={{ color: "#6b7280", fontSize: 14 }}><UiValue value={uiMessage("salon.s0118")} /></div>
                 )}
 
                 {!contractsLoading && activeContracts.length === 0 && (
-                  <EmptyState text="Нет активных контрактов" />
+                  <EmptyState text={uiMessage("salon.s0119")} />
                 )}
 
                 {!contractsLoading && activeContracts.length > 0 && (
@@ -2139,13 +2076,13 @@ export default function SalonContractsPage() {
                     <table style={tableStyle}>
                       <thead>
                         <tr>
-                          <th style={tableHeadCellStyle}>ID</th>
-                          <th style={tableHeadCellStyle}>Мастер</th>
-                          <th style={tableHeadCellStyle}>Модель</th>
-                          <th style={tableHeadCellStyle}>Условия</th>
-                          <th style={tableHeadCellStyle}>Дата начала</th>
-                          <th style={tableHeadCellStyle}>Статус</th>
-                          <th style={tableHeadCellStyle}>Действия</th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0096")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0094")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0099")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0160")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0097")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0148")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0150")} /></th>
                         </tr>
                       </thead>
 
@@ -2157,13 +2094,13 @@ export default function SalonContractsPage() {
 
                           return (
                             <tr key={c.id}>
-                              {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})}
+                              <UiValue value={renderCell(c.id, isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})} />
                               {renderCell(
-                                <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
+                                <span style={getStatusStyle(c.status)}><UiValue value={formatStatus(c.status)} /></span>,
                                 isLast ? { borderBottom: "none" } : {}
                               )}
                               {renderCell(
@@ -2178,7 +2115,7 @@ export default function SalonContractsPage() {
                                       cursor: actionsLocked ? "wait" : "pointer"
                                     }}
                                   >
-                                    {isBusy ? "Обработка..." : "Архивировать"}
+                                    <UiValue value={isBusy ? uiMessage("salon.s0100") : uiMessage("salon.s0102")} />
                                   </button>
                                 </div>,
                                 isLast ? { borderBottom: "none" } : {}
@@ -2193,16 +2130,14 @@ export default function SalonContractsPage() {
               </div>
 
               <div style={{ marginTop: 18 }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
-                  Ожидающие контракты
-                </h3>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}><UiValue value={uiMessage("salon.s0161")} /></h3>
 
                 {contractsLoading && (
-                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
+                  <div style={{ color: "#6b7280", fontSize: 14 }}><UiValue value={uiMessage("salon.s0118")} /></div>
                 )}
 
                 {!contractsLoading && pendingContracts.length === 0 && (
-                  <EmptyState text="Нет ожидающих контрактов" />
+                  <EmptyState text={uiMessage("salon.s0162")} />
                 )}
 
                 {!contractsLoading && pendingContracts.length > 0 && (
@@ -2210,13 +2145,13 @@ export default function SalonContractsPage() {
                     <table style={tableStyle}>
                       <thead>
                         <tr>
-                          <th style={tableHeadCellStyle}>ID</th>
-                          <th style={tableHeadCellStyle}>Мастер</th>
-                          <th style={tableHeadCellStyle}>Модель</th>
-                          <th style={tableHeadCellStyle}>Условия</th>
-                          <th style={tableHeadCellStyle}>Дата начала</th>
-                          <th style={tableHeadCellStyle}>Статус</th>
-                          <th style={tableHeadCellStyle}>Действия</th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0096")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0094")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0099")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0160")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0097")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0148")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0150")} /></th>
                         </tr>
                       </thead>
 
@@ -2228,13 +2163,13 @@ export default function SalonContractsPage() {
 
                           return (
                             <tr key={c.id}>
-                              {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})}
+                              <UiValue value={renderCell(c.id, isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})} />
                               {renderCell(
-                                <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
+                                <span style={getStatusStyle(c.status)}><UiValue value={formatStatus(c.status)} /></span>,
                                 isLast ? { borderBottom: "none" } : {}
                               )}
                               {renderCell(
@@ -2251,7 +2186,7 @@ export default function SalonContractsPage() {
                                       cursor: actionsLocked ? "wait" : "pointer"
                                     }}
                                   >
-                                    {isBusy ? "Обработка..." : "Принять"}
+                                    <UiValue value={isBusy ? uiMessage("salon.s0100") : uiMessage("salon.s0101")} />
                                   </button>
 
                                   <button
@@ -2264,7 +2199,7 @@ export default function SalonContractsPage() {
                                       cursor: actionsLocked ? "wait" : "pointer"
                                     }}
                                   >
-                                    {isBusy ? "Обработка..." : "Архивировать"}
+                                    <UiValue value={isBusy ? uiMessage("salon.s0100") : uiMessage("salon.s0102")} />
                                   </button>
                                 </div>,
                                 isLast ? { borderBottom: "none" } : {}
@@ -2279,16 +2214,14 @@ export default function SalonContractsPage() {
               </div>
 
               <div style={{ marginTop: 18 }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}>
-                  Архивные контракты
-                </h3>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700, color: "#111827" }}><UiValue value={uiMessage("salon.s0163")} /></h3>
 
                 {contractsLoading && (
-                  <div style={{ color: "#6b7280", fontSize: 14 }}>Загрузка...</div>
+                  <div style={{ color: "#6b7280", fontSize: 14 }}><UiValue value={uiMessage("salon.s0118")} /></div>
                 )}
 
                 {!contractsLoading && archivedContracts.length === 0 && (
-                  <EmptyState text="Нет архивных контрактов" />
+                  <EmptyState text={uiMessage("salon.s0164")} />
                 )}
 
                 {!contractsLoading && archivedContracts.length > 0 && (
@@ -2296,14 +2229,14 @@ export default function SalonContractsPage() {
                     <table style={tableStyle}>
                       <thead>
                         <tr>
-                          <th style={tableHeadCellStyle}>ID</th>
-                          <th style={tableHeadCellStyle}>Мастер</th>
-                          <th style={tableHeadCellStyle}>Модель</th>
-                          <th style={tableHeadCellStyle}>Условия</th>
-                          <th style={tableHeadCellStyle}>Дата начала</th>
-                          <th style={tableHeadCellStyle}>Архивирован</th>
-                          <th style={tableHeadCellStyle}>Статус</th>
-                          <th style={tableHeadCellStyle}>Действия</th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0096")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0094")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0099")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0160")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0097")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0098")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0148")} /></th>
+                          <th style={tableHeadCellStyle}><UiValue value={uiMessage("salon.s0150")} /></th>
                         </tr>
                       </thead>
 
@@ -2313,14 +2246,14 @@ export default function SalonContractsPage() {
 
                           return (
                             <tr key={c.id}>
-                              {renderCell(c.id, isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})}
-                              {renderCell(formatDateTime(c.archived_at), isLast ? { borderBottom: "none" } : {})}
+                              <UiValue value={renderCell(c.id, isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getMasterName(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getContractModelLabel(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(getContractSummary(c), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(formatDateTime(c.effective_from), isLast ? { borderBottom: "none" } : {})} />
+                              <UiValue value={renderCell(formatDateTime(c.archived_at), isLast ? { borderBottom: "none" } : {})} />
                               {renderCell(
-                                <span style={getStatusStyle(c.status)}>{formatStatus(c.status)}</span>,
+                                <span style={getStatusStyle(c.status)}><UiValue value={formatStatus(c.status)} /></span>,
                                 isLast ? { borderBottom: "none" } : {}
                               )}
                               {renderCell(
@@ -2335,7 +2268,7 @@ export default function SalonContractsPage() {
                                       cursor: contractActionLoadingId ? "wait" : "pointer"
                                     }}
                                   >
-                                    {contractActionLoadingId === c.id ? "Обработка..." : "Восстановить"}
+                                    <UiValue value={contractActionLoadingId === c.id ? uiMessage("salon.s0100") : uiMessage("salon.s0165")} />
                                   </button>
                                 </div>,
                                 isLast ? { borderBottom: "none" } : {}
@@ -2364,7 +2297,7 @@ export default function SalonContractsPage() {
                       cursor: "pointer"
                     }}
                   >
-                    {archivedContractsExpanded ? "Свернуть" : `Показать ещё ${hiddenArchivedContractsCount}`}
+                    <UiValue value={archivedContractsExpanded ? uiMessage("salon.s0166") : uiMessage("salon.s0167", {p0: hiddenArchivedContractsCount})} />
                   </button>
                 )}
               </div>
@@ -2372,24 +2305,20 @@ export default function SalonContractsPage() {
 
             <Card soft>
               <div style={{ marginBottom: 16 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>
-                  Создать контракт
-                </h3>
-                <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-                  Существующая структура сохранена. Добавлены сценарии договорённостей через модель контракта и поля в terms_json.
-                </p>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}><UiValue value={uiMessage("salon.s0168")} /></h3>
+                <p style={{ margin: "6px 0 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}><UiValue value={uiMessage("salon.s0169")} /></p>
               </div>
 
-              {mastersLoading && <p style={{ margin: 0, color: "#6b7280" }}>Загрузка мастеров...</p>}
+              {mastersLoading && <p style={{ margin: 0, color: "#6b7280" }}><UiValue value={uiMessage("salon.s0170")} /></p>}
 
               {!mastersLoading && !hasMasters && (
-                <EmptyState text="Нет мастеров для создания контракта" />
+                <EmptyState text={uiMessage("salon.s0171")} />
               )}
 
               {!mastersLoading && hasMasters && (
                 <form onSubmit={createContract}>
                   <div style={fieldBlockStyle}>
-                    <label style={labelStyle}>Модель договора</label>
+                    <label style={labelStyle}><UiValue value={uiMessage("salon.s0172")} /></label>
                     <div style={modelGridStyle}>
                       {contractModelOptions.map((item) => {
                         const isActive = contractModel === item.value
@@ -2414,7 +2343,7 @@ export default function SalonContractsPage() {
                               cursor: "pointer"
                             }}
                           >
-                            {item.label}
+                            <UiValue value={item.label} />
                           </button>
                         )
                       })}
@@ -2422,16 +2351,16 @@ export default function SalonContractsPage() {
                   </div>
 
                   <div style={fieldBlockStyle}>
-                    <label style={labelStyle}>Мастер</label>
+                    <label style={labelStyle}><UiValue value={uiMessage("salon.s0094")} /></label>
                     <select
                       value={selectedMasterId}
                       onChange={(e) => setSelectedMasterId(e.target.value)}
                       style={inputStyle}
                     >
-                      <option value="">Выбери мастера</option>
+                      <option value=""><UiValue value={uiMessage("salon.s0067")} /></option>
                       {masters.map((master) => (
                         <option key={master.id} value={master.id}>
-                          {master.name || master.slug || master.id}
+                          <UiValue value={master.name || master.slug || master.id} />
                         </option>
                       ))}
                     </select>
@@ -2440,29 +2369,29 @@ export default function SalonContractsPage() {
                   {(isRentModel || isSalaryModel || isHybridModel) && (
                     <div style={formGridStyle}>
                       <div style={fieldBlockStyle}>
-                        <label style={labelStyle}>Валюта</label>
+                        <label style={labelStyle}><UiValue value={uiMessage("salon.s0173")} /></label>
                         <select
                           value={currency}
                           onChange={(e) => setCurrency(e.target.value)}
                           style={inputStyle}
                         >
-                          <option value="USD">USD</option>
-                          <option value="KGS">KGS</option>
-                          <option value="EUR">EUR</option>
+                          <option value="USD"><UiValue value={uiMessage("salon.s0174")} /></option>
+                          <option value="KGS"><UiValue value={uiMessage("salon.s0175")} /></option>
+                          <option value="EUR"><UiValue value={uiMessage("salon.s0176")} /></option>
                         </select>
                       </div>
 
                       <div style={fieldBlockStyle}>
-                        <label style={labelStyle}>График выплат</label>
+                        <label style={labelStyle}><UiValue value={uiMessage("salon.s0177")} /></label>
                         <select
                           value={payoutSchedule}
                           onChange={(e) => setPayoutSchedule(e.target.value)}
                           style={inputStyle}
                         >
-                          <option value="manual">Вручную</option>
-                          <option value="daily">Ежедневно</option>
-                          <option value="weekly">Еженедельно</option>
-                          <option value="monthly">Ежемесячно</option>
+                          <option value="manual"><UiValue value={uiMessage("salon.s0178")} /></option>
+                          <option value="daily"><UiValue value={uiMessage("salon.s0179")} /></option>
+                          <option value="weekly"><UiValue value={uiMessage("salon.s0180")} /></option>
+                          <option value="monthly"><UiValue value={uiMessage("salon.s0181")} /></option>
                         </select>
                       </div>
                     </div>
@@ -2472,7 +2401,7 @@ export default function SalonContractsPage() {
                     <>
                       <div style={formGridStyle}>
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Процент мастера</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0182")} /></label>
                           <input
                             type="number"
                             value={masterPercent}
@@ -2482,7 +2411,7 @@ export default function SalonContractsPage() {
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Процент салона</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0183")} /></label>
                           <input
                             type="number"
                             value={salonPercent}
@@ -2492,7 +2421,7 @@ export default function SalonContractsPage() {
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Процент платформы</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0184")} /></label>
                           <input
                             type="number"
                             value={platformPercent}
@@ -2503,16 +2432,16 @@ export default function SalonContractsPage() {
                       </div>
 
                       <div style={fieldBlockStyle}>
-                        <label style={labelStyle}>График выплат</label>
+                        <label style={labelStyle}><UiValue value={uiMessage("salon.s0177")} /></label>
                         <select
                           value={payoutSchedule}
                           onChange={(e) => setPayoutSchedule(e.target.value)}
                           style={inputStyle}
                         >
-                          <option value="manual">Вручную</option>
-                          <option value="daily">Ежедневно</option>
-                          <option value="weekly">Еженедельно</option>
-                          <option value="monthly">Ежемесячно</option>
+                          <option value="manual"><UiValue value={uiMessage("salon.s0178")} /></option>
+                          <option value="daily"><UiValue value={uiMessage("salon.s0179")} /></option>
+                          <option value="weekly"><UiValue value={uiMessage("salon.s0180")} /></option>
+                          <option value="monthly"><UiValue value={uiMessage("salon.s0181")} /></option>
                         </select>
                       </div>
                     </>
@@ -2522,7 +2451,7 @@ export default function SalonContractsPage() {
                     <>
                       <div style={formGridStyle}>
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Сумма аренды</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0185")} /></label>
                           <input
                             type="number"
                             value={rentAmount}
@@ -2532,27 +2461,27 @@ export default function SalonContractsPage() {
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Период аренды</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0186")} /></label>
                           <select
                             value={rentPeriod}
                             onChange={(e) => setRentPeriod(e.target.value)}
                             style={inputStyle}
                           >
-                            <option value="daily">Ежедневно</option>
-                            <option value="weekly">Еженедельно</option>
-                            <option value="monthly">Ежемесячно</option>
+                            <option value="daily"><UiValue value={uiMessage("salon.s0179")} /></option>
+                            <option value="weekly"><UiValue value={uiMessage("salon.s0180")} /></option>
+                            <option value="monthly"><UiValue value={uiMessage("salon.s0181")} /></option>
                           </select>
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Режим расчёта</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0187")} /></label>
                           <select
                             value={settlementMode}
                             onChange={(e) => setSettlementMode(e.target.value)}
                             style={inputStyle}
                           >
-                            <option value="accrued">По факту</option>
-                            <option value="prepaid">Предоплата</option>
+                            <option value="accrued"><UiValue value={uiMessage("salon.s0188")} /></option>
+                            <option value="prepaid"><UiValue value={uiMessage("salon.s0189")} /></option>
                           </select>
                         </div>
                       </div>
@@ -2568,9 +2497,7 @@ export default function SalonContractsPage() {
                           fontSize: 14,
                           lineHeight: 1.5
                         }}
-                      >
-                        Фиксированная аренда хранится как отдельная модель в terms_json и не ломает существующий процентный сценарий.
-                      </div>
+                      ><UiValue value={uiMessage("salon.s0190")} /></div>
                     </>
                   )}
 
@@ -2578,7 +2505,7 @@ export default function SalonContractsPage() {
                     <>
                       <div style={formGridStyle}>
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Сумма зарплаты</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0191")} /></label>
                           <input
                             type="number"
                             value={salaryAmount}
@@ -2588,20 +2515,20 @@ export default function SalonContractsPage() {
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Период зарплаты</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0192")} /></label>
                           <select
                             value={salaryPeriod}
                             onChange={(e) => setSalaryPeriod(e.target.value)}
                             style={inputStyle}
                           >
-                            <option value="weekly">Еженедельно</option>
-                            <option value="biweekly">Раз в две недели</option>
-                            <option value="monthly">Ежемесячно</option>
+                            <option value="weekly"><UiValue value={uiMessage("salon.s0180")} /></option>
+                            <option value="biweekly"><UiValue value={uiMessage("salon.s0193")} /></option>
+                            <option value="monthly"><UiValue value={uiMessage("salon.s0181")} /></option>
                           </select>
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Бонус %</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0194")} /></label>
                           <input
                             type="number"
                             value={bonusPercent}
@@ -2618,19 +2545,19 @@ export default function SalonContractsPage() {
                     <>
                       <div style={formGridStyle}>
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Базовый тип</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0196")} /></label>
                           <select
                             value={hybridBaseType}
                             onChange={(e) => setHybridBaseType(e.target.value)}
                             style={inputStyle}
                           >
-                            <option value="salary">Зарплата</option>
-                            <option value="fixed_rent">Аренда</option>
+                            <option value="salary"><UiValue value={uiMessage("salon.s0039")} /></option>
+                            <option value="fixed_rent"><UiValue value={uiMessage("salon.s0053")} /></option>
                           </select>
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Базовая сумма</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0197")} /></label>
                           <input
                             type="number"
                             value={hybridBaseAmount}
@@ -2640,21 +2567,21 @@ export default function SalonContractsPage() {
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Базовый период</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0198")} /></label>
                           <select
                             value={hybridBasePeriod}
                             onChange={(e) => setHybridBasePeriod(e.target.value)}
                             style={inputStyle}
                           >
-                            <option value="weekly">Еженедельно</option>
-                            <option value="monthly">Ежемесячно</option>
+                            <option value="weekly"><UiValue value={uiMessage("salon.s0180")} /></option>
+                            <option value="monthly"><UiValue value={uiMessage("salon.s0181")} /></option>
                           </select>
                         </div>
                       </div>
 
                       <div style={formGridStyle}>
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Процент мастера</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0182")} /></label>
                           <input
                             type="number"
                             value={masterPercent}
@@ -2664,7 +2591,7 @@ export default function SalonContractsPage() {
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Процент салона</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0183")} /></label>
                           <input
                             type="number"
                             value={salonPercent}
@@ -2674,7 +2601,7 @@ export default function SalonContractsPage() {
                         </div>
 
                         <div style={fieldBlockStyle}>
-                          <label style={labelStyle}>Процент платформы</label>
+                          <label style={labelStyle}><UiValue value={uiMessage("salon.s0184")} /></label>
                           <input
                             type="number"
                             value={platformPercent}
@@ -2695,15 +2622,14 @@ export default function SalonContractsPage() {
                           fontSize: 14,
                           fontWeight: 600
                         }}
-                      >
-                        Сумма процентов гибридного договора: {contractSum}
+                      ><UiValue value={uiMessage("salon.s0199")} /><UiValue value={contractSum} />
                       </div>
                     </>
                   )}
 
                   {!isRentModel && !isSalaryModel && (
                     <div style={fieldBlockStyle}>
-                      <label style={labelStyle}>Дата начала действия</label>
+                      <label style={labelStyle}><UiValue value={uiMessage("salon.s0200")} /></label>
                       <input
                         type="datetime-local"
                         value={effectiveFrom}
@@ -2715,7 +2641,7 @@ export default function SalonContractsPage() {
 
                   {(isRentModel || isSalaryModel) && (
                     <div style={fieldBlockStyle}>
-                      <label style={labelStyle}>Дата начала действия</label>
+                      <label style={labelStyle}><UiValue value={uiMessage("salon.s0200")} /></label>
                       <input
                         type="datetime-local"
                         value={effectiveFrom}
@@ -2737,8 +2663,7 @@ export default function SalonContractsPage() {
                         fontSize: 14,
                         fontWeight: 600
                       }}
-                    >
-                      Сумма процентов: {contractSum}
+                    ><UiValue value={uiMessage("salon.s0201")} /><UiValue value={contractSum} />
                     </div>
                   )}
 
@@ -2754,7 +2679,7 @@ export default function SalonContractsPage() {
                         fontSize: 14
                       }}
                     >
-                      {createContractError}
+                      <UiValue value={createContractError} />
                     </div>
                   )}
 
@@ -2770,7 +2695,7 @@ export default function SalonContractsPage() {
                         fontSize: 14
                       }}
                     >
-                      {createContractSuccess}
+                      <UiValue value={createContractSuccess} />
                     </div>
                   )}
 
@@ -2784,7 +2709,7 @@ export default function SalonContractsPage() {
                       width: "100%"
                     }}
                   >
-                    {createContractLoading ? "Создание..." : "Создать контракт"}
+                    <UiValue value={createContractLoading ? uiMessage("salon.s0202") : uiMessage("salon.s0203")} />
                   </button>
                 </form>
               )}

@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMaster } from "../MasterContext";
@@ -6,32 +7,15 @@ import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
 import { getMasterPayouts } from "../../api/internal";
 
-function money(value) {
-  const n = Number(value) || 0;
-  return `${new Intl.NumberFormat("ru-RU").format(n)} сом`;
-}
+function money(value, currency) { return uiMoney(value, currency); }
 
-function formatDate(iso) {
-  if (!iso) return "—";
-
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-
-  return (
-    d.toLocaleDateString("ru-RU") +
-    " " +
-    d.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit"
-    })
-  );
-}
+function formatDate(iso) { if (!iso) return "—"; return uiDate(iso, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
 function getStatusLabel(status) {
-  if (status === "pending") return "В обработке";
-  if (status === "processing") return "Обрабатывается";
-  if (status === "completed") return "Завершено";
-  if (status === "failed") return "Ошибка";
+  if (status === "pending") return uiMessage("salon.s1120");
+  if (status === "processing") return uiMessage("salon.s0878");
+  if (status === "completed") return uiMessage("salon.s1122");
+  if (status === "failed") return uiMessage("salon.s0506");
   return status || "—";
 }
 
@@ -46,20 +30,20 @@ function normalizePayouts(payload) {
 function SummaryCard({ label, value, hint }) {
   return (
     <div style={styles.summaryCard}>
-      <div style={styles.summaryLabel}>{label}</div>
-      <div style={styles.summaryValue}>{value}</div>
-      {hint ? <div style={styles.summaryHint}>{hint}</div> : null}
+      <div style={styles.summaryLabel}><UiValue value={label} /></div>
+      <div style={styles.summaryValue}><UiValue value={value} /></div>
+      {hint ? <div style={styles.summaryHint}><UiValue value={hint} /></div> : null}
     </div>
   );
 }
 
 function FinanceNav({ masterSlug, active }) {
   const items = [
-    { key: "finance", label: "Финансы", note: "overview", to: `/master/${masterSlug}/finance` },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: `/master/${masterSlug}/money` },
-    { key: "settlements", label: "Сеты", note: "расчётные периоды", to: `/master/${masterSlug}/settlements` },
-    { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: `/master/${masterSlug}/payouts` },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: `/master/${masterSlug}/transactions` }
+    { key: "finance", label: uiMessage("salon.s0017"), note: uiMessage("salon.s1070"), to: uiTemplate(["/master/","/finance"], [masterSlug]) },
+    { key: "money", label: uiMessage("salon.s0412"), note: uiMessage("salon.s0902"), to: uiTemplate(["/master/","/money"], [masterSlug]) },
+    { key: "settlements", label: uiMessage("salon.s0029"), note: uiMessage("salon.s1071"), to: uiTemplate(["/master/","/settlements"], [masterSlug]) },
+    { key: "payouts", label: uiMessage("salon.s0030"), note: uiMessage("salon.s1072"), to: uiTemplate(["/master/","/payouts"], [masterSlug]) },
+    { key: "transactions", label: uiMessage("salon.s0031"), note: uiMessage("salon.s1073"), to: uiTemplate(["/master/","/transactions"], [masterSlug]) }
   ];
 
   return (
@@ -76,8 +60,8 @@ function FinanceNav({ masterSlug, active }) {
               background: isActive ? "#eff6ff" : "#ffffff"
             }}
           >
-            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}>{item.label}</div>
-            <div style={styles.navNote}>{item.note}</div>
+            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}><UiValue value={item.label} /></div>
+            <div style={styles.navNote}><UiValue value={item.note} /></div>
           </Link>
         );
       })}
@@ -103,7 +87,7 @@ export default function MasterPayoutsPage() {
 
         if (!masterSlug) {
           if (!cancelled) {
-            setError("Не найден master slug");
+            setError(uiError(uiMessage("master.s0201")));
             setPayouts([]);
           }
           return;
@@ -121,7 +105,7 @@ export default function MasterPayoutsPage() {
 
         if (!cancelled) {
           setPayouts([]);
-          setError("Не удалось загрузить выплаты");
+          setError(uiError(uiMessage("salon.s1113")));
         }
       } finally {
         if (!cancelled) {
@@ -149,58 +133,58 @@ export default function MasterPayoutsPage() {
     <div style={{ padding: "14px 14px 20px" }}>
       {masterSlug ? <FinanceNav masterSlug={masterSlug} active="payouts" /> : null}
 
-      <PageSection title="Выплаты">
-        {loading && <div>Загрузка...</div>}
+      <PageSection title={uiMessage("salon.s0030")}>
+        {loading && <div><UiValue value={uiMessage("salon.s0118")} /></div>}
 
         {!loading && error && (
           <EmptyState
-            title="Ошибка загрузки"
+            title={uiMessage("salon.s1036")}
             message={error}
           />
         )}
 
         {!loading && !error && payouts.length === 0 && (
           <EmptyState
-            title="Выплат нет"
-            message="Выплаты появятся после закрытия сетов"
+            title={uiMessage("master.s0896")}
+            message={uiMessage("master.s0897")}
           />
         )}
 
         {!loading && !error && payouts.length > 0 && (
           <>
             <div style={styles.summaryGrid}>
-              <SummaryCard label="Кол-во выплат" value={payouts.length} />
-              <SummaryCard label="Общая сумма" value={money(total)} />
-              <SummaryCard label="Завершено" value={completedCount} hint="Успешно проведенные выплаты" />
+              <SummaryCard label={uiMessage("master.s0898")} value={payouts.length} />
+              <SummaryCard label={uiMessage("salon.s1118")} value={money(total)} />
+              <SummaryCard label={uiMessage("salon.s1122")} value={completedCount} hint={uiMessage("master.s0899")} />
             </div>
 
             <div style={styles.cardsList}>
               {payouts.map((p, index) => (
                 <div key={p?.id || index} style={styles.itemCard}>
                   <div style={styles.itemTop}>
-                    <strong>{p?.id || `Выплата ${index + 1}`}</strong>
-                    <span style={styles.statusBadge}>{getStatusLabel(p?.status)}</span>
+                    <strong><UiValue value={p?.id || uiMessage("salon.s1131", {p0: index + 1})} /></strong>
+                    <span style={styles.statusBadge}><UiValue value={getStatusLabel(p?.status)} /></span>
                   </div>
 
                   <div style={styles.metaGrid}>
                     <div>
-                      <div style={styles.metaLabel}>Дата</div>
-                      <div style={styles.metaValue}>{formatDate(p?.created_at || p?.date)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0233")} /></div>
+                      <div style={styles.metaValue}><UiValue value={formatDate(p?.created_at || p?.date)} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Сумма</div>
-                      <div style={styles.metaValue}>{money(p?.amount)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0147")} /></div>
+                      <div style={styles.metaValue}><UiValue value={money(p?.amount, p?.currency_code || p?.currency)} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Reference</div>
-                      <div style={styles.metaValue}>{p?.reference || p?.reference_id || "—"}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("master.s0901")} /></div>
+                      <div style={styles.metaValue}><UiValue value={p?.reference || p?.reference_id || "—"} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Статус</div>
-                      <div style={styles.metaValue}>{getStatusLabel(p?.status)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0148")} /></div>
+                      <div style={styles.metaValue}><UiValue value={getStatusLabel(p?.status)} /></div>
                     </div>
                   </div>
                 </div>

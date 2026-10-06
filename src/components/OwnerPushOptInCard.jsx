@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiTemplate, uiError } from "../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import PageSection from "../cabinet/PageSection"
 import { getPublicPushConfig } from "../api/publicApi"
@@ -20,7 +21,7 @@ function isPushApiSupported() {
 function getOwnerPushDeviceId(ownerType, slug) {
   const safeOwnerType = String(ownerType || "").trim().toLowerCase()
   const safeSlug = String(slug || "").trim().toLowerCase()
-  const storageKey = `TOTEM_OWNER_PUSH_DEVICE:${safeOwnerType}:${safeSlug}`
+  const storageKey = uiTemplate(["TOTEM_OWNER_PUSH_DEVICE:",":",""], [safeOwnerType, safeSlug])
 
   try {
     const existing = window.localStorage.getItem(storageKey)
@@ -28,11 +29,11 @@ function getOwnerPushDeviceId(ownerType, slug) {
       return existing
     }
 
-    const nextValue = `owner-push-${safeOwnerType}-${safeSlug}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    const nextValue = uiTemplate(["owner-push-","-","-","-",""], [safeOwnerType, safeSlug, Date.now(), Math.random().toString(36).slice(2, 10)])
     window.localStorage.setItem(storageKey, nextValue)
     return nextValue
   } catch {
-    return `owner-push-${safeOwnerType}-${safeSlug}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    return uiTemplate(["owner-push-","-","-","-",""], [safeOwnerType, safeSlug, Date.now(), Math.random().toString(36).slice(2, 10)])
   }
 }
 
@@ -59,7 +60,7 @@ function decodeBase64UrlToUint8Array(value) {
 }
 
 function getOwnerPushLabel(ownerType) {
-  return String(ownerType || "").trim().toLowerCase() === "master" ? "мастера" : "салона"
+  return String(ownerType || "").trim().toLowerCase() === "master" ? uiMessage("salon.s1212") : uiMessage("salon.s1213")
 }
 
 function getOwnerPushOps(ownerType) {
@@ -131,7 +132,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
           setPushState((current) => ({
             ...current,
             kind: "failed",
-            message: "Не удалось определить кабинет для push-уведомлений.",
+            message: uiMessage("salon.s1214"),
             supported: isPushApiSupported(),
             busy: false
           }))
@@ -145,7 +146,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
           setPushState((current) => ({
             ...current,
             kind: "unsupported",
-            message: "Push недоступен в этом браузере, уведомления останутся внутри кабинета.",
+            message: uiMessage("salon.s1215"),
             permission: typeof window !== "undefined" && window.Notification ? window.Notification.permission : "default",
             supported: false,
             enabled: false,
@@ -181,7 +182,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
           setPushState((current) => ({
             ...current,
             kind: "failed",
-            message: "Push-уведомления пока не настроены.",
+            message: uiMessage("salon.s1216"),
             permission: window.Notification?.permission || "default",
             supported: true,
             enabled: false,
@@ -214,7 +215,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
             setPushState((current) => ({
               ...current,
               kind: "enabled",
-              message: `Push-уведомления для ${getOwnerPushLabel(normalizedOwnerType)} включены.`,
+              message: uiMessage("salon.s1217", {p0: getOwnerPushLabel(normalizedOwnerType)}),
               permission: window.Notification?.permission || "granted",
               supported: true,
               enabled: true,
@@ -227,7 +228,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
           setPushState((current) => ({
             ...current,
             kind: "failed",
-            message: saveResult?.error || "Не удалось сохранить push-подписку кабинета.",
+            message: uiError(saveResult?.error || uiMessage("salon.s1218")),
             permission: window.Notification?.permission || "default",
             supported: true,
             enabled: false,
@@ -241,8 +242,8 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
           kind: window.Notification?.permission === "denied" ? "permission_denied" : "ready",
           message:
             window.Notification?.permission === "denied"
-              ? "Разрешение на push отклонено."
-              : `Нажмите кнопку, чтобы включить push-уведомления для ${getOwnerPushLabel(normalizedOwnerType)}.`,
+              ? uiMessage("salon.s1219")
+              : uiMessage("salon.s1220", {p0: getOwnerPushLabel(normalizedOwnerType)}),
           permission: window.Notification?.permission || "default",
           supported: true,
           enabled: false,
@@ -264,8 +265,8 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
           kind: "failed",
           message:
             error?.message === "SERVICE_WORKER_NOT_READY"
-              ? "Service worker не готов. Обновите страницу и попробуйте снова."
-              : error?.message || "Не удалось загрузить push-настройки.",
+              ? uiMessage("salon.s1221")
+              : uiError(error?.message, uiMessage("salon.s1222")),
           permission: typeof window !== "undefined" && window.Notification ? window.Notification.permission : "default",
           supported: true,
           enabled: false,
@@ -290,7 +291,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
       setPushState((current) => ({
         ...current,
         kind: "unsupported",
-        message: "Push недоступен в этом браузере, уведомления останутся внутри кабинета.",
+        message: uiMessage("salon.s1215"),
         supported: false,
         enabled: false,
         busy: false
@@ -302,7 +303,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
       setPushState((current) => ({
         ...current,
         kind: "failed",
-        message: "Не удалось определить кабинет для push-уведомлений.",
+        message: uiMessage("salon.s1214"),
         supported: true,
         enabled: false,
         busy: false
@@ -328,7 +329,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
         setPushState((current) => ({
           ...current,
           kind: "failed",
-          message: "Push-уведомления пока не настроены.",
+          message: uiMessage("salon.s1216"),
           supported: true,
           enabled: false,
           busy: false
@@ -347,7 +348,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
         setPushState((current) => ({
           ...current,
           kind: "permission_denied",
-          message: "Разрешение на push отклонено.",
+          message: uiMessage("salon.s1219"),
           permission,
           supported: true,
           enabled: false,
@@ -384,7 +385,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
         setPushState((current) => ({
           ...current,
           kind: "failed",
-          message: saveResult?.error || "Не удалось сохранить push-подписку кабинета.",
+          message: uiError(saveResult?.error || uiMessage("salon.s1218")),
           permission,
           supported: true,
           enabled: false,
@@ -396,7 +397,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
       setPushState((current) => ({
         ...current,
         kind: "enabled",
-        message: `Push-уведомления для ${getOwnerPushLabel(normalizedOwnerType)} включены.`,
+        message: uiMessage("salon.s1217", {p0: getOwnerPushLabel(normalizedOwnerType)}),
         permission,
         supported: true,
         enabled: true,
@@ -409,8 +410,8 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
         kind: "failed",
         message:
           error?.message === "SERVICE_WORKER_NOT_READY"
-            ? "Service worker не готов. Обновите страницу и попробуйте снова."
-            : error?.message || "Не удалось включить push-уведомления.",
+            ? uiMessage("salon.s1221")
+            : uiError(error?.message, uiMessage("salon.s1223")),
         permission: typeof window !== "undefined" && window.Notification ? window.Notification.permission : "default",
         supported: true,
         enabled: false,
@@ -428,7 +429,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
       setPushState((current) => ({
         ...current,
         kind: "unsupported",
-        message: "Push недоступен в этом браузере, уведомления останутся внутри кабинета.",
+        message: uiMessage("salon.s1215"),
         supported: false,
         enabled: false,
         busy: false
@@ -458,7 +459,7 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
       setPushState((current) => ({
         ...current,
         kind: "ready",
-        message: `Push-уведомления для ${getOwnerPushLabel(normalizedOwnerType)} отключены.`,
+        message: uiMessage("salon.s1224", {p0: getOwnerPushLabel(normalizedOwnerType)}),
         permission: typeof window !== "undefined" && window.Notification ? window.Notification.permission : "default",
         supported: true,
         enabled: false,
@@ -471,8 +472,8 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
         kind: "failed",
         message:
           error?.message === "SERVICE_WORKER_NOT_READY"
-            ? "Service worker не готов. Обновите страницу и попробуйте снова."
-            : error?.message || "Не удалось отключить push-уведомления.",
+            ? uiMessage("salon.s1221")
+            : uiError(error?.message, uiMessage("salon.s1225")),
         supported: true,
         enabled: true,
         busy: false
@@ -486,14 +487,14 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
 
   const kind = String(pushState.kind || "idle")
   const message =
-    String(pushState.message || "").trim() ||
+    pushState.message ||
     (kind === "enabled"
-      ? `Push-уведомления для ${getOwnerPushLabel(normalizedOwnerType)} включены.`
+      ? uiMessage("salon.s1217", {p0: getOwnerPushLabel(normalizedOwnerType)})
       : kind === "permission_denied"
-        ? "Разрешение на push отклонено."
+        ? uiMessage("salon.s1219")
         : kind === "unsupported"
-          ? "Push недоступен в этом браузере, уведомления останутся внутри кабинета."
-          : "Нажмите кнопку, чтобы включить push-уведомления.")
+          ? uiMessage("salon.s1215")
+          : uiMessage("salon.s1226"))
 
   const statusTone =
     kind === "enabled"
@@ -505,13 +506,13 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
           : "accent"
 
   const buttonLabel = pushState.busy
-    ? "Сохраняем…"
+    ? uiMessage("salon.s0519")
     : pushState.enabled
-      ? "Отключить уведомления"
-      : "Включить уведомления"
+      ? uiMessage("salon.s1227")
+      : uiMessage("salon.s1228")
 
   return (
-    <PageSection title="Push-уведомления">
+    <PageSection title={uiMessage("salon.s0367")}>
       <div style={{
         border: "1px solid #e5e7eb",
         borderRadius: "18px",
@@ -522,9 +523,9 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", alignItems: "flex-start" }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: "16px", fontWeight: 800, color: "#111827" }}>{title || "Push-уведомления"}</div>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#111827" }}><UiValue value={title || uiMessage("salon.s0367")} /></div>
             <div style={{ marginTop: "4px", fontSize: "13px", color: "#6b7280", lineHeight: 1.45 }}>
-              {subtitle || `Браузерные уведомления для ${getOwnerPushLabel(normalizedOwnerType)}.`}
+              <UiValue value={subtitle || uiMessage("salon.s1229", {p0: getOwnerPushLabel(normalizedOwnerType)})} />
             </div>
           </div>
           <span style={{
@@ -550,22 +551,22 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
             fontSize: "12px",
             fontWeight: 800
           }}>
-            {kind === "enabled"
-              ? "Включено"
+            <UiValue value={kind === "enabled"
+              ? uiMessage("salon.s1230")
               : kind === "permission_denied"
-                ? "Доступ запрещён"
+                ? uiMessage("salon.s1231")
                 : kind === "unsupported"
-                  ? "Недоступно"
+                  ? uiMessage("salon.s1232")
                   : kind === "failed"
-                    ? "Ошибка"
-                    : "Готово"}
+                    ? uiMessage("salon.s0506")
+                    : uiMessage("salon.s0507")} />
           </span>
         </div>
 
         <div style={{ fontSize: "13px", lineHeight: 1.55, color: "#4b5563" }}>
-          {pushConfig.loading
-            ? "Проверяем доступность push-настроек…"
-            : message}
+          <UiValue value={pushConfig.loading
+            ? uiMessage("salon.s1233")
+            : message} />
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
@@ -585,12 +586,10 @@ export default function OwnerPushOptInCard({ ownerType, slug, title, subtitle })
               cursor: pushState.busy || kind === "unsupported" || pushConfig.loading ? "default" : "pointer"
             }}
           >
-            {buttonLabel}
+            <UiValue value={buttonLabel} />
           </button>
           {pushState.enabled ? (
-            <div style={{ fontSize: "13px", color: "#6b7280", alignSelf: "center" }}>
-              Подписка закреплена за этим кабинетом и этим устройством.
-            </div>
+            <div style={{ fontSize: "13px", color: "#6b7280", alignSelf: "center" }}><UiValue value={uiMessage("salon.s1234")} /></div>
           ) : null}
         </div>
       </div>

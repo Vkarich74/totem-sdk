@@ -1,3 +1,5 @@
+import { NotificationText } from "../../i18n/NotificationText.jsx";
+import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import PageSection from "../../cabinet/PageSection"
@@ -17,9 +19,7 @@ import { getMasterNotifications, markMasterNotificationRead } from "../../api/ma
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import OwnerPushOptInCard from "../../components/OwnerPushOptInCard"
 
-function money(n){
-  return new Intl.NumberFormat("ru-RU").format(Number(n) || 0) + " сом"
-}
+function money(n, currency) { return uiMoney(n, currency); }
 
 function normalizeMetricsResponse(payload){
   if(payload?.metrics) return payload.metrics
@@ -37,30 +37,30 @@ function getBillingUi(billingAccess, billingBlockReason){
 
   if(state === "blocked"){
     return {
-      label: "Доступ ограничен",
+      label: uiMessage("salon.s0300"),
       tone: "#b42318",
       bg: "#fff5f5",
       border: "#f5c2c7",
-      note: billingBlockReason || "Оплатите подписку для полного доступа"
+      note: uiError(billingBlockReason, uiMessage("salon.s0301"))
     }
   }
 
   if(state === "grace"){
     return {
-      label: "Льготный период",
+      label: uiMessage("salon.s0302"),
       tone: "#9a6700",
       bg: "#fff8db",
       border: "#facc15",
-      note: billingBlockReason || "Скоро потребуется пополнение"
+      note: uiError(billingBlockReason, uiMessage("salon.s0303"))
     }
   }
 
   return {
-    label: "Доступ активен",
+    label: uiMessage("salon.s0304"),
     tone: "#027a48",
     bg: "#ecfdf3",
     border: "#abefc6",
-    note: "Кабинет работает без ограничений"
+    note: uiMessage("salon.s0305")
   }
 }
 
@@ -87,8 +87,8 @@ function QuickAction({ to, title, note }){
         boxShadow: "0 1px 2px rgba(0,0,0,0.03)"
       }}
     >
-      <div style={{ fontSize: "15px", fontWeight: 700, marginBottom: "6px" }}>{title}</div>
-      <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.4 }}>{note}</div>
+      <div style={{ fontSize: "15px", fontWeight: 700, marginBottom: "6px" }}><UiValue value={title} /></div>
+      <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.4 }}><UiValue value={note} /></div>
     </Link>
   )
 }
@@ -105,14 +105,14 @@ function RouteCard({ to, title, note, tone = "default" }){
         display: "block",
         textDecoration: "none",
         color: "inherit",
-        border: `1px solid ${palette.border}`,
+        border: uiTemplate(["1px solid ",""], [palette.border]),
         borderRadius: "14px",
         background: palette.bg,
         padding: "14px"
       }}
     >
-      <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "6px" }}>{title}</div>
-      <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}>{note}</div>
+      <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "6px" }}><UiValue value={title} /></div>
+      <div style={{ fontSize: "12px", color: "#6b7280", lineHeight: 1.45 }}><UiValue value={note} /></div>
     </Link>
   )
 }
@@ -125,10 +125,10 @@ function SummaryCard({ title, value, note }){
       background: "#fff",
       padding: "16px"
     }}>
-      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>{title}</div>
-      <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827" }}>{value}</div>
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}><UiValue value={title} /></div>
+      <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827" }}><UiValue value={value} /></div>
       {note ? (
-        <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "8px", lineHeight: 1.4 }}>{note}</div>
+        <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "8px", lineHeight: 1.4 }}><UiValue value={note} /></div>
       ) : null}
     </div>
   )
@@ -164,20 +164,7 @@ function getResolvedUnreadCount(payload, items){
   return getUnreadNotificationCount(items)
 }
 
-function formatNotificationDate(value){
-  if(!value) return "—"
-
-  const date = new Date(value)
-  if(Number.isNaN(date.getTime())) return "—"
-
-  return new Intl.DateTimeFormat("ru-RU", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date)
-}
+function formatNotificationDate(value){ if (!value) return "—"; return uiDate(value, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
 function getSafeBookingList(payload){
   if(Array.isArray(payload)) return payload
@@ -189,7 +176,7 @@ function getSafeBookingList(payload){
 
 function isCancelledBookingStatus(status){
   const normalized = String(status || "").trim().toLowerCase()
-  return normalized === "cancelled" || normalized === "canceled" || normalized === "отмена"
+  return normalized === "cancelled" || normalized === "canceled" || normalized === uiMessage("master.s0034")
 }
 
 function isPendingCashBooking(booking){
@@ -205,19 +192,16 @@ function isPendingCashBooking(booking){
 }
 
 function getPaymentLabelRu(booking){
-  const explicitLabel = String(booking?.payment_label_ru || "").trim()
-  if(explicitLabel) return explicitLabel
-
   const provider = String(booking?.payment_provider || "").toLowerCase()
   const status = String(booking?.payment_status || "").toLowerCase()
 
-  if(status === "failed") return "Оплата не прошла"
-  if(status === "refunded") return "Оплата возвращена"
-  if(provider === "direct" && status === "pending") return "Наличные ожидают подтверждения"
-  if(provider === "direct" && status === "confirmed") return "Оплата наличными подтверждена"
-  if(provider === "xpay" && status === "pending") return "Ожидаем оплату XPAY"
-  if(provider === "xpay" && status === "confirmed") return "Оплата получена"
-  return "Оплата не выбрана"
+  if(status === "failed") return uiMessage("salon.s0279")
+  if(status === "refunded") return uiMessage("salon.s0280")
+  if(provider === "direct" && status === "pending") return uiMessage("salon.s0243")
+  if(provider === "direct" && status === "confirmed") return uiMessage("salon.s0281")
+  if(provider === "xpay" && status === "pending") return uiMessage("salon.s0282")
+  if(provider === "xpay" && status === "confirmed") return uiMessage("salon.s0283")
+  return uiMessage("salon.s0244")
 }
 
 function getBookingAmount(booking){
@@ -238,9 +222,9 @@ function getSafeOwnerQrPaymentList(payload){
 function getOwnerQrPaymentStatusLabel(payment){
   const status = String(payment?.status || payment?.payment_status || "").toLowerCase()
 
-  if(status === "pending_owner_confirmation") return "Ожидает подтверждения"
-  if(status === "confirmed") return "Подтверждено"
-  if(status === "rejected") return "Отклонено"
+  if(status === "pending_owner_confirmation") return uiMessage("salon.s0284")
+  if(status === "confirmed") return uiMessage("salon.s0285")
+  if(status === "rejected") return uiMessage("salon.s0286")
   return status ? status : "—"
 }
 
@@ -261,25 +245,26 @@ function getOwnerQrActionErrorMessage(error){
   const code = String(error || "").trim()
 
   if(code === "OWNER_QR_CONFIRM_WRITE_DISABLED"){
-    return "Подтверждение временно закрыто: финансовое окно Money Core выключено."
+    return uiMessage("salon.s0295")
   }
 
   if(code === "OWNER_QR_ACTIVE_CONTRACT_REQUIRED"){
-    return "Нельзя подтвердить: нет активного контракта между салоном и мастером."
+    return uiMessage("salon.s0296")
   }
 
   if(code === "OWNER_QR_INVALID_CONTRACT_TERMS"){
-    return "Нельзя подтвердить: условия распределения некорректны."
+    return uiMessage("salon.s0297")
   }
 
   if(code === "OWNER_QR_FORBIDDEN"){
-    return "Недостаточно прав для подтверждения или отклонения этой оплаты."
+    return uiMessage("salon.s0298")
   }
 
-  return code || "Не удалось выполнить действие"
+  return code || uiMessage("salon.s0299")
 }
 
 export default function MasterDashboard() {
+  const { renderUi } = useUiMessages();
   const {
     loading: masterLoading,
     error: masterError,
@@ -320,7 +305,7 @@ export default function MasterDashboard() {
         if(!cancelled){
           setMetrics(null)
           setMetricsLoading(false)
-          setMetricsError("SLUG_MISSING")
+          setMetricsError(uiError("SLUG_MISSING"))
           setEmpty(false)
         }
         return
@@ -369,7 +354,7 @@ export default function MasterDashboard() {
 
         if(!cancelled){
           setMetrics(null)
-          setMetricsError(error?.message || "MASTER_METRICS_LOAD_FAILED")
+          setMetricsError(uiError(error?.message || "MASTER_METRICS_LOAD_FAILED"))
           setEmpty(false)
         }
       }finally{
@@ -438,7 +423,7 @@ export default function MasterDashboard() {
     }catch(error){
       console.error("MASTER DASHBOARD OWNER QR LOAD ERROR", error)
       setOwnerQrPayments([])
-      setOwnerQrError(error?.message || "MASTER_OWNER_QR_LOAD_FAILED")
+      setOwnerQrError(uiError(error?.message || "MASTER_OWNER_QR_LOAD_FAILED"))
     }finally{
       setOwnerQrLoading(false)
     }
@@ -484,7 +469,7 @@ export default function MasterDashboard() {
 
         if(!cancelled){
           setPendingCashBookings([])
-          setPendingCashError(error?.message || "MASTER_PENDING_CASH_LOAD_FAILED")
+          setPendingCashError(uiError(error?.message || "MASTER_PENDING_CASH_LOAD_FAILED"))
         }
       }finally{
         if(!cancelled){
@@ -533,7 +518,7 @@ export default function MasterDashboard() {
         if(!cancelled){
           setNotifications([])
           setUnreadCount(0)
-          setNotificationsError(error?.message || "MASTER_NOTIFICATIONS_LOAD_FAILED")
+          setNotificationsError(uiError(error?.message || "MASTER_NOTIFICATIONS_LOAD_FAILED"))
         }
       }finally{
         if(!cancelled){
@@ -573,7 +558,7 @@ export default function MasterDashboard() {
 
       setPendingCashBookings((prev) => prev.filter((item) => String(item?.id || "") !== key))
     }catch(error){
-      setPendingCashError(error?.message || "MASTER_CASH_CONFIRM_FAILED")
+      setPendingCashError(uiError(error?.message || "MASTER_CASH_CONFIRM_FAILED"))
     }finally{
       setConfirmingCashKey("")
     }
@@ -599,7 +584,7 @@ export default function MasterDashboard() {
 
       await loadOwnerQrPayments()
     }catch(error){
-      setOwnerQrActionError(getOwnerQrActionErrorMessage(error?.message || "OWNER_QR_CONFIRM_FAILED"))
+      setOwnerQrActionError(uiError(getOwnerQrActionErrorMessage(error?.message || "OWNER_QR_CONFIRM_FAILED")))
     }finally{
       setOwnerQrActionLoadingId("")
     }
@@ -611,11 +596,11 @@ export default function MasterDashboard() {
       return
     }
 
-    const reason = typeof window !== "undefined" ? window.prompt("Укажите причину отклонения:", "") : ""
+    const reason = typeof window !== "undefined" ? window.prompt(renderUi(uiMessage("salon.s0307")), "") : ""
     const rejectionReason = String(reason || "").trim()
 
     if(!rejectionReason){
-      setOwnerQrActionError("Укажите причину отклонения")
+      setOwnerQrActionError(uiError(uiMessage("salon.s0308")))
       return
     }
 
@@ -633,7 +618,7 @@ export default function MasterDashboard() {
 
       await loadOwnerQrPayments()
     }catch(error){
-      setOwnerQrActionError(getOwnerQrActionErrorMessage(error?.message || "OWNER_QR_REJECT_FAILED"))
+      setOwnerQrActionError(uiError(getOwnerQrActionErrorMessage(error?.message || "OWNER_QR_REJECT_FAILED")))
     }finally{
       setOwnerQrActionLoadingId("")
     }
@@ -657,7 +642,7 @@ export default function MasterDashboard() {
       console.error("MASTER NOTIFICATIONS LOAD ERROR", error)
       setNotifications([])
       setUnreadCount(0)
-      setNotificationsError(error?.message || "MASTER_NOTIFICATIONS_LOAD_FAILED")
+      setNotificationsError(uiError(error?.message || "MASTER_NOTIFICATIONS_LOAD_FAILED"))
     }finally{
       setNotificationsLoading(false)
     }
@@ -711,8 +696,8 @@ export default function MasterDashboard() {
     ()=>getBillingUi(billingAccess, billingBlockReason),
     [billingAccess, billingBlockReason]
   )
-  const roleLabel = "Мастер"
-  const masterSlugLabel = String(slug || "").trim() || "slug не найден"
+  const roleLabel = uiMessage("salon.s0094")
+  const masterSlugLabel = String(slug || "").trim() || uiMessage("master.s0053")
 
   if (error) {
     return (
@@ -730,13 +715,9 @@ export default function MasterDashboard() {
           padding: 20,
           boxShadow: "0 14px 32px rgba(15, 23, 42, 0.08)"
         }}>
-          <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6b7280" }}>
-            Кабинет мастера
-          </div>
-          <h2 style={{ margin: "8px 0 0", fontSize: 28, color: "#111827" }}>Не удалось загрузить dashboard</h2>
-          <p style={{ margin: "10px 0 0", color: "#475569", lineHeight: 1.5 }}>
-            Проверьте доступ к кабинету и обновите страницу. Логика сессии и маршруты сохранены.
-          </p>
+          <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6b7280" }}><UiValue value={uiMessage("master.s0054")} /></div>
+          <h2 style={{ margin: "8px 0 0", fontSize: 28, color: "#111827" }}><UiValue value={uiMessage("master.s0055")} /></h2>
+          <p style={{ margin: "10px 0 0", color: "#475569", lineHeight: 1.5 }}><UiValue value={uiMessage("master.s0056")} /></p>
         </div>
         <div style={{
           marginTop: 14,
@@ -745,12 +726,9 @@ export default function MasterDashboard() {
           color: "#b42318",
           borderRadius: "16px",
           padding: "16px",
-        }}>
-          Ошибка загрузки метрик
-        </div>
+        }}><UiValue value={uiMessage("salon.s0314")} /></div>
         {slug ? (
-          <div style={{ marginTop: "8px", color: "#666", fontSize: "14px" }}>
-            slug: {slug}
+          <div style={{ marginTop: "8px", color: "#666", fontSize: "14px" }}><UiValue value={uiMessage("salon.s0315")} /><UiValue value={slug} />
           </div>
         ) : null}
       </div>
@@ -773,13 +751,9 @@ export default function MasterDashboard() {
           padding: 20,
           boxShadow: "0 14px 32px rgba(15, 23, 42, 0.08)"
         }}>
-          <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6b7280" }}>
-            Кабинет мастера
-          </div>
-          <h2 style={{ margin: "8px 0 0", fontSize: 28, color: "#111827" }}>Загрузка dashboard</h2>
-          <p style={{ margin: "10px 0 0", color: "#475569", lineHeight: 1.5 }}>
-            Собираем данные по записям, финансам и уведомлениям.
-          </p>
+          <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6b7280" }}><UiValue value={uiMessage("master.s0054")} /></div>
+          <h2 style={{ margin: "8px 0 0", fontSize: 28, color: "#111827" }}><UiValue value={uiMessage("master.s0059")} /></h2>
+          <p style={{ margin: "10px 0 0", color: "#475569", lineHeight: 1.5 }}><UiValue value={uiMessage("master.s0060")} /></p>
         </div>
       </div>
     )
@@ -806,15 +780,10 @@ export default function MasterDashboard() {
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", opacity: 0.82 }}>
-              Кабинет мастера
-            </div>
-            <h2 style={{ margin: "10px 0 8px", fontSize: 34, lineHeight: 1.05 }}>
-              Кабинет мастера{masterName ? ` — ${masterName}` : ""}
+            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", opacity: 0.82 }}><UiValue value={uiMessage("master.s0054")} /></div>
+            <h2 style={{ margin: "10px 0 8px", fontSize: 34, lineHeight: 1.05 }}><UiValue value={uiMessage("master.s0021")} /><UiValue value={masterName ? uiTemplate([" — ",""], [masterName]) : ""} />
             </h2>
-            <div style={{ fontSize: 15, lineHeight: 1.6, color: "rgba(255,255,255,0.92)", maxWidth: 760 }}>
-              Быстрый доступ к расписанию, записям и финансам мастера. Сегодняшний фокус, уведомления и QR для записи собраны в одном месте.
-            </div>
+            <div style={{ fontSize: 15, lineHeight: 1.6, color: "rgba(255,255,255,0.92)", maxWidth: 760 }}><UiValue value={uiMessage("master.s0061")} /></div>
           </div>
 
           <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
@@ -828,7 +797,7 @@ export default function MasterDashboard() {
               fontSize: 12,
               fontWeight: 700
             }}>
-              {roleLabel}
+              <UiValue value={roleLabel} />
             </span>
             <span style={{
               display: "inline-flex",
@@ -840,7 +809,7 @@ export default function MasterDashboard() {
               fontSize: 12,
               fontWeight: 700
             }}>
-              {masterSlugLabel}
+              <UiValue value={masterSlugLabel} />
             </span>
             <span style={{
               display: "inline-flex",
@@ -851,23 +820,21 @@ export default function MasterDashboard() {
               background: "rgba(255,255,255,0.16)",
               fontSize: 12,
               fontWeight: 700
-            }}>
-              Сегодня
-            </span>
+            }}><UiValue value={uiMessage("salon.s0261")} /></span>
           </div>
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}>Записи</span>
-          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}>Календарь</span>
-          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}>Финансы</span>
-          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}>Статистика</span>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}><UiValue value={uiMessage("salon.s0014")} /></span>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}><UiValue value={uiMessage("salon.s0361")} /></span>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}><UiValue value={uiMessage("salon.s0017")} /></span>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 32, padding: "0 12px", borderRadius: 999, background: "rgba(255,255,255,0.16)", fontSize: 12, fontWeight: 700 }}><UiValue value={uiMessage("salon.s0325")} /></span>
         </div>
       </section>
 
       <PageSection>
         <div style={{
-          border: `1px solid ${billingUi.border}`,
+          border: uiTemplate(["1px solid ",""], [billingUi.border]),
           background: billingUi.bg,
           color: billingUi.tone,
           borderRadius: "18px",
@@ -875,10 +842,9 @@ export default function MasterDashboard() {
           marginBottom: "16px",
           boxShadow: "0 8px 20px rgba(15, 23, 42, 0.06)"
         }}>
-          <div style={{ fontSize: "15px", fontWeight: 800, marginBottom: "6px" }}>{billingUi.label}</div>
-          <div style={{ fontSize: "13px", lineHeight: 1.45 }}>{billingUi.note}</div>
-          <div style={{ marginTop: "10px", fontSize: "13px", color: "#344054" }}>
-            Запись: <strong>{canWrite ? "доступна" : "ограничена"}</strong> · Выплаты: <strong>{canWithdraw ? "доступны" : "ограничены"}</strong>
+          <div style={{ fontSize: "15px", fontWeight: 800, marginBottom: "6px" }}><UiValue value={billingUi.label} /></div>
+          <div style={{ fontSize: "13px", lineHeight: 1.45 }}><UiValue value={billingUi.note} /></div>
+          <div style={{ marginTop: "10px", fontSize: "13px", color: "#344054" }}><UiValue value={uiMessage("salon.s0005")} /><strong><UiValue value={canWrite ? uiMessage("salon.s0006") : uiMessage("salon.s0007")} /></strong><UiValue value={uiMessage("salon.s0008")} /><strong><UiValue value={canWithdraw ? uiMessage("salon.s0009") : uiMessage("salon.s0010")} /></strong>
           </div>
         </div>
 
@@ -887,11 +853,11 @@ export default function MasterDashboard() {
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "12px"
         }}>
-          <StatCard title="Записей сегодня" value={safeMetrics.bookings_today || 0} />
-          <StatCard title="Записей за неделю" value={safeMetrics.bookings_week || 0} />
-          <StatCard title="Клиентов всего" value={safeMetrics.clients_total || 0} />
-          <StatCard title="Доход сегодня" value={money(financeCardAmount)} />
-          <StatCard title="Доход за месяц" value={money(financeCardAmount)} />
+          <StatCard title={uiMessage("salon.s0327")} value={safeMetrics.bookings_today || 0} />
+          <StatCard title={uiMessage("salon.s0329")} value={safeMetrics.bookings_week || 0} />
+          <StatCard title={uiMessage("salon.s0331")} value={safeMetrics.clients_total || 0} />
+          <StatCard title={uiMessage("salon.s0335")} value={money(financeCardAmount)} />
+          <StatCard title={uiMessage("salon.s0337")} value={money(financeCardAmount)} />
         </div>
 
         <div style={{
@@ -910,12 +876,8 @@ export default function MasterDashboard() {
             marginBottom: "10px"
           }}>
             <div>
-              <div style={{ fontSize: "14px", fontWeight: 800, color: "#991b1b", marginBottom: "4px" }}>
-                Наличные ожидают подтверждения
-              </div>
-              <div style={{ fontSize: "12px", color: "#7f1d1d", lineHeight: 1.45 }}>
-                Мастер может подтвердить cash вручную без изменения booking lifecycle.
-              </div>
+              <div style={{ fontSize: "14px", fontWeight: 800, color: "#991b1b", marginBottom: "4px" }}><UiValue value={uiMessage("salon.s0339")} /></div>
+              <div style={{ fontSize: "12px", color: "#7f1d1d", lineHeight: 1.45 }}><UiValue value={uiMessage("master.s0071")} /></div>
             </div>
 
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -930,8 +892,7 @@ export default function MasterDashboard() {
                 fontSize: "12px",
                 fontWeight: 800
               }}>
-                {Number(safeMetrics.cash_pending_exposure_count || 0)} записей
-              </span>
+                <UiValue value={Number(safeMetrics.cash_pending_exposure_count || 0)} /><UiValue value={uiMessage("salon.s0341")} /></span>
               <span style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -943,7 +904,7 @@ export default function MasterDashboard() {
                 fontSize: "12px",
                 fontWeight: 800
               }}>
-                {money(safeMetrics.cash_pending_exposure_amount || 0)}
+                <UiValue value={money(safeMetrics.cash_pending_exposure_amount || 0)} />
               </span>
             </div>
           </div>
@@ -958,14 +919,12 @@ export default function MasterDashboard() {
               fontSize: "13px",
               marginBottom: "12px"
             }}>
-              {pendingCashError}
+              <UiValue value={pendingCashError} />
             </div>
           ) : null}
 
           {pendingCashLoading ? (
-            <div style={{ fontSize: "13px", color: "#7f1d1d" }}>
-              Загружаем pending cash…
-            </div>
+            <div style={{ fontSize: "13px", color: "#7f1d1d" }}><UiValue value={uiMessage("salon.s0342")} /></div>
           ) : pendingCashBookings.length ? (
             <div style={{ display: "grid", gap: "10px" }}>
               {pendingCashBookings.slice(0, 5).map((booking) => {
@@ -975,7 +934,7 @@ export default function MasterDashboard() {
 
                 return (
                   <div
-                    key={key || `${booking?.service_name || "booking"}-${booking?.start_at || ""}`}
+                    key={key || uiTemplate(["","-",""], [booking?.service_name || "booking", booking?.start_at || ""])}
                     style={{
                       display: "grid",
                       gap: "10px",
@@ -994,13 +953,13 @@ export default function MasterDashboard() {
                     }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                          {booking?.service_name || "Услуга"}
+                          <UiValue value={booking?.service_name || uiMessage("salon.s0231")} />
                         </div>
                         <div style={{ fontSize: "12px", color: "#7f1d1d", marginTop: "4px" }}>
-                          {booking?.start_at ? formatNotificationDate(booking.start_at) : "—"}
+                          <UiValue value={booking?.start_at ? formatNotificationDate(booking.start_at) : "—"} />
                         </div>
                         <div style={{ fontSize: "12px", color: "#7f1d1d", marginTop: "4px" }}>
-                          {booking?.salon_name || "Салон"}
+                          <UiValue value={booking?.salon_name || uiMessage("salon.s0319")} />
                         </div>
                       </div>
 
@@ -1016,10 +975,10 @@ export default function MasterDashboard() {
                           fontWeight: 800,
                           border: "1px solid #fecaca"
                         }}>
-                          {getPaymentLabelRu(booking)}
+                          <UiValue value={getPaymentLabelRu(booking)} />
                         </span>
                         <span style={{ fontSize: "13px", fontWeight: 800, color: "#7f1d1d" }}>
-                          {amount > 0 ? money(amount) : money(booking?.price_snapshot)}
+                          <UiValue value={amount > 0 ? money(amount, booking?.currency_code || booking?.currency) : money(booking?.price_snapshot, booking?.currency_code || booking?.currency)} />
                         </span>
                       </div>
                     </div>
@@ -1041,7 +1000,7 @@ export default function MasterDashboard() {
                           cursor: isConfirming ? "default" : "pointer"
                         }}
                       >
-                        {isConfirming ? "Подтверждаем…" : "Подтвердить наличные"}
+                        <UiValue value={isConfirming ? uiMessage("salon.s0343") : uiMessage("salon.s0344")} />
                       </button>
                     </div>
                   </div>
@@ -1049,23 +1008,19 @@ export default function MasterDashboard() {
               })}
             </div>
           ) : (
-            <div style={{ fontSize: "13px", color: "#7f1d1d" }}>
-              Pending cash записей нет.
-            </div>
+            <div style={{ fontSize: "13px", color: "#7f1d1d" }}><UiValue value={uiMessage("salon.s0345")} /></div>
           )}
         </div>
       </PageSection>
 
-      <PageSection title="QR для оплаты — ожидает подтверждения">
+      <PageSection title={uiMessage("salon.s0346")}>
         <div style={{
           border: "1px solid #e5e7eb",
           borderRadius: "14px",
           background: "#fff",
           padding: "16px"
         }}>
-          <div style={{ fontSize: "13px", color: "#4b5563", lineHeight: 1.5, marginBottom: "12px" }}>
-            Клиент выбрал оплату на QR. Подтвердите только после фактического поступления денег.
-          </div>
+          <div style={{ fontSize: "13px", color: "#4b5563", lineHeight: 1.5, marginBottom: "12px" }}><UiValue value={uiMessage("salon.s0347")} /></div>
 
           {ownerQrActionError ? (
             <div style={{
@@ -1077,7 +1032,7 @@ export default function MasterDashboard() {
               fontSize: "13px",
               marginBottom: "12px"
             }}>
-              {ownerQrActionError}
+              <UiValue value={ownerQrActionError} />
             </div>
           ) : null}
 
@@ -1091,14 +1046,12 @@ export default function MasterDashboard() {
               fontSize: "13px",
               marginBottom: "12px"
             }}>
-              {ownerQrError}
+              <UiValue value={ownerQrError} />
             </div>
           ) : null}
 
           {ownerQrLoading ? (
-            <div style={{ fontSize: "13px", color: "#7f1d1d" }}>
-              Загружаем owner_qr платежи…
-            </div>
+            <div style={{ fontSize: "13px", color: "#7f1d1d" }}><UiValue value={uiMessage("salon.s0348")} /></div>
           ) : ownerQrPayments.length ? (
             <div style={{ display: "grid", gap: "10px" }}>
               {ownerQrPayments.slice(0, 10).map((payment) => {
@@ -1117,7 +1070,7 @@ export default function MasterDashboard() {
 
                 return (
                   <div
-                    key={key || `${payment?.booking_id || "owner-qr"}-${payment?.created_at || ""}`}
+                    key={key || uiTemplate(["","-",""], [payment?.booking_id || "owner-qr", payment?.created_at || ""])}
                     style={{
                       display: "grid",
                       gap: "10px",
@@ -1135,14 +1088,13 @@ export default function MasterDashboard() {
                       alignItems: "flex-start"
                     }}>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
-                          Запись #{payment?.booking_id || "—"}
+                        <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}><UiValue value={uiMessage("salon.s0349")} /><UiValue value={payment?.booking_id || "—"} />
                         </div>
                         <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-                          {serviceName || "Услуга"}
+                          <UiValue value={serviceName || uiMessage("salon.s0231")} />
                         </div>
                         <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-                          {bookingStartAt ? formatNotificationDate(bookingStartAt) : "—"}
+                          <UiValue value={bookingStartAt ? formatNotificationDate(bookingStartAt) : "—"} />
                         </div>
                       </div>
 
@@ -1158,22 +1110,22 @@ export default function MasterDashboard() {
                           fontWeight: 800,
                           border: status === "rejected" ? "1px solid #fecaca" : "1px solid #bfdbfe"
                         }}>
-                          {getOwnerQrPaymentStatusLabel(payment)}
+                          <UiValue value={getOwnerQrPaymentStatusLabel(payment)} />
                         </span>
                         <span style={{ fontSize: "13px", fontWeight: 800, color: "#111827" }}>
-                          {amount > 0 ? money(amount) : money(payment?.amount)}
+                          <UiValue value={amount > 0 ? money(amount, payment?.currency_code || payment?.currency) : money(payment?.amount, payment?.currency_code || payment?.currency)} />
                         </span>
                       </div>
                     </div>
 
                     <div style={{ fontSize: "13px", color: "#374151", lineHeight: 1.55, display: "grid", gap: "4px" }}>
-                      {clientName ? <div>Клиент: <strong>{clientName}</strong></div> : null}
-                      {clientPhone ? <div>Телефон: <strong>{clientPhone}</strong></div> : null}
-                      <div>Создано: <strong>{createdAt ? formatNotificationDate(createdAt) : "—"}</strong></div>
+                      {clientName ? <div><UiValue value={uiMessage("salon.s0350")} /><strong><UiValue value={clientName} /></strong></div> : null}
+                      {clientPhone ? <div><UiValue value={uiMessage("salon.s0351")} /><strong><UiValue value={clientPhone} /></strong></div> : null}
+                      <div><UiValue value={uiMessage("salon.s0352")} /><strong><UiValue value={createdAt ? formatNotificationDate(createdAt) : "—"} /></strong></div>
                       {status === "rejected" && rejectedAt ? (
-                        <div>Отклонено: <strong>{formatNotificationDate(rejectedAt)}</strong></div>
+                        <div><UiValue value={uiMessage("salon.s0353")} /><strong><UiValue value={formatNotificationDate(rejectedAt)} /></strong></div>
                       ) : null}
-                      {rejectionReason ? <div style={{ color: "#991b1b" }}>Причина: <strong>{rejectionReason}</strong></div> : null}
+                      {rejectionReason ? <div style={{ color: "#991b1b" }}><UiValue value={uiMessage("salon.s0354")} /><strong><UiValue value={rejectionReason} /></strong></div> : null}
                     </div>
 
                     {isPending ? (
@@ -1194,7 +1146,7 @@ export default function MasterDashboard() {
                             cursor: isBusy ? "default" : "pointer"
                           }}
                         >
-                          {isBusy ? "Подтверждаем…" : "Подтвердить оплату"}
+                          <UiValue value={isBusy ? uiMessage("salon.s0343") : uiMessage("salon.s0355")} />
                         </button>
                         <button
                           type="button"
@@ -1212,7 +1164,7 @@ export default function MasterDashboard() {
                             cursor: isBusy ? "default" : "pointer"
                           }}
                         >
-                          {isBusy ? "Отклоняем…" : "Отклонить"}
+                          <UiValue value={isBusy ? uiMessage("salon.s0356") : uiMessage("salon.s0357")} />
                         </button>
                       </div>
                     ) : null}
@@ -1221,43 +1173,41 @@ export default function MasterDashboard() {
               })}
             </div>
           ) : (
-            <div style={{ fontSize: "13px", color: "#6b7280" }}>
-              QR для оплаты пока не ждёт подтверждения.
-            </div>
+            <div style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("salon.s0358")} /></div>
           )}
         </div>
       </PageSection>
 
-      <PageSection title="Быстрые действия">
+      <PageSection title={uiMessage("master.s0092")}>
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: "12px"
         }}>
-          <QuickAction to={`/master/${slug}/bookings`} title="Открыть записи" note="Список записей, статусы и переход к деталям." />
-          <QuickAction to={`/master/${slug}/schedule`} title="Открыть расписание" note="Рабочее время, ближайшие окна и управление днём." />
-          <QuickAction to={`/master/${slug}/clients`} title="Открыть клиентов" note="CRM-light список клиентов и последних визитов." />
-          <QuickAction to={`/master/${slug}/finance`} title="Открыть финансы" note="Обзор денег, баланса и переход к расчётам." />
+          <QuickAction to={uiTemplate(["/master/","/bookings"], [slug])} title={uiMessage("master.s0093")} note={uiMessage("salon.s0360")} />
+          <QuickAction to={uiTemplate(["/master/","/schedule"], [slug])} title={uiMessage("master.s0095")} note={uiMessage("master.s0096")} />
+          <QuickAction to={uiTemplate(["/master/","/clients"], [slug])} title={uiMessage("master.s0097")} note={uiMessage("master.s0098")} />
+          <QuickAction to={uiTemplate(["/master/","/finance"], [slug])} title={uiMessage("salon.s0832")} note={uiMessage("master.s0100")} />
         </div>
       </PageSection>
 
       <OwnerBookingQrCard
         ownerType="master"
         slug={slug}
-        title="QR для записи к мастеру"
-        subtitle="Клиент откроет форму записи с выбранным мастером."
+        title={uiMessage("master.s0101")}
+        subtitle={uiMessage("master.s0102")}
       />
 
       <OwnerPushOptInCard
         ownerType="master"
         slug={slug}
-        title="Push-уведомления"
-        subtitle="Браузерные уведомления о записях, деньгах и важных событиях мастера."
+        title={uiMessage("salon.s0367")}
+        subtitle={uiMessage("master.s0104")}
       />
 
       <PageSection title={(
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <span>Уведомления</span>
+          <span><UiValue value={uiMessage("salon.s0387")} /></span>
           <span style={{
             display: "inline-flex",
             alignItems: "center",
@@ -1267,8 +1217,7 @@ export default function MasterDashboard() {
             color: "#1d4ed8",
             fontSize: "12px",
             fontWeight: 700
-          }}>
-            Новых: {unreadCount}
+          }}><UiValue value={uiMessage("salon.s0388")} /><UiValue value={unreadCount} />
           </span>
         </div>
       )}>
@@ -1280,9 +1229,7 @@ export default function MasterDashboard() {
             padding: "14px",
             color: "#6b7280",
             fontSize: "14px"
-          }}>
-            Загружаем уведомления…
-          </div>
+          }}><UiValue value={uiMessage("salon.s0389")} /></div>
         ) : notificationsError ? (
           <div style={{
             border: "1px solid #f5c2c7",
@@ -1291,16 +1238,14 @@ export default function MasterDashboard() {
             color: "#b42318",
             padding: "14px",
             fontSize: "14px"
-          }}>
-            Не удалось загрузить уведомления
-          </div>
+          }}><UiValue value={uiMessage("salon.s0390")} /></div>
         ) : notifications.length ? (
           <div style={{ display: "grid", gap: "12px" }}>
             {visibleNotifications.map((notification)=>{
               const uid = getNotificationUid(notification)
               const isRead = Boolean(notification?.is_read || notification?.read_at)
-              const title = notification?.title_ru || notification?.title_en || notification?.title || "Без заголовка"
-              const body = notification?.body_ru || notification?.body_en || notification?.body || ""
+              const title = <NotificationText notification={notification} field="title" fallback={uiMessage("salon.s0391")} />
+              const body = <NotificationText notification={notification} field="body" />
               const type = notification?.target_type || notification?.action_type || "—"
               const priority = notification?.priority || "normal"
               const actionUrl = String(notification?.action_url || "").trim()
@@ -1309,7 +1254,7 @@ export default function MasterDashboard() {
 
               return (
                 <div
-                  key={uid || `${title}-${notification?.created_at || ""}`}
+                  key={uid || uiTemplate(["","-",""], [title, notification?.created_at || ""])}
                   style={{
                     border: "1px solid #e5e7eb",
                     borderRadius: "14px",
@@ -1326,11 +1271,11 @@ export default function MasterDashboard() {
                   }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: "15px", fontWeight: 800, color: "#111827", marginBottom: "4px" }}>
-                        {title}
+                        <UiValue value={title} />
                       </div>
                       {body ? (
                         <div style={{ fontSize: "13px", color: "#4b5563", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                          {body}
+                          <UiValue value={body} />
                         </div>
                       ) : null}
                     </div>
@@ -1344,7 +1289,7 @@ export default function MasterDashboard() {
                       fontSize: "12px",
                       fontWeight: 700
                     }}>
-                      {isRead ? "Прочитано" : "Новое"}
+                      <UiValue value={isRead ? uiMessage("salon.s0392") : uiMessage("salon.s0393")} />
                     </div>
                   </div>
 
@@ -1355,10 +1300,10 @@ export default function MasterDashboard() {
                     fontSize: "12px",
                     color: "#667085"
                   }}>
-                    <div>Тип: <strong style={{ color: "#344054" }}>{type}</strong></div>
-                    <div>Приоритет: <strong style={{ color: "#344054" }}>{priority}</strong></div>
-                    <div>Создано: <strong style={{ color: "#344054" }}>{formatNotificationDate(notification?.created_at)}</strong></div>
-                    <div>Статус: <strong style={{ color: "#344054" }}>{isRead ? "Прочитано" : "Не прочитано"}</strong></div>
+                    <div><UiValue value={uiMessage("salon.s0394")} /><strong style={{ color: "#344054" }}><UiValue value={type} /></strong></div>
+                    <div><UiValue value={uiMessage("salon.s0395")} /><strong style={{ color: "#344054" }}><UiValue value={priority} /></strong></div>
+                    <div><UiValue value={uiMessage("salon.s0352")} /><strong style={{ color: "#344054" }}><UiValue value={formatNotificationDate(notification?.created_at)} /></strong></div>
+                    <div><UiValue value={uiMessage("salon.s0396")} /><strong style={{ color: "#344054" }}><UiValue value={isRead ? uiMessage("salon.s0392") : uiMessage("salon.s0397")} /></strong></div>
                   </div>
 
                   {hasAction ? (
@@ -1381,9 +1326,7 @@ export default function MasterDashboard() {
                           fontSize: "13px",
                           fontWeight: 700
                         }}
-                      >
-                        Открыть
-                      </a>
+                      ><UiValue value={uiMessage("salon.s0398")} /></a>
                     </div>
                   ) : null}
 
@@ -1404,9 +1347,7 @@ export default function MasterDashboard() {
                           cursor: readingNotificationUid === uid ? "not-allowed" : "pointer",
                           opacity: readingNotificationUid === uid ? 0.7 : 1
                         }}
-                      >
-                        Прочитано
-                      </button>
+                      ><UiValue value={uiMessage("salon.s0399")} /></button>
                     </div>
                   ) : null}
                 </div>
@@ -1428,7 +1369,7 @@ export default function MasterDashboard() {
                   cursor: "pointer"
                 }}
               >
-                {notificationsExpanded ? "Свернуть" : `Показать ещё ${hiddenNotificationsCount}`}
+                <UiValue value={notificationsExpanded ? uiMessage("salon.s0166") : uiMessage("salon.s0167", {p0: hiddenNotificationsCount})} />
               </button>
             ) : null}
           </div>
@@ -1440,45 +1381,43 @@ export default function MasterDashboard() {
             padding: "14px",
             color: "#6b7280",
             fontSize: "14px"
-          }}>
-            Новых уведомлений пока нет.
-          </div>
+          }}><UiValue value={uiMessage("salon.s0400")} /></div>
         )}
       </PageSection>
 
-      <PageSection title="Маршруты из dashboard">
+      <PageSection title={uiMessage("salon.s0401")}>
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: "12px"
         }}>
-          <RouteCard to={`/master/${slug}/bookings`} title="Кто записан" note="Открой список записей, фильтруй статусы и работай с потоком дня." />
-          <RouteCard to={`/master/${slug}/schedule`} title="Когда запись" note="Перейди в time-based view, если нужно быстро понять загрузку и окна." />
-          <RouteCard to={`/master/${slug}/money`} title="Кошелёк и вывод" note="Баланс, расчёты и доступ к выводу." tone="finance" />
-          <RouteCard to={`/master/${slug}/payouts`} title="Когда выплата" note="Переход прямо к выплатам и их статусам без лишних промежуточных блоков." tone="finance" />
+          <RouteCard to={uiTemplate(["/master/","/bookings"], [slug])} title={uiMessage("master.s0122")} note={uiMessage("master.s0123")} />
+          <RouteCard to={uiTemplate(["/master/","/schedule"], [slug])} title={uiMessage("master.s0124")} note={uiMessage("master.s0125")} />
+          <RouteCard to={uiTemplate(["/master/","/money"], [slug])} title={uiMessage("salon.s0412")} note={uiMessage("salon.s0404")} tone="finance" />
+          <RouteCard to={uiTemplate(["/master/","/payouts"], [slug])} title={uiMessage("master.s0128")} note={uiMessage("master.s0129")} tone="finance" />
         </div>
       </PageSection>
 
-      <PageSection title="Краткий статус">
+      <PageSection title={uiMessage("salon.s0407")}>
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: "12px"
         }}>
           <SummaryCard
-            title="Фокус на сегодня"
+            title={uiMessage("salon.s0408")}
             value={safeMetrics.bookings_today || 0}
-            note="Главный операционный ориентир — сегодняшние записи. Управление временем вынесено в раздел «Расписание»."
+            note={uiMessage("master.s0132")}
           />
           <SummaryCard
-            title="Кошелёк и вывод"
+            title={uiMessage("salon.s0412")}
             value={money(financeCardAmount)}
-            note="Быстрый обзор без тяжёлых таблиц. Детальные движения вынесены в отдельные финансовые страницы."
+            note={uiMessage("master.s0133")}
           />
           <SummaryCard
-            title="Клиентская база"
+            title={uiMessage("master.s0134")}
             value={safeMetrics.clients_total || 0}
-            note="На dashboard только обзор. Подробный клиентский список живёт отдельно и не нагружает стартовый экран."
+            note={uiMessage("master.s0135")}
           />
         </div>
       </PageSection>
@@ -1491,9 +1430,7 @@ export default function MasterDashboard() {
             padding: "12px",
             background: "#fff",
             marginTop: "10px"
-          }}>
-            Нет данных
-          </div>
+          }}><UiValue value={uiMessage("salon.s0419")} /></div>
         </PageSection>
       ) : null}
       </div>

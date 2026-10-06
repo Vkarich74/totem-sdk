@@ -1,6 +1,8 @@
+import { useMarketContext } from "../market/MarketContext.jsx";
 import { Outlet, Link } from "react-router-dom";
 
 export default function AuthLayout(){
+  const { t } = useMarketContext();
   return (
     <div
       style={{
@@ -28,7 +30,7 @@ export default function AuthLayout(){
           }}
         >
           <div style={{ fontSize: "20px", fontWeight: 700, color: "#111827" }}>
-            TOTEM Auth
+            {t("auth.brand")}
           </div>
 
           <Link
@@ -39,7 +41,7 @@ export default function AuthLayout(){
               fontSize: "14px"
             }}
           >
-            На главную
+            {t("auth.home")}
           </Link>
         </div>
 
@@ -51,7 +53,7 @@ export default function AuthLayout(){
             lineHeight: 1.5
           }}
         >
-          Вход и восстановление доступа в кабинет салона или мастера.
+          {t("auth.intro")}
         </div>
       </div>
 
@@ -61,3 +63,4 @@ export default function AuthLayout(){
     </div>
   );
 }
+

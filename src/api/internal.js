@@ -73,6 +73,8 @@ export function setAuthAccessToken(token){
     }
   }
 
+  window.__TOTEM_UI_LOCALE__ = null;
+  window.dispatchEvent(new Event("totem:auth-changed"));
   return normalized;
 }
 
@@ -95,6 +97,11 @@ function buildJsonHeaders(extraHeaders = {}, includeContentType = true){
     headers.Authorization = `Bearer ${token}`;
   }
 
+  const selectedLocale = window.__TOTEM_UI_LOCALE__;
+  const supported = window.__TOTEM_MARKET_CONTEXT__?.supported_locales;
+  if (selectedLocale && supported?.includes(selectedLocale) && !headers["x-totem-locale"]) {
+    headers["x-totem-locale"] = selectedLocale;
+  }
   return headers;
 }
 
@@ -108,6 +115,11 @@ function buildAuthHeaders(extraHeaders = {}){
     headers.Authorization = `Bearer ${token}`;
   }
 
+  const selectedLocale = window.__TOTEM_UI_LOCALE__;
+  const supported = window.__TOTEM_MARKET_CONTEXT__?.supported_locales;
+  if (selectedLocale && supported?.includes(selectedLocale) && !headers["x-totem-locale"]) {
+    headers["x-totem-locale"] = selectedLocale;
+  }
   return headers;
 }
 
@@ -209,7 +221,7 @@ export function getBillingBlockReason(billingAccess){
    AUTH API
 ================================ */
 
-export async function resolveSession(){
+async function requestSession(){
   const r = await safeInternalJson(`/auth/session/resolve`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"AUTH_SESSION_RESOLVE_FETCH_FAILED", detail:r };
   const j = r.json;
@@ -222,6 +234,60 @@ export async function resolveSession(){
     auth:j.auth || null,
     identity:j.identity || null
   };
+}
+
+let sessionRequest = null;
+let sessionRequestToken = null;
+export function resolveSession() {
+  const token = getAuthAccessToken();
+  if (sessionRequest && sessionRequestToken === token) return sessionRequest;
+  sessionRequestToken = token;
+  const request = requestSession();
+  sessionRequest = request;
+  request.finally(() => { if (sessionRequest === request) sessionRequest = null; }).catch(() => {});
+  return request;
+}
+
+async function localeApiJson(path, { method = "GET", body, signal, token } = {}) {
+  const response = await safeInternalRequest(path, {
+    method, signal,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    headers: {
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok || response.json?.ok !== true) {
+    const serverCode = response.json?.error;
+    const code = typeof serverCode === "string" && /^[A-Z][A-Z0-9_]+$/.test(serverCode)
+      ? serverCode : response.status === 404 ? "LOCALE_ENDPOINT_UNAVAILABLE" : "LOCALE_REQUEST_FAILED";
+    throw Object.assign(new Error(code), { code, status: response.status });
+  }
+  return response.json;
+}
+
+export function getLocaleOwnerContext(owner, options = {}) {
+  return localeApiJson("/locale-context" + buildQuery({ owner_type: owner.type, owner_slug: owner.slug }), options);
+}
+
+export function getLocalePreference(marketCode, options = {}) {
+  return localeApiJson("/locale-preference" + buildQuery({ market_code: marketCode }), options);
+}
+
+export function saveLocalePreference(marketCode, locale, options = {}) {
+  return localeApiJson("/locale-preference", { ...options, method: "PUT", body: { market_code: marketCode, locale } });
+}
+
+export async function getPublicMarketContext(salonSlug = null, { signal } = {}) {
+  const base = String(window.TOTEM_API_BASE || "https://api.totemv.com").replace(/\/$/, "");
+  const response = await fetch(base + "/public/market-context" + buildQuery({ salon_slug: salonSlug }), {
+    method: "GET", headers: { Accept: "application/json" }, credentials: "omit", signal,
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.ok !== true || !payload.market_context) {
+    throw Object.assign(new Error("MARKET_CONTEXT_UNAVAILABLE"), { status: response.status });
+  }
+  return payload.market_context;
 }
 
 export async function loginWithPassword({ email = "", phone = "", password = "" } = {}){
@@ -2640,3 +2706,4 @@ export async function closeSalonCollectionAnchors(salonSlug = getSalonSlug(), pa
     return { ok:false, error:"SALON_COLLECTION_ANCHORS_CLOSE_FETCH_FAILED", message:e?.message || String(e) };
   }
 }
+

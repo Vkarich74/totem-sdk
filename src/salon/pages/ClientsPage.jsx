@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiDate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { resolveSalonSlug } from "../SalonContext";
@@ -5,6 +6,7 @@ import PageSection from "../../cabinet/PageSection";
 import { getClients } from "../../api/internal";
 
 export default function ClientsPage(){
+  const { renderUi } = useUiMessages();
 
 const [clients,setClients] = useState([]);
 const [loading,setLoading] = useState(true);
@@ -28,12 +30,12 @@ const result = await getClients(salonSlug);
 if(result?.ok){
 setClients(result.clients || []);
 }else{
-setError("Ошибка загрузки клиентов");
+setError(uiError(uiMessage("salon.s0270")));
 }
 
 }catch(e){
 console.error(e);
-setError("Ошибка сети");
+setError(uiError(uiMessage("salon.s0271")));
 }
 
 setLoading(false);
@@ -57,12 +59,12 @@ return (
 
 return (
 
-<PageSection title="Клиенты салона">
+<PageSection title={uiMessage("salon.s0272")}>
 
 {/* SEARCH */}
 
 <input
-placeholder="Поиск клиента..."
+placeholder={renderUi(uiMessage("salon.s0273"))}
 value={search}
 onChange={(e)=>setSearch(e.target.value)}
 style={{
@@ -90,9 +92,7 @@ padding:"15px",
 border:"1px solid #eee",
 borderRadius:"10px",
 background:"#fafafa"
-}}>
-Загрузка...
-</div>
+}}><UiValue value={uiMessage("salon.s0274")} /></div>
 ))}
 </div>
 
@@ -109,7 +109,7 @@ background:"#fff5f5",
 borderRadius:"8px",
 color:"#c00"
 }}>
-{error}
+<UiValue value={error} />
 </div>
 
 )}
@@ -124,9 +124,7 @@ border:"1px dashed #ccc",
 borderRadius:"10px",
 color:"#888",
 textAlign:"center"
-}}>
-Клиенты пока отсутствуют
-</div>
+}}><UiValue value={uiMessage("salon.s0275")} /></div>
 
 )}
 
@@ -158,7 +156,7 @@ fontWeight:"600",
 fontSize:"15px",
 marginBottom:"5px"
 }}>
-{c.name || "Без имени"}
+<UiValue value={c.name || uiMessage("salon.s0276")} />
 </div>
 
 <div style={{
@@ -166,7 +164,7 @@ fontSize:"13px",
 color:"#666",
 marginBottom:"8px"
 }}>
-📞 {c.phone || "-"}
+📞 <UiValue value={c.phone || "-"} />
 </div>
 
 <div style={{
@@ -176,14 +174,13 @@ fontSize:"13px",
 color:"#444"
 }}>
 
-<div>
-Визиты: <b>{c.visits || 0}</b>
+<div><UiValue value={uiMessage("salon.s0278")} /><b><UiValue value={c.visits || 0} /></b>
 </div>
 
 <div>
-{c.created_at
-? new Date(c.created_at).toLocaleDateString("ru-RU")
-: ""}
+<UiValue value={c.created_at
+? uiDate(c.created_at, {dateStyle: "short"})
+: ""} />
 </div>
 
 </div>

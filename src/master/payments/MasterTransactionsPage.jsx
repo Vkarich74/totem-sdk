@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMaster } from "../MasterContext";
@@ -6,37 +7,20 @@ import PageSection from "../../cabinet/PageSection";
 import EmptyState from "../../cabinet/EmptyState";
 import { getMasterLedger } from "../../api/internal";
 
-function money(value) {
-  const n = Number(value) || 0;
-  return `${new Intl.NumberFormat("ru-RU").format(n)} сом`;
-}
+function money(value, currency) { return uiMoney(value, currency); }
 
-function formatDate(iso) {
-  if (!iso) return "—";
-
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-
-  return (
-    d.toLocaleDateString("ru-RU") +
-    " " +
-    d.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit"
-    })
-  );
-}
+function formatDate(iso) { if (!iso) return "—"; return uiDate(iso, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
 function getDirectionLabel(value) {
-  if (value === "credit") return "Пополнение";
-  if (value === "debit") return "Списание";
+  if (value === "credit") return uiMessage("salon.s1165");
+  if (value === "debit") return uiMessage("salon.s1166");
   return value || "—";
 }
 
 function getTypeLabel(value) {
-  if (value === "payout") return "Выплата";
-  if (value === "subscription") return "Подписка";
-  if (value === "platform_fee") return "Платформа";
+  if (value === "payout") return uiMessage("salon.s1066");
+  if (value === "subscription") return uiMessage("salon.s1167");
+  if (value === "platform_fee") return uiMessage("salon.s1168");
   if (value === "refund_reverse") return "Refund reverse";
   return value || "—";
 }
@@ -53,20 +37,20 @@ function normalizeLedger(payload) {
 function SummaryCard({ label, value, hint }) {
   return (
     <div style={styles.summaryCard}>
-      <div style={styles.summaryLabel}>{label}</div>
-      <div style={styles.summaryValue}>{value}</div>
-      {hint ? <div style={styles.summaryHint}>{hint}</div> : null}
+      <div style={styles.summaryLabel}><UiValue value={label} /></div>
+      <div style={styles.summaryValue}><UiValue value={value} /></div>
+      {hint ? <div style={styles.summaryHint}><UiValue value={hint} /></div> : null}
     </div>
   );
 }
 
 function FinanceNav({ masterSlug, active }) {
   const items = [
-    { key: "finance", label: "Финансы", note: "overview", to: `/master/${masterSlug}/finance` },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: `/master/${masterSlug}/money` },
-    { key: "settlements", label: "Сеты", note: "расчётные периоды", to: `/master/${masterSlug}/settlements` },
-    { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: `/master/${masterSlug}/payouts` },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: `/master/${masterSlug}/transactions` }
+    { key: "finance", label: uiMessage("salon.s0017"), note: uiMessage("salon.s1070"), to: uiTemplate(["/master/","/finance"], [masterSlug]) },
+    { key: "money", label: uiMessage("salon.s0412"), note: uiMessage("salon.s0902"), to: uiTemplate(["/master/","/money"], [masterSlug]) },
+    { key: "settlements", label: uiMessage("salon.s0029"), note: uiMessage("salon.s1071"), to: uiTemplate(["/master/","/settlements"], [masterSlug]) },
+    { key: "payouts", label: uiMessage("salon.s0030"), note: uiMessage("salon.s1072"), to: uiTemplate(["/master/","/payouts"], [masterSlug]) },
+    { key: "transactions", label: uiMessage("salon.s0031"), note: uiMessage("salon.s1073"), to: uiTemplate(["/master/","/transactions"], [masterSlug]) }
   ];
 
   return (
@@ -83,8 +67,8 @@ function FinanceNav({ masterSlug, active }) {
               background: isActive ? "#eff6ff" : "#ffffff"
             }}
           >
-            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}>{item.label}</div>
-            <div style={styles.navNote}>{item.note}</div>
+            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}><UiValue value={item.label} /></div>
+            <div style={styles.navNote}><UiValue value={item.note} /></div>
           </Link>
         );
       })}
@@ -112,7 +96,7 @@ export default function MasterTransactionsPage() {
         if (!masterSlug) {
           if (!cancelled) {
             setTransactions([]);
-            setError("Не найден master slug");
+            setError(uiError(uiMessage("master.s0201")));
           }
           return;
         }
@@ -129,7 +113,7 @@ export default function MasterTransactionsPage() {
 
         if (!cancelled) {
           setTransactions([]);
-          setError("Не удалось загрузить транзакции");
+          setError(uiError(uiMessage("salon.s1172")));
         }
       } finally {
         if (!cancelled) {
@@ -181,59 +165,59 @@ export default function MasterTransactionsPage() {
     <div style={{ padding: "14px 14px 20px" }}>
       {masterSlug ? <FinanceNav masterSlug={masterSlug} active="transactions" /> : null}
 
-      <PageSection title="Транзакции">
-        {loading && <div>Загрузка...</div>}
+      <PageSection title={uiMessage("salon.s0031")}>
+        {loading && <div><UiValue value={uiMessage("salon.s0118")} /></div>}
 
         {!loading && error && (
           <EmptyState
-            title="Ошибка загрузки"
+            title={uiMessage("salon.s1036")}
             message={error}
           />
         )}
 
         {!loading && !error && transactions.length === 0 && (
           <EmptyState
-            title="Транзакций пока нет"
-            message="Финансовые операции появятся здесь"
+            title={uiMessage("salon.s1184")}
+            message={uiMessage("master.s0875")}
           />
         )}
 
         {!loading && !error && transactions.length > 0 && (
           <>
             <div style={styles.summaryGrid}>
-              <SummaryCard label="Всего операций" value={transactions.length} />
-              <SummaryCard label="Пополнения" value={money(summary.creditAmount)} hint={`${summary.creditCount} шт.`} />
-              <SummaryCard label="Списания" value={money(summary.debitAmount)} hint={`${summary.debitCount} шт.`} />
-              <SummaryCard label="Общий оборот" value={money(summary.total)} />
+              <SummaryCard label={uiMessage("salon.s1175")} value={transactions.length} />
+              <SummaryCard label={uiMessage("salon.s1177")} value={money(summary.creditAmount)} hint={uiMessage("salon.s1178", {p0: summary.creditCount})} />
+              <SummaryCard label={uiMessage("salon.s1179")} value={money(summary.debitAmount)} hint={uiMessage("salon.s1178", {p0: summary.debitCount})} />
+              <SummaryCard label={uiMessage("salon.s1180")} value={money(summary.total)} />
             </div>
 
             <div style={styles.cardsList}>
               {visibleTransactions.map((item, index) => (
                 <div key={item?.id || index} style={styles.itemCard}>
                   <div style={styles.itemTop}>
-                    <strong>{item?.id || `Операция ${index + 1}`}</strong>
-                    <span style={styles.directionBadge}>{getDirectionLabel(item?.direction)}</span>
+                    <strong><UiValue value={item?.id || uiMessage("salon.s1189", {p0: index + 1})} /></strong>
+                    <span style={styles.directionBadge}><UiValue value={getDirectionLabel(item?.direction)} /></span>
                   </div>
 
                   <div style={styles.metaGrid}>
                     <div>
-                      <div style={styles.metaLabel}>Тип</div>
-                      <div style={styles.metaValue}>{getTypeLabel(item?.reference_type || item?.type)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s1190")} /></div>
+                      <div style={styles.metaValue}><UiValue value={getTypeLabel(item?.reference_type || item?.type)} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Сумма</div>
-                      <div style={styles.metaValue}>{money(item?.amount)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0147")} /></div>
+                      <div style={styles.metaValue}><UiValue value={money(item?.amount, item?.currency_code || item?.currency)} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Дата</div>
-                      <div style={styles.metaValue}>{formatDate(item?.created_at || item?.date)}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0233")} /></div>
+                      <div style={styles.metaValue}><UiValue value={formatDate(item?.created_at || item?.date)} /></div>
                     </div>
 
                     <div>
-                      <div style={styles.metaLabel}>Reference ID</div>
-                      <div style={styles.metaValue}>{item?.reference_id || "—"}</div>
+                      <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s1191")} /></div>
+                      <div style={styles.metaValue}><UiValue value={item?.reference_id || "—"} /></div>
                     </div>
                   </div>
                 </div>
@@ -256,7 +240,7 @@ export default function MasterTransactionsPage() {
                     cursor: "pointer"
                   }}
                 >
-                  {transactionsExpanded ? "Свернуть" : `Показать ещё ${hiddenTransactionsCount}`}
+                  <UiValue value={transactionsExpanded ? uiMessage("salon.s0166") : uiMessage("salon.s0167", {p0: hiddenTransactionsCount})} />
                 </button>
               </div>
             ) : null}

@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import * as api from "../../api/internal"
@@ -16,10 +17,10 @@ function statusColor(status){
 
 function statusText(status){
   const value = String(status || "reserved").toLowerCase()
-  if(value === "reserved") return "Ожидает"
-  if(value === "confirmed") return "Подтверждена"
-  if(value === "completed") return "Завершена"
-  if(value === "cancelled" || value === "canceled") return "Отменена"
+  if(value === "reserved") return uiMessage("salon.s0042")
+  if(value === "confirmed") return uiMessage("salon.s0204")
+  if(value === "completed") return uiMessage("salon.s0205")
+  if(value === "cancelled" || value === "canceled") return uiMessage("salon.s0206")
   return status || "—"
 }
 
@@ -34,28 +35,9 @@ function getBookingStartAt(booking){
   )
 }
 
-function formatDateTime(value){
-  if(!value) return "—"
+function formatDateTime(value){ if (!value) return "—"; return uiDate(value, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
-  const date = new Date(value)
-
-  if(Number.isNaN(date.getTime())){
-    return "—"
-  }
-
-  return date.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  })
-}
-
-function formatMoney(value){
-  if(value === null || value === undefined || value === "") return "—"
-  return `${value} сом`
-}
+function formatMoney(value, currency) { return uiMoney(value, currency); }
 
 function normalizeBooking(raw){
   const startAt = getBookingStartAt(raw)
@@ -125,14 +107,15 @@ function useIsMobile(){
 function SummaryCard({ label, value, hint }){
   return (
     <div style={styles.summaryCard}>
-      <div style={styles.summaryLabel}>{label}</div>
-      <div style={styles.summaryValue}>{value}</div>
-      {hint ? <div style={styles.summaryHint}>{hint}</div> : null}
+      <div style={styles.summaryLabel}><UiValue value={label} /></div>
+      <div style={styles.summaryValue}><UiValue value={value} /></div>
+      {hint ? <div style={styles.summaryHint}><UiValue value={hint} /></div> : null}
     </div>
   )
 }
 
 export default function BookingsPage(){
+  const { renderUi } = useUiMessages();
   const { slug: routeSlug } = useParams()
   const isMobile = useIsMobile()
   const salonSlug = resolveSalonSlug(routeSlug)
@@ -150,7 +133,7 @@ export default function BookingsPage(){
     if(!salonSlug){
       setBookings([])
       setMasters([])
-      setError("SALON_SLUG_MISSING")
+      setError(uiError("SALON_SLUG_MISSING"))
       setLoading(false)
       return
     }
@@ -178,7 +161,7 @@ export default function BookingsPage(){
       console.error("SALON BOOKINGS LOAD ERROR", loadError)
       setBookings([])
       setMasters([])
-      setError(loadError?.message || "SALON_BOOKINGS_LOAD_FAILED")
+      setError(uiError(loadError?.message || "SALON_BOOKINGS_LOAD_FAILED"))
     }finally{
       setLoading(false)
     }
@@ -207,14 +190,14 @@ export default function BookingsPage(){
       const response = await api.bookingAction(id, type)
 
       if(!response?.ok){
-        alert("Ошибка изменения статуса")
+        alert(renderUi(uiError(uiMessage("salon.s0208"))))
         return
       }
 
       await load()
     }catch(actionError){
       console.error("SALON BOOKING ACTION ERROR", actionError)
-      alert("Ошибка сервера")
+      alert(renderUi(uiError(uiMessage("salon.s0209"))))
     }finally{
       setLoadingAction(null)
     }
@@ -316,52 +299,52 @@ export default function BookingsPage(){
 
   if(loading){
     return (
-      <PageSection title="Записи салона">
-        <div style={styles.feedbackBox}>Загрузка записей...</div>
+      <PageSection title={uiMessage("salon.s0210")}>
+        <div style={styles.feedbackBox}><UiValue value={uiMessage("salon.s0211")} /></div>
       </PageSection>
     )
   }
 
   if(error){
     return (
-      <PageSection title="Записи салона">
-        <EmptyState title="Ошибка загрузки данных" message={error} />
+      <PageSection title={uiMessage("salon.s0210")}>
+        <EmptyState title={uiMessage("salon.s0212")} message={error} />
       </PageSection>
     )
   }
 
   if(bookings.length === 0){
     return (
-      <PageSection title="Записи салона">
+      <PageSection title={uiMessage("salon.s0210")}>
         <div style={styles.toolbar}>
-          <FilterButton active={filter === "today"} onClick={() => setFilter("today")}>Сегодня</FilterButton>
-          <FilterButton active={filter === "week"} onClick={() => setFilter("week")}>Неделя</FilterButton>
-          <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>Все</FilterButton>
+          <FilterButton active={filter === "today"} onClick={() => setFilter("today")}><UiValue value={uiMessage("salon.s0213")} /></FilterButton>
+          <FilterButton active={filter === "week"} onClick={() => setFilter("week")}><UiValue value={uiMessage("salon.s0214")} /></FilterButton>
+          <FilterButton active={filter === "all"} onClick={() => setFilter("all")}><UiValue value={uiMessage("salon.s0215")} /></FilterButton>
         </div>
 
-        <EmptyState title="Записей пока нет" message="Когда появятся записи, они будут показаны здесь." />
+        <EmptyState title={uiMessage("salon.s0216")} message={uiMessage("salon.s0217")} />
       </PageSection>
     )
   }
 
   return (
-    <PageSection title="Записи салона">
+    <PageSection title={uiMessage("salon.s0210")}>
       <div style={styles.summaryGrid}>
-        <SummaryCard label="Всего" value={summary.total} hint="по текущему фильтру" />
-        <SummaryCard label="Активные" value={summary.active} hint="не завершены" />
-        <SummaryCard label="Ожидают" value={summary.reserved} hint="нужно действие" />
-        <SummaryCard label="Мастера" value={summary.masters} hint="в салоне" />
+        <SummaryCard label={uiMessage("salon.s0115")} value={summary.total} hint={uiMessage("salon.s0218")} />
+        <SummaryCard label={uiMessage("salon.s0109")} value={summary.active} hint={uiMessage("salon.s0219")} />
+        <SummaryCard label={uiMessage("salon.s0220")} value={summary.reserved} hint={uiMessage("salon.s0221")} />
+        <SummaryCard label={uiMessage("salon.s0015")} value={summary.masters} hint={uiMessage("salon.s0222")} />
       </div>
 
       <div style={styles.toolbar}>
-        <FilterButton active={filter === "today"} onClick={() => setFilter("today")}>Сегодня</FilterButton>
-        <FilterButton active={filter === "week"} onClick={() => setFilter("week")}>Неделя</FilterButton>
-        <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>Все</FilterButton>
+        <FilterButton active={filter === "today"} onClick={() => setFilter("today")}><UiValue value={uiMessage("salon.s0213")} /></FilterButton>
+        <FilterButton active={filter === "week"} onClick={() => setFilter("week")}><UiValue value={uiMessage("salon.s0214")} /></FilterButton>
+        <FilterButton active={filter === "all"} onClick={() => setFilter("all")}><UiValue value={uiMessage("salon.s0215")} /></FilterButton>
       </div>
 
       <div style={styles.searchWrap}>
         <input
-          placeholder="Поиск по клиенту, телефону, мастеру, услуге"
+          placeholder={renderUi(uiMessage("salon.s0223"))}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           style={styles.searchInput}
@@ -369,7 +352,7 @@ export default function BookingsPage(){
       </div>
 
       {filteredBookings.length === 0 ? (
-        <EmptyState title="По текущему фильтру записей нет" message="Измените период или поисковый запрос." />
+        <EmptyState title={uiMessage("salon.s0224")} message={uiMessage("salon.s0225")} />
       ) : (
         <div
           style={{
@@ -395,15 +378,15 @@ export default function BookingsPage(){
                   }}
                 >
                   <div style={styles.listItemTop}>
-                    <div style={styles.listItemTitle}>BR-{booking.id}</div>
+                    <div style={styles.listItemTitle}><UiValue value={uiMessage("salon.s0226")} /><UiValue value={booking.id} /></div>
                     <div style={{ ...styles.statusBadge, color: statusColor(booking.status), borderColor: statusColor(booking.status) }}>
-                      {statusText(booking.status)}
+                      <UiValue value={statusText(booking.status)} />
                     </div>
                   </div>
 
-                  <div style={styles.listItemName}>{booking.client_name}</div>
-                  <div style={styles.listItemMeta}>{formatDateTime(booking.start_at)}</div>
-                  <div style={styles.listItemMeta}>{booking.master_name} · {booking.service_name}</div>
+                  <div style={styles.listItemName}><UiValue value={booking.client_name} /></div>
+                  <div style={styles.listItemMeta}><UiValue value={formatDateTime(booking.start_at)} /></div>
+                  <div style={styles.listItemMeta}><UiValue value={booking.master_name} /> · <UiValue value={booking.service_name} /></div>
                 </button>
               )
             })}
@@ -411,48 +394,48 @@ export default function BookingsPage(){
 
           <div style={styles.detailCard}>
             {!selectedBooking ? (
-              <EmptyState title="Выберите запись" message="Справа откроются детали выбранной записи." />
+              <EmptyState title={uiMessage("salon.s0227")} message={uiMessage("salon.s0228")} />
             ) : (
               <>
                 <div style={styles.detailHeader}>
                   <div>
-                    <div style={styles.detailId}>BR-{selectedBooking.id}</div>
-                    <div style={styles.detailDate}>{formatDateTime(selectedBooking.start_at)}</div>
+                    <div style={styles.detailId}><UiValue value={uiMessage("salon.s0226")} /><UiValue value={selectedBooking.id} /></div>
+                    <div style={styles.detailDate}><UiValue value={formatDateTime(selectedBooking.start_at)} /></div>
                   </div>
 
                   <div style={{ ...styles.statusBadge, color: statusColor(selectedBooking.status), borderColor: statusColor(selectedBooking.status) }}>
-                    {statusText(selectedBooking.status)}
+                    <UiValue value={statusText(selectedBooking.status)} />
                   </div>
                 </div>
 
                 <div style={styles.detailGrid}>
-                  <DetailItem label="Клиент" value={selectedBooking.client_name} />
-                  <DetailItem label="Телефон" value={selectedBooking.phone || "—"} />
-                  <DetailItem label="Мастер" value={selectedBooking.master_name} />
-                  <DetailItem label="Услуга" value={selectedBooking.service_name} />
-                  <DetailItem label="Цена" value={formatMoney(selectedBooking.price)} />
-                  <DetailItem label="Дата" value={formatDateTime(selectedBooking.start_at)} />
+                  <DetailItem label={uiMessage("salon.s0229")} value={selectedBooking.client_name} />
+                  <DetailItem label={uiMessage("salon.s0230")} value={selectedBooking.phone || "—"} />
+                  <DetailItem label={uiMessage("salon.s0094")} value={selectedBooking.master_name} />
+                  <DetailItem label={uiMessage("salon.s0231")} value={selectedBooking.service_name} />
+                  <DetailItem label={uiMessage("salon.s0232")} value={formatMoney(selectedBooking.price, selectedBooking?.currency_code || selectedBooking?.currency)} />
+                  <DetailItem label={uiMessage("salon.s0233")} value={formatDateTime(selectedBooking.start_at)} />
                 </div>
 
                 <div style={styles.actionsRow}>
                   {selectedBooking.status === "reserved" && (
                     <>
-                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "confirm")}>Подтвердить</ActionButton>
-                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "cancel")}>Отменить</ActionButton>
+                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "confirm")}><UiValue value={uiMessage("salon.s0234")} /></ActionButton>
+                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "cancel")}><UiValue value={uiMessage("salon.s0235")} /></ActionButton>
                     </>
                   )}
 
                   {selectedBooking.status === "confirmed" && (
                     <>
-                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "complete")}>Завершить</ActionButton>
-                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "cancel")}>Отменить</ActionButton>
+                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "complete")}><UiValue value={uiMessage("salon.s0236")} /></ActionButton>
+                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "cancel")}><UiValue value={uiMessage("salon.s0235")} /></ActionButton>
                     </>
                   )}
 
                   {selectedBooking.phone ? (
                     <ActionButton onClick={() => {
-                      window.location.href = `tel:${selectedBooking.phone}`
-                    }}>Позвонить</ActionButton>
+                      window.location.href = uiTemplate(["tel:",""], [selectedBooking.phone])
+                    }}><UiValue value={uiMessage("salon.s0237")} /></ActionButton>
                   ) : null}
                 </div>
               </>
@@ -476,7 +459,7 @@ function FilterButton({ active, onClick, children }){
         borderColor: active ? "#111827" : "#d1d5db"
       }}
     >
-      {children}
+      <UiValue value={children} />
     </button>
   )
 }
@@ -493,7 +476,7 @@ function ActionButton({ disabled, onClick, children }){
         cursor: disabled ? "not-allowed" : "pointer"
       }}
     >
-      {children}
+      <UiValue value={children} />
     </button>
   )
 }
@@ -501,8 +484,8 @@ function ActionButton({ disabled, onClick, children }){
 function DetailItem({ label, value }){
   return (
     <div style={styles.detailItem}>
-      <div style={styles.detailLabel}>{label}</div>
-      <div style={styles.detailValue}>{value}</div>
+      <div style={styles.detailLabel}><UiValue value={label} /></div>
+      <div style={styles.detailValue}><UiValue value={value} /></div>
     </div>
   )
 }

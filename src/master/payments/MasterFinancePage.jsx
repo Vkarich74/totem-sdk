@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiJoin, uiTemplate, uiConcat, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMaster } from "../MasterContext";
@@ -28,10 +29,9 @@ import {
   isContractActive
 } from "../../core/contracts/contractEngine";
 
-function money(value) {
-  const n = Number(value) || 0;
-  return `${new Intl.NumberFormat("ru-RU").format(n)} сом`;
-}
+function displayStatus(value) { const state = String(value || "").toLowerCase(); const keys = { active: "active", grace: "grace", blocked: "blockedAccess", pending: "pending", processing: "processing", completed: "completed", failed: "failed", cancelled: "cancelled", expired: "expired", paid: "paid" }; return keys[state] ? uiMessage("salon.display." + keys[state]) : (value || "—"); }
+
+function money(value, currency) { return uiMoney(value, currency); }
 
 function toNumber(value) {
   const numeric = Number(value);
@@ -110,15 +110,15 @@ function calculateSplitAllocatedStats(rows) {
 }
 
 const WITHDRAW_REQUEST_USER_STATUS_LABELS = Object.freeze({
-  pending_validation: "Новая",
-  requires_review: "В процессе",
-  locked: "В процессе",
-  queued_for_payout: "В процессе",
-  bank_processing: "В процессе",
-  completed: "Выполнена",
-  failed: "Ошибка выплаты",
-  canceled: "Отклонена",
-  rejected: "Отклонена"
+  pending_validation: uiMessage("salon.s0839"),
+  requires_review: uiMessage("salon.s0840"),
+  locked: uiMessage("salon.s0840"),
+  queued_for_payout: uiMessage("salon.s0840"),
+  bank_processing: uiMessage("salon.s0840"),
+  completed: uiMessage("salon.s0841"),
+  failed: uiMessage("salon.s0842"),
+  canceled: uiMessage("salon.s0843"),
+  rejected: uiMessage("salon.s0843")
 });
 
 function getWithdrawRequestUserStatusLabel(status) {
@@ -132,12 +132,12 @@ function getWithdrawRequestHistoryDetails(item) {
   const details = [];
   const adminNote = cleanText(item?.admin_note);
 
-  if (status) details.push(`raw: ${status}`);
+  if (status) details.push(uiTemplate(["raw: ",""], [status]));
   if (adminNote) {
-    details.push(`Комментарий платформы: ${adminNote}`);
+    details.push(uiMessage("salon.s0844", {p0: adminNote}));
   }
 
-  return details.join(" · ");
+  return uiJoin(details, " · ");
 }
 
 function getWithdrawRequestPayoutResultDetails(item) {
@@ -148,12 +148,12 @@ function getWithdrawRequestPayoutResultDetails(item) {
   const userMessage = cleanText(payoutResult?.user_message);
   const details = [];
 
-  if (completedAt) details.push(`Выполнено: ${formatDateTime(completedAt)}`);
-  if (failedAt) details.push(`Ошибка/отказ: ${formatDateTime(failedAt)}`);
-  if (failureReason) details.push(`Причина: ${failureReason}`);
+  if (completedAt) details.push(uiMessage("salon.s0845", {p0: formatDateTime(completedAt)}));
+  if (failedAt) details.push(uiMessage("salon.s0846", {p0: formatDateTime(failedAt)}));
+  if (failureReason) details.push(uiMessage("salon.s0847", {p0: failureReason}));
   if (userMessage) details.push(userMessage);
 
-  return details.join(" · ");
+  return uiJoin(details, " · ");
 }
 
 function parseMaybeJson(value) {
@@ -185,18 +185,18 @@ const WITHDRAW_DESTINATION_METHOD_OPTIONS = new Set([
 ]);
 
 const WITHDRAW_DESTINATION_METHOD_LABELS = Object.freeze({
-  wallet: "Кошелёк",
-  card: "Карта",
-  bank_account: "Банк",
-  manual_other: "Прочее"
+  wallet: uiMessage("salon.s0848"),
+  card: uiMessage("salon.s0478"),
+  bank_account: uiMessage("salon.s0849"),
+  manual_other: uiMessage("salon.s0850")
 });
 
 const WITHDRAW_DESTINATION_RELATION_LABELS = Object.freeze({
-  self: "Свой счёт",
-  company_account: "Счёт компании",
-  authorized_person: "Уполномоченное лицо",
-  third_party: "Третье лицо",
-  unknown: "Не указано"
+  self: uiMessage("salon.s0851"),
+  company_account: uiMessage("salon.s0852"),
+  authorized_person: uiMessage("salon.s0853"),
+  third_party: uiMessage("salon.s0854"),
+  unknown: uiMessage("salon.s0855")
 });
 
 function cleanText(value) {
@@ -211,12 +211,12 @@ function maskPhone(value) {
   if (digits.length <= 4) return text;
   const last4 = digits.slice(-4);
   if (digits.startsWith("996")) {
-    return `+996•••${last4}`;
+    return uiTemplate(["+996•••",""], [last4]);
   }
   if (text.startsWith("+")) {
-    return `+•••${last4}`;
+    return uiTemplate(["+•••",""], [last4]);
   }
-  return `•••${last4}`;
+  return uiTemplate(["•••",""], [last4]);
 }
 
 function getWithdrawRequestDestinationSummary(item, destinationsById) {
@@ -227,7 +227,7 @@ function getWithdrawRequestDestinationSummary(item, destinationsById) {
   const destination = destinationSummary || destinationByList || destinationSnapshot || null;
 
   if (!destination && !destinationId) {
-    return "Реквизиты не указаны";
+    return uiMessage("salon.s0856");
   }
 
   const method = cleanText(destination?.method);
@@ -240,20 +240,20 @@ function getWithdrawRequestDestinationSummary(item, destinationsById) {
   const cardLast4 = cleanText(destination?.card_last4);
 
   const parts = [];
-  if (method) parts.push(`Способ: ${WITHDRAW_DESTINATION_METHOD_LABELS[method] || method}`);
-  if (providerCode) parts.push(`Провайдер: ${providerCode}`);
-  if (walletProvider && walletProvider !== providerCode) parts.push(`Wallet provider: ${walletProvider}`);
-  if (relation) parts.push(`Отношение: ${WITHDRAW_DESTINATION_RELATION_LABELS[relation] || relation}`);
-  if (bankName) parts.push(`Банк: ${bankName}`);
-  if (phone) parts.push(`Телефон: ${phone}`);
-  if (accountMasked) parts.push(`Счёт: ${accountMasked}`);
-  if (cardLast4) parts.push(`Карта: •••• ${cardLast4}`);
+  if (method) parts.push(uiMessage("salon.s0857", {p0: WITHDRAW_DESTINATION_METHOD_LABELS[method] || method}));
+  if (providerCode) parts.push(uiMessage("salon.s0858", {p0: providerCode}));
+  if (walletProvider && walletProvider !== providerCode) parts.push(uiTemplate(["Wallet provider: ",""], [walletProvider]));
+  if (relation) parts.push(uiMessage("salon.s0859", {p0: WITHDRAW_DESTINATION_RELATION_LABELS[relation] || relation}));
+  if (bankName) parts.push(uiMessage("salon.s0860", {p0: bankName}));
+  if (phone) parts.push(uiMessage("salon.s0861", {p0: phone}));
+  if (accountMasked) parts.push(uiMessage("salon.s0862", {p0: accountMasked}));
+  if (cardLast4) parts.push(uiMessage("salon.s0863", {p0: cardLast4}));
 
   if (!parts.length) {
-    return destinationId > 0 ? `Реквизиты #${destinationId}` : "Реквизиты не указаны";
+    return destinationId > 0 ? uiMessage("salon.s0864", {p0: destinationId}) : uiMessage("salon.s0856");
   }
 
-  return parts.join(" · ");
+  return uiJoin(parts, " · ");
 }
 
 function buildWithdrawDestinationPreview(providers, draft) {
@@ -273,28 +273,28 @@ function buildWithdrawDestinationPreview(providers, draft) {
   const errors = [];
 
   if (!selectedProvider) {
-    errors.push("Выберите способ вывода.");
+    errors.push(uiMessage("salon.s0865"));
   } else if (!WITHDRAW_DESTINATION_METHOD_OPTIONS.has(method)) {
-    errors.push("Выбран неподдерживаемый способ вывода.");
+    errors.push(uiMessage("salon.s0866"));
   }
 
   if (destinationRelation === "unknown" && draft.destinationRelation !== "unknown") {
-    errors.push("Выберите корректное отношение к владельцу.");
+    errors.push(uiMessage("salon.s0867"));
   }
 
   if (method === "bank_account") {
-    if (!bankName) errors.push("Для bank_account укажите банк.");
-    if (!accountMasked) errors.push("Для bank_account укажите маску счёта.");
+    if (!bankName) errors.push(uiMessage("salon.s0868"));
+    if (!accountMasked) errors.push(uiMessage("salon.s0869"));
   } else if (method === "card") {
-    if (!accountMasked && !cardLast4) errors.push("Для card укажите маску счёта или последние 4 цифры карты.");
+    if (!accountMasked && !cardLast4) errors.push(uiMessage("salon.s0870"));
   } else if (method === "wallet") {
-    if (!phone) errors.push("Для wallet укажите телефон.");
+    if (!phone) errors.push(uiMessage("salon.s0871"));
     if (selectedProvider?.code !== draft.selectedProviderCode) {
-      errors.push("wallet_provider должен совпадать с кодом выбранного провайдера.");
+      errors.push(uiMessage("salon.s0872"));
     }
   } else if (method === "manual_other") {
     if (!accountHolder && !phone && !note && !accountMasked) {
-      errors.push("Для manual_other заполните хотя бы одно безопасное поле.");
+      errors.push(uiMessage("salon.s0873"));
     }
   }
 
@@ -467,33 +467,9 @@ function resolveBusinessTimeZone(source) {
   return DEFAULT_BUSINESS_TIME_ZONE;
 }
 
-function formatDateTime(iso, source) {
-  if (!iso) return "—";
+function formatDateTime(iso, source) { if (!iso) return "—"; return uiDate(iso, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-
-  return new Intl.DateTimeFormat("ru-RU", {
-    timeZone: resolveBusinessTimeZone(source),
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(d);
-}
-
-function formatSignedCurrency(value, sign, currency = "KGS") {
-  const amount = Math.abs(Number(value || 0));
-
-  if (Number.isNaN(amount)) {
-    return "—";
-  }
-
-  const prefix = sign === "-" ? "-" : sign === "+" ? "+" : "";
-  return `${prefix}${new Intl.NumberFormat("ru-RU").format(amount)} ${currency}`;
-}
+function formatSignedCurrency(value, sign, currency = "KGS") { const amount = Number(value); if (value == null || value === "" || !Number.isFinite(amount)) return String(value ?? ""); const prefix = sign === "-" ? "-" : sign === "+" ? "+" : ""; return uiConcat(prefix, uiMoney(Math.abs(amount), currency)); }
 
 function normalizeObligationStatus(value) {
   return String(value || "").trim().toLowerCase();
@@ -554,7 +530,7 @@ function getBillingSnapshot() {
 }
 
 function formatBillingState(billing, billingLoading) {
-  if (billingLoading) return "Проверка";
+  if (billingLoading) return uiMessage("master.s0625");
 
   const state = String(
     billing?.access_state ||
@@ -562,14 +538,14 @@ function formatBillingState(billing, billingLoading) {
       "active"
   ).toLowerCase();
 
-  if (state === "active") return "Активен";
-  if (state === "grace") return "Grace";
-  if (state === "blocked") return "Blocked";
+  if (state === "active") return uiMessage("salon.s0420");
+  if (state === "grace") return uiMessage("salon.display.grace");
+  if (state === "blocked") return uiMessage("salon.display.blockedAccess");
   return state || "—";
 }
 
 function formatAccessFlag(value) {
-  return value ? "Разрешено" : "Ограничено";
+  return value ? uiMessage("salon.s1068") : uiMessage("salon.s1069");
 }
 
 function sumAmounts(items) {
@@ -580,21 +556,21 @@ function sumAmounts(items) {
 function getCollectionAnchorOwnerLabel(value) {
   const status = String(value || "").trim().toLowerCase();
 
-  if (status === "master") return "У мастера";
-  if (status === "salon") return "У салона";
-  if (status === "unknown") return "Не определено";
-  if (status === "conflict") return "Конфликт";
+  if (status === "master") return uiMessage("salon.s0287");
+  if (status === "salon") return uiMessage("salon.s0288");
+  if (status === "unknown") return uiMessage("salon.s0289");
+  if (status === "conflict") return uiMessage("salon.s0290");
   return status ? status : "—";
 }
 
 function getCollectionAnchorStatusLabel(value) {
   const status = String(value || "").trim().toLowerCase();
 
-  if (status === "open") return "Открыто";
-  if (status === "closed") return "Закрыто";
-  if (status === "not_needed") return "Не требуется";
-  if (status === "unknown") return "Не определено";
-  if (status === "conflict") return "Конфликт";
+  if (status === "open") return uiMessage("salon.s0047");
+  if (status === "closed") return uiMessage("salon.s0291");
+  if (status === "not_needed") return uiMessage("salon.s0292");
+  if (status === "unknown") return uiMessage("salon.s0289");
+  if (status === "conflict") return uiMessage("salon.s0290");
   return status ? status : "—";
 }
 
@@ -636,8 +612,8 @@ function readCollectionAnchorMetric(summary, keys = []) {
   }
 
   for (const key of keys) {
-    const countKey = `${key}_count`;
-    const amountKey = `${key}_amount`;
+    const countKey = uiTemplate(["","_count"], [key]);
+    const amountKey = uiTemplate(["","_amount"], [key]);
     const hasCount = Object.prototype.hasOwnProperty.call(source, countKey);
     const hasAmount = Object.prototype.hasOwnProperty.call(source, amountKey);
     const hasRaw = Object.prototype.hasOwnProperty.call(source, key);
@@ -671,18 +647,18 @@ function formatCollectionAnchorMetric(summary, keys = []) {
   }
 
   if (metric.count === null) {
-    return money(metric.amount);
+    return money(metric.amount, metric?.currency_code || metric?.currency);
   }
 
   if (metric.amount === null) {
     return String(metric.count);
   }
 
-  return `${Number(metric.count)} / ${money(metric.amount)}`;
+  return uiTemplate([""," / ",""], [Number(metric.count), money(metric.amount, metric?.currency_code || metric?.currency)]);
 }
 
 function getCollectionAnchorRowKey(row, index) {
-  return String(row?.id || row?.payment_id || row?.source_id || `${index}`);
+  return String(row?.id || row?.payment_id || row?.source_id || uiTemplate(["",""], [index]));
 }
 
 function getCollectionAnchorSalonLabel(row) {
@@ -699,9 +675,9 @@ function getCollectionAnchorSalonLabel(row) {
 function StatCard({ label, value, hint }) {
   return (
     <div style={styles.card}>
-      <div style={styles.cardLabel}>{label}</div>
-      <div style={styles.cardValue}>{value}</div>
-      {hint ? <div style={styles.cardHint}>{hint}</div> : null}
+      <div style={styles.cardLabel}><UiValue value={label} /></div>
+      <div style={styles.cardValue}><UiValue value={value} /></div>
+      {hint ? <div style={styles.cardHint}><UiValue value={hint} /></div> : null}
     </div>
   );
 }
@@ -709,8 +685,8 @@ function StatCard({ label, value, hint }) {
 function EmptyState({ title, text }) {
   return (
     <div style={styles.emptyState}>
-      <div style={styles.emptyStateTitle}>{title}</div>
-      <div style={styles.emptyStateText}>{text}</div>
+      <div style={styles.emptyStateTitle}><UiValue value={title} /></div>
+      <div style={styles.emptyStateText}><UiValue value={text} /></div>
     </div>
   );
 }
@@ -719,12 +695,12 @@ function PreviewRow({ title, meta, status, value }) {
   return (
     <div style={styles.previewRow}>
       <div style={{ minWidth: 0, flex: "1 1 240px" }}>
-        <div style={styles.previewTitle}>{title}</div>
-        {meta ? <div style={styles.previewMeta}>{meta}</div> : null}
+        <div style={styles.previewTitle}><UiValue value={title} /></div>
+        {meta ? <div style={styles.previewMeta}><UiValue value={meta} /></div> : null}
       </div>
       <div style={styles.previewAside}>
-        {typeof value !== "undefined" ? <div style={styles.previewValue}>{value}</div> : null}
-        {status ? <div style={styles.previewStatus}>{status}</div> : null}
+        {typeof value !== "undefined" ? <div style={styles.previewValue}><UiValue value={value} /></div> : null}
+        {status ? <div style={styles.previewStatus}><UiValue value={status} /></div> : null}
       </div>
     </div>
   );
@@ -735,11 +711,11 @@ function Panel({ title, subtitle, children }) {
     <section style={styles.panel}>
       <div style={styles.panelHeader}>
         <div>
-          <div style={styles.panelTitle}>{title}</div>
-          {subtitle ? <div style={styles.panelSubtitle}>{subtitle}</div> : null}
+          <div style={styles.panelTitle}><UiValue value={title} /></div>
+          {subtitle ? <div style={styles.panelSubtitle}><UiValue value={subtitle} /></div> : null}
         </div>
       </div>
-      {children}
+      <UiValue value={children} />
     </section>
   );
 }
@@ -747,19 +723,19 @@ function Panel({ title, subtitle, children }) {
 function InfoRow({ label, value }) {
   return (
     <div style={styles.infoRow}>
-      <div style={styles.infoLabel}>{label}</div>
-      <div style={styles.infoValue}>{value}</div>
+      <div style={styles.infoLabel}><UiValue value={label} /></div>
+      <div style={styles.infoValue}><UiValue value={value} /></div>
     </div>
   );
 }
 
 function FinanceNav({ masterSlug, active }) {
   const items = [
-    { key: "finance", label: "Финансы", note: "overview", to: `/master/${masterSlug}/finance` },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: `/master/${masterSlug}/money` },
-    { key: "settlements", label: "Сеты", note: "расчётные периоды", to: `/master/${masterSlug}/settlements` },
-    { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: `/master/${masterSlug}/payouts` },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: `/master/${masterSlug}/transactions` }
+    { key: "finance", label: uiMessage("salon.s0017"), note: uiMessage("salon.s1070"), to: uiTemplate(["/master/","/finance"], [masterSlug]) },
+    { key: "money", label: uiMessage("salon.s0412"), note: uiMessage("salon.s0902"), to: uiTemplate(["/master/","/money"], [masterSlug]) },
+    { key: "settlements", label: uiMessage("salon.s0029"), note: uiMessage("salon.s1071"), to: uiTemplate(["/master/","/settlements"], [masterSlug]) },
+    { key: "payouts", label: uiMessage("salon.s0030"), note: uiMessage("salon.s1072"), to: uiTemplate(["/master/","/payouts"], [masterSlug]) },
+    { key: "transactions", label: uiMessage("salon.s0031"), note: uiMessage("salon.s1073"), to: uiTemplate(["/master/","/transactions"], [masterSlug]) }
   ];
 
   return (
@@ -776,8 +752,8 @@ function FinanceNav({ masterSlug, active }) {
               background: isActive ? "#eff6ff" : "#ffffff"
             }}
           >
-            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}>{item.label}</div>
-            <div style={styles.navNote}>{item.note}</div>
+            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}><UiValue value={item.label} /></div>
+            <div style={styles.navNote}><UiValue value={item.note} /></div>
           </Link>
         );
       })}
@@ -786,6 +762,7 @@ function FinanceNav({ masterSlug, active }) {
 }
 
 export default function MasterFinancePage() {
+  const { renderUi } = useUiMessages();
   const { master, slug: contextSlug } = useMaster() || {};
   const masterSlug = master?.slug || contextSlug || null;
 
@@ -851,7 +828,7 @@ export default function MasterFinancePage() {
             setPaymentProjectionRows([]);
             setMoneyCoreSplitAllocations([]);
             setMoneyCoreSplitAllocationsError("");
-            setError("Не найден master slug");
+            setError(uiError(uiMessage("master.s0201")));
           }
           return;
         }
@@ -940,7 +917,7 @@ export default function MasterFinancePage() {
           const splitResult = await getMasterSplitAllocations(masterSlug, { owner_id: moneyCoreOwnerId });
           if (!cancelled) {
             setMoneyCoreSplitAllocations(splitResult?.ok && Array.isArray(splitResult.allocations) ? splitResult.allocations : []);
-            setMoneyCoreSplitAllocationsError(splitResult?.ok ? "" : "Распределено временно недоступно");
+            setMoneyCoreSplitAllocationsError(uiError(splitResult?.ok ? "" : uiMessage("salon.s0882")));
           }
         } else if (!cancelled) {
           setMoneyCoreSplitAllocations([]);
@@ -954,7 +931,7 @@ export default function MasterFinancePage() {
           (settlementsResult.status === "rejected" || !settlementsResult.value?.ok) &&
           (payoutsResult.status === "rejected" || !payoutsResult.value?.ok)
         ) {
-          setError("Не удалось загрузить finance overview");
+          setError(uiError(uiMessage("master.s0642")));
         }
       } catch (e) {
         console.error("MASTER_FINANCE_OVERVIEW_LOAD_FAILED", e);
@@ -971,7 +948,7 @@ export default function MasterFinancePage() {
           setMoneyCoreFlags(null);
           setMoneyCoreSplitAllocations([]);
           setMoneyCoreSplitAllocationsError("");
-          setError("Не удалось загрузить finance overview");
+          setError(uiError(uiMessage("master.s0642")));
         }
       } finally {
         if (!cancelled) {
@@ -1013,7 +990,7 @@ export default function MasterFinancePage() {
         }
         else {
           setLostProfit(null);
-          setLostProfitError("Недополученная прибыль временно недоступна");
+          setLostProfitError(uiError(uiMessage("salon.s0881")));
         }
       }
       catch (e) {
@@ -1021,7 +998,7 @@ export default function MasterFinancePage() {
 
         if (!cancelled) {
           setLostProfit(null);
-          setLostProfitError("Недополученная прибыль временно недоступна");
+          setLostProfitError(uiError(uiMessage("salon.s0881")));
         }
       }
       finally {
@@ -1074,7 +1051,7 @@ export default function MasterFinancePage() {
         }
         else {
           setCollectionAnchors(null);
-          setCollectionAnchorsError("Не удалось загрузить оплаты за мои услуги.");
+          setCollectionAnchorsError(uiError(uiMessage("master.s0644")));
         }
       }
       catch (e) {
@@ -1082,7 +1059,7 @@ export default function MasterFinancePage() {
 
         if (!cancelled) {
           setCollectionAnchors(null);
-          setCollectionAnchorsError("Не удалось загрузить оплаты за мои услуги.");
+          setCollectionAnchorsError(uiError(uiMessage("master.s0644")));
         }
       }
       finally {
@@ -1128,7 +1105,7 @@ export default function MasterFinancePage() {
         else {
           setSalaryObligations([]);
           setSalaryObligationsSummary(null);
-          setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.");
+          setSalaryObligationsError(uiError(uiMessage("salon.s0036")));
         }
       }
       catch (e) {
@@ -1137,7 +1114,7 @@ export default function MasterFinancePage() {
         if (!cancelled) {
           setSalaryObligations([]);
           setSalaryObligationsSummary(null);
-          setSalaryObligationsError("Не удалось загрузить обязательства по зарплате.");
+          setSalaryObligationsError(uiError(uiMessage("salon.s0036")));
         }
       }
       finally {
@@ -1240,7 +1217,7 @@ export default function MasterFinancePage() {
         else {
           setRentObligations([]);
           setRentObligationsSummary(null);
-          setRentObligationsError("Не удалось загрузить обязательства по аренде.");
+          setRentObligationsError(uiError(uiMessage("salon.s0035")));
         }
       }
       catch (e) {
@@ -1249,7 +1226,7 @@ export default function MasterFinancePage() {
         if (!cancelled) {
           setRentObligations([]);
           setRentObligationsSummary(null);
-          setRentObligationsError("Не удалось загрузить обязательства по аренде.");
+          setRentObligationsError(uiError(uiMessage("salon.s0035")));
         }
       }
       finally {
@@ -1300,23 +1277,23 @@ export default function MasterFinancePage() {
       moneyCoreFlagsData.WITHDRAW_DESTINATIONS_WRITE_ENABLED === true
   );
   const moneyCoreWithdrawPanelNote = moneyCoreOpen
-    ? "Текущий режим Money Core"
-    : "Текущий режим Money Core без возможности записи";
+    ? uiMessage("salon.s0883")
+    : uiMessage("salon.s0884");
   const moneyCoreWithdrawStateText = moneyCoreOpen
-    ? "Money Core включён. Вывод работает в рабочем режиме."
-    : "Заявки на вывод через Money Core пока выключены. Деньги нельзя вывести напрямую до включения write-флагов.";
+    ? uiMessage("salon.s0885")
+    : uiMessage("salon.s0886");
   const moneyCoreWithdrawSettingsText = moneyCoreOpen
-    ? "Money Core включён. Используется текущая конфигурация вывода."
-    : "Пока используется дефолтная только просмотр конфигурация.";
+    ? uiMessage("salon.s0887")
+    : uiMessage("salon.s0888");
   const moneyCoreWithdrawRequestsText = moneyCoreOpen
-    ? "История выводов появится после первых операций Money Core."
-    : "История выводов появится после включения write-флагов.";
+    ? uiMessage("salon.s0889")
+    : uiMessage("salon.s0890");
   const moneyCoreCreateRequestText = moneyCoreOpen
-    ? "Создание заявки доступно в рабочем режиме Money Core."
-    : "Создание заявки будет доступно после controlled write-smoke и включения Money Core write-флагов.";
+    ? uiMessage("salon.s0891")
+    : uiMessage("salon.s0892");
   const moneyCoreAddRequisitesText = moneyCoreDestinationWriteOpen
-    ? "Сохранение реквизитов доступно. Данные вводятся вручную и сохраняются только по нажатию кнопки."
-    : "Сохранение реквизитов закрыто флагом WITHDRAW_DESTINATIONS_WRITE_ENABLED.";
+    ? uiMessage("salon.s0893")
+    : uiMessage("salon.s0894");
   const selectedWithdrawProvider = useMemo(
     () => buildWithdrawDestinationPreview(moneyCoreDestinationProviders, {
       selectedProviderCode,
@@ -1350,7 +1327,7 @@ export default function MasterFinancePage() {
     if (!moneyCoreDestinationWriteOpen) {
       setDestinationSaveStatus({
         tone: "error",
-        text: "Сохранение реквизитов сейчас закрыто.",
+        text: uiMessage("salon.s0895"),
       });
       return;
     }
@@ -1358,7 +1335,7 @@ export default function MasterFinancePage() {
     if (!selectedWithdrawProvider.isReady) {
       setDestinationSaveStatus({
         tone: "error",
-        text: selectedWithdrawProvider.errors[0] || "Проверьте поля формы.",
+        text: uiError(selectedWithdrawProvider.errors[0], uiMessage("salon.s0896")),
       });
       return;
     }
@@ -1368,7 +1345,7 @@ export default function MasterFinancePage() {
     if (!payload) {
       setDestinationSaveStatus({
         tone: "error",
-        text: "Не удалось собрать payload для сохранения.",
+        text: uiMessage("salon.s0897"),
       });
       return;
     }
@@ -1400,7 +1377,7 @@ export default function MasterFinancePage() {
         setNote("");
         setDestinationSaveStatus({
           tone: "success",
-          text: "Реквизиты сохранены.",
+          text: uiMessage("salon.s0898"),
         });
         return;
       }
@@ -1412,13 +1389,13 @@ export default function MasterFinancePage() {
       setDestinationSaveStatus({
         tone: "error",
         text: blockedByFlag
-          ? "Сохранение реквизитов сейчас закрыто."
-          : result?.detail?.message || result?.message || result?.error || "Не удалось сохранить реквизиты.",
+          ? uiMessage("salon.s0895")
+          : uiError(result?.detail?.message || result?.message || result?.error, uiMessage("salon.s0899")),
       });
     } catch (error) {
       setDestinationSaveStatus({
         tone: "error",
-        text: error?.message || "Не удалось сохранить реквизиты.",
+        text: uiError(error?.message, uiMessage("salon.s0899")),
       });
     } finally {
       setDestinationSaving(false);
@@ -1462,19 +1439,19 @@ export default function MasterFinancePage() {
   const formatObligationStatus = (value) => {
     const status = normalizeObligationStatus(value);
 
-    if (status === "overdue") return "Просрочено";
-    if (status === "upcoming") return "Предстоящий";
-    if (status === "open") return "Открыто";
-    if (status === "paid") return "Оплачено";
-    if (status === "cancelled") return "Отменено";
-    if (status === "voided") return "Аннулировано";
+    if (status === "overdue") return uiMessage("salon.s0045");
+    if (status === "upcoming") return uiMessage("salon.s0046");
+    if (status === "open") return uiMessage("salon.s0047");
+    if (status === "paid") return uiMessage("salon.s0048");
+    if (status === "cancelled") return uiMessage("salon.s0049");
+    if (status === "voided") return uiMessage("salon.s0050");
     return value || "—";
   };
 
   const formatCurrencyAmount = (value, currencyCode = "KGS") => {
     const amount = Number(value || 0);
     if (Number.isNaN(amount)) return "—";
-    return `${new Intl.NumberFormat("ru-RU").format(amount)} ${currencyCode}`;
+    return uiTemplate([""," ",""], [new Intl.NumberFormat("ru-RU").format(amount), currencyCode]);
   };
 
   return (
@@ -1482,71 +1459,69 @@ export default function MasterFinancePage() {
       <div style={styles.container}>
         <header style={styles.header}>
           <div>
-            <div style={styles.eyebrow}>MASTER CABINET</div>
-            <h1 style={styles.title}>Финансы</h1>
-            <p style={styles.subtitle}>
-              Обзор финансового состояния мастера. Детальные движения вынесены в отдельные страницы.
-            </p>
+            <div style={styles.eyebrow}><UiValue value={uiMessage("master.s0669")} /></div>
+            <h1 style={styles.title}><UiValue value={uiMessage("salon.s0017")} /></h1>
+            <p style={styles.subtitle}><UiValue value={uiMessage("master.s0670")} /></p>
           </div>
         </header>
 
         {masterSlug ? <FinanceNav masterSlug={masterSlug} active="finance" /> : null}
 
-        {loading ? <div style={styles.loadingCard}>Загрузка финансов...</div> : null}
+        {loading ? <div style={styles.loadingCard}><UiValue value={uiMessage("master.s0671")} /></div> : null}
 
         {!loading && error ? (
           <div style={styles.errorBanner}>
-            <div style={styles.errorTitle}>Ошибка загрузки</div>
-            <div style={styles.errorText}>{error}</div>
+            <div style={styles.errorTitle}><UiValue value={uiMessage("salon.s1036")} /></div>
+            <div style={styles.errorText}><UiValue value={uiError(error)} /></div>
           </div>
         ) : null}
 
         {!loading && !error ? (
           <>
             <section style={styles.grid}>
-              <StatCard label="Баланс" value={money(walletBalance)} hint="Текущий wallet state" />
-              <StatCard label="Статус billing" value={billingStateLabel} hint={`Запись: ${formatAccessFlag(billingSnapshot.canWrite)} · Выплаты: ${formatAccessFlag(billingSnapshot.canWithdraw)}`} />
-              <StatCard label="Сеты" value={String(settlements.length)} hint={money(settlementTotal)} />
-              <StatCard label="Выплаты" value={String(payouts.length)} hint={money(payoutTotal)} />
-              <StatCard label="История оплат" value={money(paymentProjectionSummary?.history_amount)} hint={`Строк: ${Number(paymentProjectionSummary?.history_count || 0)}`} />
-              <StatCard label="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} hint={`Открыто: ${Number(paymentProjectionSummary?.open_balance_count || 0)}`} />
+              <StatCard label={uiMessage("salon.s1082")} value={money(walletBalance)} hint={uiMessage("master.s0674")} />
+              <StatCard label={uiMessage("master.s0675")} value={billingStateLabel} hint={uiMessage("master.s0676", {p0: formatAccessFlag(billingSnapshot.canWrite), p1: formatAccessFlag(billingSnapshot.canWithdraw)})} />
+              <StatCard label={uiMessage("salon.s0029")} value={String(settlements.length)} hint={money(settlementTotal)} />
+              <StatCard label={uiMessage("salon.s0030")} value={String(payouts.length)} hint={money(payoutTotal)} />
+              <StatCard label={uiMessage("salon.s0920")} value={money(paymentProjectionSummary?.history_amount)} hint={uiMessage("master.s0678", {p0: Number(paymentProjectionSummary?.history_count || 0)})} />
+              <StatCard label={uiMessage("salon.s0922")} value={money(paymentProjectionSummary?.open_balance_amount)} hint={uiMessage("master.s0680", {p0: Number(paymentProjectionSummary?.open_balance_count || 0)})} />
             </section>
 
             <Panel
-              title="Недополученная прибыль"
-              subtitle="Только отменённые записи этого мастера. Не влияет на выплаты."
+              title={uiMessage("salon.s0946")}
+              subtitle={uiMessage("master.s0682")}
             >
               {lostProfitError ? (
                 <div style={{ marginBottom: 12, fontSize: 13, color: "#b42318", background: "#fff5f5", border: "1px solid #f5c2c7", borderRadius: 12, padding: 12 }}>
-                  {lostProfitError}
+                  <UiValue value={lostProfitError} />
                 </div>
               ) : null}
 
               {lostProfitLoading ? (
                 <EmptyState
-                  title="Недополученная прибыль загружается"
-                  text="Считаем отменённые записи и суммы по этому мастеру."
+                  title={uiMessage("salon.s0948")}
+                  text={uiMessage("master.s0684")}
                 />
               ) : lostProfitSummary ? (
                 <div style={{ display: "grid", gap: 16 }}>
                   <section style={styles.grid}>
-                    <StatCard label="Сумма" value={money(lostProfitSummary.lost_profit_amount)} hint="Недополученная прибыль" />
-                    <StatCard label="Отменённые записи" value={String(Number(lostProfitSummary.cancelled_count || 0))} hint="Записи в выборке" />
+                    <StatCard label={uiMessage("salon.s0147")} value={money(lostProfitSummary.lost_profit_amount, lostProfitSummary?.currency_code || lostProfitSummary?.currency)} hint={uiMessage("salon.s0946")} />
+                    <StatCard label={uiMessage("salon.s0950")} value={String(Number(lostProfitSummary.cancelled_count || 0))} hint={uiMessage("salon.s0951")} />
                     {Number(lostProfitSummary.missing_price_count || 0) > 0 ? (
-                      <StatCard label="Без цены" value={String(Number(lostProfitSummary.missing_price_count || 0))} hint="Записи без price_snapshot" />
+                      <StatCard label={uiMessage("salon.s0952")} value={String(Number(lostProfitSummary.missing_price_count || 0))} hint={uiMessage("salon.s0953")} />
                     ) : null}
                   </section>
 
                   {lostProfitMonthly.length ? (
                     <div style={{ display: "grid", gap: 8 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>История по месяцам</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0956")} /></div>
                       <div style={{ display: "grid", gap: 8 }}>
                         {lostProfitMonthly.map((item) => (
                           <PreviewRow
                             key={item.month}
                             title={item.month || "—"}
-                            meta={`${Number(item.cancelled_count || 0)} отменённых записей`}
-                            value={money(item.lost_profit_amount)}
+                            meta={uiMessage("salon.s0957", {p0: Number(item.cancelled_count || 0)})}
+                            value={money(item.lost_profit_amount, item?.currency_code || item?.currency)}
                           />
                         ))}
                       </div>
@@ -1555,36 +1530,36 @@ export default function MasterFinancePage() {
                 </div>
               ) : (
                 <EmptyState
-                  title="Недополученная прибыль пока не найдена"
-                  text="Для выбранного периода нет отменённых записей."
+                  title={uiMessage("salon.s0958")}
+                  text={uiMessage("salon.s0959")}
                 />
               )}
             </Panel>
 
             <Panel
-              title="Оплаты за мои услуги"
-              subtitle="Только просмотр. Деньги по моим услугам без действий."
+              title={uiMessage("master.s0694")}
+              subtitle={uiMessage("master.s0695")}
             >
               {collectionAnchorsError ? (
                 <div style={{ marginBottom: 12, fontSize: 13, color: "#b42318", background: "#fff5f5", border: "1px solid #f5c2c7", borderRadius: 12, padding: 12 }}>
-                  {collectionAnchorsError}
+                  <UiValue value={collectionAnchorsError} />
                 </div>
               ) : null}
 
               {collectionAnchorsLoading ? (
                 <EmptyState
-                  title="Оплаты за мои услуги загружаются"
-                  text="Считаем деньги по моим услугам и распределение по статусам."
+                  title={uiMessage("master.s0696")}
+                  text={uiMessage("master.s0697")}
                 />
               ) : collectionAnchors?.ok && collectionAnchorRows.length ? (
                 <div style={{ display: "grid", gap: 16 }}>
                   <section style={styles.grid}>
-                    <StatCard label="Сумма" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["total_paid_for_my_services", "collected_by_master", "paid_for_my_services"])} hint="Деньги по моим услугам" />
-                    <StatCard label="У мастера" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["collected_by_master"])} hint="Уже закреплено за мной" />
-                    <StatCard label="У салона" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["open_at_salon", "open_to_transfer"])} hint="Пока у салона" />
-                    <StatCard label="Закрыто" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["closed_by_salon", "closed_transfers"])} hint="Передача завершена" />
-                    <StatCard label="Не определено" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["unknown"])} hint="Требует проверки" />
-                    <StatCard label="Конфликт" value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["conflict"])} hint="Нужна сверка" />
+                    <StatCard label={uiMessage("salon.s0147")} value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["total_paid_for_my_services", "collected_by_master", "paid_for_my_services"])} hint={uiMessage("master.s0698")} />
+                    <StatCard label={uiMessage("salon.s0287")} value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["collected_by_master"])} hint={uiMessage("master.s0699")} />
+                    <StatCard label={uiMessage("salon.s0288")} value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["open_at_salon", "open_to_transfer"])} hint={uiMessage("master.s0700")} />
+                    <StatCard label={uiMessage("salon.s0291")} value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["closed_by_salon", "closed_transfers"])} hint={uiMessage("salon.s0376")} />
+                    <StatCard label={uiMessage("salon.s0289")} value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["unknown"])} hint={uiMessage("salon.s0976")} />
+                    <StatCard label={uiMessage("salon.s0290")} value={formatCollectionAnchorMetric(collectionAnchorsSummary, ["conflict"])} hint={uiMessage("master.s0703")} />
                   </section>
 
                   <div style={{ display: "grid", gap: 8 }}>
@@ -1605,10 +1580,10 @@ export default function MasterFinancePage() {
                       return (
                         <PreviewRow
                           key={rowKey}
-                          title={`Оплата #${row?.payment_id || "—"}`}
-                          meta={`Запись #${row?.booking_id || "—"} · Салон: ${salonLabel} · Мастер: ${masterLabel} · Источник: ${String(row?.source_type || row?.source || "—").trim() || "—"}`}
-                          value={money(amount)}
-                          status={`${getCollectionAnchorOwnerLabel(row?.collector_owner_type)} · ${getCollectionAnchorStatusLabel(row?.anchor_status)}`}
+                          title={uiMessage("master.s0704", {p0: row?.payment_id || "—"})}
+                          meta={uiMessage("master.s0705", {p0: row?.booking_id || "—", p1: salonLabel, p2: masterLabel, p3: String(row?.source_type || row?.source || "—").trim() || "—"})}
+                          value={money(amount, row?.currency_code || row?.currency)}
+                          status={uiTemplate([""," · ",""], [getCollectionAnchorOwnerLabel(row?.collector_owner_type), getCollectionAnchorStatusLabel(row?.anchor_status)])}
                         />
                       );
                     })}
@@ -1616,122 +1591,120 @@ export default function MasterFinancePage() {
                 </div>
               ) : (
                 <EmptyState
-                  title="Оплаты за мои услуги пока не найдены"
-                  text="Для выбранного периода нет данных."
+                  title={uiMessage("master.s0706")}
+                  text={uiMessage("master.s0707")}
                 />
               )}
             </Panel>
 
             <Panel
-              title="Money Core: баланс и вывод"
-              subtitle={moneyCoreOpen ? "Money Core включён" : "Новая модель вывода средств. Сейчас доступен только просмотр."}
+              title={uiMessage("salon.s0960")}
+              subtitle={moneyCoreOpen ? uiMessage("salon.s0961") : uiMessage("salon.s0962")}
             >
               <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: moneyCoreOpen ? "#ecfdf3" : "#fff7ed", border: moneyCoreOpen ? "1px solid #abefc6" : "1px solid #fed7aa", color: moneyCoreOpen ? "#065f46" : "#92400e" }}>
-                {moneyCoreWithdrawStateText}
+                <UiValue value={moneyCoreWithdrawStateText} />
               </div>
 
               {moneyCoreSummary ? (
                 <section style={styles.grid}>
-                  <StatCard label="Резерв у провайдера" value={money(moneyCoreZones.provider_hold)} hint="Резерв у провайдера" />
-                  <StatCard label="Ожидает расчёта" value={money(moneyCoreZones.pending_settlement)} hint="Ожидает расчёта" />
-                  <StatCard label="available" value={money(moneyCoreZones.available)} hint="Доступно к выводу" />
-                  <StatCard label="locked" value={money(moneyCoreZones.locked)} hint="Заблокировано" />
-                  <StatCard label="paid_out" value={money(moneyCoreZones.paid_out)} hint="Уже выплачено" />
-                  <StatCard label="Возвраты" value={money(moneyCoreZones.refunded)} hint="Возвраты" />
-                  <StatCard label="Отменённые операции" value={money(moneyCoreZones.reversed)} hint="Отмены" />
-                  <StatCard label="Требует проверки" value={money(moneyCoreZones.requires_review)} hint="Требует проверки" />
-                  <StatCard label="Комиссия сервиса" value={money(moneyCoreZones.commission)} hint="Комиссия" />
-                  <StatCard label="Резерв комиссии" value={money(moneyCoreZones.fee_reserved)} hint="Резерв комиссии" />
+                  <StatCard label={uiMessage("salon.s0965")} value={money(moneyCoreZones.provider_hold)} hint={uiMessage("salon.s0965")} />
+                  <StatCard label={uiMessage("salon.s0966")} value={money(moneyCoreZones.pending_settlement)} hint={uiMessage("salon.s0966")} />
+                  <StatCard label={uiMessage("salon.s0967")} value={money(moneyCoreZones.available)} hint={uiMessage("salon.s0968")} />
+                  <StatCard label={uiMessage("salon.s0969")} value={money(moneyCoreZones.locked)} hint={uiMessage("master.s0716")} />
+                  <StatCard label={uiMessage("salon.s0971")} value={money(moneyCoreZones.paid_out)} hint={uiMessage("salon.s0972")} />
+                  <StatCard label={uiMessage("salon.s0973")} value={money(moneyCoreZones.refunded)} hint={uiMessage("salon.s0973")} />
+                  <StatCard label={uiMessage("salon.s0974")} value={money(moneyCoreZones.reversed)} hint={uiMessage("salon.s0975")} />
+                  <StatCard label={uiMessage("salon.s0976")} value={money(moneyCoreZones.requires_review)} hint={uiMessage("salon.s0976")} />
+                  <StatCard label={uiMessage("salon.s0977")} value={money(moneyCoreZones.commission)} hint={uiMessage("salon.s0978")} />
+                  <StatCard label={uiMessage("salon.s0979")} value={money(moneyCoreZones.fee_reserved)} hint={uiMessage("salon.s0979")} />
                 </section>
               ) : (
                 <EmptyState
-                  title="Money Core баланс пока не сформирован"
-                  text="Доступный вывод появится после подтверждённого settlement."
+                  title={uiMessage("salon.s0980")}
+                  text={uiMessage("salon.s0981")}
                 />
               )}
 
               <Panel
-                title="Финансовая статистика"
-                subtitle="Projection rows, реквизиты, заявки и Owner QR без новой таблицы платежей."
+                title={uiMessage("salon.s0924")}
+                subtitle={uiMessage("master.s0728")}
               >
                 <section style={styles.grid}>
-                  <StatCard label="Подтверждённая выручка" value={money(financeStats.confirmedGrossAmount)} hint="Только confirmed записи" />
-                  <StatCard label="Доля салона" value={money(financeStats.salonShare)} hint="Projection share салона" />
-                  <StatCard label="Доля мастера" value={money(financeStats.masterShare)} hint="Projection share мастера" />
-                  <StatCard label="Распределено" value={money(splitAllocatedStats.splitAllocatedAmount)} hint="Доли по подтверждённым provider settlement" />
-                  <StatCard label="Open balance" value={money(financeStats.openBalanceAmount)} hint="В Money Core ledger пока не проведено" />
-                  <StatCard label="Collector missing" value={`${financeStats.collectorMissingCount} платёж`} hint="confirmed rows без collector" />
-                  <StatCard label="Реквизиты / заявки" value={`${financeStats.destinationsCount} / ${financeStats.withdrawRequestsCount}`} hint="Withdraw surface" />
-                  <StatCard label="Owner QR" value={String(financeStats.ownerQrCount)} hint="Привязанные QR-реквизиты" />
+                  <StatCard label={uiMessage("salon.s0926")} value={money(financeStats.confirmedGrossAmount)} hint={uiMessage("salon.s0927")} />
+                  <StatCard label={uiMessage("salon.s0928")} value={money(financeStats.salonShare)} hint={uiMessage("salon.s0929")} />
+                  <StatCard label={uiMessage("salon.s0930")} value={money(financeStats.masterShare)} hint={uiMessage("salon.s0931")} />
+                  <StatCard label={uiMessage("salon.s0932")} value={money(splitAllocatedStats.splitAllocatedAmount)} hint={uiMessage("salon.s0933")} />
+                  <StatCard label={uiMessage("salon.s0934")} value={money(financeStats.openBalanceAmount)} hint={uiMessage("salon.s0935")} />
+                  <StatCard label={uiMessage("salon.s0936")} value={uiMessage("salon.s0937", {p0: financeStats.collectorMissingCount})} hint={uiMessage("salon.s0938")} />
+                  <StatCard label={uiMessage("salon.s0939")} value={uiTemplate([""," / ",""], [financeStats.destinationsCount, financeStats.withdrawRequestsCount])} hint={uiMessage("salon.s0940")} />
+                  <StatCard label={uiMessage("salon.s0941")} value={String(financeStats.ownerQrCount)} hint={uiMessage("salon.s0942")} />
                 </section>
 
                 <div style={{ display: "grid", gap: 8, marginTop: 14, fontSize: 13, lineHeight: 1.5, color: "#475569" }}>
                   {financeStats.confirmedGrossAmount > 0 && financeStats.openBalanceAmount === 0 ? (
-                    <div>
-                      Оплата рассчитана в projection, но не включена в open balance: collector не определён или движение ещё не проведено в Money Core ledger.
-                    </div>
+                    <div><UiValue value={uiMessage("salon.s0943")} /></div>
                   ) : null}
                   {moneyCoreSplitAllocationsError ? (
-                    <div>{moneyCoreSplitAllocationsError}</div>
+                    <div><UiValue value={moneyCoreSplitAllocationsError} /></div>
                   ) : null}
                   {financeStats.destinationsCount === 0 ? (
-                    <div>Реквизиты для вывода ещё не добавлены.</div>
+                    <div><UiValue value={uiMessage("salon.s0944")} /></div>
                   ) : null}
                   {financeStats.withdrawRequestsCount === 0 ? (
-                    <div>Заявок на вывод пока нет.</div>
+                    <div><UiValue value={uiMessage("salon.s0945")} /></div>
                   ) : null}
                 </div>
               </Panel>
 
               {moneyCoreOwnerType && moneyCoreOwnerId ? (
                 <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
-                  <Panel title="Способы вывода" subtitle="Доступные провайдеры вывода для Money Core">
+                  <Panel title={uiMessage("salon.s0982")} subtitle={uiMessage("salon.s0983")}>
                     {moneyCoreDestinationProviders.length ? (
                       <div style={{ display: "grid", gap: 8 }}>
                         {moneyCoreDestinationProviders.map((item) => (
                           <PreviewRow
                             key={item.code}
                             title={item.name || item.code}
-                            meta={`${item.code} · ${item.method || "—"}`}
-                            status={item.enabled ? "Доступен" : "Отключён"}
+                            meta={uiTemplate([""," · ",""], [item.code, item.method || "—"])}
+                            status={item.enabled ? uiMessage("salon.s0984") : uiMessage("salon.s0421")}
                           />
                         ))}
                       </div>
                     ) : (
                       <EmptyState
-                        title="Провайдеры не настроены"
-                        text="Список способов вывода пока пуст."
+                        title={uiMessage("salon.s0985")}
+                        text={uiMessage("salon.s0986")}
                       />
                     )}
                   </Panel>
 
-                  <Panel title="Мои реквизиты" subtitle="Сохранённые реквизиты для вывода средств">
+                  <Panel title={uiMessage("salon.s0987")} subtitle={uiMessage("salon.s0988")}>
                     {moneyCoreWithdrawDestinations.length ? (
                       <div style={{ display: "grid", gap: 8 }}>
                         {moneyCoreWithdrawDestinations.map((item) => (
                           <PreviewRow
                             key={item.id}
                             title={item.method || "—"}
-                            meta={`${item.status || "—"} · ${item.destination_relation || "—"}`}
+                            meta={uiTemplate([""," · ",""], [item.status || "—", item.destination_relation || "—"])}
                             value={item.phone || item.bank_name || item.account_masked || item.card_last4 || "—"}
                           />
                         ))}
                       </div>
                     ) : (
                       <EmptyState
-                        title="Реквизиты ещё не добавлены"
-                        text="Для этого владельца пока нет сохранённых реквизитов."
+                        title={uiMessage("salon.s0989")}
+                        text={uiMessage("salon.s0990")}
                       />
                     )}
 
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb", display: "grid", gap: 12 }}>
                       <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                        {moneyCoreAddRequisitesText}
+                        <UiValue value={moneyCoreAddRequisitesText} />
                       </div>
 
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Способ вывода</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0991")} /></span>
                           <select
                             disabled={!moneyCoreDestinationWriteOpen}
                             value={selectedProviderCode}
@@ -1747,22 +1720,22 @@ export default function MasterFinancePage() {
                               cursor: moneyCoreDestinationWriteOpen ? "pointer" : "not-allowed"
                             }}
                           >
-                            <option value="">Выберите способ вывода</option>
+                            <option value=""><UiValue value={uiMessage("salon.s0992")} /></option>
                             {moneyCoreDestinationProviders.map((item) => (
                               <option key={item.code} value={item.code}>
-                                {item.name || item.code} · {item.method || "—"}
+                                <UiValue value={item.name || item.code} /> · <UiValue value={item.method || "—"} />
                               </option>
                             ))}
                           </select>
                         </label>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Получатель</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0993")} /></span>
                           <input
                             disabled={!moneyCoreDestinationWriteOpen}
                             value={accountHolder}
                             onChange={(event) => setAccountHolder(event.target.value)}
-                            placeholder="Имя получателя"
+                            placeholder={renderUi(uiMessage("salon.s0994"))}
                             style={{
                               width: "100%",
                               border: "1px solid #d1d5db",
@@ -1777,7 +1750,7 @@ export default function MasterFinancePage() {
                         </label>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Телефон</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0230")} /></span>
                           <input
                             disabled={!moneyCoreDestinationWriteOpen}
                             value={phone}
@@ -1797,12 +1770,12 @@ export default function MasterFinancePage() {
                         </label>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Банк</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0849")} /></span>
                           <input
                             disabled={!moneyCoreDestinationWriteOpen}
                             value={bankName}
                             onChange={(event) => setBankName(event.target.value)}
-                            placeholder="Название банка"
+                            placeholder={renderUi(uiMessage("salon.s0996"))}
                             style={{
                               width: "100%",
                               border: "1px solid #d1d5db",
@@ -1817,7 +1790,7 @@ export default function MasterFinancePage() {
                         </label>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Маска счёта / карты</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0997")} /></span>
                           <input
                             disabled={!moneyCoreDestinationWriteOpen}
                             value={accountMasked}
@@ -1837,7 +1810,7 @@ export default function MasterFinancePage() {
                         </label>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Последние 4 цифры карты</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0999")} /></span>
                           <input
                             disabled={!moneyCoreDestinationWriteOpen}
                             value={cardLast4}
@@ -1857,7 +1830,7 @@ export default function MasterFinancePage() {
                         </label>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Отношение к владельцу</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1001")} /></span>
                           <select
                             disabled={!moneyCoreDestinationWriteOpen}
                             value={destinationRelation}
@@ -1875,7 +1848,7 @@ export default function MasterFinancePage() {
                           >
                             {WITHDRAW_DESTINATION_RELATION_OPTIONS.map((relation) => (
                               <option key={relation} value={relation}>
-                                {relation}
+                                <UiValue value={relation} />
                               </option>
                             ))}
                           </select>
@@ -1883,12 +1856,12 @@ export default function MasterFinancePage() {
                       </div>
 
                       <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Примечание</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1002")} /></span>
                         <textarea
                           disabled={!moneyCoreDestinationWriteOpen}
                           value={note}
                           onChange={(event) => setNote(event.target.value)}
-                          placeholder="Необязательная заметка для заявки"
+                          placeholder={renderUi(uiMessage("salon.s1003"))}
                           rows={3}
                           style={{
                             width: "100%",
@@ -1905,23 +1878,22 @@ export default function MasterFinancePage() {
                       </label>
 
                       <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Payload preview</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1004")} /></div>
                         <div style={{ fontSize: 13, color: selectedWithdrawProvider.isReady ? "#065f46" : "#92400e", lineHeight: 1.5 }}>
-                          {selectedWithdrawProvider.isReady
-                            ? "Payload готов"
-                            : `Payload не готов${selectedWithdrawProvider.errors.length ? `: ${selectedWithdrawProvider.errors[0]}` : ""}`}
+                          <UiValue value={selectedWithdrawProvider.isReady
+                            ? uiMessage("salon.s1005")
+                            : uiMessage("salon.s1006", {p0: selectedWithdrawProvider.errors.length ? uiTemplate([": ",""], [selectedWithdrawProvider.errors[0]]) : ""})} />
+                        </div>
+                        <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}><UiValue value={uiMessage("salon.s1007")} /><UiValue value={selectedWithdrawProvider.method || "—"} /><UiValue value={uiMessage("salon.s1008")} /><UiValue value={selectedWithdrawProvider.selectedProvider?.code || "—"} /><UiValue value={uiMessage("salon.s1009")} /><UiValue value={selectedWithdrawProvider.destinationRelation || "—"} />
                         </div>
                         <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
-                          Метод: {selectedWithdrawProvider.method || "—"} · Провайдер: {selectedWithdrawProvider.selectedProvider?.code || "—"} · Отношение: {selectedWithdrawProvider.destinationRelation || "—"}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
-                          {selectedWithdrawProvider.method === "wallet"
-                            ? `wallet_provider: ${selectedWithdrawProvider.selectedProvider?.code || "—"}`
+                          <UiValue value={selectedWithdrawProvider.method === "wallet"
+                            ? uiTemplate(["wallet_provider: ",""], [selectedWithdrawProvider.selectedProvider?.code || "—"])
                             : selectedWithdrawProvider.method === "bank_account"
-                              ? `bank_name: ${selectedWithdrawProvider.bankName || "—"}`
+                              ? uiTemplate(["bank_name: ",""], [selectedWithdrawProvider.bankName || "—"])
                               : selectedWithdrawProvider.method === "card"
-                                ? `card_last4: ${selectedWithdrawProvider.cardLast4 || "—"}`
-                                : `safe fields: ${[selectedWithdrawProvider.accountHolder, selectedWithdrawProvider.phone, selectedWithdrawProvider.accountMasked, selectedWithdrawProvider.note].filter(Boolean).length}`}
+                                ? uiTemplate(["card_last4: ",""], [selectedWithdrawProvider.cardLast4 || "—"])
+                                : uiTemplate(["safe fields: ",""], [[selectedWithdrawProvider.accountHolder, selectedWithdrawProvider.phone, selectedWithdrawProvider.accountMasked, selectedWithdrawProvider.note].filter(Boolean).length])} />
                         </div>
                       </div>
 
@@ -1940,36 +1912,34 @@ export default function MasterFinancePage() {
                         cursor: destinationSaveReady ? "pointer" : "not-allowed",
                         justifySelf: "start"
                       }}
-                    >
-                      Добавить реквизиты
-                    </button>
+                    ><UiValue value={uiMessage("salon.s1010")} /></button>
                     <div style={{ fontSize: 12, color: destinationSaveStatus?.tone === "error" ? "#b91c1c" : destinationSaveStatus?.tone === "success" ? "#065f46" : "#6b7280", lineHeight: 1.5 }}>
-                      {destinationSaveStatus?.text || moneyCoreAddRequisitesText}
+                      <UiValue value={destinationSaveStatus?.text || moneyCoreAddRequisitesText} />
                     </div>
                   </div>
                 </Panel>
 
-                  <Panel title="Настройки вывода" subtitle={moneyCoreWithdrawPanelNote}>
+                  <Panel title={uiMessage("salon.s1011")} subtitle={moneyCoreWithdrawPanelNote}>
                     {moneyCoreWithdrawSettings ? (
                       <div style={styles.grid}>
-                        <StatCard title="Режим" value={moneyCoreWithdrawSettings.mode || "—"} note="Текущий режим" />
-                        <StatCard title="Автозаявки" value={String(Boolean(moneyCoreWithdrawSettings.auto_submit_enabled))} note="Автоматизация" />
-                        <StatCard title="Проверка админом" value={String(Boolean(moneyCoreWithdrawSettings.requires_admin_review))} note="Контроль" />
-                        <StatCard title="Способ суммы" value={moneyCoreWithdrawSettings.amount_mode || "—"} note="Модель суммы" />
+                        <StatCard title={uiMessage("salon.s1012")} value={moneyCoreWithdrawSettings.mode || "—"} note={uiMessage("salon.s1013")} />
+                        <StatCard title={uiMessage("salon.s1014")} value={String(Boolean(moneyCoreWithdrawSettings.auto_submit_enabled))} note={uiMessage("salon.s1015")} />
+                        <StatCard title={uiMessage("salon.s1016")} value={String(Boolean(moneyCoreWithdrawSettings.requires_admin_review))} note={uiMessage("salon.s1017")} />
+                        <StatCard title={uiMessage("salon.s1018")} value={moneyCoreWithdrawSettings.amount_mode || "—"} note={uiMessage("salon.s1019")} />
                       </div>
                     ) : (
                       <EmptyState
-                        title="Настройки вывода не заданы"
+                        title={uiMessage("salon.s1020")}
                         text={moneyCoreWithdrawSettingsText}
                       />
                     )}
                   </Panel>
 
-                  <Panel title="История заявок" subtitle="Последние заявки на вывод по Money Core">
+                  <Panel title={uiMessage("salon.s1021")} subtitle={uiMessage("salon.s1022")}>
                     {moneyCoreWithdrawRequests.length ? (
                       <div style={{ display: "grid", gap: 8 }}>
                         {moneyCoreWithdrawRequests.map((item) => {
-                          const withdrawRequestStatus = getWithdrawRequestUserStatusLabel(item?.status) || "Статус неизвестен";
+                          const withdrawRequestStatus = getWithdrawRequestUserStatusLabel(item?.status) || uiMessage("salon.s1023");
                           const withdrawRequestDetails = getWithdrawRequestHistoryDetails(item);
                           const withdrawRequestPayoutResultDetails = getWithdrawRequestPayoutResultDetails(item);
                           const withdrawRequestDestinationDetails = getWithdrawRequestDestinationSummary(item, withdrawDestinationById);
@@ -1978,8 +1948,8 @@ export default function MasterFinancePage() {
                             <PreviewRow
                               key={item.id}
                               title={withdrawRequestStatus}
-                              meta={`Заявка #${item.id || "—"} · ${formatDateTime(item.created_at)}${withdrawRequestDetails ? ` · ${withdrawRequestDetails}` : ""}${withdrawRequestPayoutResultDetails ? ` · ${withdrawRequestPayoutResultDetails}` : ""}${withdrawRequestDestinationDetails ? ` · ${withdrawRequestDestinationDetails}` : ""}`}
-                              value={money(item.amount)}
+                              meta={uiMessage("salon.s1024", {p0: item.id || "—", p1: formatDateTime(item.created_at), p2: withdrawRequestDetails ? uiTemplate([" · ",""], [withdrawRequestDetails]) : "", p3: withdrawRequestPayoutResultDetails ? uiTemplate([" · ",""], [withdrawRequestPayoutResultDetails]) : "", p4: withdrawRequestDestinationDetails ? uiTemplate([" · ",""], [withdrawRequestDestinationDetails]) : ""})}
+                              value={money(item.amount, item?.currency_code || item?.currency)}
                               status={cleanStatus(item?.status) || null}
                             />
                           );
@@ -1987,30 +1957,30 @@ export default function MasterFinancePage() {
                       </div>
                     ) : (
                     <EmptyState
-                      title="Заявок пока нет"
+                      title={uiMessage("salon.s1025")}
                       text={moneyCoreWithdrawRequestsText}
                     />
                   )}
 
                   <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb", display: "grid", gap: 12 }}>
                     <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
-                        {moneyCoreCreateRequestText}
+                        <UiValue value={moneyCoreCreateRequestText} />
                     </div>
 
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                         <div style={{ display: "grid", gap: 6 }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Доступно к выводу</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s0968")} /></div>
                           <div style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 12, background: "#f9fafb", padding: "12px 14px", fontSize: 14, color: "#111827" }}>
-                            {money(moneyCoreZones.available)}
+                            <UiValue value={money(moneyCoreZones.available)} />
                           </div>
                         </div>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Сумма вывода</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1026")} /></span>
                           <input
                             disabled
                             defaultValue=""
-                            placeholder="0 сом"
+                            placeholder={renderUi(uiMessage("salon.s0246"))}
                             style={{
                               width: "100%",
                               border: "1px solid #d1d5db",
@@ -2025,7 +1995,7 @@ export default function MasterFinancePage() {
                         </label>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Реквизиты</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1027")} /></span>
                           <select
                             disabled
                             defaultValue=""
@@ -2040,16 +2010,16 @@ export default function MasterFinancePage() {
                               cursor: "not-allowed"
                             }}
                           >
-                            <option value="">Выберите реквизиты</option>
+                            <option value=""><UiValue value={uiMessage("salon.s1028")} /></option>
                           </select>
                         </label>
 
                         <label style={{ display: "grid", gap: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Комментарий</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}><UiValue value={uiMessage("salon.s1029")} /></span>
                           <textarea
                             disabled
                             defaultValue=""
-                            placeholder="Комментарий к заявке"
+                            placeholder={renderUi(uiMessage("salon.s1030"))}
                             rows={3}
                             style={{
                               width: "100%",
@@ -2080,9 +2050,7 @@ export default function MasterFinancePage() {
                           cursor: "not-allowed",
                           justifySelf: "start"
                         }}
-                      >
-                        Создать заявку на вывод
-                      </button>
+                      ><UiValue value={uiMessage("salon.s1031")} /></button>
                     </div>
                   </Panel>
                 </div>
@@ -2090,81 +2058,81 @@ export default function MasterFinancePage() {
             </Panel>
 
             <section style={styles.actionsGrid}>
-              <Link to={`/master/${masterSlug}/money`} style={styles.actionCard}>
-                <div style={styles.actionTitle}>Доход</div>
-                <div style={styles.actionText}>Баланс, доступы, последний расчетный период</div>
+              <Link to={uiTemplate(["/master/","/money"], [masterSlug])} style={styles.actionCard}>
+                <div style={styles.actionTitle}><UiValue value={uiMessage("salon.s0028")} /></div>
+                <div style={styles.actionText}><UiValue value={uiMessage("master.s0798")} /></div>
               </Link>
 
-              <Link to={`/master/${masterSlug}/settlements`} style={styles.actionCard}>
-                <div style={styles.actionTitle}>Сеты</div>
-                <div style={styles.actionText}>Все расчетные периоды по мастеру</div>
+              <Link to={uiTemplate(["/master/","/settlements"], [masterSlug])} style={styles.actionCard}>
+                <div style={styles.actionTitle}><UiValue value={uiMessage("salon.s0029")} /></div>
+                <div style={styles.actionText}><UiValue value={uiMessage("master.s0799")} /></div>
               </Link>
 
-              <Link to={`/master/${masterSlug}/payouts`} style={styles.actionCard}>
-                <div style={styles.actionTitle}>Выплаты</div>
-                <div style={styles.actionText}>Фактические выплаты и их статусы</div>
+              <Link to={uiTemplate(["/master/","/payouts"], [masterSlug])} style={styles.actionCard}>
+                <div style={styles.actionTitle}><UiValue value={uiMessage("salon.s0030")} /></div>
+                <div style={styles.actionText}><UiValue value={uiMessage("master.s0800")} /></div>
               </Link>
 
-              <Link to={`/master/${masterSlug}/transactions`} style={styles.actionCard}>
-                <div style={styles.actionTitle}>Транзакции</div>
-                <div style={styles.actionText}>История финансовых операций</div>
+              <Link to={uiTemplate(["/master/","/transactions"], [masterSlug])} style={styles.actionCard}>
+                <div style={styles.actionTitle}><UiValue value={uiMessage("salon.s0031")} /></div>
+                <div style={styles.actionText}><UiValue value={uiMessage("master.s0801")} /></div>
               </Link>
             </section>
 
             <div style={styles.stack}>
-              <Panel title="Текущее состояние" subtitle="Только summary без тяжелых таблиц">
+              <Panel title={uiMessage("master.s0802")} subtitle={uiMessage("master.s0803")}>
                 <div style={styles.infoGrid}>
-                  <InfoRow label="Активный контракт" value={contractIsActive ? "Да" : "Нет"} />
-                  <InfoRow label="Contract ID" value={activeContract?.contract_id || activeContract?.id || "—"} />
-                  <InfoRow label="Модель" value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
-                  <InfoRow label="Баланс" value={money(walletBalance)} />
-                  <InfoRow label="Billing state" value={billingStateLabel} />
-                  <InfoRow label="История оплат" value={money(paymentProjectionSummary?.history_amount)} />
-                  <InfoRow label="Открытый баланс" value={money(paymentProjectionSummary?.open_balance_amount)} />
-                  <InfoRow label="Write доступ" value={formatAccessFlag(billingSnapshot.canWrite)} />
-                  <InfoRow label="Withdraw доступ" value={formatAccessFlag(billingSnapshot.canWithdraw)} />
-                  <InfoRow label="Block reason" value={billingSnapshot.billingBlockReason || "—"} />
+                  <InfoRow label={uiMessage("master.s0804")} value={contractIsActive ? uiMessage("salon.s0628") : uiMessage("salon.s0629")} />
+                  <InfoRow label={uiMessage("master.s0807")} value={activeContract?.contract_id || activeContract?.id || "—"} />
+                  <InfoRow label={uiMessage("salon.s0099")} value={activeContract?.model_type || activeContract?.terms_json?.model || "—"} />
+                  <InfoRow label={uiMessage("salon.s1082")} value={money(walletBalance)} />
+                  <InfoRow label={uiMessage("salon.s1084")} value={billingStateLabel} />
+                  <InfoRow label={uiMessage("salon.s0920")} value={money(paymentProjectionSummary?.history_amount)} />
+                  <InfoRow label={uiMessage("salon.s0922")} value={money(paymentProjectionSummary?.open_balance_amount)} />
+                  <InfoRow label={uiMessage("master.s0810")} value={formatAccessFlag(billingSnapshot.canWrite)} />
+                  <InfoRow label={uiMessage("master.s0811")} value={formatAccessFlag(billingSnapshot.canWithdraw)} />
+                  <InfoRow label={uiMessage("master.s0812")} value={billingSnapshot.billingBlockReason || "—"} />
                 </div>
               </Panel>
 
-              <Panel title="Последний расчетный период" subtitle="Компактная поверхность вместо полной таблицы">
+              <Panel title={uiMessage("salon.s1096")} subtitle={uiMessage("master.s0814")}>
                 {lastSettlement ? (
                   <div style={styles.infoGrid}>
-                    <InfoRow label="Settlement ID" value={lastSettlement.id || "—"} />
-                    <InfoRow label="Начало" value={formatDateTime(lastSettlement.period_start || lastSettlement.start_date)} />
-                    <InfoRow label="Конец" value={formatDateTime(lastSettlement.period_end || lastSettlement.end_date)} />
-                    <InfoRow label="Сумма" value={money(lastSettlement.amount)} />
-                    <InfoRow label="Статус" value={lastSettlement.status || "—"} />
-                    <InfoRow label="Создан" value={formatDateTime(lastSettlement.created_at)} />
+                    <InfoRow label={uiMessage("salon.s1098")} value={lastSettlement.id || "—"} />
+                    <InfoRow label={uiMessage("salon.s1099")} value={formatDateTime(lastSettlement.period_start || lastSettlement.start_date)} />
+                    <InfoRow label={uiMessage("salon.s1100")} value={formatDateTime(lastSettlement.period_end || lastSettlement.end_date)} />
+                    <InfoRow label={uiMessage("salon.s0147")} value={money(lastSettlement.amount, lastSettlement?.currency_code || lastSettlement?.currency)} />
+                    <InfoRow label={uiMessage("salon.s0148")} value={displayStatus(lastSettlement.status || "—")} />
+                    <InfoRow label={uiMessage("salon.s1160")} value={formatDateTime(lastSettlement.created_at)} />
                   </div>
                 ) : (
-                  <div style={styles.emptyText}>Расчетных периодов пока нет.</div>
+                  <div style={styles.emptyText}><UiValue value={uiMessage("salon.s1101")} /></div>
                 )}
               </Panel>
 
-              <Panel title="Обязательства по аренде" subtitle="Только просмотр. Аренда показывает обязательства мастера перед салоном.">
+              <Panel title={uiMessage("master.s0820")} subtitle={uiMessage("master.s0821")}>
                 {rentObligationsError ? (
                   <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", fontSize: 14 }}>
-                    {rentObligationsError}
+                    <UiValue value={rentObligationsError} />
                   </div>
                 ) : null}
 
                 <div style={styles.infoGrid}>
-                  <InfoRow label="Открыто" value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.open_count ?? 0))} />
-                  <InfoRow label="Аренда к оплате / удержанию" value={rentObligationsLoading ? "..." : formatSignedCurrency(rentObligationsSummary?.open_amount ?? 0, "-")} />
-                  <InfoRow label="Оплачено" value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.paid_count ?? 0))} />
-                  <InfoRow label="Аренда оплачена / удержана" value={rentObligationsLoading ? "..." : formatSignedCurrency(rentObligationsSummary?.paid_amount ?? 0, "-")} />
+                  <InfoRow label={uiMessage("salon.s0047")} value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.open_count ?? 0))} />
+                  <InfoRow label={uiMessage("master.s0822")} value={rentObligationsLoading ? "..." : formatSignedCurrency(rentObligationsSummary?.open_amount ?? 0, "-")} />
+                  <InfoRow label={uiMessage("salon.s0048")} value={rentObligationsLoading ? "..." : String(Number(rentObligationsSummary?.paid_count ?? 0))} />
+                  <InfoRow label={uiMessage("master.s0823")} value={rentObligationsLoading ? "..." : formatSignedCurrency(rentObligationsSummary?.paid_amount ?? 0, "-")} />
                 </div>
 
                 {rentObligationsLoading ? (
-                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>Загружаем обязательства по аренде...</div>
+                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}><UiValue value={uiMessage("master.s0824")} /></div>
                 ) : null}
 
                 {!rentObligationsLoading && !rentObligationsError && rentObligations.length === 0 ? (
                   <div style={{ marginTop: 12 }}>
                     <EmptyState
-                      title="Обязательства по аренде пока не найдены."
-                      text="Список обязательств по аренде появится после создания записей."
+                      title={uiMessage("master.s0825")}
+                      text={uiMessage("master.s0826")}
                     />
                   </div>
                 ) : null}
@@ -2172,15 +2140,15 @@ export default function MasterFinancePage() {
                 {!rentObligationsLoading && !rentObligationsError && rentObligations.length > 0 ? (
                   <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
                     {rentObligations.map((item, index) => {
-                      const periodLabel = `${formatDateTime(item?.period_start, item)} — ${formatDateTime(item?.period_end, item)}`;
+                      const periodLabel = uiTemplate([""," — ",""], [formatDateTime(item?.period_start, item), formatDateTime(item?.period_end, item)]);
                       const amountLabel = formatSignedCurrency(item?.amount, "-", item?.currency || "KGS");
                       const dueLabel = formatDateTime(item?.due_at, item);
 
                       return (
                         <PreviewRow
-                          key={item?.id || `${item?.contract_id || "obligation"}-${index}`}
+                          key={item?.id || uiTemplate(["","-",""], [item?.contract_id || "obligation", index])}
                           title={periodLabel}
-                          meta={`Срок оплаты: ${dueLabel}`}
+                          meta={uiMessage("master.s0827", {p0: dueLabel})}
                           value={amountLabel}
                           status={formatObligationStatus(item?.status)}
                         />
@@ -2190,29 +2158,29 @@ export default function MasterFinancePage() {
                 ) : null}
               </Panel>
 
-              <Panel title="Обязательства по зарплате" subtitle="Только просмотр. Зарплата показывает обязательства салона перед мастером.">
+              <Panel title={uiMessage("master.s0828")} subtitle={uiMessage("master.s0829")}>
                 {salaryObligationsError ? (
                   <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", fontSize: 14 }}>
-                    {salaryObligationsError}
+                    <UiValue value={salaryObligationsError} />
                   </div>
                 ) : null}
 
                 <div style={styles.infoGrid}>
-                  <InfoRow label="Открыто" value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.open_count ?? 0))} />
-                  <InfoRow label="Зарплата к получению" value={salaryObligationsLoading ? "..." : formatSignedCurrency(salaryObligationsSummary?.open_amount ?? 0, "+")} />
-                  <InfoRow label="Оплачено" value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.paid_count ?? 0))} />
-                  <InfoRow label="Зарплата получена" value={salaryObligationsLoading ? "..." : formatSignedCurrency(salaryObligationsSummary?.paid_amount ?? 0, "+")} />
+                  <InfoRow label={uiMessage("salon.s0047")} value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.open_count ?? 0))} />
+                  <InfoRow label={uiMessage("master.s0830")} value={salaryObligationsLoading ? "..." : formatSignedCurrency(salaryObligationsSummary?.open_amount ?? 0, "+")} />
+                  <InfoRow label={uiMessage("salon.s0048")} value={salaryObligationsLoading ? "..." : String(Number(salaryObligationsSummary?.paid_count ?? 0))} />
+                  <InfoRow label={uiMessage("master.s0831")} value={salaryObligationsLoading ? "..." : formatSignedCurrency(salaryObligationsSummary?.paid_amount ?? 0, "+")} />
                 </div>
 
                 {salaryObligationsLoading ? (
-                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>Загружаем обязательства по зарплате...</div>
+                  <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}><UiValue value={uiMessage("master.s0832")} /></div>
                 ) : null}
 
                 {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length === 0 ? (
                   <div style={{ marginTop: 12 }}>
                     <EmptyState
-                      title="Обязательства по зарплате пока не найдены."
-                      text="Список обязательств по зарплате появится после создания записей."
+                      title={uiMessage("master.s0833")}
+                      text={uiMessage("master.s0834")}
                     />
                   </div>
                 ) : null}
@@ -2220,15 +2188,15 @@ export default function MasterFinancePage() {
                 {!salaryObligationsLoading && !salaryObligationsError && salaryObligations.length > 0 ? (
                   <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
                     {salaryObligations.map((item, index) => {
-                      const periodLabel = `${formatDateTime(item?.period_start, item)} — ${formatDateTime(item?.period_end, item)}`;
+                      const periodLabel = uiTemplate([""," — ",""], [formatDateTime(item?.period_start, item), formatDateTime(item?.period_end, item)]);
                       const amountLabel = formatSignedCurrency(item?.amount, "+", item?.currency || "KGS");
                       const dueLabel = formatDateTime(item?.due_at, item);
 
                       return (
                         <PreviewRow
-                          key={item?.id || `${item?.contract_id || "salary-obligation"}-${index}`}
+                          key={item?.id || uiTemplate(["","-",""], [item?.contract_id || "salary-obligation", index])}
                           title={periodLabel}
-                          meta={`Срок выплаты: ${dueLabel}`}
+                          meta={uiMessage("master.s0835", {p0: dueLabel})}
                           value={amountLabel}
                           status={formatObligationStatus(item?.status)}
                         />
@@ -2238,22 +2206,22 @@ export default function MasterFinancePage() {
                 ) : null}
               </Panel>
 
-              <Panel title="История контрактов" subtitle="Компактный блок. Полная история не перегружает hub.">
+              <Panel title={uiMessage("master.s0836")} subtitle={uiMessage("master.s0837")}>
                 {historyPreview.length === 0 ? (
-                  <div style={styles.emptyText}>История контрактов пока не найдена.</div>
+                  <div style={styles.emptyText}><UiValue value={uiMessage("master.s0838")} /></div>
                 ) : (
                   <div style={styles.historyList}>
                     {historyPreview.map((item, index) => (
                       <details key={item?.id || item?.contract_id || index} style={styles.historyItem}>
                         <summary style={styles.historySummary}>
-                          <span>{item?.contract_id || item?.id || `Контракт ${index + 1}`}</span>
-                          <span>{item?.status || item?.state || "—"}</span>
+                          <span><UiValue value={item?.contract_id || item?.id || uiMessage("master.s0839", {p0: index + 1})} /></span>
+                          <span><UiValue value={item?.status || item?.state || "—"} /></span>
                         </summary>
                         <div style={styles.historyBody}>
-                          <InfoRow label="Модель" value={item?.model_type || item?.terms_json?.model || "—"} />
-                          <InfoRow label="Версия" value={item?.version || "—"} />
-                          <InfoRow label="Начало" value={formatDateTime(item?.start_date || item?.created_at)} />
-                          <InfoRow label="Окончание" value={formatDateTime(item?.end_date || item?.closed_at)} />
+                          <InfoRow label={uiMessage("salon.s0099")} value={item?.model_type || item?.terms_json?.model || "—"} />
+                          <InfoRow label={uiMessage("master.s0840")} value={item?.version || "—"} />
+                          <InfoRow label={uiMessage("salon.s1099")} value={formatDateTime(item?.start_date || item?.created_at)} />
+                          <InfoRow label={uiMessage("master.s0841")} value={formatDateTime(item?.end_date || item?.closed_at)} />
                         </div>
                       </details>
                     ))}

@@ -1,3 +1,5 @@
+import { NotificationText, NotificationLabel } from "../i18n/NotificationText.jsx";
+import { useMarketContext } from "../market/MarketContext.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getClientNotifications, markClientNotificationRead } from "../api/client.js";
@@ -221,6 +223,7 @@ function getActionLinkStyle(baseStyle, isMobile) {
 }
 
 export default function ClientCabinetPage() {
+  const { t, formatDateTime: localeDate } = useMarketContext();
   const { clientId, token } = useParams();
 
   const [data, setData] = useState(null);
@@ -561,14 +564,14 @@ export default function ClientCabinetPage() {
 
       <section style={getCardStyle(isMobile)}>
         <div style={styles.sectionHeaderWithBadge}>
-          <h2 style={styles.sectionTitle}>Уведомления</h2>
-          <span style={styles.unreadBadge}>Новых: {unreadCount}</span>
+          <h2 style={styles.sectionTitle}>{t("notifications.header")}</h2>
+          <span style={styles.unreadBadge}>{t("notifications.newCount", {count: unreadCount})}</span>
         </div>
 
         {notificationsLoading ? (
-          <p style={styles.muted}>Загружаем уведомления…</p>
+          <p style={styles.muted}>{t("notifications.loading")}</p>
         ) : notificationsError ? (
-          <p style={styles.error}>Не удалось загрузить уведомления</p>
+          <p style={styles.error}>{t("notifications.loadError")}</p>
         ) : notificationItems.length ? (
           <div style={styles.notificationList}>
             {notificationItems.map((notification) => {
@@ -581,12 +584,12 @@ export default function ClientCabinetPage() {
               return (
                 <div key={notificationUid || notification.id} style={styles.notificationItem}>
                   <div style={styles.notificationMain}>
-                    <strong style={styles.notificationTitle}>{notification.title_ru || notification.title_en || "Уведомление"}</strong>
-                    <p style={styles.muted}>{notification.body_ru || notification.body_en || "—"}</p>
+                    <strong style={styles.notificationTitle}>{<NotificationText notification={notification} field="title" fallback={t("notifications.title")} />}</strong>
+                    <p style={styles.muted}>{<NotificationText notification={notification} field="body" fallback="—" />}</p>
                     <div style={styles.notificationMeta}>
-                      <span style={styles.badge}>{notification.target_type || "client"}</span>
-                      <span style={styles.notificationPill}>{String(notification.priority || "normal")}</span>
-                      <span style={styles.notificationTime}>{formatDateTime(notification.created_at)}</span>
+                      <span style={styles.badge}><NotificationLabel kind="target" value={notification.target_type || "client"} /></span>
+                      <span style={styles.notificationPill}><NotificationLabel kind="priority" value={notification.priority || "normal"} /></span>
+                      <span style={styles.notificationTime}>{localeDate(notification.created_at)}</span>
                     </div>
                     {hasAction ? (
                       <div style={{ marginTop: 8 }}>
@@ -596,7 +599,7 @@ export default function ClientCabinetPage() {
                           rel={isExternal ? "noreferrer" : undefined}
                           style={getActionLinkStyle(styles.secondaryButton, isMobile)}
                         >
-                          Открыть
+                          {t("notifications.open")}
                         </a>
                       </div>
                     ) : null}
@@ -604,7 +607,7 @@ export default function ClientCabinetPage() {
 
                   <div style={styles.notificationRight}>
                     <span style={isRead ? styles.notificationRead : styles.notificationUnread}>
-                      {isRead ? "Прочитано" : "Новое"}
+                      {isRead ? t("notifications.read") : t("notifications.new")}
                     </span>
                     {!isRead && notificationUid ? (
                       <button
@@ -613,7 +616,7 @@ export default function ClientCabinetPage() {
                         disabled={readingNotificationUid === notificationUid}
                         style={getActionButtonStyle(styles.secondaryButton, isMobile)}
                       >
-                        Прочитано
+                        {t("notifications.read")}
                       </button>
                     ) : null}
                   </div>
@@ -622,7 +625,7 @@ export default function ClientCabinetPage() {
             })}
           </div>
         ) : (
-          <p style={styles.muted}>Новых уведомлений пока нет.</p>
+          <p style={styles.muted}>{t("notifications.empty")}</p>
         )}
       </section>
 

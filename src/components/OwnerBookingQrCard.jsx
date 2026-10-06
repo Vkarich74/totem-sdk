@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiTemplate, uiError, useUiMessages } from "../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { getOwnerBookingQrPayload, getOwnerBookingQrPngBlob } from "../api/internal"
 
@@ -87,6 +88,7 @@ function actionButtonStyle(kind = "default") {
 }
 
 export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle }) {
+  const { renderUi } = useUiMessages();
   const safeOwnerType = useMemo(() => normalizeOwnerType(ownerType), [ownerType])
   const safeSlug = useMemo(() => String(slug || "").trim(), [slug])
   const [loading, setLoading] = useState(true)
@@ -123,7 +125,7 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
 
       if (!safeOwnerType || !safeSlug) {
         if (active) {
-          setPayloadError("Ссылка недоступна.")
+          setPayloadError(uiError(uiMessage("salon.s1197")))
           setLoading(false)
         }
         return
@@ -142,7 +144,7 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
       }
 
       if (!payloadResult?.ok) {
-        setPayloadError(String(payloadResult?.error || "OWNER_BOOKING_QR_PAYLOAD_FETCH_FAILED"))
+        setPayloadError(uiError(String(payloadResult?.error || "OWNER_BOOKING_QR_PAYLOAD_FETCH_FAILED")))
         setLoading(false)
         return
       }
@@ -154,7 +156,7 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
         currentObjectUrl = URL.createObjectURL(pngResult.blob)
         setImageUrl(currentObjectUrl)
       } else {
-        setImageError(String(pngResult?.error || "OWNER_BOOKING_QR_PNG_FETCH_FAILED"))
+        setImageError(uiError(String(pngResult?.error || "OWNER_BOOKING_QR_PNG_FETCH_FAILED")))
       }
 
       setLoading(false)
@@ -172,30 +174,30 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
   }, [safeOwnerType, safeSlug])
 
   const bookingUrl = String(payload?.booking_url || payload?.qr_target_url || "").trim()
-  const qrAlt = title ? `${title} QR-код` : "QR-код для записи"
+  const qrAlt = title ? uiMessage("salon.s1198", {p0: title}) : uiMessage("salon.s1199")
 
   async function copyBookingLink() {
     if (!bookingUrl) {
-      setActionStatus("Ссылка недоступна")
+      setActionStatus(uiMessage("salon.s1200"))
       return
     }
 
     if (!window.navigator?.clipboard?.writeText) {
-      setActionStatus("Буфер обмена недоступен")
+      setActionStatus(uiMessage("salon.s1201"))
       return
     }
 
     try {
       await window.navigator.clipboard.writeText(bookingUrl)
-      setActionStatus("Ссылка скопирована")
+      setActionStatus(uiMessage("salon.s1202"))
     } catch {
-      setActionStatus("Не удалось скопировать ссылку")
+      setActionStatus(uiMessage("salon.s1203"))
     }
   }
 
   async function openBooking() {
     if (!bookingUrl) {
-      setActionStatus("Ссылка недоступна")
+      setActionStatus(uiMessage("salon.s1200"))
       return
     }
 
@@ -204,13 +206,13 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
 
   function downloadQr() {
     if (!imageUrl) {
-      setActionStatus("QR-код недоступен")
+      setActionStatus(uiMessage("salon.s1204"))
       return
     }
 
     const anchor = document.createElement("a")
     anchor.href = imageUrl
-    anchor.download = `${safeOwnerType || "owner"}-${safeSlug || "booking"}-qr.png`
+    anchor.download = uiTemplate(["","-","-qr.png"], [safeOwnerType || "owner", safeSlug || "booking"])
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
@@ -218,24 +220,23 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
 
   return (
     <div style={cardStyle()}>
-      <div style={sectionTitleStyle()}>{title || "QR для записи"}</div>
-      {subtitle ? <p style={sectionSubtitleStyle()}>{subtitle}</p> : null}
+      <div style={sectionTitleStyle()}><UiValue value={title || uiMessage("salon.s1205")} /></div>
+      {subtitle ? <p style={sectionSubtitleStyle()}><UiValue value={subtitle} /></p> : null}
 
       {loading ? (
-        <div style={{ marginTop: 14, fontSize: 13, color: "#6b7280" }}>Загрузка QR-кода…</div>
+        <div style={{ marginTop: 14, fontSize: 13, color: "#6b7280" }}><UiValue value={uiMessage("salon.s1206")} /></div>
       ) : payloadError ? (
-        <div style={{ marginTop: 14, fontSize: 13, color: "#991b1b", lineHeight: 1.45 }}>
-          Не удалось загрузить QR-код. {payloadError}
+        <div style={{ marginTop: 14, fontSize: 13, color: "#991b1b", lineHeight: 1.45 }}><UiValue value={uiMessage("salon.s1207")} /><UiValue value={payloadError} />
         </div>
       ) : (
         <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-          <div style={codeBoxStyle()}>{bookingUrl || "Ссылка недоступна"}</div>
+          <div style={codeBoxStyle()}><UiValue value={bookingUrl || uiMessage("salon.s1200")} /></div>
 
           {imageUrl ? (
             <div style={{ display: "flex", justifyContent: "center" }}>
               <img
                 src={imageUrl}
-                alt={qrAlt}
+                alt={renderUi(qrAlt)}
                 style={{
                   width: 220,
                   maxWidth: "100%",
@@ -249,29 +250,23 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
             </div>
           ) : (
             <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-              {imageError ? "QR-код временно недоступен." : "Загрузка QR-кода…"}
+              <UiValue value={imageError ? uiMessage("salon.s1208") : uiMessage("salon.s1206")} />
             </div>
           )}
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            <button type="button" onClick={copyBookingLink} style={actionButtonStyle("primary")}>
-              Скопировать ссылку
-            </button>
-            <button type="button" onClick={openBooking} style={actionButtonStyle("secondary")}>
-              Открыть запись
-            </button>
-            <button type="button" onClick={downloadQr} style={actionButtonStyle()}>
-              Скачать QR
-            </button>
+            <button type="button" onClick={copyBookingLink} style={actionButtonStyle("primary")}><UiValue value={uiMessage("salon.s1209")} /></button>
+            <button type="button" onClick={openBooking} style={actionButtonStyle("secondary")}><UiValue value={uiMessage("salon.s1210")} /></button>
+            <button type="button" onClick={downloadQr} style={actionButtonStyle()}><UiValue value={uiMessage("salon.s1211")} /></button>
           </div>
 
           {actionStatus ? (
-            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>{actionStatus}</div>
+            <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}><UiValue value={actionStatus} /></div>
           ) : null}
 
           {imageError ? (
             <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.45 }}>
-              {imageError}
+              <UiValue value={imageError} />
             </div>
           ) : null}
         </div>

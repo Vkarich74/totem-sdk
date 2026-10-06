@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiJoin, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { resolveSalonSlug } from "../SalonContext";
@@ -100,15 +101,7 @@ function badgeStyle(active) {
   };
 }
 
-function formatMoney(value) {
-  const numberValue = Number(value);
-
-  if (!Number.isFinite(numberValue)) {
-    return "—";
-  }
-
-  return `${numberValue.toLocaleString("ru-RU")} сом`;
-}
+function formatMoney(value, currency) { return uiMoney(value, currency); }
 
 function formatDuration(value) {
   const numberValue = Number(value);
@@ -117,7 +110,7 @@ function formatDuration(value) {
     return "—";
   }
 
-  return `${numberValue} мин`;
+  return uiMessage("salon.s0735", {p0: numberValue});
 }
 
 function normalizeServicesResponse(data) {
@@ -135,13 +128,13 @@ function getAttachOptionLabel(service) {
 
   const tail = [];
   if (Number.isFinite(Number(service?.price))) {
-    tail.push(`${Number(service.price).toLocaleString("ru-RU")} сом`);
+    tail.push(uiMoney(service.price, service.currency_code || service.currency));
   }
   if (Number.isFinite(Number(service?.duration_min))) {
-    tail.push(`${service.duration_min} мин`);
+    tail.push(uiMessage("salon.s0735", {p0: service.duration_min}));
   }
 
-  return [parts.join(" — "), tail.join(" — ")].filter(Boolean).join(" — ");
+  return uiJoin([uiJoin(parts, " — "), uiJoin(tail, " — ")].filter(Boolean), " — ");
 }
 
 function resolveMasterSlug(master) {
@@ -154,6 +147,7 @@ function resolveMasterSlug(master) {
 }
 
 export default function ServicesPage() {
+  const { renderUi } = useUiMessages();
   const { slug: routeSlug } = useParams();
   const slug = resolveSalonSlug(routeSlug);
 
@@ -172,7 +166,7 @@ export default function ServicesPage() {
     const result = await getSalonMasters(slug);
     if (!result?.ok) {
       const status = Number(result?.detail?.status || result?.detail?.response?.status || 0);
-      throw new Error(status ? `SALON_MASTERS_LOAD_FAILED_${status}` : "SALON_MASTERS_LOAD_FAILED");
+      throw new Error(status ? uiTemplate(["SALON_MASTERS_LOAD_FAILED_",""], [status]) : "SALON_MASTERS_LOAD_FAILED");
     }
     const list = Array.isArray(result?.masters) ? result.masters : [];
     return list.filter((item) => item?.status === "active");
@@ -182,7 +176,7 @@ export default function ServicesPage() {
     if (!slug) {
       setServices([]);
       setLoading(false);
-      setError("Не найден slug салона");
+      setError(uiError(uiMessage("salon.s0736")));
       return;
     }
 
@@ -197,7 +191,7 @@ export default function ServicesPage() {
 
       if (!servicesResult?.ok) {
         const status = Number(servicesResult?.detail?.status || servicesResult?.detail?.response?.status || 0);
-        throw new Error(status ? `LOAD_FAILED_${status}` : "LOAD_FAILED");
+        throw new Error(status ? uiTemplate(["LOAD_FAILED_",""], [status]) : "LOAD_FAILED");
       }
 
       const normalizedServices = normalizeServicesResponse(servicesResult);
@@ -209,7 +203,7 @@ export default function ServicesPage() {
       console.error("LOAD_SERVICES_ERROR", e);
       setServices([]);
       setSalonMasters([]);
-      setError("Не удалось загрузить услуги салона");
+      setError(uiError(uiMessage("salon.s0737")));
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -246,7 +240,7 @@ export default function ServicesPage() {
           const result = await getMasterServices(masterSlug);
           if (!result?.ok) {
             const status = Number(result?.detail?.status || result?.detail?.response?.status || 0);
-            throw new Error(`MASTER_SERVICES_LOAD_FAILED_${masterSlug}_${status || "ERROR"}`);
+            throw new Error(uiTemplate(["MASTER_SERVICES_LOAD_FAILED_","_",""], [masterSlug, status || "ERROR"]));
           }
 
           const list = normalizeServicesResponse(result);
@@ -298,23 +292,23 @@ export default function ServicesPage() {
       if (!result?.ok) throw new Error("TOGGLE_FAILED");
 
       await loadServices(false);
-      setSuccess(service.active ? "Услуга выключена" : "Услуга включена");
+      setSuccess(service.active ? uiMessage("salon.s0738") : uiMessage("salon.s0739"));
     } catch (e) {
       console.error("TOGGLE_ERROR", e);
-      setError("Ошибка изменения статуса услуги");
+      setError(uiError(uiMessage("salon.s0740")));
     } finally {
       setProcessingId(null);
     }
   }
 
   async function updatePrice(service) {
-    const input = window.prompt("Новая цена", String(service.price ?? ""));
+    const input = window.prompt(renderUi(uiMessage("salon.s0741")), String(service.price ?? ""));
     if (input === null) return;
 
     const price = Number(input);
 
     if (!Number.isFinite(price) || price < 0) {
-      setError("Некорректная цена");
+      setError(uiError(uiMessage("salon.s0742")));
       return;
     }
 
@@ -331,23 +325,23 @@ export default function ServicesPage() {
       if (!result?.ok) throw new Error("UPDATE_PRICE_FAILED");
 
       await loadServices(false);
-      setSuccess("Цена услуги обновлена");
+      setSuccess(uiMessage("salon.s0743"));
     } catch (e) {
       console.error("UPDATE_PRICE_ERROR", e);
-      setError("Ошибка обновления цены");
+      setError(uiError(uiMessage("salon.s0744")));
     } finally {
       setProcessingId(null);
     }
   }
 
   async function updateDuration(service) {
-    const input = window.prompt("Новая длительность в минутах", String(service.duration_min ?? ""));
+    const input = window.prompt(renderUi(uiMessage("salon.s0745")), String(service.duration_min ?? ""));
     if (input === null) return;
 
     const durationMin = Number(input);
 
     if (!Number.isFinite(durationMin) || durationMin <= 0 || !Number.isInteger(durationMin)) {
-      setError("Некорректная длительность");
+      setError(uiError(uiMessage("salon.s0746")));
       return;
     }
 
@@ -364,10 +358,10 @@ export default function ServicesPage() {
       if (!result?.ok) throw new Error("UPDATE_DURATION_FAILED");
 
       await loadServices(false);
-      setSuccess("Длительность услуги обновлена");
+      setSuccess(uiMessage("salon.s0747"));
     } catch (e) {
       console.error("UPDATE_DURATION_ERROR", e);
-      setError("Ошибка обновления длительности");
+      setError(uiError(uiMessage("salon.s0748")));
     } finally {
       setProcessingId(null);
     }
@@ -375,20 +369,20 @@ export default function ServicesPage() {
 
   async function attachService() {
     if (!selectedServiceId) {
-      setError("Выбери услугу мастера");
+      setError(uiError(uiMessage("salon.s0749")));
       return;
     }
 
     const selected = masterServices.find((item) => String(item.id) === String(selectedServiceId));
 
     if (!selected) {
-      setError("Услуга мастера не найдена");
+      setError(uiError(uiMessage("salon.s0750")));
       return;
     }
 
     const targetMasterId = selected.master_id;
     if (!targetMasterId) {
-      setError("Не удалось определить мастера для услуги");
+      setError(uiError(uiMessage("salon.s0751")));
       return;
     }
 
@@ -406,7 +400,7 @@ export default function ServicesPage() {
       });
 
       if (!response?.ok) {
-        let message = "Ошибка подключения услуги";
+        let message = uiMessage("salon.s0752");
         try {
           message = response?.error || response?.detail?.json?.error || message;
         } catch (parseError) {
@@ -418,22 +412,22 @@ export default function ServicesPage() {
       await loadServices(false);
       await loadMasterServices(false);
       setSelectedServiceId("");
-      setSuccess("Услуга подключена в салон");
+      setSuccess(uiMessage("salon.s0753"));
     } catch (e) {
       console.error("ATTACH_ERROR", e);
-      setError(e?.message || "Ошибка подключения услуги");
+      setError(uiError(e?.message || uiMessage("salon.s0752")));
     } finally {
       setAttachLoading(false);
     }
   }
 
   const availableMasterServices = useMemo(() => {
-    const existingKeys = new Set(services.map((item) => `${item.master_id}:${item.service_pk}`));
+    const existingKeys = new Set(services.map((item) => uiTemplate(["",":",""], [item.master_id, item.service_pk])));
 
     return masterServices.filter((item) => {
       const masterId = item?.master_id;
       if (!masterId) return false;
-      return !existingKeys.has(`${masterId}:${item.service_pk}`);
+      return !existingKeys.has(uiTemplate(["",":",""], [masterId, item.service_pk]));
     });
   }, [masterServices, services]);
 
@@ -449,7 +443,7 @@ export default function ServicesPage() {
   const isBusy = loading || attachLoading || processingId !== null;
 
   return (
-    <PageSection title="Услуги салона">
+    <PageSection title={uiMessage("salon.s0754")}>
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         <div>
           <div
@@ -459,22 +453,19 @@ export default function ServicesPage() {
               fontSize: "14px",
               lineHeight: 1.5
             }}
-          >
-            Управляй витриной услуг салона: подключай услуги мастеров, меняй цену и длительность,
-            включай и отключай продажу без выхода из кабинета.
-          </div>
+          ><UiValue value={uiMessage("salon.s0755")} /></div>
         </div>
 
         <StatGrid
           items={[
-            { label: "Всего услуг", value: stats.total },
-            { label: "Активные", value: stats.active },
-            { label: "Мастеров в витрине", value: stats.masters }
+            { label: uiMessage("salon.s0756"), value: stats.total },
+            { label: uiMessage("salon.s0109"), value: stats.active },
+            { label: uiMessage("salon.s0757"), value: stats.masters }
           ]}
         />
 
         <div style={cardStyle()}>
-          <h3 style={sectionTitleStyle()}>Подключить услугу мастера</h3>
+          <h3 style={sectionTitleStyle()}><UiValue value={uiMessage("salon.s0758")} /></h3>
 
           <div
             style={{
@@ -485,24 +476,22 @@ export default function ServicesPage() {
             }}
           >
             <div>
-              <div style={labelStyle()}>Доступные услуги</div>
+              <div style={labelStyle()}><UiValue value={uiMessage("salon.s0759")} /></div>
               <select
                 value={selectedServiceId}
                 onChange={(event) => setSelectedServiceId(event.target.value)}
                 style={inputStyle()}
                 disabled={attachLoading || !hasAvailableMasterServices}
               >
-                <option value="">{hasAvailableMasterServices ? "Выбери услугу" : "Все услуги уже подключены"}</option>
+                <option value=""><UiValue value={hasAvailableMasterServices ? uiMessage("salon.s0760") : uiMessage("salon.s0761")} /></option>
                 {availableMasterServices.map((service) => (
-                  <option key={`${service.master_id || "master"}-${service.id}`} value={service.id}>
-                    {getAttachOptionLabel(service)}
+                  <option key={uiTemplate(["","-",""], [service.master_id || "master", service.id])} value={service.id}>
+                    <UiValue value={getAttachOptionLabel(service)} />
                   </option>
                 ))}
               </select>
               {!hasAvailableMasterServices ? (
-                <div style={{ marginTop: "8px", fontSize: "13px", color: "#667085", lineHeight: 1.5 }}>
-                  Нет доступных услуг для подключения. Все услуги мастеров уже добавлены в салон.
-                </div>
+                <div style={{ marginTop: "8px", fontSize: "13px", color: "#667085", lineHeight: 1.5 }}><UiValue value={uiMessage("salon.s0762")} /></div>
               ) : null}
             </div>
 
@@ -512,7 +501,7 @@ export default function ServicesPage() {
                 disabled={attachLoading || !hasAvailableMasterServices}
                 style={buttonStyle("primary", attachLoading || !hasAvailableMasterServices)}
               >
-                {attachLoading ? "Подключаем..." : "Добавить"}
+                <UiValue value={attachLoading ? uiMessage("salon.s0429") : uiMessage("salon.s0763")} />
               </button>
 
               <button
@@ -523,26 +512,23 @@ export default function ServicesPage() {
                 disabled={isBusy}
                 style={buttonStyle("default", isBusy)}
               >
-                {loading ? "Обновляем..." : "Обновить"}
+                <UiValue value={loading ? uiMessage("salon.s0431") : uiMessage("salon.s0107")} />
               </button>
             </div>
           </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <div style={badgeStyle(salonMasters.length > 0)}>Активных мастеров: {salonMasters.length}</div>
-            <div style={badgeStyle(hasAvailableMasterServices)}>
-              Доступно для подключения: {availableMasterServices.length}
+            <div style={badgeStyle(salonMasters.length > 0)}><UiValue value={uiMessage("salon.s0764")} /><UiValue value={salonMasters.length} /></div>
+            <div style={badgeStyle(hasAvailableMasterServices)}><UiValue value={uiMessage("salon.s0765")} /><UiValue value={availableMasterServices.length} />
             </div>
           </div>
 
           {salonMasters.length === 0 && (
-            <div style={{ fontSize: "13px", color: "#667085" }}>В салоне нет активных мастеров.</div>
+            <div style={{ fontSize: "13px", color: "#667085" }}><UiValue value={uiMessage("salon.s0766")} /></div>
           )}
 
           {salonMasters.length > 0 && !hasAvailableMasterServices && (
-            <div style={{ fontSize: "13px", color: "#667085" }}>
-              Все доступные услуги мастеров уже подключены в салон.
-            </div>
+            <div style={{ fontSize: "13px", color: "#667085" }}><UiValue value={uiMessage("salon.s0767")} /></div>
           )}
         </div>
 
@@ -555,7 +541,7 @@ export default function ServicesPage() {
               color: "#067647"
             }}
           >
-            {success}
+            <UiValue value={success} />
           </div>
         )}
 
@@ -568,20 +554,20 @@ export default function ServicesPage() {
               color: "#b42318"
             }}
           >
-            {error}
+            <UiValue value={error} />
           </div>
         )}
 
         {loading && (
           <div style={cardStyle()}>
-            <div style={{ color: "#667085", fontSize: "14px" }}>Загрузка услуг...</div>
+            <div style={{ color: "#667085", fontSize: "14px" }}><UiValue value={uiMessage("salon.s0768")} /></div>
           </div>
         )}
 
         {!loading && services.length === 0 && !error && (
           <EmptyState
-            title="Услуг пока нет"
-            text="Подключите услуги мастеров и начните управлять витриной салона"
+            title={uiMessage("salon.s0769")}
+            text={uiMessage("salon.s0770")}
           />
         )}
 
@@ -597,10 +583,8 @@ export default function ServicesPage() {
                   flexWrap: "wrap"
                 }}
               >
-                <h3 style={sectionTitleStyle()}>Подключённые услуги</h3>
-                <div style={{ fontSize: "13px", color: "#667085" }}>
-                  Все изменения применяются сразу после действия.
-                </div>
+                <h3 style={sectionTitleStyle()}><UiValue value={uiMessage("salon.s0771")} /></h3>
+                <div style={{ fontSize: "13px", color: "#667085" }}><UiValue value={uiMessage("salon.s0772")} /></div>
               </div>
             </div>
 
@@ -626,14 +610,14 @@ export default function ServicesPage() {
                     >
                       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                         <div style={{ fontSize: "17px", fontWeight: 700, color: "#111827" }}>
-                          {service.name || "Без названия"}
+                          <UiValue value={service.name || uiMessage("salon.s0773")} />
                         </div>
                         <div style={{ fontSize: "13px", color: "#667085" }}>
-                          {service.master_name || "Мастер не указан"}
+                          <UiValue value={service.master_name || uiMessage("salon.s0774")} />
                         </div>
                       </div>
                       <span style={badgeStyle(!!service.active)}>
-                        {service.active ? "Активна" : "Отключена"}
+                        <UiValue value={service.active ? uiMessage("salon.s0627") : uiMessage("salon.s0775")} />
                       </span>
                     </div>
 
@@ -645,15 +629,15 @@ export default function ServicesPage() {
                       }}
                     >
                       <div>
-                        <div style={labelStyle()}>Цена</div>
+                        <div style={labelStyle()}><UiValue value={uiMessage("salon.s0232")} /></div>
                         <div style={{ fontSize: "15px", fontWeight: 600, color: "#111827" }}>
-                          {formatMoney(service.price)}
+                          <UiValue value={formatMoney(service.price, service?.currency_code || service?.currency)} />
                         </div>
                       </div>
                       <div>
-                        <div style={labelStyle()}>Длительность</div>
+                        <div style={labelStyle()}><UiValue value={uiMessage("salon.s0776")} /></div>
                         <div style={{ fontSize: "15px", fontWeight: 600, color: "#111827" }}>
-                          {formatDuration(service.duration_min)}
+                          <UiValue value={formatDuration(service.duration_min)} />
                         </div>
                       </div>
                     </div>
@@ -664,24 +648,20 @@ export default function ServicesPage() {
                         disabled={isProcessing || attachLoading}
                         style={buttonStyle("default", isProcessing || attachLoading)}
                       >
-                        {service.active ? "Выключить" : "Включить"}
+                        <UiValue value={service.active ? uiMessage("salon.s0777") : uiMessage("salon.s0778")} />
                       </button>
 
                       <button
                         onClick={() => updatePrice(service)}
                         disabled={isProcessing || attachLoading}
                         style={buttonStyle("default", isProcessing || attachLoading)}
-                      >
-                        Цена
-                      </button>
+                      ><UiValue value={uiMessage("salon.s0779")} /></button>
 
                       <button
                         onClick={() => updateDuration(service)}
                         disabled={isProcessing || attachLoading}
                         style={buttonStyle("default", isProcessing || attachLoading)}
-                      >
-                        Длительность
-                      </button>
+                      ><UiValue value={uiMessage("salon.s0780")} /></button>
                     </div>
                   </div>
                 );

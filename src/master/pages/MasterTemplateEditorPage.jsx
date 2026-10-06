@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiDate, uiJoin, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import PageHeader from "../../cabinet/PageHeader";
@@ -22,22 +23,22 @@ const MASTER_ASSET_KINDS = {
 const MASTER_ASSET_KIND_VALUES = Object.freeze(Object.values(MASTER_ASSET_KINDS));
 
 const sectionItems = [
-  { id: "identity", label: "Identity", note: "Имя мастера, профессия, город и верхняя identity strip." },
-  { id: "hero", label: "Hero", note: "Главный hero блок, subtitle, description, CTA и hero image." },
-  { id: "contacts", label: "Contacts / Location", note: "Адрес, район, город, график, телефон, WhatsApp и карта." },
-  { id: "trust", label: "Trust", note: "Рейтинг, количество отзывов и trust note." },
-  { id: "badges", label: "Badges", note: "Короткие бейджи под hero." },
-  { id: "benefits", label: "Benefits", note: "Карточки преимуществ мастера." },
-  { id: "metrics", label: "Metrics", note: "Trust metrics/value cards." },
-  { id: "featured-services", label: "Featured Services", note: "Основные услуги с ценой и временем." },
-  { id: "catalog", label: "Full Catalog", note: "Полный каталог услуг." },
-  { id: "reviews", label: "Reviews", note: "Отзывы клиентов." },
-  { id: "about", label: "About", note: "О мастере и параграфы описания." },
-  { id: "stats", label: "Stats", note: "Годы, рейтинг, бронирования." },
-  { id: "images", label: "Images", note: "Hero mandatory, avatar/portfolio/service-card reserved." },
-  { id: "cta", label: "CTA", note: "Booking CTA band и sticky CTA." },
-  { id: "seo", label: "SEO", note: "Title, description и canonical URL." },
-  { id: "preview-publish", label: "Предпросмотр и публикация", note: "Сохранение, preview, publish и validation state." }
+  { id: "identity", label: uiMessage("salon.s0681"), note: uiMessage("master.s0324") },
+  { id: "hero", label: uiMessage("master.s0325"), note: uiMessage("master.s0326") },
+  { id: "contacts", label: uiMessage("master.s0327"), note: uiMessage("master.s0328") },
+  { id: "trust", label: uiMessage("salon.s0686"), note: uiMessage("master.s0330") },
+  { id: "badges", label: uiMessage("master.s0331"), note: uiMessage("master.s0332") },
+  { id: "benefits", label: uiMessage("salon.s0511"), note: uiMessage("master.s0334") },
+  { id: "metrics", label: uiMessage("master.s0335"), note: uiMessage("master.s0336") },
+  { id: "featured-services", label: uiMessage("master.s0337"), note: uiMessage("master.s0338") },
+  { id: "catalog", label: uiMessage("master.s0339"), note: uiMessage("master.s0340") },
+  { id: "reviews", label: uiMessage("salon.s0515"), note: uiMessage("salon.s0474") },
+  { id: "about", label: uiMessage("master.s0343"), note: uiMessage("master.s0344") },
+  { id: "stats", label: uiMessage("master.s0345"), note: uiMessage("master.s0346") },
+  { id: "images", label: uiMessage("master.s0347"), note: uiMessage("master.s0348") },
+  { id: "cta", label: uiMessage("salon.s0480"), note: uiMessage("master.s0350") },
+  { id: "seo", label: uiMessage("salon.s0482"), note: uiMessage("master.s0352") },
+  { id: "preview-publish", label: uiMessage("master.s0353"), note: uiMessage("master.s0354") }
 ];
 
 const EMPTY_DRAFT = {
@@ -125,7 +126,7 @@ const EMPTY_DRAFT = {
 function resolveMasterAssetKind(assetKind) {
   const normalized = String(assetKind || "").trim().toLowerCase();
   if (!MASTER_ASSET_KIND_VALUES.includes(normalized)) {
-    throw new Error(`MASTER_ASSET_KIND_INVALID:${assetKind || "unknown"}`);
+    throw new Error(uiTemplate(["MASTER_ASSET_KIND_INVALID:",""], [assetKind || "unknown"]));
   }
   return normalized;
 }
@@ -141,19 +142,19 @@ function getCloudinaryConfig() {
 function buildCloudinaryAssetFolder(ownerType, ownerSlug, assetKind, rootFolder) {
   const normalizedOwnerType = String(ownerType || MASTER_OWNER_TYPE).trim().toLowerCase() || MASTER_OWNER_TYPE;
   const normalizedAssetKind = resolveMasterAssetKind(assetKind);
-  return `${rootFolder}/${normalizedOwnerType}/${ownerSlug}/${normalizedAssetKind}`;
+  return uiTemplate(["","/","/","/",""], [rootFolder, normalizedOwnerType, ownerSlug, normalizedAssetKind]);
 }
 
 function buildCloudinaryContext(meta) {
   const ownerType = String(meta.ownerType || MASTER_OWNER_TYPE).trim().toLowerCase() || MASTER_OWNER_TYPE;
   const assetKind = resolveMasterAssetKind(meta.assetKind);
-  return `owner_type=${ownerType}|owner_slug=${meta.ownerSlug}|asset_kind=${assetKind}`;
+  return uiTemplate(["owner_type=","|owner_slug=","|asset_kind=",""], [ownerType, meta.ownerSlug, assetKind]);
 }
 
 function buildCloudinaryTags(meta) {
   const ownerType = String(meta.ownerType || MASTER_OWNER_TYPE).trim().toLowerCase() || MASTER_OWNER_TYPE;
   const assetKind = resolveMasterAssetKind(meta.assetKind);
-  return ["totem", ownerType, assetKind].filter(Boolean).join(",");
+  return uiJoin(["totem", ownerType, assetKind].filter(Boolean), ",");
 }
 
 function normalizeCloudinaryAsset(payload, meta) {
@@ -161,7 +162,7 @@ function normalizeCloudinaryAsset(payload, meta) {
   const assetKind = resolveMasterAssetKind(meta.assetKind);
 
   return {
-    asset_id: `cld:${payload?.public_id || ""}`,
+    asset_id: uiTemplate(["cld:",""], [payload?.public_id || ""]),
     public_id: payload?.public_id || "",
     secure_url: payload?.secure_url || "",
     asset_folder: payload?.asset_folder || meta.assetFolder,
@@ -192,7 +193,7 @@ async function uploadImageToCloudinary(file, meta) {
   form.append("context", buildCloudinaryContext(meta));
   form.append("tags", buildCloudinaryTags(meta));
 
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {
+  const response = await fetch(uiTemplate(["https://api.cloudinary.com/v1_1/","/image/upload"], [config.cloudName]), {
     method: "POST",
     body: form
   });
@@ -310,17 +311,12 @@ function mergeDraft(source = {}) {
 }
 
 function extractMessage(result, fallback) {
-  return (
-    result?.detail?.json?.message ||
-    result?.detail?.json?.error ||
-    result?.detail?.text ||
-    result?.error ||
-    fallback
-  );
+ const safeFallback = typeof fallback === "string" ? uiMessage("salon.error.generic") : fallback;
+ return uiError(result?.detail?.json?.message || result?.detail?.json?.error || result?.detail?.text || result?.error || safeFallback, safeFallback);
 }
 
 function getItemKey(prefix) {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return uiTemplate(["","_","_",""], [prefix, Date.now(), Math.random().toString(36).slice(2, 8)]);
 }
 
 function normalizeText(value) {
@@ -545,16 +541,16 @@ function StatusCard({ title, value, note, tone = "neutral" }) {
   return (
     <div
       style={{
-        border: `1px solid ${palette.border}`,
+        border: uiTemplate(["1px solid ",""], [palette.border]),
         background: palette.bg,
         borderRadius: "14px",
         padding: "16px"
       }}
     >
-      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>{title}</div>
-      <div style={{ fontSize: "24px", fontWeight: 800, color: palette.value }}>{value}</div>
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}><UiValue value={title} /></div>
+      <div style={{ fontSize: "24px", fontWeight: 800, color: palette.value }}><UiValue value={value} /></div>
       {note ? (
-        <div style={{ marginTop: "8px", fontSize: "13px", color: "#6b7280", lineHeight: 1.45 }}>{note}</div>
+        <div style={{ marginTop: "8px", fontSize: "13px", color: "#6b7280", lineHeight: 1.45 }}><UiValue value={note} /></div>
       ) : null}
     </div>
   );
@@ -564,7 +560,7 @@ function Panel({ title, note, children, id }) {
   return (
     <div id={id} style={{ scrollMarginTop: "24px" }}>
       <PageSection title={title} description={note}>
-        <div style={{ display: "grid", gap: "16px" }}>{children}</div>
+        <div style={{ display: "grid", gap: "16px" }}><UiValue value={children} /></div>
       </PageSection>
     </div>
   );
@@ -573,9 +569,9 @@ function Panel({ title, note, children, id }) {
 function Field({ label, children, hint }) {
   return (
     <label style={{ display: "grid", gap: "6px" }}>
-      <span style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>{label}</span>
-      {children}
-      {hint ? <span style={{ fontSize: "12px", color: "#6b7280" }}>{hint}</span> : null}
+      <span style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}><UiValue value={label} /></span>
+      <UiValue value={children} />
+      {hint ? <span style={{ fontSize: "12px", color: "#6b7280" }}><UiValue value={hint} /></span> : null}
     </label>
   );
 }
@@ -583,7 +579,7 @@ function Field({ label, children, hint }) {
 function UploadInput({ onSelect, disabled = false }) {
   return (
     <label style={uploadFieldStyle}>
-      <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}>Загрузка изображения</span>
+      <span style={{ fontSize: "13px", fontWeight: 700, color: "#344054" }}><UiValue value={uiMessage("salon.s0489")} /></span>
       <input
         type="file"
         accept="image/png,image/jpeg,image/jpg,image/webp"
@@ -601,20 +597,21 @@ function UploadInput({ onSelect, disabled = false }) {
   );
 }
 
-function AssetPreview({ title = "Preview", entity = {}, emptyNote = "Изображение ещё не загружено." }) {
+function AssetPreview({ title = "Preview", entity = {}, emptyNote = uiMessage("salon.s0488") }) {
+  const { renderUi } = useUiMessages();
   const previewUrl = getAssetPreviewUrl(entity);
   const assetId = entity?.image_asset_id || entity?.asset_id || "";
 
   return (
     <div style={assetPreviewCardStyle}>
-      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>{title}</div>
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}><UiValue value={title} /></div>
       {previewUrl ? (
         <>
-          <img src={previewUrl} alt={entity?.alt || title} style={assetPreviewImageStyle} />
-          <div style={assetPreviewMetaStyle}>{assetId || "Asset attached"}</div>
+          <img src={previewUrl} alt={renderUi(entity?.alt || title)} style={assetPreviewImageStyle} />
+          <div style={assetPreviewMetaStyle}><UiValue value={assetId || uiMessage("salon.display.assetAttached")} /></div>
         </>
       ) : (
-        <div style={assetPreviewEmptyStyle}>{emptyNote}</div>
+        <div style={assetPreviewEmptyStyle}><UiValue value={emptyNote} /></div>
       )}
     </div>
   );
@@ -636,7 +633,7 @@ function inputStyle() {
 function textareaStyle(rows = 4) {
   return {
     ...inputStyle(),
-    minHeight: `${rows * 24 + 24}px`,
+    minHeight: uiTemplate(["","px"], [rows * 24 + 24]),
     resize: "vertical"
   };
 }
@@ -657,7 +654,7 @@ function ActionButton({ children, onClick, disabled = false, tone = "primary", t
         height: "40px",
         padding: "0 14px",
         borderRadius: "10px",
-        border: `1px solid ${palette.border}`,
+        border: uiTemplate(["1px solid ",""], [palette.border]),
         background: disabled ? "#e5e7eb" : palette.background,
         color: disabled ? "#9ca3af" : palette.color,
         fontSize: "14px",
@@ -665,7 +662,7 @@ function ActionButton({ children, onClick, disabled = false, tone = "primary", t
         cursor: disabled ? "not-allowed" : "pointer"
       }}
     >
-      {children}
+      <UiValue value={children} />
     </button>
   );
 }
@@ -675,17 +672,18 @@ function ArrayCard({ title, note, children, onAdd, addLabel }) {
     <div style={{ display: "grid", gap: "12px", padding: "16px", borderRadius: "14px", border: "1px solid #e5e7eb", background: "#ffffff" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" }}>
         <div style={{ display: "grid", gap: "4px" }}>
-          <strong style={{ fontSize: "15px", color: "#111827" }}>{title}</strong>
-          {note ? <span style={{ fontSize: "12px", color: "#6b7280" }}>{note}</span> : null}
+          <strong style={{ fontSize: "15px", color: "#111827" }}><UiValue value={title} /></strong>
+          {note ? <span style={{ fontSize: "12px", color: "#6b7280" }}><UiValue value={note} /></span> : null}
         </div>
-        {onAdd ? <ActionButton tone="secondary" onClick={onAdd}>{addLabel}</ActionButton> : null}
+        {onAdd ? <ActionButton tone="secondary" onClick={onAdd}><UiValue value={addLabel} /></ActionButton> : null}
       </div>
-      {children}
+      <UiValue value={children} />
     </div>
   );
 }
 
 export default function MasterTemplateEditorPage() {
+  const { renderUi } = useUiMessages();
   const { slug = "" } = useParams();
   const { master } = useMaster();
   const resolvedSlug = master?.slug || slug;
@@ -708,7 +706,7 @@ export default function MasterTemplateEditorPage() {
     async function loadDocument() {
       if (!resolvedSlug) {
         setPageLoading(false);
-        setPageError("MASTER_SLUG_MISSING");
+        setPageError(uiError("MASTER_SLUG_MISSING"));
         return;
       }
 
@@ -731,7 +729,7 @@ export default function MasterTemplateEditorPage() {
       if (cancelled) return;
 
       if (!result.ok) {
-        setPageError(extractMessage(result, "MASTER_TEMPLATE_DOCUMENT_FETCH_FAILED"));
+        setPageError(uiError(extractMessage(result, "MASTER_TEMPLATE_DOCUMENT_FETCH_FAILED")));
         setPageLoading(false);
         return;
       }
@@ -757,12 +755,12 @@ export default function MasterTemplateEditorPage() {
   const lastSavedAt = documentState?.meta?.last_saved_at || documentState?.last_saved_at || null;
 
   const sectionHealthItems = [
-    { label: "Badges", value: draft.sections.badges.length },
-    { label: "Benefits", value: draft.sections.benefits.length },
-    { label: "Metrics", value: draft.metrics.length },
-    { label: "Featured", value: draft.sections.featured_services.length },
-    { label: "Catalog", value: draft.sections.service_catalog.length },
-    { label: "Reviews", value: draft.sections.reviews.length }
+    { label: uiMessage("master.s0331"), value: draft.sections.badges.length },
+    { label: uiMessage("salon.s0511"), value: draft.sections.benefits.length },
+    { label: uiMessage("master.s0335"), value: draft.metrics.length },
+    { label: uiMessage("master.s0357"), value: draft.sections.featured_services.length },
+    { label: uiMessage("master.s0358"), value: draft.sections.service_catalog.length },
+    { label: uiMessage("salon.s0515"), value: draft.sections.reviews.length }
   ];
   const previewPayload = previewState.payload || {};
   const previewIdentity = useMemo(() => buildContextPreviewIdentity(previewPayload, draft, master), [previewPayload, draft, master]);
@@ -782,7 +780,7 @@ export default function MasterTemplateEditorPage() {
   }
 
   function setUploadFlag(key, value) {
-    setUploadState((current) => ({ ...current, [key]: value }));
+    setUploadState((current) => ({ ...current, [key]: { ...value, error: uiError(value.error) } }));
   }
 
   function setDraftField(section, field, value) {
@@ -846,7 +844,7 @@ export default function MasterTemplateEditorPage() {
   async function handleRootImageUpload(slot, file) {
     if (!resolvedSlug) return;
 
-    const uploadKey = `root:${slot}`;
+    const uploadKey = uiTemplate(["root:",""], [slot]);
     setUploadFlag(uploadKey, { loading: true, error: "" });
 
     try {
@@ -1102,7 +1100,7 @@ export default function MasterTemplateEditorPage() {
   async function handleImageArrayUpload(imageKey, index, file) {
     if (!resolvedSlug) return;
 
-    const uploadKey = `${imageKey}:${index}`;
+    const uploadKey = uiTemplate(["",":",""], [imageKey, index]);
     setUploadFlag(uploadKey, { loading: true, error: "" });
 
     try {
@@ -1140,7 +1138,7 @@ export default function MasterTemplateEditorPage() {
   async function handlePortfolioUpload(index, file) {
     if (!resolvedSlug) return;
 
-    const uploadKey = `portfolio:${index}`;
+    const uploadKey = uiTemplate(["portfolio:",""], [index]);
     setUploadFlag(uploadKey, { loading: true, error: "" });
 
     try {
@@ -1185,8 +1183,8 @@ export default function MasterTemplateEditorPage() {
       setSaveState({
         kind: "success",
         message: validationResult.is_ready_for_publish
-          ? "Черновик сохранён локально. Это режим редактирования до полной цепочки доступа."
-          : "Черновик сохранён локально с обязательные поля."
+          ? uiMessage("master.s0359")
+          : uiMessage("master.s0360")
       });
       return { ok: true, document: nextDocument, validation: validationResult, mode: "mock" };
     }
@@ -1209,13 +1207,13 @@ export default function MasterTemplateEditorPage() {
       }
     });
     setDraft(mergeDraft(nextDocument?.draft || nextDraft));
-    setSaveState(createStatusState("success", "Черновик мастера сохранён."));
+    setSaveState(createStatusState("success", uiMessage("master.s0361")));
     return { ok: true, document: nextDocument, validation: nextDocument?.validation || validationResult, mode: "backend" };
   }
 
   async function handleSaveDraft() {
     if (!resolvedSlug) return;
-    setSaveState({ kind: "saving", message: "Сохраняем draft…" });
+    setSaveState({ kind: "saving", message: uiMessage("salon.s0499") });
     setPublishState({ kind: "idle", message: "" });
     await persistDraft(draft);
   }
@@ -1228,7 +1226,7 @@ export default function MasterTemplateEditorPage() {
       loading: true,
       payload: null,
       mode: "loading",
-      message: "Сохраняем draft и собираем preview…"
+      message: uiMessage("master.s0363")
     });
 
     const saveResult = await persistDraft(draft);
@@ -1238,7 +1236,7 @@ export default function MasterTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "fallback",
-        message: saveResult.error || "PREVIEW_SAVE_FAILED — открыт текущий черновик."
+        message: uiError(saveResult.error || uiMessage("master.s0364"))
       });
       return;
     }
@@ -1249,7 +1247,7 @@ export default function MasterTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "mock",
-        message: "Локальный preview открыт без доступ к серверу. Это mock по текущему draft."
+        message: uiMessage("salon.s0490")
       });
       return;
     }
@@ -1262,7 +1260,7 @@ export default function MasterTemplateEditorPage() {
         loading: false,
         payload: buildPreviewPayload(draft, resolvedSlug),
         mode: "fallback",
-        message: extractMessage(result, "Не удалось открыть серверный предпросмотр. Показан текущий черновик.")
+        message: extractMessage(result, uiMessage("master.s0366"))
       });
       return;
     }
@@ -1272,7 +1270,7 @@ export default function MasterTemplateEditorPage() {
       loading: false,
       payload: result.payload || buildPreviewPayload(draft, resolvedSlug),
       mode: "backend",
-      message: result.is_ready_for_preview ? "Preview получен из backend." : "Preview получен, но backend validation ещё не готов."
+      message: result.is_ready_for_preview ? uiMessage("salon.s0495") : uiMessage("master.s0368")
     });
   }
 
@@ -1289,18 +1287,18 @@ export default function MasterTemplateEditorPage() {
       setDocumentState(nextDocument);
       setPublishState({
         kind: "error",
-        message: "Публикация заблокирована: исправь обязательные поля страница мастера."
+        message: uiMessage("master.s0369")
       });
       return;
     }
 
-    setPublishState(createStatusState("publishing", "Публикуем страницу…"));
+    setPublishState(createStatusState("publishing", uiMessage("salon.s0503")));
     const saveResult = await persistDraft(draft);
 
     if (!saveResult.ok) {
       setPublishState({
         kind: "error",
-        message: saveResult.error || "DRAFT_SAVE_BEFORE_PUBLISH_FAILED"
+        message: uiError(saveResult.error || "DRAFT_SAVE_BEFORE_PUBLISH_FAILED")
       });
       return;
     }
@@ -1311,7 +1309,7 @@ export default function MasterTemplateEditorPage() {
       setDraft(mergeDraft(nextDocument.draft || draft));
       setPublishState({
         kind: "success",
-        message: "Публикация выполнена локально. Это режим редактирования до полной цепочки доступа."
+        message: uiMessage("master.s0371")
       });
       return;
     }
@@ -1340,35 +1338,33 @@ export default function MasterTemplateEditorPage() {
       }
     });
     setDraft(mergeDraft(nextDraft));
-    setPublishState({ kind: "success", message: "Страница мастера опубликована." });
+    setPublishState({ kind: "success", message: uiMessage("master.s0372") });
     setSaveState({ kind: "idle", message: "" });
   }
 
-  const previewPath = `/preview/master/${resolvedSlug}`;
-  const publicPath = `/master/${resolvedSlug}`;
+  const previewPath = uiTemplate(["/preview/master/",""], [resolvedSlug]);
+  const publicPath = uiTemplate(["/master/",""], [resolvedSlug]);
   const blockTone = pageError ? "warn" : hasToken ? "good" : "neutral";
-  const blockValue = pageLoading ? "Загрузка" : pageError ? "Ошибка" : hasToken ? "Готово" : "Локальный режим";
+  const blockValue = pageLoading ? uiMessage("salon.s0505") : pageError ? uiMessage("salon.s0506") : hasToken ? uiMessage("salon.s0507") : uiMessage("salon.s0508");
   const blockNote = pageError
     ? pageError
     : hasToken
-      ? "Страница читает document и работает с backend."
-      : "Полная цепочка доступа ещё не внедрена, editor работает в безопасном режиме без поломки кабинета.";
+      ? uiMessage("master.s0376")
+      : uiMessage("master.s0377");
 
   return (
     <div style={{ display: "grid", gap: "20px", padding: "24px", width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box" }}>
       <PageHeader
-        title="Редактор страницы мастера"
-        subtitle={`Mirror editor для мастера${resolvedSlug ? ` · ${resolvedSlug}` : ""}. Логика сохранена как у салона, без трогания эталонного PublicMasterPage.`}
+        title={uiMessage("master.s0378")}
+        subtitle={uiMessage("master.s0379", {p0: resolvedSlug ? uiTemplate([" · ",""], [resolvedSlug]) : ""})}
         actions={(
           <>
             <ActionButton tone="secondary" onClick={handleSaveDraft} disabled={!resolvedSlug || pageLoading || saveState.kind === "saving"}>
-              {saveState.kind === "saving" ? "Сохраняем…" : "Сохранить draft"}
+              <UiValue value={saveState.kind === "saving" ? uiMessage("salon.s0519") : uiMessage("salon.s0520")} />
             </ActionButton>
-            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!resolvedSlug || pageLoading}>
-              Открыть preview
-            </ActionButton>
+            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!resolvedSlug || pageLoading}><UiValue value={uiMessage("master.s0381")} /></ActionButton>
             <ActionButton onClick={handlePublish} disabled={!resolvedSlug || pageLoading || publishState.kind === "publishing"}>
-              {publishState.kind === "publishing" ? "Публикуем…" : "Опубликовать"}
+              <UiValue value={publishState.kind === "publishing" ? uiMessage("salon.s0522") : uiMessage("salon.s0523")} />
             </ActionButton>
           </>
         )}
@@ -1382,21 +1378,19 @@ export default function MasterTemplateEditorPage() {
         maxWidth: "100%",
         boxSizing: "border-box"
       }}>
-        <StatusCard title="Статус блока" value={blockValue} note={blockNote} tone={blockTone} />
-        <StatusCard title="Slug" value={resolvedSlug || "—"} note="Master editor работает от route slug и master context." />
-        <StatusCard title="Готовность к публикации" value={validation.is_ready_for_publish ? "Готово" : "Не готово"} note={`Ошибок: ${hardErrors.length} · Warnings: ${warnings.length}`} tone={validation.is_ready_for_publish ? "good" : "warn"} />
-        <StatusCard title="Заполнение" value={`${completionScore}%`} note={lastSavedAt ? `Последнее сохранение: ${new Date(lastSavedAt).toLocaleString()}` : "Сохранения ещё не было."} />
+        <StatusCard title={uiMessage("salon.s0524")} value={blockValue} note={blockNote} tone={blockTone} />
+        <StatusCard title={uiMessage("salon.s0525")} value={resolvedSlug || "—"} note={uiMessage("master.s0386")} />
+        <StatusCard title={uiMessage("salon.s0527")} value={validation.is_ready_for_publish ? uiMessage("salon.s0507") : uiMessage("salon.s0528")} note={uiMessage("salon.s0529", {p0: hardErrors.length, p1: warnings.length})} tone={validation.is_ready_for_publish ? "good" : "warn"} />
+        <StatusCard title={uiMessage("salon.s0530")} value={uiTemplate(["","%"], [completionScore])} note={lastSavedAt ? uiMessage("salon.s0531", {p0: uiDate(lastSavedAt, { dateStyle: "short", timeStyle: "short" })}) : uiMessage("salon.s0532")} />
       </div>
 
       {!hasToken ? (
-        <PageSection title="Локальный режим" subtitle="Полная цепочка доступа ещё не внедрена, поэтому доступ к серверу для browser не обязателен на этом этапе.">
-          <div style={infoBoxStyle}>
-            Страница работает в безопасном режиме. Это не ломает контракт: сейчас мы фиксируем работу редактора, preview и экран публикации, не трогая эталонный публичную страницу.
-          </div>
+        <PageSection title={uiMessage("salon.s0508")} subtitle={uiMessage("salon.s0533")}>
+          <div style={infoBoxStyle}><UiValue value={uiMessage("master.s0394")} /></div>
         </PageSection>
       ) : null}
 
-      <PageSection title="Cloudinary pipeline" subtitle="Upload layer подключён прямо в master editor. Ручной image_asset_id сохранён как резерв.">
+      <PageSection title={uiMessage("salon.s0535")} subtitle={uiMessage("master.s0396")}>
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={{
             display: "grid",
@@ -1406,15 +1400,15 @@ export default function MasterTemplateEditorPage() {
             maxWidth: "100%",
             boxSizing: "border-box"
           }}>
-            <StatusCard title="Cloud name" value={cloudinaryConfig.cloudName || "MISSING"} tone={cloudinaryConfig.cloudName ? "good" : "warn"} />
-            <StatusCard title="Upload preset" value={cloudinaryConfig.uploadPreset || "MISSING"} tone={cloudinaryConfig.uploadPreset ? "good" : "warn"} />
-            <StatusCard title="Медиа-хранилище" value={cloudinaryConfig.rootFolder} note={`Папка медиа: ${cloudinaryConfig.rootFolder}/${MASTER_OWNER_TYPE}/<slug>/<asset_kind>`} tone="neutral" />
-            <StatusCard title="Upload state" value={cloudinaryReady ? "READY" : "BLOCKED"} note={cloudinaryReady ? "Можно загружать hero/avatar/portfolio/service-card прямо из editor." : "Нужно заполнить VITE_CLOUDINARY_* в SDK env."} tone={cloudinaryReady ? "good" : "warn"} />
+            <StatusCard title={uiMessage("salon.s0537")} value={cloudinaryConfig.cloudName || uiMessage("salon.display.missing")} tone={cloudinaryConfig.cloudName ? "good" : "warn"} />
+            <StatusCard title={uiMessage("salon.s0538")} value={cloudinaryConfig.uploadPreset || uiMessage("salon.display.missing")} tone={cloudinaryConfig.uploadPreset ? "good" : "warn"} />
+            <StatusCard title={uiMessage("salon.s0539")} value={cloudinaryConfig.rootFolder} note={uiMessage("salon.s0540", {p0: cloudinaryConfig.rootFolder, p1: MASTER_OWNER_TYPE})} tone="neutral" />
+            <StatusCard title={uiMessage("salon.s0541")} value={cloudinaryReady ? uiMessage("salon.display.ready") : uiMessage("salon.display.blocked")} note={cloudinaryReady ? uiMessage("master.s0402") : uiMessage("salon.s0543")} tone={cloudinaryReady ? "good" : "warn"} />
           </div>
         </div>
       </PageSection>
 
-      <PageSection title="Validation UX" subtitle="Живая проверка текущего draft без ожидания save. Это контроль перед publish.">
+      <PageSection title={uiMessage("salon.s0544")} subtitle={uiMessage("master.s0405")}>
         <div style={{ display: "grid", gap: "16px" }}>
           <div style={{
             display: "grid",
@@ -1424,31 +1418,31 @@ export default function MasterTemplateEditorPage() {
             maxWidth: "100%",
             boxSizing: "border-box"
           }}>
-            <StatusCard title="Live publish state" value={validation.is_ready_for_publish ? "READY" : "BLOCKED"} note="Статус считается по текущему draft." tone={validation.is_ready_for_publish ? "good" : "warn"} />
-            <StatusCard title="Hard errors" value={String(hardErrors.length)} note="Эти ошибки блокируют publish." tone={hardErrors.length ? "warn" : "good"} />
-            <StatusCard title="Warnings" value={String(warnings.length)} note="Не блокируют publish, но снижают готовность." tone={warnings.length ? "warn" : "good"} />
-            <StatusCard title="Section coverage" value={`${sectionHealthItems.filter((item) => item.value > 0).length}/6`} note="Покрытие ключевых editor-секций." tone="neutral" />
+            <StatusCard title={uiMessage("salon.s0546")} value={validation.is_ready_for_publish ? uiMessage("salon.display.ready") : uiMessage("salon.display.blocked")} note={uiMessage("master.s0407")} tone={validation.is_ready_for_publish ? "good" : "warn"} />
+            <StatusCard title={uiMessage("salon.s0548")} value={String(hardErrors.length)} note={uiMessage("salon.s0549")} tone={hardErrors.length ? "warn" : "good"} />
+            <StatusCard title={uiMessage("salon.s0550")} value={String(warnings.length)} note={uiMessage("master.s0411")} tone={warnings.length ? "warn" : "good"} />
+            <StatusCard title={uiMessage("salon.s0552")} value={uiTemplate(["","/6"], [sectionHealthItems.filter((item) => item.value > 0).length])} note={uiMessage("salon.s0553")} tone="neutral" />
           </div>
 
           {hardErrors.length ? (
             <div style={warningBoxStyle}>
-              <div style={{ fontSize: "14px", fontWeight: 800, marginBottom: "8px" }}>Блокеры публикации</div>
+              <div style={{ fontSize: "14px", fontWeight: 800, marginBottom: "8px" }}><UiValue value={uiMessage("salon.s0554")} /></div>
               <div style={{ display: "grid", gap: "8px" }}>
                 {hardErrors.map((item, index) => (
-                  <div key={`${item}-${index}`} style={validationLineStyle}>• {item}</div>
+                  <div key={index} style={validationLineStyle}>• <UiValue value={validationLabel(item)} /></div>
                 ))}
               </div>
             </div>
           ) : (
-            <div style={successBoxStyle}>Блокеров публикации по текущему draft нет.</div>
+            <div style={successBoxStyle}><UiValue value={uiMessage("salon.s0556")} /></div>
           )}
 
           {warnings.length ? (
             <div style={infoBoxStyle}>
-              <div style={{ fontSize: "14px", fontWeight: 800, marginBottom: "8px", color: "#111827" }}>Warnings</div>
+              <div style={{ fontSize: "14px", fontWeight: 800, marginBottom: "8px", color: "#111827" }}><UiValue value={uiMessage("salon.s0550")} /></div>
               <div style={{ display: "grid", gap: "8px" }}>
                 {warnings.map((item, index) => (
-                  <div key={`${item}-${index}`} style={validationLineStyle}>• {item}</div>
+                  <div key={index} style={validationLineStyle}>• <UiValue value={validationLabel(item)} /></div>
                 ))}
               </div>
             </div>
@@ -1460,288 +1454,286 @@ export default function MasterTemplateEditorPage() {
         <aside style={{ position: "sticky", top: "24px", display: "grid", gap: "12px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff" }}>
             <div style={{ display: "grid", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-              <strong style={{ fontSize: "15px", color: "#111827" }}>Sections</strong>
+              <strong style={{ fontSize: "15px", color: "#111827" }}><UiValue value={uiMessage("master.s0416")} /></strong>
               {sectionItems.map((item) => (
                 <a
                   key={item.id}
-                  href={`#${item.id}`}
+                  href={uiTemplate(["#",""], [item.id])}
                   style={{ textDecoration: "none", color: "#111827", display: "grid", gap: "2px" }}
                 >
-                  <span style={{ fontSize: "14px", fontWeight: 600 }}>{item.label}</span>
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>{item.note}</span>
+                  <span style={{ fontSize: "14px", fontWeight: 600 }}><UiValue value={item.label} /></span>
+                  <span style={{ fontSize: "12px", color: "#6b7280" }}><UiValue value={item.note} /></span>
                 </a>
               ))}
             </div>
           </div>
 
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-            <strong style={{ fontSize: "15px", color: "#111827" }}>Actions</strong>
+            <strong style={{ fontSize: "15px", color: "#111827" }}><UiValue value={uiMessage("master.s0417")} /></strong>
             <ActionButton onClick={handleSaveDraft} disabled={!resolvedSlug || pageLoading || saveState.kind === "saving"}>
-              {saveState.kind === "saving" ? "Сохраняю..." : "Сохранить draft"}
+              <UiValue value={saveState.kind === "saving" ? uiMessage("master.s0418") : uiMessage("salon.s0520")} />
             </ActionButton>
-            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!resolvedSlug || pageLoading}>
-              Открыть preview
-            </ActionButton>
+            <ActionButton tone="secondary" onClick={handleOpenPreview} disabled={!resolvedSlug || pageLoading}><UiValue value={uiMessage("master.s0381")} /></ActionButton>
             <ActionButton onClick={handlePublish} disabled={!resolvedSlug || pageLoading || publishState.kind === "publishing" || !validation.is_ready_for_publish}>
-              {publishState.kind === "publishing" ? "Публикую..." : "Publish"}
+              <UiValue value={publishState.kind === "publishing" ? uiMessage("master.s0419") : "Publish"} />
             </ActionButton>
-            <Link to={publicPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}>Открыть public master page</Link>
-            <Link to={previewPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}>Открыть preview route</Link>
+            <Link to={publicPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}><UiValue value={uiMessage("master.s0420")} /></Link>
+            <Link to={previewPath} style={{ color: "#111827", fontSize: "13px", fontWeight: 600 }}><UiValue value={uiMessage("master.s0421")} /></Link>
           </div>
 
           <div style={{ padding: "16px", borderRadius: "16px", border: "1px solid #e5e7eb", background: "#ffffff", display: "grid", gap: "8px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-            <strong style={{ fontSize: "15px", color: "#111827" }}>Validation</strong>
-            <div style={{ fontSize: "13px", color: "#111827" }}>Critical</div>
+            <strong style={{ fontSize: "15px", color: "#111827" }}><UiValue value={uiMessage("master.s0422")} /></strong>
+            <div style={{ fontSize: "13px", color: "#111827" }}><UiValue value={uiMessage("master.s0423")} /></div>
             {hardErrors.length ? hardErrors.map((item) => (
-              <span key={item} style={{ fontSize: "12px", color: "#991b1b" }}>{item}</span>
-            )) : <span style={{ fontSize: "12px", color: "#065f46" }}>Нет critical ошибок.</span>}
-            <div style={{ marginTop: "6px", fontSize: "13px", color: "#111827" }}>Warnings</div>
+              <span key={item} style={{ fontSize: "12px", color: "#991b1b" }}><UiValue value={validationLabel(item)} /></span>
+            )) : <span style={{ fontSize: "12px", color: "#065f46" }}><UiValue value={uiMessage("master.s0424")} /></span>}
+            <div style={{ marginTop: "6px", fontSize: "13px", color: "#111827" }}><UiValue value={uiMessage("salon.s0550")} /></div>
             {warnings.length ? warnings.map((item) => (
-              <span key={item} style={{ fontSize: "12px", color: "#92400e" }}>{item}</span>
-            )) : <span style={{ fontSize: "12px", color: "#6b7280" }}>Нет warnings.</span>}
+              <span key={item} style={{ fontSize: "12px", color: "#92400e" }}><UiValue value={validationLabel(item)} /></span>
+            )) : <span style={{ fontSize: "12px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0425")} /></span>}
           </div>
         </aside>
 
         <div style={{ display: "grid", gap: "20px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-          <Panel id="identity" title="Identity" note="Top identity strip / master identity.">
+          <Panel id="identity" title={uiMessage("salon.s0681")} note={uiMessage("master.s0426")}>
             <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-              <Field label="Имя мастера"><input value={draft.identity.master_name} onChange={(e) => setDraftField("identity", "master_name", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Профессия"><input value={draft.identity.profession} onChange={(e) => setDraftField("identity", "profession", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Город"><input value={draft.identity.city} onChange={(e) => setDraftField("identity", "city", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Hero badge"><input value={draft.identity.hero_badge} onChange={(e) => setDraftField("identity", "hero_badge", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0439")}><input value={draft.identity.master_name} onChange={(e) => setDraftField("identity", "master_name", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0428")}><input value={draft.identity.profession} onChange={(e) => setDraftField("identity", "profession", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0571")}><input value={draft.identity.city} onChange={(e) => setDraftField("identity", "city", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0430")}><input value={draft.identity.hero_badge} onChange={(e) => setDraftField("identity", "hero_badge", e.target.value)} style={inputStyle()} /></Field>
             </div>
           </Panel>
 
-          <Panel id="hero" title="Hero" note="Main hero content and top CTA.">
-            <Field label="Hero subtitle"><input value={draft.identity.subtitle} onChange={(e) => setDraftField("identity", "subtitle", e.target.value)} style={inputStyle()} /></Field>
-            <Field label="Hero description"><textarea value={draft.identity.description} onChange={(e) => setDraftField("identity", "description", e.target.value)} style={textareaStyle(5)} /></Field>
+          <Panel id="hero" title={uiMessage("master.s0325")} note={uiMessage("master.s0431")}>
+            <Field label={uiMessage("master.s0432")}><input value={draft.identity.subtitle} onChange={(e) => setDraftField("identity", "subtitle", e.target.value)} style={inputStyle()} /></Field>
+            <Field label={uiMessage("master.s0433")}><textarea value={draft.identity.description} onChange={(e) => setDraftField("identity", "description", e.target.value)} style={textareaStyle(5)} /></Field>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
               <div style={{ display: "grid", gap: "14px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                <Field label="Hero image asset id" hint="V1 primary pipeline field."><input value={draft.images.hero.image_asset_id} onChange={(e) => setNestedDraftField("images", "hero", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
-                <Field label="Hero image URL" hint="Fallback для dev/manual mode."><input value={draft.images.hero.image_url} onChange={(e) => setNestedDraftField("images", "hero", "image_url", e.target.value)} style={inputStyle()} /></Field>
-                <Field label="Hero alt"><input value={draft.images.hero.alt} onChange={(e) => setNestedDraftField("images", "hero", "alt", e.target.value)} style={inputStyle()} /></Field>
+                <Field label={uiMessage("salon.s0580")} hint={uiMessage("master.s0435")}><input value={draft.images.hero.image_asset_id} onChange={(e) => setNestedDraftField("images", "hero", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
+                <Field label={uiMessage("master.s0436")} hint={uiMessage("master.s0437")}><input value={draft.images.hero.image_url} onChange={(e) => setNestedDraftField("images", "hero", "image_url", e.target.value)} style={inputStyle()} /></Field>
+                <Field label={uiMessage("salon.s0582")}><input value={draft.images.hero.alt} onChange={(e) => setNestedDraftField("images", "hero", "alt", e.target.value)} style={inputStyle()} /></Field>
                 <UploadInput onSelect={(file) => handleRootImageUpload("hero", file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState["root:hero"]?.loading} />
-                {uploadState["root:hero"]?.error ? <div style={warningBoxStyle}>{uploadState["root:hero"].error}</div> : null}
+                {uploadState["root:hero"]?.error ? <div style={warningBoxStyle}><UiValue value={uploadState["root:hero"].error} /></div> : null}
               </div>
-              <AssetPreview title="Hero preview" entity={draft.images.hero || {}} emptyNote="Hero пока не загружен." />
+              <AssetPreview title={uiMessage("salon.s0584")} entity={draft.images.hero || {}} emptyNote={uiMessage("salon.s0585")} />
             </div>
           </Panel>
 
-          <Panel id="contacts" title="Contacts / Location" note="Address card and map contract.">
+          <Panel id="contacts" title={uiMessage("master.s0327")} note={uiMessage("master.s0441")}>
             <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-              <Field label="Адрес"><input value={draft.location.address} onChange={(e) => setDraftField("location", "address", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Район"><input value={draft.location.district} onChange={(e) => setDraftField("location", "district", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Город"><input value={draft.location.city} onChange={(e) => setDraftField("location", "city", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="График"><input value={draft.location.schedule_text} onChange={(e) => setDraftField("location", "schedule_text", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Телефон"><input value={draft.location.phone} onChange={(e) => setDraftField("location", "phone", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="WhatsApp"><input value={draft.location.whatsapp} onChange={(e) => setDraftField("location", "whatsapp", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Instagram"><input value={draft.location.instagram} onChange={(e) => setDraftField("location", "instagram", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Telegram"><input value={draft.location.telegram} onChange={(e) => setDraftField("location", "telegram", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0567")}><input value={draft.location.address} onChange={(e) => setDraftField("location", "address", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0569")}><input value={draft.location.district} onChange={(e) => setDraftField("location", "district", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0571")}><input value={draft.location.city} onChange={(e) => setDraftField("location", "city", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0575")}><input value={draft.location.schedule_text} onChange={(e) => setDraftField("location", "schedule_text", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0230")}><input value={draft.location.phone} onChange={(e) => setDraftField("location", "phone", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0574")}><input value={draft.location.whatsapp} onChange={(e) => setDraftField("location", "whatsapp", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0445")}><input value={draft.location.instagram} onChange={(e) => setDraftField("location", "instagram", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0446")}><input value={draft.location.telegram} onChange={(e) => setDraftField("location", "telegram", e.target.value)} style={inputStyle()} /></Field>
             </div>
-            <Field label="Map URL"><input value={draft.location.map_url} onChange={(e) => setDraftField("location", "map_url", e.target.value)} style={inputStyle()} /></Field>
+            <Field label={uiMessage("master.s0447")}><input value={draft.location.map_url} onChange={(e) => setDraftField("location", "map_url", e.target.value)} style={inputStyle()} /></Field>
           </Panel>
 
-          <Panel id="trust" title="Trust" note="Ratings and social proof.">
+          <Panel id="trust" title={uiMessage("salon.s0686")} note={uiMessage("master.s0448")}>
             <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-              <Field label="Rating value"><input value={draft.trust.rating_value} onChange={(e) => setDraftField("trust", "rating_value", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Review count"><input value={draft.trust.review_count} onChange={(e) => setDraftField("trust", "review_count", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0449")}><input value={draft.trust.rating_value} onChange={(e) => setDraftField("trust", "rating_value", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0450")}><input value={draft.trust.review_count} onChange={(e) => setDraftField("trust", "review_count", e.target.value)} style={inputStyle()} /></Field>
             </div>
-            <Field label="Trust note"><textarea value={draft.trust.trust_note} onChange={(e) => setDraftField("trust", "trust_note", e.target.value)} style={textareaStyle(3)} /></Field>
-            <Field label="Sticky subline"><input value={draft.trust.sticky_subline} onChange={(e) => setDraftField("trust", "sticky_subline", e.target.value)} style={inputStyle()} /></Field>
+            <Field label={uiMessage("master.s0451")}><textarea value={draft.trust.trust_note} onChange={(e) => setDraftField("trust", "trust_note", e.target.value)} style={textareaStyle(3)} /></Field>
+            <Field label={uiMessage("master.s0452")}><input value={draft.trust.sticky_subline} onChange={(e) => setDraftField("trust", "sticky_subline", e.target.value)} style={inputStyle()} /></Field>
           </Panel>
 
-          <Panel id="badges" title="Badges" note="Short hero badges.">
-            <ArrayCard title="Badges" note="Один badge = одна короткая строка." onAdd={() => addPrimitiveItem("badges", "")} addLabel="Добавить badge">
-              {draft.sections.badges.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+          <Panel id="badges" title={uiMessage("master.s0331")} note={uiMessage("master.s0453")}>
+            <ArrayCard title={uiMessage("master.s0331")} note={uiMessage("master.s0454")} onAdd={() => addPrimitiveItem("badges", "")} addLabel={uiMessage("master.s0455")}>
+              {draft.sections.badges.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
               {draft.sections.badges.map((item, index) => (
-                <div key={`badge_${index}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+                <div key={uiTemplate(["badge_",""], [index])} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                   <input value={item} onChange={(e) => updatePrimitiveItem("badges", index, e.target.value)} style={inputStyle()} />
-                  <ActionButton tone="secondary" onClick={() => removePrimitiveItem("badges", index)}>Удалить</ActionButton>
+                  <ActionButton tone="secondary" onClick={() => removePrimitiveItem("badges", index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton>
                 </div>
               ))}
             </ArrayCard>
           </Panel>
 
-          <Panel id="benefits" title="Benefits" note="Карточки преимуществ мастера.">
-            <ArrayCard title="Benefits" note="title + text" onAdd={() => addObjectItem("benefits", () => ({ id: getItemKey("benefit"), title: "", text: "" }))} addLabel="Добавить benefit">
-              {draft.sections.benefits.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+          <Panel id="benefits" title={uiMessage("salon.s0511")} note={uiMessage("master.s0334")}>
+            <ArrayCard title={uiMessage("salon.s0511")} note={uiMessage("master.s0457")} onAdd={() => addObjectItem("benefits", () => ({ id: getItemKey("benefit"), title: "", text: "" }))} addLabel={uiMessage("master.s0458")}>
+              {draft.sections.benefits.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
               {draft.sections.benefits.map((item, index) => (
-                <div key={item.id || `benefit_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-                  <Field label="Title"><input value={item.title || ""} onChange={(e) => setArrayItem("benefits", index, "title", e.target.value)} style={inputStyle()} /></Field>
-                  <Field label="Text"><textarea value={item.text || ""} onChange={(e) => setArrayItem("benefits", index, "text", e.target.value)} style={textareaStyle(3)} /></Field>
-                  <div><ActionButton tone="secondary" onClick={() => removeObjectItem("benefits", index)}>Удалить</ActionButton></div>
+                <div key={item.id || uiTemplate(["benefit_",""], [index])} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+                  <Field label={uiMessage("master.s0459")}><input value={item.title || ""} onChange={(e) => setArrayItem("benefits", index, "title", e.target.value)} style={inputStyle()} /></Field>
+                  <Field label={uiMessage("master.s0460")}><textarea value={item.text || ""} onChange={(e) => setArrayItem("benefits", index, "text", e.target.value)} style={textareaStyle(3)} /></Field>
+                  <div><ActionButton tone="secondary" onClick={() => removeObjectItem("benefits", index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton></div>
                 </div>
               ))}
             </ArrayCard>
           </Panel>
 
-          <Panel id="metrics" title="Metrics" note="Trust cards/value indicators.">
-            <ArrayCard title="Metrics" note="value + label" onAdd={addMetric} addLabel="Добавить metric">
-              {draft.metrics.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+          <Panel id="metrics" title={uiMessage("master.s0335")} note={uiMessage("master.s0461")}>
+            <ArrayCard title={uiMessage("master.s0335")} note={uiMessage("master.s0462")} onAdd={addMetric} addLabel={uiMessage("master.s0463")}>
+              {draft.metrics.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
               {draft.metrics.map((item, index) => (
-                <div key={item.id || `metric_${index}`} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                  <input placeholder="Value" value={item.value || ""} onChange={(e) => setMetricItem(index, "value", e.target.value)} style={inputStyle()} />
-                  <input placeholder="Label" value={item.label || ""} onChange={(e) => setMetricItem(index, "label", e.target.value)} style={inputStyle()} />
-                  <ActionButton tone="secondary" onClick={() => removeMetric(index)}>Удалить</ActionButton>
+                <div key={item.id || uiTemplate(["metric_",""], [index])} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+                  <input placeholder={renderUi(uiMessage("master.s0464"))} value={item.value || ""} onChange={(e) => setMetricItem(index, "value", e.target.value)} style={inputStyle()} />
+                  <input placeholder={renderUi(uiMessage("master.s0465"))} value={item.label || ""} onChange={(e) => setMetricItem(index, "label", e.target.value)} style={inputStyle()} />
+                  <ActionButton tone="secondary" onClick={() => removeMetric(index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton>
                 </div>
               ))}
             </ArrayCard>
           </Panel>
 
-          <Panel id="featured-services" title="Featured Services" note="Карточки основных услуг мастера.">
-            <ArrayCard title="Featured services" note="title / price / time / note" onAdd={() => addObjectItem("featured_services", () => ({ id: getItemKey("featured_service"), title: "", price: "", time: "", note: "" }))} addLabel="Добавить услугу">
-              {draft.sections.featured_services.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+          <Panel id="featured-services" title={uiMessage("master.s0337")} note={uiMessage("master.s0466")}>
+            <ArrayCard title={uiMessage("master.s0467")} note={uiMessage("master.s0468")} onAdd={() => addObjectItem("featured_services", () => ({ id: getItemKey("featured_service"), title: "", price: "", time: "", note: "" }))} addLabel={uiMessage("salon.s0601")}>
+              {draft.sections.featured_services.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
               {draft.sections.featured_services.map((item, index) => (
-                <div key={item.id || `featured_service_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+                <div key={item.id || uiTemplate(["featured_service_",""], [index])} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
                   <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                    <input placeholder="Title" value={item.title || ""} onChange={(e) => setArrayItem("featured_services", index, "title", e.target.value)} style={inputStyle()} />
-                    <input placeholder="Price" value={item.price || ""} onChange={(e) => setArrayItem("featured_services", index, "price", e.target.value)} style={inputStyle()} />
-                    <input placeholder="Time" value={item.time || ""} onChange={(e) => setArrayItem("featured_services", index, "time", e.target.value)} style={inputStyle()} />
+                    <input placeholder={renderUi(uiMessage("master.s0459"))} value={item.title || ""} onChange={(e) => setArrayItem("featured_services", index, "title", e.target.value)} style={inputStyle()} />
+                    <input placeholder={renderUi(uiMessage("master.s0469"))} value={item.price || ""} onChange={(e) => setArrayItem("featured_services", index, "price", e.target.value)} style={inputStyle()} />
+                    <input placeholder={renderUi(uiMessage("master.s0470"))} value={item.time || ""} onChange={(e) => setArrayItem("featured_services", index, "time", e.target.value)} style={inputStyle()} />
                   </div>
-                  <textarea placeholder="Note" value={item.note || ""} onChange={(e) => setArrayItem("featured_services", index, "note", e.target.value)} style={textareaStyle(3)} />
-                  <div><ActionButton tone="secondary" onClick={() => removeObjectItem("featured_services", index)}>Удалить</ActionButton></div>
+                  <textarea placeholder={renderUi(uiMessage("master.s0471"))} value={item.note || ""} onChange={(e) => setArrayItem("featured_services", index, "note", e.target.value)} style={textareaStyle(3)} />
+                  <div><ActionButton tone="secondary" onClick={() => removeObjectItem("featured_services", index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton></div>
                 </div>
               ))}
             </ArrayCard>
           </Panel>
 
-          <Panel id="catalog" title="Full Catalog" note="Полный service catalog мастера.">
-            <ArrayCard title="Service catalog" note="name / price / duration / description" onAdd={() => addObjectItem("service_catalog", () => ({ id: getItemKey("service_catalog"), name: "", price: "", duration: "", description: "" }))} addLabel="Добавить в каталог">
-              {draft.sections.service_catalog.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+          <Panel id="catalog" title={uiMessage("master.s0339")} note={uiMessage("master.s0472")}>
+            <ArrayCard title={uiMessage("master.s0473")} note={uiMessage("master.s0474")} onAdd={() => addObjectItem("service_catalog", () => ({ id: getItemKey("service_catalog"), name: "", price: "", duration: "", description: "" }))} addLabel={uiMessage("master.s0475")}>
+              {draft.sections.service_catalog.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
               {draft.sections.service_catalog.map((item, index) => (
-                <div key={item.id || `service_catalog_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+                <div key={item.id || uiTemplate(["service_catalog_",""], [index])} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
                   <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                    <input placeholder="Name" value={item.name || ""} onChange={(e) => setArrayItem("service_catalog", index, "name", e.target.value)} style={inputStyle()} />
-                    <input placeholder="Price" value={item.price || ""} onChange={(e) => setArrayItem("service_catalog", index, "price", e.target.value)} style={inputStyle()} />
-                    <input placeholder="Duration" value={item.duration || ""} onChange={(e) => setArrayItem("service_catalog", index, "duration", e.target.value)} style={inputStyle()} />
+                    <input placeholder={renderUi(uiMessage("master.s0476"))} value={item.name || ""} onChange={(e) => setArrayItem("service_catalog", index, "name", e.target.value)} style={inputStyle()} />
+                    <input placeholder={renderUi(uiMessage("master.s0469"))} value={item.price || ""} onChange={(e) => setArrayItem("service_catalog", index, "price", e.target.value)} style={inputStyle()} />
+                    <input placeholder={renderUi(uiMessage("master.s0477"))} value={item.duration || ""} onChange={(e) => setArrayItem("service_catalog", index, "duration", e.target.value)} style={inputStyle()} />
                   </div>
-                  <textarea placeholder="Description" value={item.description || ""} onChange={(e) => setArrayItem("service_catalog", index, "description", e.target.value)} style={textareaStyle(3)} />
-                  <div><ActionButton tone="secondary" onClick={() => removeObjectItem("service_catalog", index)}>Удалить</ActionButton></div>
+                  <textarea placeholder={renderUi(uiMessage("master.s0478"))} value={item.description || ""} onChange={(e) => setArrayItem("service_catalog", index, "description", e.target.value)} style={textareaStyle(3)} />
+                  <div><ActionButton tone="secondary" onClick={() => removeObjectItem("service_catalog", index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton></div>
                 </div>
               ))}
             </ArrayCard>
           </Panel>
 
-          <Panel id="reviews" title="Reviews" note="Отзывы клиентов.">
-            <ArrayCard title="Reviews" note="name / text / rating" onAdd={() => addObjectItem("reviews", () => ({ id: getItemKey("review"), name: "", text: "", rating: "" }))} addLabel="Добавить отзыв">
-              {draft.sections.reviews.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+          <Panel id="reviews" title={uiMessage("salon.s0515")} note={uiMessage("salon.s0474")}>
+            <ArrayCard title={uiMessage("salon.s0515")} note={uiMessage("master.s0479")} onAdd={() => addObjectItem("reviews", () => ({ id: getItemKey("review"), name: "", text: "", rating: "" }))} addLabel={uiMessage("salon.s0642")}>
+              {draft.sections.reviews.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
               {draft.sections.reviews.map((item, index) => (
-                <div key={item.id || `review_${index}`} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+                <div key={item.id || uiTemplate(["review_",""], [index])} style={{ display: "grid", gap: "10px", padding: "14px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
                   <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                    <input placeholder="Name" value={item.name || ""} onChange={(e) => setReviewItem(index, "name", e.target.value)} style={inputStyle()} />
-                    <input placeholder="Rating" value={item.rating || ""} onChange={(e) => setReviewItem(index, "rating", e.target.value)} style={inputStyle()} />
+                    <input placeholder={renderUi(uiMessage("master.s0476"))} value={item.name || ""} onChange={(e) => setReviewItem(index, "name", e.target.value)} style={inputStyle()} />
+                    <input placeholder={renderUi(uiMessage("master.s0481"))} value={item.rating || ""} onChange={(e) => setReviewItem(index, "rating", e.target.value)} style={inputStyle()} />
                   </div>
-                  <textarea placeholder="Text" value={item.text || ""} onChange={(e) => setReviewItem(index, "text", e.target.value)} style={textareaStyle(3)} />
-                  <div><ActionButton tone="secondary" onClick={() => removeObjectItem("reviews", index)}>Удалить</ActionButton></div>
+                  <textarea placeholder={renderUi(uiMessage("master.s0460"))} value={item.text || ""} onChange={(e) => setReviewItem(index, "text", e.target.value)} style={textareaStyle(3)} />
+                  <div><ActionButton tone="secondary" onClick={() => removeObjectItem("reviews", index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton></div>
                 </div>
               ))}
             </ArrayCard>
           </Panel>
 
-          <Panel id="about" title="About" note="About + stats composition stays together in публичную страницу.">
-            <ArrayCard title="About paragraphs" note="Минимум 1 paragraph обязателен для publish." onAdd={addAboutParagraph} addLabel="Добавить paragraph">
-              {draft.sections.about_paragraphs.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+          <Panel id="about" title={uiMessage("master.s0343")} note={uiMessage("master.s0482")}>
+            <ArrayCard title={uiMessage("master.s0483")} note={uiMessage("master.s0484")} onAdd={addAboutParagraph} addLabel={uiMessage("master.s0485")}>
+              {draft.sections.about_paragraphs.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
               {draft.sections.about_paragraphs.map((item, index) => (
-                <div key={item.id || `about_${index}`} style={{ display: "grid", gap: "10px" }}>
+                <div key={item.id || uiTemplate(["about_",""], [index])} style={{ display: "grid", gap: "10px" }}>
                   <textarea value={item.text || ""} onChange={(e) => updateAboutParagraph(index, "text", e.target.value)} style={textareaStyle(4)} />
-                  <div><ActionButton tone="secondary" onClick={() => removeAboutParagraph(index)}>Удалить</ActionButton></div>
+                  <div><ActionButton tone="secondary" onClick={() => removeAboutParagraph(index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton></div>
                 </div>
               ))}
             </ArrayCard>
           </Panel>
 
-          <Panel id="stats" title="Stats" note="Years / rating / bookings block.">
+          <Panel id="stats" title={uiMessage("master.s0345")} note={uiMessage("master.s0486")}>
             <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-              <Field label="Years"><input value={draft.stats.years} onChange={(e) => setDraftField("stats", "years", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Rating"><input value={draft.stats.rating} onChange={(e) => setDraftField("stats", "rating", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Bookings"><input value={draft.stats.bookings} onChange={(e) => setDraftField("stats", "bookings", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0487")}><input value={draft.stats.years} onChange={(e) => setDraftField("stats", "years", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0481")}><input value={draft.stats.rating} onChange={(e) => setDraftField("stats", "rating", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("salon.s0731")}><input value={draft.stats.bookings} onChange={(e) => setDraftField("stats", "bookings", e.target.value)} style={inputStyle()} /></Field>
             </div>
           </Panel>
 
-          <Panel id="images" title="Images" note="Hero now, avatar/portfolio/service-card reserved and already wired into upload pipeline.">
+          <Panel id="images" title={uiMessage("master.s0347")} note={uiMessage("master.s0489")}>
             <div style={{ display: "grid", gap: "16px" }}>
               <div style={nestedCardStyle}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                   <div style={{ display: "grid", gap: "14px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                    <Field label="Avatar asset id"><input value={draft.images.avatar.image_asset_id} onChange={(e) => setNestedDraftField("images", "avatar", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
-                    <Field label="Avatar URL"><input value={draft.images.avatar.image_url} onChange={(e) => setNestedDraftField("images", "avatar", "image_url", e.target.value)} style={inputStyle()} /></Field>
-                    <Field label="Avatar alt"><input value={draft.images.avatar.alt} onChange={(e) => setNestedDraftField("images", "avatar", "alt", e.target.value)} style={inputStyle()} /></Field>
+                    <Field label={uiMessage("salon.s0657")}><input value={draft.images.avatar.image_asset_id} onChange={(e) => setNestedDraftField("images", "avatar", "image_asset_id", e.target.value)} style={inputStyle()} /></Field>
+                    <Field label={uiMessage("master.s0491")}><input value={draft.images.avatar.image_url} onChange={(e) => setNestedDraftField("images", "avatar", "image_url", e.target.value)} style={inputStyle()} /></Field>
+                    <Field label={uiMessage("master.s0492")}><input value={draft.images.avatar.alt} onChange={(e) => setNestedDraftField("images", "avatar", "alt", e.target.value)} style={inputStyle()} /></Field>
                     <UploadInput onSelect={(file) => handleRootImageUpload("avatar", file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState["root:avatar"]?.loading} />
-                    {uploadState["root:avatar"]?.error ? <div style={warningBoxStyle}>{uploadState["root:avatar"].error}</div> : null}
+                    {uploadState["root:avatar"]?.error ? <div style={warningBoxStyle}><UiValue value={uploadState["root:avatar"].error} /></div> : null}
                   </div>
-                  <AssetPreview title="Avatar preview" entity={draft.images.avatar || {}} emptyNote="Avatar пока не загружен." />
+                  <AssetPreview title={uiMessage("master.s0493")} entity={draft.images.avatar || {}} emptyNote={uiMessage("master.s0494")} />
                 </div>
               </div>
 
-              <ArrayCard title="Portfolio reserved" note="Pipeline ready. Public block будет позже, но upload уже готов." onAdd={addPortfolioItem} addLabel="Добавить portfolio image">
-                {draft.sections.portfolio.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+              <ArrayCard title={uiMessage("master.s0495")} note={uiMessage("master.s0496")} onAdd={addPortfolioItem} addLabel={uiMessage("master.s0497")}>
+                {draft.sections.portfolio.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
                 {draft.sections.portfolio.map((item, index) => (
-                  <div key={item.id || `portfolio_${index}`} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+                  <div key={item.id || uiTemplate(["portfolio_",""], [index])} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                     <div style={{ display: "grid", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                      <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_asset_id", e.target.value)} style={inputStyle()} />
-                      <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_url", e.target.value)} style={inputStyle()} />
-                      <input placeholder="alt" value={item.alt || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "alt", e.target.value)} style={inputStyle()} />
-                      <UploadInput onSelect={(file) => handlePortfolioUpload(index, file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState[`portfolio:${index}`]?.loading} />
-                      {uploadState[`portfolio:${index}`]?.error ? <div style={warningBoxStyle}>{uploadState[`portfolio:${index}`].error}</div> : null}
-                      <div><ActionButton tone="secondary" onClick={() => removePortfolioItem(index)}>Удалить</ActionButton></div>
+                      <input placeholder={renderUi(uiMessage("master.s0498"))} value={item.image_asset_id || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_asset_id", e.target.value)} style={inputStyle()} />
+                      <input placeholder={renderUi(uiMessage("master.s0499"))} value={item.image_url || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "image_url", e.target.value)} style={inputStyle()} />
+                      <input placeholder={renderUi(uiMessage("master.s0500"))} value={item.alt || ""} onChange={(e) => setSectionImageArrayItem("portfolio", index, "alt", e.target.value)} style={inputStyle()} />
+                      <UploadInput onSelect={(file) => handlePortfolioUpload(index, file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState[uiTemplate(["portfolio:",""], [index])]?.loading} />
+                      {uploadState[uiTemplate(["portfolio:",""], [index])]?.error ? <div style={warningBoxStyle}><UiValue value={uploadState[uiTemplate(["portfolio:",""], [index])].error} /></div> : null}
+                      <div><ActionButton tone="secondary" onClick={() => removePortfolioItem(index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton></div>
                     </div>
-                    <AssetPreview title="Portfolio preview" entity={item} emptyNote="Portfolio image пока не загружено." />
+                    <AssetPreview title={uiMessage("master.s0501")} entity={item} emptyNote={uiMessage("master.s0502")} />
                   </div>
                 ))}
               </ArrayCard>
 
-              <ArrayCard title="Service-card reserved" note="Future service-card visuals." onAdd={() => addImageItem("service_card")} addLabel="Добавить service-card image">
-                {draft.images.service_card.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}>Пока пусто.</span> : null}
+              <ArrayCard title={uiMessage("master.s0503")} note={uiMessage("master.s0504")} onAdd={() => addImageItem("service_card")} addLabel={uiMessage("master.s0505")}>
+                {draft.images.service_card.length === 0 ? <span style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("master.s0456")} /></span> : null}
                 {draft.images.service_card.map((item, index) => (
-                  <div key={item.id || `service_card_${index}`} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+                  <div key={item.id || uiTemplate(["service_card_",""], [index])} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", alignItems: "start", padding: "12px", borderRadius: "12px", border: "1px solid #e5e7eb", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
                     <div style={{ display: "grid", gap: "10px", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                      <input placeholder="asset id" value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_asset_id", e.target.value)} style={inputStyle()} />
-                      <input placeholder="image url" value={item.image_url || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_url", e.target.value)} style={inputStyle()} />
-                      <input placeholder="alt" value={item.alt || ""} onChange={(e) => setImageArrayItem("service_card", index, "alt", e.target.value)} style={inputStyle()} />
-                      <UploadInput onSelect={(file) => handleImageArrayUpload("service_card", index, file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState[`service_card:${index}`]?.loading} />
-                      {uploadState[`service_card:${index}`]?.error ? <div style={warningBoxStyle}>{uploadState[`service_card:${index}`].error}</div> : null}
-                      <div><ActionButton tone="secondary" onClick={() => removeImageItem("service_card", index)}>Удалить</ActionButton></div>
+                      <input placeholder={renderUi(uiMessage("master.s0498"))} value={item.image_asset_id || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_asset_id", e.target.value)} style={inputStyle()} />
+                      <input placeholder={renderUi(uiMessage("master.s0499"))} value={item.image_url || ""} onChange={(e) => setImageArrayItem("service_card", index, "image_url", e.target.value)} style={inputStyle()} />
+                      <input placeholder={renderUi(uiMessage("master.s0500"))} value={item.alt || ""} onChange={(e) => setImageArrayItem("service_card", index, "alt", e.target.value)} style={inputStyle()} />
+                      <UploadInput onSelect={(file) => handleImageArrayUpload("service_card", index, file)} disabled={!cloudinaryReady || !resolvedSlug || uploadState[uiTemplate(["service_card:",""], [index])]?.loading} />
+                      {uploadState[uiTemplate(["service_card:",""], [index])]?.error ? <div style={warningBoxStyle}><UiValue value={uploadState[uiTemplate(["service_card:",""], [index])].error} /></div> : null}
+                      <div><ActionButton tone="secondary" onClick={() => removeImageItem("service_card", index)}><UiValue value={uiMessage("salon.s0594")} /></ActionButton></div>
                     </div>
-                    <AssetPreview title="Service-card preview" entity={item} emptyNote="Service-card image пока не загружено." />
+                    <AssetPreview title={uiMessage("master.s0506")} entity={item} emptyNote={uiMessage("master.s0507")} />
                   </div>
                 ))}
               </ArrayCard>
             </div>
           </Panel>
 
-          <Panel id="cta" title="CTA" note="Booking band + sticky bottom CTA preserved.">
+          <Panel id="cta" title={uiMessage("salon.s0480")} note={uiMessage("master.s0508")}>
             <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-              <Field label="Booking label"><input value={draft.cta.booking_label} onChange={(e) => setDraftField("cta", "booking_label", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Booking URL"><input value={draft.cta.booking_url} onChange={(e) => setDraftField("cta", "booking_url", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Services label"><input value={draft.cta.services_label} onChange={(e) => setDraftField("cta", "services_label", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Services anchor"><input value={draft.cta.services_anchor} onChange={(e) => setDraftField("cta", "services_anchor", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Contact map label"><input value={draft.cta.contact_map_label} onChange={(e) => setDraftField("cta", "contact_map_label", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="Sticky CTA label"><input value={draft.cta.sticky_label} onChange={(e) => setDraftField("cta", "sticky_label", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0509")}><input value={draft.cta.booking_label} onChange={(e) => setDraftField("cta", "booking_label", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0510")}><input value={draft.cta.booking_url} onChange={(e) => setDraftField("cta", "booking_url", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0511")}><input value={draft.cta.services_label} onChange={(e) => setDraftField("cta", "services_label", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0512")}><input value={draft.cta.services_anchor} onChange={(e) => setDraftField("cta", "services_anchor", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0513")}><input value={draft.cta.contact_map_label} onChange={(e) => setDraftField("cta", "contact_map_label", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0514")}><input value={draft.cta.sticky_label} onChange={(e) => setDraftField("cta", "sticky_label", e.target.value)} style={inputStyle()} /></Field>
             </div>
 
-            <ArrayCard title="Booking CTA band" note="Bottom booking band before sticky CTA.">
+            <ArrayCard title={uiMessage("master.s0515")} note={uiMessage("master.s0516")}>
               <div style={{ display: "grid", gap: "10px" }}>
-                <input placeholder="Band title" value={draft.sections.booking_band.title} onChange={(e) => setBookingBand("title", e.target.value)} style={inputStyle()} />
-                <textarea placeholder="Band text" value={draft.sections.booking_band.text} onChange={(e) => setBookingBand("text", e.target.value)} style={textareaStyle(3)} />
+                <input placeholder={renderUi(uiMessage("master.s0517"))} value={draft.sections.booking_band.title} onChange={(e) => setBookingBand("title", e.target.value)} style={inputStyle()} />
+                <textarea placeholder={renderUi(uiMessage("master.s0518"))} value={draft.sections.booking_band.text} onChange={(e) => setBookingBand("text", e.target.value)} style={textareaStyle(3)} />
                 <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
-                  <input placeholder="Booking CTA label" value={draft.sections.booking_band.booking_cta_label} onChange={(e) => setBookingBand("booking_cta_label", e.target.value)} style={inputStyle()} />
-                  <input placeholder="Booking CTA URL" value={draft.sections.booking_band.booking_cta_url} onChange={(e) => setBookingBand("booking_cta_url", e.target.value)} style={inputStyle()} />
-                  <input placeholder="Services CTA label" value={draft.sections.booking_band.services_cta_label} onChange={(e) => setBookingBand("services_cta_label", e.target.value)} style={inputStyle()} />
-                  <input placeholder="Services anchor" value={draft.sections.booking_band.services_anchor} onChange={(e) => setBookingBand("services_anchor", e.target.value)} style={inputStyle()} />
+                  <input placeholder={renderUi(uiMessage("master.s0519"))} value={draft.sections.booking_band.booking_cta_label} onChange={(e) => setBookingBand("booking_cta_label", e.target.value)} style={inputStyle()} />
+                  <input placeholder={renderUi(uiMessage("master.s0520"))} value={draft.sections.booking_band.booking_cta_url} onChange={(e) => setBookingBand("booking_cta_url", e.target.value)} style={inputStyle()} />
+                  <input placeholder={renderUi(uiMessage("master.s0521"))} value={draft.sections.booking_band.services_cta_label} onChange={(e) => setBookingBand("services_cta_label", e.target.value)} style={inputStyle()} />
+                  <input placeholder={renderUi(uiMessage("master.s0512"))} value={draft.sections.booking_band.services_anchor} onChange={(e) => setBookingBand("services_anchor", e.target.value)} style={inputStyle()} />
                 </div>
               </div>
             </ArrayCard>
           </Panel>
 
-          <Panel id="seo" title="SEO" note="Public metadata.">
+          <Panel id="seo" title={uiMessage("salon.s0482")} note={uiMessage("master.s0522")}>
             <div style={{ display: "grid", gap: "16px" }}>
-              <Field label="SEO title"><input value={draft.seo.title} onChange={(e) => setDraftField("seo", "title", e.target.value)} style={inputStyle()} /></Field>
-              <Field label="SEO description"><textarea value={draft.seo.description} onChange={(e) => setDraftField("seo", "description", e.target.value)} style={textareaStyle(3)} /></Field>
-              <Field label="Canonical URL"><input value={draft.seo.canonical_url} onChange={(e) => setDraftField("seo", "canonical_url", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0523")}><input value={draft.seo.title} onChange={(e) => setDraftField("seo", "title", e.target.value)} style={inputStyle()} /></Field>
+              <Field label={uiMessage("master.s0524")}><textarea value={draft.seo.description} onChange={(e) => setDraftField("seo", "description", e.target.value)} style={textareaStyle(3)} /></Field>
+              <Field label={uiMessage("master.s0525")}><input value={draft.seo.canonical_url} onChange={(e) => setDraftField("seo", "canonical_url", e.target.value)} style={inputStyle()} /></Field>
             </div>
           </Panel>
 
-          <Panel id="preview-publish" title="Предпросмотр и публикация" note="Проверьте страницу перед публикацией.">
+          <Panel id="preview-publish" title={uiMessage("master.s0353")} note={uiMessage("master.s0526")}>
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -1750,16 +1742,16 @@ export default function MasterTemplateEditorPage() {
               maxWidth: "100%",
               boxSizing: "border-box"
             }}>
-              <StatusCard title="Draft save" value={saveState.kind === "idle" ? "IDLE" : saveState.kind.toUpperCase()} note={saveState.message || "Готов к сохранению."} tone={saveState.kind === "error" ? "warn" : saveState.kind === "success" ? "good" : "neutral"} />
-              <StatusCard title="Publish" value={publishState.kind === "idle" ? "IDLE" : publishState.kind.toUpperCase()} note={publishState.message || "Готов к публикации."} tone={publishState.kind === "error" ? "warn" : publishState.kind === "success" ? "good" : "neutral"} />
-              <StatusCard title="Preview mode" value={(previewState.mode || "idle").toUpperCase()} note={previewState.message || "Preview ещё не открыт."} tone={previewState.mode === "backend" ? "good" : previewState.mode === "fallback" ? "warn" : "neutral"} />
-              <StatusCard title="Published path" value={publicPath} note="Эталонный публичную страницу пока не трогаем." tone="neutral" />
+              <StatusCard title={uiMessage("master.s0527")} value={saveState.kind === "idle" ? "IDLE" : saveState.kind.toUpperCase()} note={saveState.message || uiMessage("master.s0528")} tone={saveState.kind === "error" ? "warn" : saveState.kind === "success" ? "good" : "neutral"} />
+              <StatusCard title={uiMessage("master.s0529")} value={publishState.kind === "idle" ? "IDLE" : publishState.kind.toUpperCase()} note={publishState.message || uiMessage("master.s0530")} tone={publishState.kind === "error" ? "warn" : publishState.kind === "success" ? "good" : "neutral"} />
+              <StatusCard title={uiMessage("master.s0531")} value={(previewState.mode || "idle").toUpperCase()} note={previewState.message || uiMessage("master.s0532")} tone={previewState.mode === "backend" ? "good" : previewState.mode === "fallback" ? "warn" : "neutral"} />
+              <StatusCard title={uiMessage("master.s0533")} value={publicPath} note={uiMessage("master.s0534")} tone="neutral" />
             </div>
           </Panel>
         </div>
       </div>
 
-      <PageSection title="Секции шаблона" subtitle="Это жёсткая карта секций, на которые дальше вешаются данные без трогания PublicMasterPage.">
+      <PageSection title={uiMessage("salon.s0672")} subtitle={uiMessage("master.s0536")}>
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -1771,10 +1763,10 @@ export default function MasterTemplateEditorPage() {
           {sectionItems.map((item, index) => (
             <div key={item.id} style={sectionCardStyle}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "8px" }}>
-                <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}>{item.label}</div>
-                <div style={badgeIndexStyle}>{index + 1}</div>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}><UiValue value={item.label} /></div>
+                <div style={badgeIndexStyle}><UiValue value={index + 1} /></div>
               </div>
-              <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.5 }}>{item.note}</div>
+              <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.5 }}><UiValue value={item.note} /></div>
             </div>
           ))}
         </div>
@@ -1785,128 +1777,128 @@ export default function MasterTemplateEditorPage() {
           <div style={previewModalStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", minWidth: 0 }}>
               <div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>Preview · {resolvedSlug || "master"}</div>
-                <div style={{ marginTop: "6px", fontSize: "13px", color: "#6b7280" }}>{previewState.message}</div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}><UiValue value={uiMessage("salon.s0674")} /><UiValue value={resolvedSlug || "master"} /></div>
+                <div style={{ marginTop: "6px", fontSize: "13px", color: "#6b7280" }}><UiValue value={previewState.message} /></div>
               </div>
-              <ActionButton tone="secondary" onClick={handleClosePreview}>Закрыть</ActionButton>
+              <ActionButton tone="secondary" onClick={handleClosePreview}><UiValue value={uiMessage("salon.s0675")} /></ActionButton>
             </div>
 
             {previewState.loading ? (
-              <div style={infoBoxStyle}>Загружаем preview…</div>
+              <div style={infoBoxStyle}><UiValue value={uiMessage("salon.s0676")} /></div>
             ) : (
               <div style={{ display: "grid", gap: "16px" }}>
                 <div style={previewHeroStyle}>
                   <div style={{ display: "grid", gap: "10px", minWidth: 0 }}>
-                    <div style={previewBadgeStyle}>{previewIdentity.hero_badge || "Master preview"}</div>
+                    <div style={previewBadgeStyle}><UiValue value={previewIdentity.hero_badge || "Master preview"} /></div>
                     <div style={{ fontSize: "32px", lineHeight: 1.1, fontWeight: 900, color: "#111827" }}>
-                      {previewIdentity.master_name || "Preview мастера"}
+                      <UiValue value={previewIdentity.master_name || uiMessage("master.s0540")} />
                     </div>
                     <div style={{ fontSize: "16px", color: "#111827", fontWeight: 600, lineHeight: 1.5 }}>
-                      {[previewIdentity.profession, previewIdentity.subtitle].filter(Boolean).join(". ") || "Профессия и subtitle preview"}
+                      <UiValue value={uiJoin([previewIdentity.profession, previewIdentity.subtitle].filter(Boolean), ". ") || uiMessage("master.s0541")} />
                     </div>
                     <div style={{ fontSize: "16px", color: "#475467", lineHeight: 1.6 }}>
-                      {previewIdentity.description || "Описание hero preview"}
+                      <UiValue value={previewIdentity.description || uiMessage("master.s0542")} />
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "8px" }}>
-                      <a href={previewCta.booking_url || "#"} style={previewPrimaryCtaStyle}>{previewCta.booking_label || "Записаться"}</a>
-                      <span style={previewSecondaryCtaStyle}>{previewCta.services_label || "Услуги"}</span>
+                      <a href={previewCta.booking_url || "#"} style={previewPrimaryCtaStyle}><UiValue value={previewCta.booking_label || uiMessage("salon.s0665")} /></a>
+                      <span style={previewSecondaryCtaStyle}><UiValue value={previewCta.services_label || uiMessage("salon.s0024")} /></span>
                     </div>
                   </div>
                   <div style={previewImageCardStyle}>
                     {getAssetPreviewUrl(previewImages.hero || {}) ? (
-                      <img src={getAssetPreviewUrl(previewImages.hero || {})} alt={previewImages.hero?.alt || "Hero preview"} style={previewImageRealStyle} />
+                      <img src={getAssetPreviewUrl(previewImages.hero || {})} alt={renderUi(previewImages.hero?.alt || "Hero preview")} style={previewImageRealStyle} />
                     ) : previewImages.hero?.image_asset_id ? (
-                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}>Hero asset: {previewImages.hero.image_asset_id}</div>
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 700 }}><UiValue value={uiMessage("salon.s0679")} /><UiValue value={previewImages.hero.image_asset_id} /></div>
                     ) : (
-                      <div style={{ fontSize: "14px", color: "#6b7280" }}>Hero image не подключён</div>
+                      <div style={{ fontSize: "14px", color: "#6b7280" }}><UiValue value={uiMessage("salon.s0680")} /></div>
                     )}
-                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}>{previewImages.hero?.alt || "Hero preview"}</div>
+                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#667085" }}><UiValue value={previewImages.hero?.alt || "Hero preview"} /></div>
                   </div>
                 </div>
 
                 <div style={previewGridStyle}>
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Identity</div>
-                    <div style={previewCardTextStyle}>Мастер: {previewIdentity.master_name || "—"}</div>
-                    <div style={previewCardTextStyle}>Профессия: {previewIdentity.profession || "—"}</div>
-                    <div style={previewCardTextStyle}>Subtitle: {previewIdentity.subtitle || "—"}</div>
-                    <div style={previewCardTextStyle}>Описание: {previewIdentity.description || "—"}</div>
-                    <div style={previewCardTextStyle}>Город: {previewIdentity.city || "—"}</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("salon.s0681")} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0546")} /><UiValue value={previewIdentity.master_name || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0547")} /><UiValue value={previewIdentity.profession || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0548")} /><UiValue value={previewIdentity.subtitle || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0549")} /><UiValue value={previewIdentity.description || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0550")} /><UiValue value={previewIdentity.city || "—"} /></div>
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Contacts</div>
-                    <div style={previewCardTextStyle}>{previewLocation.address || "—"}</div>
-                    <div style={previewCardTextStyle}>{previewLocation.phone || previewLocation.whatsapp || "—"}</div>
-                    <div style={previewCardTextStyle}>{previewLocation.schedule_text || "—"}</div>
-                    <div style={previewCardTextStyle}>{previewLocation.map_url || "—"}</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("master.s0551")} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={previewLocation.address || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={previewLocation.phone || previewLocation.whatsapp || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={previewLocation.schedule_text || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={previewLocation.map_url || "—"} /></div>
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Trust</div>
-                    <div style={previewCardTextStyle}>Rating: {previewTrust.rating_value || "—"}</div>
-                    <div style={previewCardTextStyle}>Reviews: {previewTrust.review_count || "—"}</div>
-                    <div style={previewCardTextStyle}>Note: {previewTrust.trust_note || "—"}</div>
-                    <div style={previewCardTextStyle}>Sticky: {previewTrust.sticky_subline || "—"}</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("salon.s0686")} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0552")} /><UiValue value={previewTrust.rating_value || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("salon.s0702")} /><UiValue value={previewTrust.review_count || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0554")} /><UiValue value={previewTrust.trust_note || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0555")} /><UiValue value={previewTrust.sticky_subline || "—"} /></div>
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Stats</div>
-                    <div style={previewCardTextStyle}>Years: {previewStats.years || "—"}</div>
-                    <div style={previewCardTextStyle}>Rating: {previewStats.rating || "—"}</div>
-                    <div style={previewCardTextStyle}>Bookings: {previewStats.bookings || "—"}</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("master.s0345")} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0556")} /><UiValue value={previewStats.years || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0552")} /><UiValue value={previewStats.rating || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0557")} /><UiValue value={previewStats.bookings || "—"} /></div>
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>CTA</div>
-                    <div style={previewCardTextStyle}>Кнопка: {previewCta.booking_label || "—"}</div>
-                    <div style={previewCardTextStyle}>URL: {previewCta.booking_url || "—"}</div>
-                    <div style={previewCardTextStyle}>Services: {previewCta.services_label || "—"}</div>
-                    <div style={previewCardTextStyle}>Якорь: {previewCta.services_anchor || "—"}</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("salon.s0480")} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("salon.s0693")} /><UiValue value={previewCta.booking_label || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("salon.s0694")} /><UiValue value={previewCta.booking_url || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0560")} /><UiValue value={previewCta.services_label || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("salon.s0695")} /><UiValue value={previewCta.services_anchor || "—"} /></div>
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Featured services</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("master.s0467")} /></div>
                     {previewFeaturedServices.length === 0 ? (
-                      <div style={previewCardTextStyle}>Пока пусто.</div>
+                      <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0456")} /></div>
                     ) : previewFeaturedServices.map((item, index) => (
-                      <div key={item.id || `preview_featured_${index}`} style={previewCardTextStyle}>
-                        {(item.title || "Без названия")}
-                        {[item.price, item.time].filter(Boolean).length ? ` · ${[item.price, item.time].filter(Boolean).join(" · ")}` : ""}
+                      <div key={item.id || uiTemplate(["preview_featured_",""], [index])} style={previewCardTextStyle}>
+                        <UiValue value={item.title || uiMessage("salon.s0773")} />
+                        <UiValue value={[item.price, item.time].filter(Boolean).length ? uiTemplate([" · ",""], [uiJoin([item.price, item.time].filter(Boolean), " · ")]) : ""} />
                       </div>
                     ))}
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Service catalog</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("master.s0473")} /></div>
                     {previewServiceCatalog.length === 0 ? (
-                      <div style={previewCardTextStyle}>Пока пусто.</div>
+                      <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0456")} /></div>
                     ) : previewServiceCatalog.map((item, index) => (
-                      <div key={item.id || `preview_catalog_${index}`} style={previewCardTextStyle}>
-                        {(item.name || "Без названия")}
-                        {[item.price, item.duration].filter(Boolean).length ? ` · ${[item.price, item.duration].filter(Boolean).join(" · ")}` : ""}
+                      <div key={item.id || uiTemplate(["preview_catalog_",""], [index])} style={previewCardTextStyle}>
+                        <UiValue value={item.name || uiMessage("salon.s0773")} />
+                        <UiValue value={[item.price, item.duration].filter(Boolean).length ? uiTemplate([" · ",""], [uiJoin([item.price, item.duration].filter(Boolean), " · ")]) : ""} />
                       </div>
                     ))}
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Booking band</div>
-                    <div style={previewCardTextStyle}>Title: {previewBookingBand.title || "—"}</div>
-                    <div style={previewCardTextStyle}>Text: {previewBookingBand.text || "—"}</div>
-                    <div style={previewCardTextStyle}>Booking CTA: {previewBookingBand.booking_cta_label || "—"}</div>
-                    <div style={previewCardTextStyle}>Booking URL: {previewBookingBand.booking_cta_url || "—"}</div>
-                    <div style={previewCardTextStyle}>Services CTA: {previewBookingBand.services_cta_label || "—"}</div>
-                    <div style={previewCardTextStyle}>Services anchor: {previewBookingBand.services_anchor || "—"}</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("master.s0562")} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0563")} /><UiValue value={previewBookingBand.title || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0564")} /><UiValue value={previewBookingBand.text || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0565")} /><UiValue value={previewBookingBand.booking_cta_label || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0566")} /><UiValue value={previewBookingBand.booking_cta_url || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0567")} /><UiValue value={previewBookingBand.services_cta_label || "—"} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0568")} /><UiValue value={previewBookingBand.services_anchor || "—"} /></div>
                   </div>
 
                   <div style={previewCardStyle}>
-                    <div style={previewCardTitleStyle}>Sections coverage</div>
-                    <div style={previewCardTextStyle}>Badges: {previewSections.badges?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Benefits: {previewSections.benefits?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Featured services: {previewSections.featured_services?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Catalog: {previewSections.service_catalog?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Reviews: {previewSections.reviews?.length || 0}</div>
-                    <div style={previewCardTextStyle}>Portfolio: {previewSections.portfolio?.length || 0}</div>
+                    <div style={previewCardTitleStyle}><UiValue value={uiMessage("salon.s0696")} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0570")} /><UiValue value={previewSections.badges?.length || 0} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("salon.s0697")} /><UiValue value={previewSections.benefits?.length || 0} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0572")} /><UiValue value={previewSections.featured_services?.length || 0} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0573")} /><UiValue value={previewSections.service_catalog?.length || 0} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("salon.s0702")} /><UiValue value={previewSections.reviews?.length || 0} /></div>
+                    <div style={previewCardTextStyle}><UiValue value={uiMessage("master.s0574")} /><UiValue value={previewSections.portfolio?.length || 0} /></div>
                   </div>
                 </div>
               </div>
@@ -1915,30 +1907,30 @@ export default function MasterTemplateEditorPage() {
         </div>
       ) : null}
 
-      <PageSection title="Быстрые переходы" subtitle="Рабочая навигация вокруг раздел редактора без смешивания с публичную страницу.">
+      <PageSection title={uiMessage("salon.s0725")} subtitle={uiMessage("master.s0576")}>
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: "12px"
         }}>
           <Link to={publicPath} style={linkCardStyle}>
-            <div style={linkTitleStyle}>Public page</div>
-            <div style={linkTextStyle}>Эталонная публичная страница мастера остаётся отдельной и не чистится на этом этапе.</div>
+            <div style={linkTitleStyle}><UiValue value={uiMessage("salon.s0733")} /></div>
+            <div style={linkTextStyle}><UiValue value={uiMessage("master.s0578")} /></div>
           </Link>
 
           <Link to={previewPath} style={linkCardStyle}>
-            <div style={linkTitleStyle}>Preview route</div>
-            <div style={linkTextStyle}>Маршрут preview для следующего шага parity.</div>
+            <div style={linkTitleStyle}><UiValue value={uiMessage("master.s0579")} /></div>
+            <div style={linkTextStyle}><UiValue value={uiMessage("master.s0580")} /></div>
           </Link>
 
           <a href="#images" style={linkCardStyle}>
-            <div style={linkTitleStyle}>Image slots</div>
-            <div style={linkTextStyle}>Hero / avatar / portfolio / service-card pipeline уже подключён.</div>
+            <div style={linkTitleStyle}><UiValue value={uiMessage("master.s0581")} /></div>
+            <div style={linkTextStyle}><UiValue value={uiMessage("master.s0582")} /></div>
           </a>
 
           <a href="#preview-publish" style={linkCardStyle}>
-            <div style={linkTitleStyle}>Publish state</div>
-            <div style={linkTextStyle}>Контроль настройка, предпросмотр и публикация без возврата к прошлым фиксам.</div>
+            <div style={linkTitleStyle}><UiValue value={uiMessage("master.s0583")} /></div>
+            <div style={linkTextStyle}><UiValue value={uiMessage("master.s0584")} /></div>
           </a>
         </div>
       </PageSection>
@@ -2212,3 +2204,6 @@ const linkTextStyle = {
   color: "#6b7280",
   lineHeight: 1.45
 };
+
+const VALIDATION_FIELDS = {"identity.master_name":"master.validation.field0","identity.profession":"master.validation.field1","images.hero":"master.validation.field2","location.address_or_map_url":"master.validation.field3","location.phone_or_whatsapp":"master.validation.field4","sections.featured_services_or_service_catalog":"master.validation.field5","sections.about_paragraphs":"master.validation.field6","cta.booking_label":"master.validation.field7","cta.booking_url":"master.validation.field8","sections.reviews":"master.validation.field9","metrics":"master.validation.field10","sections.badges":"master.validation.field11","sections.benefits":"master.validation.field12","seo":"master.validation.field13","trust.sticky_subline":"master.validation.field14"};
+function validationLabel(code) { return uiMessage(VALIDATION_FIELDS[code] || "master.validation.unknown"); }

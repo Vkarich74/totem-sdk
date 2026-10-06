@@ -1,3 +1,4 @@
+import { UiValue, uiTemplate } from "../i18n/uiMessages.js";
 import React from "react";
 
 export default function StatCard({
@@ -9,21 +10,21 @@ export default function StatCard({
   className = "",
 }) {
   return (
-    <div className={`stat-card ${className}`.trim()}>
+    <div className={uiTemplate(["stat-card ",""], [className]).trim()}>
       <div className="stat-card__top">
-        {icon ? <div className="stat-card__icon">{icon}</div> : null}
+        {icon ? <div className="stat-card__icon"><UiValue value={icon} /></div> : null}
 
         <div className="stat-card__meta">
-          {title ? <div className="stat-card__title">{title}</div> : null}
+          {title ? <div className="stat-card__title"><UiValue value={title} /></div> : null}
           {value !== undefined ? (
-            <div className="stat-card__value">{value}</div>
+            <div className="stat-card__value"><UiValue value={value} /></div>
           ) : null}
         </div>
       </div>
 
-      {hint ? <div className="stat-card__hint">{hint}</div> : null}
+      {hint ? <div className="stat-card__hint"><UiValue value={hint} /></div> : null}
 
-      {children ? <div className="stat-card__extra">{children}</div> : null}
+      {children ? <div className="stat-card__extra"><UiValue value={children} /></div> : null}
 
       <style>{`
         .stat-card {

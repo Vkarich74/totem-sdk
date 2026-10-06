@@ -1,3 +1,4 @@
+import { UiValue, uiTemplate } from "../i18n/uiMessages.js";
 import React from "react";
 
 export default function PageSection({
@@ -9,22 +10,22 @@ export default function PageSection({
   contentClassName = "",
 }) {
   return (
-    <section className={`page-section ${className}`.trim()}>
+    <section className={uiTemplate(["page-section ",""], [className]).trim()}>
       {(title || subtitle || actions) && (
         <div className="page-section__header">
           <div className="page-section__headings">
-            {title ? <h2 className="page-section__title">{title}</h2> : null}
+            {title ? <h2 className="page-section__title"><UiValue value={title} /></h2> : null}
             {subtitle ? (
-              <p className="page-section__subtitle">{subtitle}</p>
+              <p className="page-section__subtitle"><UiValue value={subtitle} /></p>
             ) : null}
           </div>
 
-          {actions ? <div className="page-section__actions">{actions}</div> : null}
+          {actions ? <div className="page-section__actions"><UiValue value={actions} /></div> : null}
         </div>
       )}
 
-      <div className={`page-section__content ${contentClassName}`.trim()}>
-        {children}
+      <div className={uiTemplate(["page-section__content ",""], [contentClassName]).trim()}>
+        <UiValue value={children} />
       </div>
 
       <style>{`

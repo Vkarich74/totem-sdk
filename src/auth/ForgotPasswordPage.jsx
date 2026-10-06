@@ -1,3 +1,4 @@
+import { useMarketContext } from "../market/MarketContext.jsx";
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { startPasswordReset } from "../api/internal";
@@ -7,6 +8,7 @@ function normalizeEmail(value){
 }
 
 export default function ForgotPasswordPage(){
+  const { t } = useMarketContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,14 +28,14 @@ export default function ForgotPasswordPage(){
     setSuccess("");
 
     if(!role || !slug){
-      setError("Ошибка контекста входа");
+      setError("auth.contextError");
       return;
     }
 
     const normalizedEmail = normalizeEmail(email);
 
     if(!normalizedEmail || !normalizedEmail.includes("@")){
-      setError("Введите email");
+      setError("auth.emailRequired");
       return;
     }
 
@@ -62,25 +64,25 @@ export default function ForgotPasswordPage(){
       });
 
       if(!result?.ok){
-        setError("Не удалось запустить восстановление");
+        setError("auth.resetStartFailed");
         setLoading(false);
         return;
       }
 
       if(result?.neutral === true){
-        setError("Пользователь с таким email и кабинетом не найден. Проверьте роль и салон/мастера.");
+        setError("auth.resetNeutral");
         setLoading(false);
         return;
       }
 
-      setSuccess("Код отправлен. Переходим к подтверждению.");
+      setSuccess("auth.codeSent");
 
       navigate(
         `/auth/reset?role=${encodeURIComponent(role)}&slug=${encodeURIComponent(slug)}&login=${encodeURIComponent(normalizedEmail)}`,
         { replace: true }
       );
     }catch(e){
-      setError("Ошибка запуска восстановления");
+      setError("auth.resetStartError");
     }finally{
       setLoading(false);
     }
@@ -107,19 +109,19 @@ export default function ForgotPasswordPage(){
           boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
         }}
       >
-        <h2 style={{ margin: "0 0 12px 0", fontSize: "24px" }}>Восстановление пароля</h2>
+        <h2 style={{ margin: "0 0 12px 0", fontSize: "24px" }}>{t("auth.forgotTitle")}</h2>
         <p style={{ margin: "0 0 16px 0", color: "#4b5563", fontSize: "14px" }}>
-          Введите email, и мы отправим код для сброса пароля.
+          {t("auth.forgotInfo")}
         </p>
 
         <form onSubmit={handleSubmit}>
           <label style={{ display: "block", marginBottom: "12px" }}>
-            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Email</div>
+            <div style={{ marginBottom: "6px", fontSize: "14px" }}>{t("auth.email")}</div>
             <input
               type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
+              placeholder={t("auth.emailPlaceholder")}
               style={{
                 width: "100%",
                 height: "42px",
@@ -132,14 +134,14 @@ export default function ForgotPasswordPage(){
           </label>
 
           {error ? (
-            <div style={{ color: "#b91c1c", marginBottom: "12px", fontSize: "14px" }}>
-              {error}
+            <div role="alert" style={{ color: "#b91c1c", marginBottom: "12px", fontSize: "14px" }}>
+              {t(error)}
             </div>
           ) : null}
 
           {success ? (
-            <div style={{ color: "#065f46", marginBottom: "12px", fontSize: "14px" }}>
-              {success}
+            <div role="status" aria-live="polite" style={{ color: "#065f46", marginBottom: "12px", fontSize: "14px" }}>
+              {t(success)}
             </div>
           ) : null}
 
@@ -157,10 +159,11 @@ export default function ForgotPasswordPage(){
               cursor: loading ? "default" : "pointer"
             }}
           >
-            {loading ? "Отправляем..." : "Отправить код"}
+            {loading ? t("auth.sending") : t("auth.sendCode")}
           </button>
         </form>
       </div>
     </div>
   );
 }
+

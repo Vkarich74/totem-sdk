@@ -1,3 +1,4 @@
+import { uiMoney, UiValue, uiMessage, uiDate, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
@@ -28,10 +29,10 @@ function statusColor(s) {
 
 function statusLabel(value){
   const s = String(value || "reserved").toLowerCase()
-  if(s === "reserved") return "Ожидает"
-  if(s === "confirmed") return "Подтверждена"
-  if(s === "completed") return "Завершена"
-  if(s === "cancelled" || s === "canceled") return "Отменена"
+  if(s === "reserved") return uiMessage("salon.s0042")
+  if(s === "confirmed") return uiMessage("salon.s0204")
+  if(s === "completed") return uiMessage("salon.s0205")
+  if(s === "cancelled" || s === "canceled") return uiMessage("salon.s0206")
   return value || "—"
 }
 
@@ -43,12 +44,7 @@ function rowHoverStyle(e, enter) {
   }
 }
 
-function formatDateTime(value){
-  if(!value) return "—"
-  const date = new Date(value)
-  if(Number.isNaN(date.getTime())) return "—"
-  return date.toLocaleString("ru-RU")
-}
+function formatDateTime(value){ if (!value) return "—"; return uiDate(value, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
 function useIsMobile(){
   const getValue = () => {
@@ -75,14 +71,15 @@ function useIsMobile(){
 function SummaryCard({ label, value, hint }){
   return (
     <div style={styles.summaryCard}>
-      <div style={styles.summaryLabel}>{label}</div>
-      <div style={styles.summaryValue}>{value}</div>
-      {hint ? <div style={styles.summaryHint}>{hint}</div> : null}
+      <div style={styles.summaryLabel}><UiValue value={label} /></div>
+      <div style={styles.summaryValue}><UiValue value={value} /></div>
+      {hint ? <div style={styles.summaryHint}><UiValue value={hint} /></div> : null}
     </div>
   )
 }
 
 export default function MasterBookingsPage() {
+  const { renderUi } = useUiMessages();
   const { bookingId } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -152,7 +149,7 @@ export default function MasterBookingsPage() {
           setServiceOptions(activeServices)
           if(activeServices.length === 0){
             setServiceId("")
-            setCreateError("Нет активных услуг для создания записи")
+            setCreateError(uiError(uiMessage("master.s0260")))
           } else {
             const currentServiceId = String(serviceId || "")
             const hasCurrent = activeServices.some((service) => String(service?.id ?? service?.service_id ?? "") === currentServiceId)
@@ -168,7 +165,7 @@ export default function MasterBookingsPage() {
         if(!cancelled){
           setServiceOptions([])
           setServiceId("")
-          setCreateError(error?.message || "MASTER_SERVICES_LOAD_FAILED")
+          setCreateError(uiError(error?.message || "MASTER_SERVICES_LOAD_FAILED"))
         }
       }finally{
         if(!cancelled){
@@ -192,7 +189,7 @@ export default function MasterBookingsPage() {
         if(!cancelled){
           setBookings([])
           setBookingsLoading(false)
-          setBookingsError("SLUG_MISSING")
+          setBookingsError(uiError("SLUG_MISSING"))
           setEmpty(false)
         }
         return
@@ -221,7 +218,7 @@ export default function MasterBookingsPage() {
 
         if(!cancelled){
           setBookings([])
-          setBookingsError(error?.message || "MASTER_BOOKINGS_LOAD_FAILED")
+          setBookingsError(uiError(error?.message || "MASTER_BOOKINGS_LOAD_FAILED"))
           setEmpty(false)
         }
       }finally{
@@ -274,14 +271,14 @@ export default function MasterBookingsPage() {
   }, [bookings])
 
   if (loading) {
-    return <div style={{ padding: "20px" }}>Загрузка...</div>
+    return <div style={{ padding: "20px" }}><UiValue value={uiMessage("salon.s0118")} /></div>
   }
 
   if (error) {
     return (
       <div style={{ padding: "20px" }}>
-        <PageSection title="Ошибка">
-          <EmptyState title="Ошибка загрузки данных" message={error} />
+        <PageSection title={uiMessage("salon.s0506")}>
+          <EmptyState title={uiMessage("salon.s0212")} message={error} />
         </PageSection>
       </div>
     )
@@ -291,7 +288,7 @@ export default function MasterBookingsPage() {
     if (!masterSlug) return
 
     if (!date || !time || !client.trim()) {
-      setCreateError("Заполните дату, время и имя клиента")
+      setCreateError(uiError(uiMessage("master.s0264")))
       return
     }
 
@@ -322,11 +319,11 @@ export default function MasterBookingsPage() {
       }
 
       setCreateError("")
-      navigate(`/master/${masterSlug}/schedule`)
+      navigate(uiTemplate(["/master/","/schedule"], [masterSlug]))
       return
     } catch (e) {
       console.error("createBooking error", e)
-      setCreateError(e?.message || "MASTER_BOOKING_CREATE_FAILED")
+      setCreateError(uiError(e?.message || "MASTER_BOOKING_CREATE_FAILED"))
     }
   }
 
@@ -334,22 +331,20 @@ export default function MasterBookingsPage() {
     return (
       <div style={{ padding: "20px" }}>
         <button
-          onClick={() => navigate(`/master/${masterSlug}/schedule`)}
+          onClick={() => navigate(uiTemplate(["/master/","/schedule"], [masterSlug]))}
           style={styles.backButton}
-        >
-          ← К календарю
-        </button>
+        ><UiValue value={uiMessage("master.s0265")} /></button>
 
-        <PageSection title="Новая запись">
+        <PageSection title={uiMessage("master.s0266")}>
           <div style={styles.createForm}>
             {createError && (
               <div style={styles.errorBanner}>
-                {createError}
+                <UiValue value={createError} />
               </div>
             )}
 
             <div style={styles.fieldGroup}>
-              <label style={styles.fieldLabel}>Дата</label>
+              <label style={styles.fieldLabel}><UiValue value={uiMessage("salon.s0233")} /></label>
               <input
                 type="date"
                 value={bookingDate}
@@ -359,7 +354,7 @@ export default function MasterBookingsPage() {
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.fieldLabel}>Время</label>
+              <label style={styles.fieldLabel}><UiValue value={uiMessage("salon.s0268")} /></label>
               <input
                 type="time"
                 value={bookingTime}
@@ -369,29 +364,29 @@ export default function MasterBookingsPage() {
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.fieldLabel}>Клиент</label>
+              <label style={styles.fieldLabel}><UiValue value={uiMessage("salon.s0229")} /></label>
               <input
                 type="text"
                 value={client}
                 onChange={(e) => setClient(e.target.value)}
-                placeholder="Имя клиента"
+                placeholder={renderUi(uiMessage("salon.s0645"))}
                 style={styles.fieldInput}
               />
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.fieldLabel}>Телефон</label>
+              <label style={styles.fieldLabel}><UiValue value={uiMessage("salon.s0230")} /></label>
               <input
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="Телефон"
+                placeholder={renderUi(uiMessage("salon.s0230"))}
                 style={styles.fieldInput}
               />
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.fieldLabel}>Услуга</label>
+              <label style={styles.fieldLabel}><UiValue value={uiMessage("salon.s0231")} /></label>
               <select
                 value={serviceId}
                 onChange={(e) => setServiceId(e.target.value)}
@@ -399,14 +394,14 @@ export default function MasterBookingsPage() {
                 disabled={serviceOptionsLoading || serviceOptions.length === 0}
               >
                 {serviceOptions.length === 0 ? (
-                  <option value="">Нет активных услуг</option>
+                  <option value=""><UiValue value={uiMessage("master.s0271")} /></option>
                 ) : (
                   serviceOptions.map((service) => {
                     const id = String(service?.id ?? service?.service_id ?? "")
-                    const label = service?.name || service?.title || service?.label || `Услуга #${id}`
+                    const label = service?.name || service?.title || service?.label || uiMessage("master.s0272", {p0: id})
                     return (
                       <option key={id} value={id}>
-                        {label}
+                        <UiValue value={label} />
                       </option>
                     )
                   })
@@ -419,16 +414,12 @@ export default function MasterBookingsPage() {
                 onClick={() => createBooking(bookingDate, bookingTime)}
                 style={styles.primaryButton}
                 disabled={serviceOptionsLoading || serviceOptions.length === 0}
-              >
-                Создать запись
-              </button>
+              ><UiValue value={uiMessage("master.s0273")} /></button>
 
               <button
-                onClick={() => navigate(`/master/${masterSlug}/schedule`)}
+                onClick={() => navigate(uiTemplate(["/master/","/schedule"], [masterSlug]))}
                 style={styles.secondaryButton}
-              >
-                Отмена
-              </button>
+              ><UiValue value={uiMessage("master.s0274")} /></button>
             </div>
           </div>
         </PageSection>
@@ -442,8 +433,8 @@ export default function MasterBookingsPage() {
     if (!booking) {
       return (
         <div style={{ padding: "20px" }}>
-          <PageSection title="Запись">
-            <EmptyState title="Запись не найдена" />
+          <PageSection title={uiMessage("salon.s0827")}>
+            <EmptyState title={uiMessage("master.s0275")} />
           </PageSection>
         </div>
       )
@@ -452,39 +443,31 @@ export default function MasterBookingsPage() {
     return (
       <div style={{ padding: "20px" }}>
         <button
-          onClick={() => navigate(`/master/${masterSlug}/schedule`)}
+          onClick={() => navigate(uiTemplate(["/master/","/schedule"], [masterSlug]))}
           style={styles.backButton}
-        >
-          ← К календарю
-        </button>
+        ><UiValue value={uiMessage("master.s0265")} /></button>
 
         <PageSection title={"BR-" + booking.id}>
           <div style={{ ...styles.detailStatus, color: statusColor(booking.status) }}>
-            {statusLabel(booking.status)}
+            <UiValue value={statusLabel(booking.status)} />
           </div>
 
           {booking.service_name && (
-            <div style={styles.detailRow}>
-              Услуга: {booking.service_name}
+            <div style={styles.detailRow}><UiValue value={uiMessage("master.s0276")} /><UiValue value={booking.service_name} />
             </div>
           )}
 
           {booking.price && (
-            <div style={styles.detailRow}>
-              Цена: {booking.price} сом
-            </div>
+            <div style={styles.detailRow}><UiValue value={uiMessage("master.s0240")} /><UiValue value={uiMoney(booking.price, booking.currency_code || booking.currency)} /></div>
           )}
 
-          <div style={styles.detailRow}>
-            Время: {formatDateTime(booking.start_at)}
+          <div style={styles.detailRow}><UiValue value={uiMessage("master.s0278")} /><UiValue value={formatDateTime(booking.start_at)} />
           </div>
 
-          <div style={styles.detailRow}>
-            Клиент: {booking.client_name || "—"}
+          <div style={styles.detailRow}><UiValue value={uiMessage("salon.s0350")} /><UiValue value={booking.client_name || "—"} />
           </div>
 
-          <div>
-            Телефон: {booking.phone || "—"}
+          <div><UiValue value={uiMessage("salon.s0351")} /><UiValue value={booking.phone || "—"} />
           </div>
         </PageSection>
       </div>
@@ -493,20 +476,20 @@ export default function MasterBookingsPage() {
 
   return (
     <div style={{ padding: isMobile ? "14px" : "20px" }}>
-      <PageSection title="Записи">
+      <PageSection title={uiMessage("salon.s0014")}>
         {!empty && (
           <div style={styles.summaryGrid}>
-            <SummaryCard label="Всего записей" value={summary.total} />
-            <SummaryCard label="Активные" value={summary.active} />
-            <SummaryCard label="Ожидают" value={summary.reserved} />
-            <SummaryCard label="Завершено" value={summary.completed} />
+            <SummaryCard label={uiMessage("master.s0279")} value={summary.total} />
+            <SummaryCard label={uiMessage("salon.s0109")} value={summary.active} />
+            <SummaryCard label={uiMessage("salon.s0220")} value={summary.reserved} />
+            <SummaryCard label={uiMessage("salon.s1122")} value={summary.completed} />
           </div>
         )}
 
         {empty ? (
           <EmptyState
-            title="Записей пока нет"
-            message="Записи появятся после бронирований"
+            title={uiMessage("salon.s0216")}
+            message={uiMessage("master.s0284")}
           />
         ) : isMobile ? (
           <div style={styles.cardsList}>
@@ -515,29 +498,29 @@ export default function MasterBookingsPage() {
                 key={b.id}
                 type="button"
                 style={styles.bookingCard}
-                onClick={() => navigate(`/master/${masterSlug}/bookings/${b.id}`)}
+                onClick={() => navigate(uiTemplate(["/master/","/bookings/",""], [masterSlug, b.id]))}
               >
                 <div style={styles.cardTop}>
-                  <strong>BR-{b.id}</strong>
+                  <strong><UiValue value={uiMessage("salon.s0226")} /><UiValue value={b.id} /></strong>
                   <span style={{ ...styles.statusBadge, color: statusColor(b.status) }}>
-                    {statusLabel(b.status)}
+                    <UiValue value={statusLabel(b.status)} />
                   </span>
                 </div>
 
                 <div style={styles.cardMeta}>
                   <div>
-                    <div style={styles.metaLabel}>Дата</div>
-                    <div style={styles.metaValue}>{formatDateTime(b.start_at)}</div>
+                    <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0233")} /></div>
+                    <div style={styles.metaValue}><UiValue value={formatDateTime(b.start_at)} /></div>
                   </div>
 
                   <div>
-                    <div style={styles.metaLabel}>Клиент</div>
-                    <div style={styles.metaValue}>{b.client_name || "—"}</div>
+                    <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0229")} /></div>
+                    <div style={styles.metaValue}><UiValue value={b.client_name || "—"} /></div>
                   </div>
 
                   <div>
-                    <div style={styles.metaLabel}>Телефон</div>
-                    <div style={styles.metaValue}>{b.phone || "—"}</div>
+                    <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0230")} /></div>
+                    <div style={styles.metaValue}><UiValue value={b.phone || "—"} /></div>
                   </div>
                 </div>
               </button>
@@ -548,11 +531,11 @@ export default function MasterBookingsPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.tableHeadCell}>ID</th>
-                  <th style={styles.tableHeadCell}>Статус</th>
-                  <th style={styles.tableHeadCell}>Дата</th>
-                  <th style={styles.tableHeadCell}>Клиент</th>
-                  <th style={styles.tableHeadCell}>Телефон</th>
+                  <th style={styles.tableHeadCell}><UiValue value={uiMessage("salon.s0096")} /></th>
+                  <th style={styles.tableHeadCell}><UiValue value={uiMessage("salon.s0148")} /></th>
+                  <th style={styles.tableHeadCell}><UiValue value={uiMessage("salon.s0233")} /></th>
+                  <th style={styles.tableHeadCell}><UiValue value={uiMessage("salon.s0229")} /></th>
+                  <th style={styles.tableHeadCell}><UiValue value={uiMessage("salon.s0230")} /></th>
                 </tr>
               </thead>
 
@@ -565,30 +548,29 @@ export default function MasterBookingsPage() {
                     onMouseLeave={(e) => rowHoverStyle(e, false)}
                     onClick={(e) => {
                       if (e.target.tagName !== "A") {
-                        navigate(`/master/${masterSlug}/bookings/${b.id}`)
+                        navigate(uiTemplate(["/master/","/bookings/",""], [masterSlug, b.id]))
                       }
                     }}
                   >
                     <td style={styles.tableCell}>
-                      <a href={`#/master/${masterSlug}/bookings/${b.id}`}>
-                        BR-{b.id}
+                      <a href={uiTemplate(["#/master/","/bookings/",""], [masterSlug, b.id])}><UiValue value={uiMessage("salon.s0226")} /><UiValue value={b.id} />
                       </a>
                     </td>
 
                     <td style={{ ...styles.tableCell, color: statusColor(b.status) }}>
-                      {statusLabel(b.status)}
+                      <UiValue value={statusLabel(b.status)} />
                     </td>
 
                     <td style={styles.tableCell}>
-                      {formatDateTime(b.start_at)}
+                      <UiValue value={formatDateTime(b.start_at)} />
                     </td>
 
                     <td style={styles.tableCell}>
-                      {b.client_name || "—"}
+                      <UiValue value={b.client_name || "—"} />
                     </td>
 
                     <td style={styles.tableCell}>
-                      {b.phone || "—"}
+                      <UiValue value={b.phone || "—"} />
                     </td>
                   </tr>
                 ))}

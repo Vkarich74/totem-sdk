@@ -1,26 +1,12 @@
+import { UiValue, uiMessage, uiMoney, uiDate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 import { getSalonSettlements } from "../../api/internal"
 
-function money(value){
-  return `${new Intl.NumberFormat("ru-RU").format(Number(value) || 0)} сом`
-}
+function money(value, currency) { return uiMoney(value, currency); }
 
-function formatDateTime(value){
-  if(!value) return "—"
-
-  const date = new Date(value)
-
-  if(Number.isNaN(date.getTime())){
-    return "—"
-  }
-
-  return `${date.toLocaleDateString("ru-RU")} ${date.toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit"
-  })}`
-}
+function formatDateTime(value){ if (!value) return "—"; return uiDate(value, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
 function safeParse(text){
   try{
@@ -41,9 +27,9 @@ function normalizeSettlements(payload){
 
 function getStatusLabel(value){
   const status = String(value || "").toLowerCase()
-  if(status === "open") return "Открыт"
-  if(status === "closed") return "Закрыт"
-  if(status === "pending") return "Ожидает"
+  if(status === "open") return uiMessage("salon.s0879")
+  if(status === "closed") return uiMessage("salon.s0880")
+  if(status === "pending") return uiMessage("salon.s0042")
   return value || "—"
 }
 
@@ -57,45 +43,46 @@ function getBillingUi(billingAccess, billingBlockReason){
 
   if(state === "blocked"){
     return {
-      title: "Доступ ограничен",
+      title: uiMessage("salon.s0300"),
       tone: "#b42318",
       bg: "#fff5f5",
       border: "#f5c2c7",
-      note: billingBlockReason || "Финансовые действия временно ограничены"
+      note: uiError(billingBlockReason, uiMessage("salon.s0874"))
     }
   }
 
   if(state === "grace"){
     return {
-      title: "Льготный период",
+      title: uiMessage("salon.s0302"),
       tone: "#9a6700",
       bg: "#fff8db",
       border: "#facc15",
-      note: billingBlockReason || "Доступ открыт, но скоро потребуется продление"
+      note: uiError(billingBlockReason, uiMessage("salon.s0875"))
     }
   }
 
   return {
-    title: "Доступ активен",
+    title: uiMessage("salon.s0304"),
     tone: "#027a48",
     bg: "#ecfdf3",
     border: "#abefc6",
-    note: "Расчётные периоды и денежные данные доступны без ограничений"
+    note: uiMessage("salon.s1141")
   }
 }
 
 function FinanceNav({ slug, active }){
+  const { renderUi } = useUiMessages();
   const items = [
-    { key: "finance", label: "Финансы", note: "overview", to: buildSalonPath(slug, "finance") },
-    { key: "money", label: "Кошелёк и вывод", note: "Баланс, расчёты и вывод", to: buildSalonPath(slug, "money") },
-    { key: "settlements", label: "Сеты", note: "расчётные периоды", to: buildSalonPath(slug, "settlements") },
-    { key: "payouts", label: "Выплаты", note: "фактические выплаты", to: buildSalonPath(slug, "payouts") },
-    { key: "transactions", label: "Транзакции", note: "Журнал операций", to: buildSalonPath(slug, "transactions") },
-    { key: "contracts", label: "Контракты", note: "договоры мастеров", to: buildSalonPath(slug, "contracts") }
+    { key: "finance", label: uiMessage("salon.s0017"), note: uiMessage("salon.s1070"), to: buildSalonPath(slug, "finance") },
+    { key: "money", label: uiMessage("salon.s0412"), note: uiMessage("salon.s0902"), to: buildSalonPath(slug, "money") },
+    { key: "settlements", label: uiMessage("salon.s0029"), note: uiMessage("salon.s1071"), to: buildSalonPath(slug, "settlements") },
+    { key: "payouts", label: uiMessage("salon.s0030"), note: uiMessage("salon.s1072"), to: buildSalonPath(slug, "payouts") },
+    { key: "transactions", label: uiMessage("salon.s0031"), note: uiMessage("salon.s1073"), to: buildSalonPath(slug, "transactions") },
+    { key: "contracts", label: uiMessage("salon.s0032"), note: uiMessage("salon.s1074"), to: buildSalonPath(slug, "contracts") }
   ]
 
   return (
-    <nav aria-label="Финансовые разделы" style={styles.navGrid}>
+    <nav aria-label={renderUi(uiMessage("salon.s0900"))} style={styles.navGrid}>
       {items.map((item) => {
         const isActive = item.key === active
 
@@ -109,8 +96,8 @@ function FinanceNav({ slug, active }){
               background: isActive ? "#eff6ff" : "#ffffff"
             }}
           >
-            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}>{item.label}</div>
-            <div style={styles.navNote}>{item.note}</div>
+            <div style={{ ...styles.navTitle, color: isActive ? "#1d4ed8" : "#111827" }}><UiValue value={item.label} /></div>
+            <div style={styles.navNote}><UiValue value={item.note} /></div>
           </Link>
         )
       })}
@@ -121,9 +108,9 @@ function FinanceNav({ slug, active }){
 function StatCard({ title, value, note }){
   return (
     <article style={styles.statCard}>
-      <div style={styles.statLabel}>{title}</div>
-      <div style={styles.statValue}>{value}</div>
-      {note ? <div style={styles.statNote}>{note}</div> : null}
+      <div style={styles.statLabel}><UiValue value={title} /></div>
+      <div style={styles.statValue}><UiValue value={value} /></div>
+      {note ? <div style={styles.statNote}><UiValue value={note} /></div> : null}
     </article>
   )
 }
@@ -132,10 +119,10 @@ function Panel({ title, note, children }){
   return (
     <section style={styles.panel}>
       <div style={styles.sectionHeader}>
-        <h2 style={styles.panelTitle}>{title}</h2>
-        {note ? <p style={styles.panelNote}>{note}</p> : null}
+        <h2 style={styles.panelTitle}><UiValue value={title} /></h2>
+        {note ? <p style={styles.panelNote}><UiValue value={note} /></p> : null}
       </div>
-      <div style={{ marginTop: 14 }}>{children}</div>
+      <div style={{ marginTop: 14 }}><UiValue value={children} /></div>
     </section>
   )
 }
@@ -143,8 +130,8 @@ function Panel({ title, note, children }){
 function EmptyBox({ title, text }){
   return (
     <div style={styles.emptyBox}>
-      <h3 style={styles.emptyTitle}>{title}</h3>
-      <p style={styles.emptyText}>{text}</p>
+      <h3 style={styles.emptyTitle}><UiValue value={title} /></h3>
+      <p style={styles.emptyText}><UiValue value={text} /></p>
     </div>
   )
 }
@@ -173,7 +160,7 @@ export default function SalonSettlementsPage(){
         if(!cancelled){
           setSettlements([])
           setLoading(false)
-          setError("Не найден salon slug")
+          setError(uiError(uiMessage("salon.s1075")))
         }
         return
       }
@@ -196,7 +183,7 @@ export default function SalonSettlementsPage(){
 
         if(!cancelled){
           setSettlements([])
-          setError("Не удалось загрузить расчётные периоды")
+          setError(uiError(uiMessage("salon.s1142")))
         }
       }finally{
         if(!cancelled){
@@ -238,11 +225,9 @@ export default function SalonSettlementsPage(){
         {slug ? <FinanceNav slug={slug} active="settlements" /> : null}
 
         <header style={styles.pageHeader}>
-          <p style={styles.eyebrow}>Salon finance / mobile</p>
-          <h1 style={styles.pageTitle}>Сеты</h1>
-          <p style={styles.pageSubtitle}>
-            Расчётные периоды салона: суммы, даты начала и окончания, текущий статус и готовность к выводу.
-          </p>
+          <p style={styles.eyebrow}><UiValue value={uiMessage("salon.s0907")} /></p>
+          <h1 style={styles.pageTitle}><UiValue value={uiMessage("salon.s0029")} /></h1>
+          <p style={styles.pageSubtitle}><UiValue value={uiMessage("salon.s1143")} /></p>
         </header>
 
         <section
@@ -253,40 +238,40 @@ export default function SalonSettlementsPage(){
           }}
         >
           <div style={styles.alertMain}>
-            <h2 style={{ ...styles.alertTitle, color: billingUi.tone }}>{billingUi.title}</h2>
-            <p style={styles.alertText}>{billingUi.note}</p>
+            <h2 style={{ ...styles.alertTitle, color: billingUi.tone }}><UiValue value={billingUi.title} /></h2>
+            <p style={styles.alertText}><UiValue value={billingUi.note} /></p>
           </div>
           <div style={styles.alertMeta}>
-            <div>Вывод: {canWithdraw ? "разрешён" : "ограничен"}</div>
-            <div>Периодов: {settlements.length}</div>
+            <div><UiValue value={uiMessage("salon.s0911")} /><UiValue value={canWithdraw ? uiMessage("salon.s0912") : uiMessage("salon.s0913")} /></div>
+            <div><UiValue value={uiMessage("salon.s1144")} /><UiValue value={settlements.length} /></div>
           </div>
         </section>
 
         <section style={styles.statsGrid}>
-          <StatCard title="Всего сетов" value={settlements.length} note="Все найденные расчётные периоды" />
-          <StatCard title="Общая сумма" value={money(totalAmount)} note="Сумма по всем периодам" />
-          <StatCard title="Открытые" value={openCount} note="Периоды, ещё не закрытые системой" />
-          <StatCard title="Закрытые" value={closedCount} note={lastSettlement ? `Последний статус: ${getStatusLabel(lastSettlement?.status)}` : "Данных пока нет"} />
+          <StatCard title={uiMessage("salon.s1087")} value={settlements.length} note={uiMessage("salon.s1145")} />
+          <StatCard title={uiMessage("salon.s1118")} value={money(totalAmount)} note={uiMessage("salon.s1146")} />
+          <StatCard title={uiMessage("salon.s1147")} value={openCount} note={uiMessage("salon.s1148")} />
+          <StatCard title={uiMessage("salon.s1149")} value={closedCount} note={lastSettlement ? uiMessage("salon.s1150", {p0: getStatusLabel(lastSettlement?.status)}) : uiMessage("salon.s1151")} />
         </section>
 
         <div style={styles.mainStack}>
           <Panel
-            title="Лента расчётных периодов"
-            note="Каждый сет выводится отдельной карточкой. На мобильном экране сначала идёт смысловой заголовок, затем даты и сумма."
+            title={uiMessage("salon.s1152")}
+            note={uiMessage("salon.s1153")}
           >
-            {pageLoading ? <div style={styles.infoText}>Загрузка...</div> : null}
+            {pageLoading ? <div style={styles.infoText}><UiValue value={uiMessage("salon.s0118")} /></div> : null}
 
             {pageError ? (
               <EmptyBox
-                title={contextError ? "Ошибка shell-слоя" : "Ошибка загрузки"}
-                text={contextError ? "Не удалось определить состояние кабинета салона" : error}
+                title={contextError ? uiMessage("salon.s1035") : uiMessage("salon.s1036")}
+                text={contextError ? uiMessage("salon.s1037") : error}
               />
             ) : null}
 
             {pageEmpty ? (
               <EmptyBox
-                title="Сеты отсутствуют"
-                text="Расчётные периоды появятся после накопления транзакций и закрытия операций. Каркас страницы уже готов под mobile-first сценарий."
+                title={uiMessage("salon.s1154")}
+                text={uiMessage("salon.s1155")}
               />
             ) : null}
 
@@ -294,11 +279,10 @@ export default function SalonSettlementsPage(){
               <>
                 <div style={styles.listHeader}>
                   <div>
-                    <h3 style={styles.listTitle}>Последние периоды</h3>
-                    <p style={styles.listNote}>Короткий обзор без перегруза: период, статус, сумма и ключевые даты.</p>
+                    <h3 style={styles.listTitle}><UiValue value={uiMessage("salon.s1156")} /></h3>
+                    <p style={styles.listNote}><UiValue value={uiMessage("salon.s1157")} /></p>
                   </div>
-                  <div style={styles.listMeta}>
-                    Последний сет: {lastSettlement ? formatDateTime(lastSettlement?.period_end || lastSettlement?.created_at) : "—"}
+                  <div style={styles.listMeta}><UiValue value={uiMessage("salon.s1158")} /><UiValue value={lastSettlement ? formatDateTime(lastSettlement?.period_end || lastSettlement?.created_at) : "—"} />
                   </div>
                 </div>
 
@@ -307,33 +291,33 @@ export default function SalonSettlementsPage(){
                     <article key={item?.id || index} style={styles.itemCard}>
                       <div style={styles.itemTop}>
                         <div>
-                          <h3 style={styles.itemTitle}>{item?.id || `Сет ${index + 1}`}</h3>
+                          <h3 style={styles.itemTitle}><UiValue value={item?.id || uiMessage("salon.s1111", {p0: index + 1})} /></h3>
                           <p style={styles.itemSubtitle}>
-                            {formatDateTime(item?.period_start || item?.start_date)} → {formatDateTime(item?.period_end || item?.end_date)}
+                            <UiValue value={formatDateTime(item?.period_start || item?.start_date)} /> → <UiValue value={formatDateTime(item?.period_end || item?.end_date)} />
                           </p>
                         </div>
-                        <div style={styles.badge}>{getStatusLabel(item?.status)}</div>
+                        <div style={styles.badge}><UiValue value={getStatusLabel(item?.status)} /></div>
                       </div>
 
                       <div style={styles.metaGrid}>
                         <div style={styles.metaCell}>
-                          <div style={styles.metaLabel}>Сумма</div>
-                          <div style={styles.metaValue}>{money(item?.amount ?? item?.total_amount)}</div>
+                          <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0147")} /></div>
+                          <div style={styles.metaValue}><UiValue value={money(item?.amount ?? item?.total_amount, item?.currency_code || item?.currency)} /></div>
                         </div>
 
                         <div style={styles.metaCell}>
-                          <div style={styles.metaLabel}>Создан</div>
-                          <div style={styles.metaValue}>{formatDateTime(item?.created_at)}</div>
+                          <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s1160")} /></div>
+                          <div style={styles.metaValue}><UiValue value={formatDateTime(item?.created_at)} /></div>
                         </div>
 
                         <div style={styles.metaCell}>
-                          <div style={styles.metaLabel}>Начало периода</div>
-                          <div style={styles.metaValue}>{formatDateTime(item?.period_start || item?.start_date)}</div>
+                          <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s1161")} /></div>
+                          <div style={styles.metaValue}><UiValue value={formatDateTime(item?.period_start || item?.start_date)} /></div>
                         </div>
 
                         <div style={styles.metaCell}>
-                          <div style={styles.metaLabel}>Конец периода</div>
-                          <div style={styles.metaValue}>{formatDateTime(item?.period_end || item?.end_date)}</div>
+                          <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s1162")} /></div>
+                          <div style={styles.metaValue}><UiValue value={formatDateTime(item?.period_end || item?.end_date)} /></div>
                         </div>
                       </div>
                     </article>
@@ -344,25 +328,25 @@ export default function SalonSettlementsPage(){
           </Panel>
 
           <Panel
-            title="Короткий статус модуля"
-            note="Страница держит стабильный верхний DOM при любых данных и даёт однородное поведение вместе с выплатами и транзакциями."
+            title={uiMessage("salon.s1032")}
+            note={uiMessage("salon.s1163")}
           >
             <div style={styles.infoGrid}>
               <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Режим вывода</div>
-                <div style={styles.infoValue}>{canWithdraw ? "Разрешён" : "Ограничен"}</div>
+                <div style={styles.infoLabel}><UiValue value={uiMessage("salon.s1135")} /></div>
+                <div style={styles.infoValue}><UiValue value={canWithdraw ? uiMessage("salon.s1136") : uiMessage("salon.s1137")} /></div>
               </div>
               <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Последняя сумма</div>
-                <div style={styles.infoValue}>{lastSettlement ? money(lastSettlement?.amount ?? lastSettlement?.total_amount) : "—"}</div>
+                <div style={styles.infoLabel}><UiValue value={uiMessage("salon.s1138")} /></div>
+                <div style={styles.infoValue}><UiValue value={lastSettlement ? money(lastSettlement?.amount ?? lastSettlement?.total_amount, lastSettlement?.currency_code || lastSettlement?.currency) : "—"} /></div>
               </div>
               <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Последний статус</div>
-                <div style={styles.infoValue}>{lastSettlement ? getStatusLabel(lastSettlement?.status) : "—"}</div>
+                <div style={styles.infoLabel}><UiValue value={uiMessage("salon.s1139")} /></div>
+                <div style={styles.infoValue}><UiValue value={lastSettlement ? getStatusLabel(lastSettlement?.status) : "—"} /></div>
               </div>
               <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Открытых периодов</div>
-                <div style={styles.infoValue}>{openCount}</div>
+                <div style={styles.infoLabel}><UiValue value={uiMessage("salon.s1164")} /></div>
+                <div style={styles.infoValue}><UiValue value={openCount} /></div>
               </div>
             </div>
           </Panel>

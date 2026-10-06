@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiDate, uiJoin, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
@@ -25,23 +26,24 @@ function Block({ title, hint, children }) {
         background: "#ffffff"
       }}
     >
-      <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "6px" }}>{title}</div>
+      <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "6px" }}><UiValue value={title} /></div>
       {hint ? (
-        <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "12px", lineHeight: 1.45 }}>{hint}</div>
+        <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "12px", lineHeight: 1.45 }}><UiValue value={hint} /></div>
       ) : null}
-      {children}
+      <UiValue value={children} />
     </div>
   )
 }
 
 function Field({ label, value, onChange, type = "text", placeholder = "" }) {
+  const { renderUi } = useUiMessages();
   return (
     <div style={{ marginBottom: "12px" }}>
-      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>{label}</div>
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}><UiValue value={label} /></div>
       <input
         type={type}
         value={value || ""}
-        placeholder={placeholder}
+        placeholder={renderUi(placeholder)}
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: "100%",
@@ -64,25 +66,25 @@ function ReadonlyRow({ label, value }){
       padding: "10px 0",
       borderBottom: "1px solid #f3f4f6"
     }}>
-      <div style={{ fontSize: "13px", color: "#6b7280" }}>{label}</div>
-      <div style={{ fontSize: "13px", fontWeight: 600, color: "#111827", textAlign: "right" }}>{value || "—"}</div>
+      <div style={{ fontSize: "13px", color: "#6b7280" }}><UiValue value={label} /></div>
+      <div style={{ fontSize: "13px", fontWeight: 600, color: "#111827", textAlign: "right" }}><UiValue value={value || "—"} /></div>
     </div>
   )
 }
 
-const OWNER_QR_LABEL = "QR для оплаты"
-const OWNER_QR_DESCRIPTION = "Загрузите готовое изображение QR из банка или приложения. TOTEM только хранит изображение."
-const OWNER_QR_EMPTY_NOTE = "QR ещё не добавлен."
-const OWNER_QR_EMPTY_HINT = "Загрузите изображение QR или вставьте ссылку на изображение."
-const OWNER_QR_LINK_LABEL = "Вставить ссылку на изображение QR"
-const OWNER_QR_LINK_BUTTON = "Сохранить ссылку"
-const OWNER_QR_UPLOAD_BUTTON = "Загрузить изображение QR"
-const OWNER_QR_REPLACE_BUTTON = "Заменить изображение QR"
-const OWNER_QR_DELETE_BUTTON = "Удалить изображение QR"
+const OWNER_QR_LABEL = uiMessage("salon.s0781")
+const OWNER_QR_DESCRIPTION = uiMessage("salon.s0782")
+const OWNER_QR_EMPTY_NOTE = uiMessage("salon.s0783")
+const OWNER_QR_EMPTY_HINT = uiMessage("salon.s0784")
+const OWNER_QR_LINK_LABEL = uiMessage("salon.s0785")
+const OWNER_QR_LINK_BUTTON = uiMessage("salon.s0786")
+const OWNER_QR_UPLOAD_BUTTON = uiMessage("salon.s0787")
+const OWNER_QR_REPLACE_BUTTON = uiMessage("salon.s0788")
+const OWNER_QR_DELETE_BUTTON = uiMessage("salon.s0789")
 const QR_IMAGE_FIELD = "qr_image_url"
-const BANK_FIELD = ["bank", "name"].join("_")
-const ACCOUNT_FIELD = ["account", "name"].join("_")
-const PHONE_FIELD = ["phone", "or", "account"].join("_")
+const BANK_FIELD = uiJoin(["bank", "name"], "_")
+const ACCOUNT_FIELD = uiJoin(["account", "name"], "_")
+const PHONE_FIELD = uiJoin(["phone", "or", "account"], "_")
 
 const OWNER_QR_EMPTY_FORM = {
   qr_image_url: ""
@@ -125,6 +127,7 @@ function OwnerQrDestinationEditor({
   uploadImage,
   deleteImage
 }) {
+  const { renderUi } = useUiMessages();
   const [form, setForm] = useState(OWNER_QR_EMPTY_FORM)
   const [destinationId, setDestinationId] = useState("")
   const [isActive, setIsActive] = useState(false)
@@ -145,7 +148,7 @@ function OwnerQrDestinationEditor({
       setForm(OWNER_QR_EMPTY_FORM)
       setDestinationId("")
       setIsActive(false)
-      setError("MASTER_SLUG_MISSING")
+      setError(uiError("MASTER_SLUG_MISSING"))
       return
     }
 
@@ -179,7 +182,7 @@ function OwnerQrDestinationEditor({
       setForm(OWNER_QR_EMPTY_FORM)
       setDestinationId("")
       setIsActive(false)
-      setError(loadError?.message || "MASTER_OWNER_QR_DESTINATION_LOAD_FAILED")
+      setError(uiError(loadError?.message || "MASTER_OWNER_QR_DESTINATION_LOAD_FAILED"))
     } finally {
       setLoading(false)
     }
@@ -203,7 +206,7 @@ function OwnerQrDestinationEditor({
     const link = String(nextQrImageUrl || "").trim()
 
     if (!destinationId && !link) {
-      setError("\u0414\u043e\u0431\u0430\u0432\u044c\u0442\u0435 \u0441\u0441\u044b\u043b\u043a\u0443 \u043d\u0430 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 QR")
+      setError(uiError(uiMessage("salon.s0790")))
       return false
     }
 
@@ -226,10 +229,10 @@ function OwnerQrDestinationEditor({
       }
 
       await loadOwnerQrDestination()
-      setMessage("QR для оплаты сохранён")
+      setMessage(uiMessage("salon.s0791"))
       return true
     } catch (saveError) {
-      setError(saveError?.message || "MASTER_OWNER_QR_DESTINATION_SAVE_FAILED")
+      setError(uiError(saveError?.message || "MASTER_OWNER_QR_DESTINATION_SAVE_FAILED"))
       return false
     } finally {
       setSaving(false)
@@ -252,9 +255,9 @@ function OwnerQrDestinationEditor({
       }
 
       await loadOwnerQrDestination()
-      setMessage("QR для оплаты деактивирован")
+      setMessage(uiMessage("salon.s0792"))
     } catch (deactivateError) {
-      setError(deactivateError?.message || "MASTER_OWNER_QR_DESTINATION_DEACTIVATE_FAILED")
+      setError(uiError(deactivateError?.message || "MASTER_OWNER_QR_DESTINATION_DEACTIVATE_FAILED"))
     } finally {
       setSaving(false)
     }
@@ -276,9 +279,9 @@ function OwnerQrDestinationEditor({
       }
 
       await loadOwnerQrDestination()
-      setMessage("Изображение QR удалено")
+      setMessage(uiMessage("salon.s0793"))
     } catch (deleteError) {
-      setError(deleteError?.message || "MASTER_OWNER_QR_IMAGE_DELETE_FAILED")
+      setError(uiError(deleteError?.message || "MASTER_OWNER_QR_IMAGE_DELETE_FAILED"))
     } finally {
       setSaving(false)
     }
@@ -290,7 +293,7 @@ function OwnerQrDestinationEditor({
     }
 
     if (!file) {
-      setError("\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u043e\u0435 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 QR")
+      setError(uiError(uiMessage("salon.s0794")))
       return
     }
 
@@ -325,9 +328,9 @@ function OwnerQrDestinationEditor({
       }
 
       await loadOwnerQrDestination()
-      setMessage("Изображение QR прикреплено")
+      setMessage(uiMessage("salon.s0795"))
     } catch (uploadError) {
-      setError(uploadError?.message || "MASTER_OWNER_QR_IMAGE_UPLOAD_FAILED")
+      setError(uiError(uploadError?.message || "MASTER_OWNER_QR_IMAGE_UPLOAD_FAILED"))
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -358,7 +361,7 @@ function OwnerQrDestinationEditor({
 
   return (
     <Block
-      title="QR для оплаты"
+      title={uiMessage("salon.s0781")}
       hint={OWNER_QR_DESCRIPTION}
     >
       <input
@@ -388,8 +391,8 @@ function OwnerQrDestinationEditor({
                 marginBottom: "14px"
               }}
             >
-              <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "4px" }}>{OWNER_QR_EMPTY_NOTE}</div>
-              <div style={{ fontSize: "13px", lineHeight: 1.45, color: "#6b7280" }}>{OWNER_QR_EMPTY_HINT}</div>
+              <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "4px" }}><UiValue value={OWNER_QR_EMPTY_NOTE} /></div>
+              <div style={{ fontSize: "13px", lineHeight: 1.45, color: "#6b7280" }}><UiValue value={OWNER_QR_EMPTY_HINT} /></div>
             </div>
           ) : null}
 
@@ -397,7 +400,7 @@ function OwnerQrDestinationEditor({
             label={OWNER_QR_LINK_LABEL}
             value={qrImageUrl}
             onChange={(value) => updateField("qr_image_url", value)}
-            placeholder="https://..."
+            placeholder={uiMessage("salon.s0796")}
           />
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "14px" }}>
@@ -415,7 +418,7 @@ function OwnerQrDestinationEditor({
                 fontWeight: 700
               }}
             >
-              {uploading ? "Загружаем…" : uploadButtonLabel}
+              <UiValue value={uploading ? uiMessage("salon.s0797") : uploadButtonLabel} />
             </button>
 
             <button
@@ -432,7 +435,7 @@ function OwnerQrDestinationEditor({
                 fontWeight: 700
               }}
             >
-              {saving ? "Сохраняем…" : OWNER_QR_LINK_BUTTON}
+              <UiValue value={saving ? uiMessage("salon.s0519") : OWNER_QR_LINK_BUTTON} />
             </button>
 
             {hasImage ? (
@@ -450,21 +453,21 @@ function OwnerQrDestinationEditor({
                   fontWeight: 700
                 }}
               >
-                {OWNER_QR_DELETE_BUTTON}
+                <UiValue value={OWNER_QR_DELETE_BUTTON} />
               </button>
             ) : null}
           </div>
 
           {message ? (
-            <div style={{ marginTop: "12px", fontSize: "13px", color: "#027a48", fontWeight: 600 }}>{message}</div>
+            <div style={{ marginTop: "12px", fontSize: "13px", color: "#027a48", fontWeight: 600 }}><UiValue value={message} /></div>
           ) : null}
           {error ? (
             <div style={{ marginTop: "12px", fontSize: "13px", color: "#b42318", fontWeight: 600 }}>
-              {error}
+              <UiValue value={uiError(error)} />
             </div>
           ) : null}
           {loading ? (
-            <div style={{ marginTop: "12px", fontSize: "13px", color: "#6b7280" }}>Загружаем active QR…</div>
+            <div style={{ marginTop: "12px", fontSize: "13px", color: "#6b7280" }}><UiValue value={uiMessage("salon.s0798")} /></div>
           ) : null}
         </div>
 
@@ -478,11 +481,11 @@ function OwnerQrDestinationEditor({
               minHeight: "220px"
             }}
           >
-            <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "10px" }}>Превью QR</div>
+            <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "10px" }}><UiValue value={uiMessage("salon.s0799")} /></div>
             {previewVisible ? (
               <img
                 src={qrImageUrl}
-                alt="QR preview"
+                alt={renderUi(uiMessage("salon.s0800"))}
                 loading="lazy"
                 decoding="async"
                 onError={() => setPreviewBroken(true)}
@@ -499,7 +502,7 @@ function OwnerQrDestinationEditor({
               />
             ) : (
               <div style={{ fontSize: "13px", lineHeight: 1.45, color: "#6b7280" }}>
-                {qrImageUrl ? "Превью недоступно." : "Добавьте ссылку на изображение QR, чтобы увидеть лёгкое превью."}
+                <UiValue value={qrImageUrl ? uiMessage("salon.s0801") : uiMessage("salon.s0802")} />
               </div>
             )}
           </div>
@@ -518,34 +521,35 @@ function getBillingUi(billingAccess, billingBlockReason){
 
   if(state === "blocked"){
     return {
-      title: "Оплата требует внимания",
+      title: uiMessage("salon.s0803"),
       tone: "#b42318",
       bg: "#fff5f5",
       border: "#f5c2c7",
-      note: billingBlockReason || "Доступ ограничен до оплаты"
+      note: uiError(billingBlockReason, uiMessage("salon.s0804"))
     }
   }
 
   if(state === "grace"){
     return {
-      title: "Льготный период",
+      title: uiMessage("salon.s0302"),
       tone: "#9a6700",
       bg: "#fff8db",
       border: "#facc15",
-      note: billingBlockReason || "Скоро потребуется пополнение"
+      note: uiError(billingBlockReason, uiMessage("salon.s0303"))
     }
   }
 
   return {
-    title: "Подписка активна",
+    title: uiMessage("salon.s0805"),
     tone: "#027a48",
     bg: "#ecfdf3",
     border: "#abefc6",
-    note: "Платёжный доступ работает без ограничений"
+    note: uiMessage("salon.s0806")
   }
 }
 
 export default function MasterSettingsPage() {
+ const { renderUi } = useUiMessages();
   const {
     master,
     slug,
@@ -608,55 +612,54 @@ export default function MasterSettingsPage() {
       advance
     })
 
-    alert("Настройки сохранены локально")
+    alert(renderUi(uiError(uiMessage("salon.s0807"))))
   }
 
   return (
     <div style={{ padding: "20px" }}>
-      <PageSection title="Настройки мастера">
+      <PageSection title={uiMessage("master.s0165")}>
         <div style={{
-          border: `1px solid ${billingUi.border}`,
+          border: uiTemplate(["1px solid ",""], [billingUi.border]),
           background: billingUi.bg,
           color: billingUi.tone,
           borderRadius: "14px",
           padding: "16px",
           marginBottom: "16px"
         }}>
-          <div style={{ fontSize: "15px", fontWeight: 800, marginBottom: "6px" }}>{billingUi.title}</div>
-          <div style={{ fontSize: "13px", lineHeight: 1.45 }}>{billingUi.note}</div>
-          <div style={{ marginTop: "10px", fontSize: "13px", color: "#344054" }}>
-            Запись: <strong>{canWrite ? "доступна" : "ограничена"}</strong> · Выплаты: <strong>{canWithdraw ? "доступны" : "ограничены"}</strong>
+          <div style={{ fontSize: "15px", fontWeight: 800, marginBottom: "6px" }}><UiValue value={billingUi.title} /></div>
+          <div style={{ fontSize: "13px", lineHeight: 1.45 }}><UiValue value={billingUi.note} /></div>
+          <div style={{ marginTop: "10px", fontSize: "13px", color: "#344054" }}><UiValue value={uiMessage("salon.s0005")} /><strong><UiValue value={canWrite ? uiMessage("salon.s0006") : uiMessage("salon.s0007")} /></strong><UiValue value={uiMessage("salon.s0008")} /><strong><UiValue value={canWithdraw ? uiMessage("salon.s0009") : uiMessage("salon.s0010")} /></strong>
           </div>
         </div>
 
-        <Block title="Профиль" hint="Базовые данные мастера. Эта страница не тянет тяжёлые списки клиентов, записей и финансов.">
-          <Field label="Имя" value={name} onChange={setName} />
-          <Field label="Фото (URL)" value={photo} onChange={setPhoto} placeholder="https://..." />
-          <Field label="Описание" value={bio} onChange={setBio} />
+        <Block title={uiMessage("master.s0166")} hint={uiMessage("master.s0167")}>
+          <Field label={uiMessage("salon.s0654")} value={name} onChange={setName} />
+          <Field label={uiMessage("master.s0169")} value={photo} onChange={setPhoto} placeholder={uiMessage("salon.s0796")} />
+          <Field label={uiMessage("salon.s0597")} value={bio} onChange={setBio} />
         </Block>
 
-        <Block title="Контакты" hint="Операционные контакты для связи с клиентами.">
-          <Field label="Телефон" value={phone} onChange={setPhone} />
-          <Field label="Email" value={email} onChange={setEmail} />
-          <Field label="WhatsApp" value={whatsapp} onChange={setWhatsapp} />
+        <Block title={uiMessage("salon.s0457")} hint={uiMessage("master.s0172")}>
+          <Field label={uiMessage("salon.s0230")} value={phone} onChange={setPhone} />
+          <Field label={uiMessage("salon.s0815")} value={email} onChange={setEmail} />
+          <Field label={uiMessage("salon.s0574")} value={whatsapp} onChange={setWhatsapp} />
         </Block>
 
-        <Block title="Параметры бронирования" hint="Локальные параметры формы и расписания. Управление услугами вынесено в отдельную страницу «Услуги».">
-          <Field label="Шаг слота (мин)" value={slot} onChange={setSlot} type="number" />
-          <Field label="Минимум до записи (мин)" value={minBefore} onChange={setMinBefore} type="number" />
-          <Field label="Максимум вперёд (дней)" value={advance} onChange={setAdvance} type="number" />
+        <Block title={uiMessage("master.s0176")} hint={uiMessage("master.s0177")}>
+          <Field label={uiMessage("salon.s0818")} value={slot} onChange={setSlot} type="number" />
+          <Field label={uiMessage("salon.s0819")} value={minBefore} onChange={setMinBefore} type="number" />
+          <Field label={uiMessage("salon.s0820")} value={advance} onChange={setAdvance} type="number" />
         </Block>
 
-        <Block title="Доступ и оплата" hint="Информационный блок. Статус и переходы в профильные разделы.">
-          <ReadonlyRow label="Master slug" value={slug} />
-          <ReadonlyRow label="Billing model" value={billingModel} />
-          <ReadonlyRow label="Статус подписки" value={subscriptionStatus} />
+        <Block title={uiMessage("salon.s0821")} hint={uiMessage("salon.s0822")}>
+          <ReadonlyRow label={uiMessage("master.s0183")} value={slug} />
+          <ReadonlyRow label={uiMessage("salon.s0824")} value={billingModel} />
+          <ReadonlyRow label={uiMessage("salon.s0825")} value={subscriptionStatus} />
           <ReadonlyRow
-            label="Период до"
-            value={currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleString("ru-RU") : "—"}
+            label={uiMessage("salon.s0826")}
+            value={currentPeriodEnd ? uiDate(currentPeriodEnd, { dateStyle: "short", timeStyle: "short" }) : "—"}
           />
-          <ReadonlyRow label="Запись" value={canWrite ? "доступна" : "ограничена"} />
-          <ReadonlyRow label="Выплаты" value={canWithdraw ? "доступны" : "ограничены"} />
+          <ReadonlyRow label={uiMessage("salon.s0827")} value={canWrite ? uiMessage("salon.s0006") : uiMessage("salon.s0007")} />
+          <ReadonlyRow label={uiMessage("salon.s0030")} value={canWithdraw ? uiMessage("salon.s0009") : uiMessage("salon.s0010")} />
 
           <div style={{
             display: "grid",
@@ -665,7 +668,7 @@ export default function MasterSettingsPage() {
             marginTop: "14px"
           }}>
             <Link
-              to={`/master/${slug}/services`}
+              to={uiTemplate(["/master/","/services"], [slug])}
               style={{
                 display: "block",
                 textDecoration: "none",
@@ -677,12 +680,10 @@ export default function MasterSettingsPage() {
                 color: "#111827",
                 fontWeight: 700
               }}
-            >
-              Открыть услуги
-            </Link>
+            ><UiValue value={uiMessage("master.s0188")} /></Link>
 
             <Link
-              to={`/master/${slug}/finance`}
+              to={uiTemplate(["/master/","/finance"], [slug])}
               style={{
                 display: "block",
                 textDecoration: "none",
@@ -694,9 +695,7 @@ export default function MasterSettingsPage() {
                 color: "#111827",
                 fontWeight: 700
               }}
-            >
-              Открыть финансы
-            </Link>
+            ><UiValue value={uiMessage("master.s0189")} /></Link>
           </div>
         </Block>
 
@@ -711,12 +710,12 @@ export default function MasterSettingsPage() {
           deleteImage={deleteMasterOwnerQrDestinationImage}
         />
 
-        <Block title="Моя ссылка и QR" hint="Быстрый доступ к ссылке записи и QR-коду для клиентов.">
+        <Block title={uiMessage("master.s0190")} hint={uiMessage("salon.s0837")}>
           <OwnerBookingQrCard
             ownerType="master"
             slug={slug}
-            title="QR для записи к мастеру"
-            subtitle="Клиент откроет форму записи с выбранным мастером."
+            title={uiMessage("master.s0101")}
+            subtitle={uiMessage("master.s0102")}
           />
         </Block>
 
@@ -731,9 +730,7 @@ export default function MasterSettingsPage() {
             cursor: "pointer",
             fontWeight: 600
           }}
-        >
-          Сохранить
-        </button>
+        ><UiValue value={uiMessage("salon.s0838")} /></button>
       </PageSection>
     </div>
   )

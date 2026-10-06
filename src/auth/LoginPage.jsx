@@ -1,3 +1,4 @@
+import { useMarketContext } from "../market/MarketContext.jsx";
 import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { authLogin, authStart, clearAuthAccessToken } from "../api/internal"
@@ -117,17 +118,18 @@ function getLoginSubtitle(role){
   const normalizedRole = String(role || "").trim().toLowerCase()
 
   if(normalizedRole === "master"){
-    return "Вход в кабинет мастера"
+    return "auth.masterSubtitle"
   }
 
   if(normalizedRole === "salon_admin"){
-    return "Вход в кабинет салона"
+    return "auth.salonSubtitle"
   }
 
-  return "Вход в кабинет"
+  return "auth.subtitle"
 }
 
 export default function LoginPage(){
+  const { t } = useMarketContext();
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -166,16 +168,16 @@ export default function LoginPage(){
     if(!href){
       e.preventDefault()
       if(!effectiveRole){
-        setError("Ошибка контекста входа")
+        setError("auth.contextError")
         return
       }
 
       if(isOwnerRole(effectiveRole) && !effectiveSlug){
-        setError("Для восстановления пароля откройте ссылку конкретного кабинета или обратитесь в поддержку.")
+        setError("auth.recoveryLinkRequired")
         return
       }
 
-      setError("Ошибка контекста входа")
+      setError("auth.contextError")
     }
   }
 
@@ -191,7 +193,7 @@ export default function LoginPage(){
 
     if(!resolvedSlug){
       clearAuthAccessToken()
-      setError("Кабинет найден, но ссылка кабинета не определена.")
+      setError("auth.ownerLinkMissing")
       return false
     }
 
@@ -236,12 +238,12 @@ export default function LoginPage(){
     e.preventDefault()
 
     if(!effectiveRole){
-      setError("Ошибка контекста входа")
+      setError("auth.contextError")
       return
     }
 
     if(!effectiveSlug && !isOwnerRole(effectiveRole)){
-      setError("Ошибка контекста входа")
+      setError("auth.contextError")
       return
     }
 
@@ -265,7 +267,7 @@ export default function LoginPage(){
 
         if(!effectiveSlug && isOwnerRole(effectiveRole) && !resolvedSlug){
           clearAuthAccessToken()
-          setError("Кабинет найден, но ссылка кабинета не определена.")
+          setError("auth.ownerLinkMissing")
           return
         }
 
@@ -274,13 +276,13 @@ export default function LoginPage(){
       }
 
       if(isMultipleOwnerContextsError(res)){
-        setError("Найдено несколько кабинетов. Выберите точную ссылку кабинета или обратитесь в поддержку.")
+        setError("auth.multipleOwners")
         return
       }
 
-      setError("Вход не завершён: токен авторизации не получен")
+      setError("auth.loginIncomplete")
     }catch(e){
-      setError("Ошибка входа")
+      setError("auth.loginError")
     }finally{
       setLoading(false)
     }
@@ -290,12 +292,12 @@ export default function LoginPage(){
     e.preventDefault()
 
     if(!effectiveRole){
-      setError("Ошибка контекста входа")
+      setError("auth.contextError")
       return
     }
 
     if(!effectiveSlug && !isOwnerRole(effectiveRole)){
-      setError("Ошибка контекста входа")
+      setError("auth.contextError")
       return
     }
 
@@ -319,7 +321,7 @@ export default function LoginPage(){
 
         if(!effectiveSlug && isOwnerRole(effectiveRole) && !resolvedSlug){
           clearAuthAccessToken()
-          setError("Кабинет найден, но ссылка кабинета не определена.")
+          setError("auth.ownerLinkMissing")
           return
         }
 
@@ -335,13 +337,13 @@ export default function LoginPage(){
       }
 
       if(isMultipleOwnerContextsError(res)){
-        setError("Найдено несколько кабинетов. Выберите точную ссылку кабинета или обратитесь в поддержку.")
+        setError("auth.multipleOwners")
         return
       }
 
-      setError("Не удалось отправить код")
+      setError("auth.sendCodeFailed")
     }catch(e){
-      setError("Ошибка отправки кода")
+      setError("auth.sendCodeError")
     }finally{
       setLoading(false)
     }
@@ -379,13 +381,13 @@ export default function LoginPage(){
           }}>
             <div>
               <div style={{ fontSize: "13px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 700 }}>
-                TOTEM Auth
+                {t("auth.brand")}
               </div>
               <h1 style={{ margin: "10px 0 8px", fontSize: "28px", lineHeight: 1.05 }}>
-                Вход
+                {t("auth.signInTitle")}
               </h1>
               <div style={{ fontSize: "14px", lineHeight: 1.5, color: "rgba(255,255,255,0.9)" }}>
-                {loginSubtitle}
+                {t(loginSubtitle)}
               </div>
             </div>
             <a
@@ -402,7 +404,7 @@ export default function LoginPage(){
                 border: "1px solid rgba(255,255,255,0.18)"
               }}
             >
-              На главную
+              {t("auth.home")}
             </a>
           </div>
 
@@ -420,7 +422,7 @@ export default function LoginPage(){
               fontSize: "12px",
               fontWeight: 700
             }}>
-              Безопасный вход
+              {t("auth.secureSignIn")}
             </span>
             <span style={{
               display: "inline-flex",
@@ -431,7 +433,7 @@ export default function LoginPage(){
               fontSize: "12px",
               fontWeight: 700
             }}>
-              Кабинет по роли
+              {t("auth.roleAccount")}
             </span>
           </div>
         </div>
@@ -468,7 +470,7 @@ export default function LoginPage(){
                 boxShadow: mode === "password" ? "0 8px 18px rgba(17,24,39,0.18)" : "none"
               }}
             >
-              Пароль
+              {t("auth.password")}
             </button>
             <button
               type="button"
@@ -486,7 +488,7 @@ export default function LoginPage(){
                 boxShadow: mode === "otp" ? "0 8px 18px rgba(17,24,39,0.18)" : "none"
               }}
             >
-              Код
+              {t("auth.code")}
             </button>
           </div>
 
@@ -496,13 +498,14 @@ export default function LoginPage(){
             color: "#475569",
             marginBottom: "14px"
           }}>
-            Вход защищён. После подтверждения доступа вы перейдёте в кабинет вашей роли.
+            {t("auth.secureInfo")}
           </div>
 
           <form onSubmit={mode === "password" ? handlePasswordLogin : handleOtpStart}>
             <input
               type="text"
-              placeholder="Email или телефон"
+              placeholder={t("auth.loginPlaceholder")}
+              aria-label={t("auth.login")}
               value={login}
               onChange={e => setLogin(e.target.value)}
               autoComplete="username"
@@ -523,7 +526,8 @@ export default function LoginPage(){
             {mode === "password" && (
               <input
                 type="password"
-                placeholder="Пароль"
+                placeholder={t("auth.password")}
+                aria-label={t("auth.password")}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 autoComplete="current-password"
@@ -543,7 +547,7 @@ export default function LoginPage(){
             )}
 
             {error && (
-              <div style={{
+              <div role="alert" style={{
                 marginBottom: "12px",
                 padding: "12px 14px",
                 borderRadius: "16px",
@@ -553,7 +557,7 @@ export default function LoginPage(){
                 fontSize: "14px",
                 lineHeight: 1.45
               }}>
-                {error}
+                {t(error)}
               </div>
             )}
 
@@ -573,7 +577,7 @@ export default function LoginPage(){
                 boxShadow: "0 14px 24px rgba(29,78,216,0.22)"
               }}
             >
-              {loading ? "Загрузка..." : "Войти"}
+              {loading ? t("auth.loading") : t("auth.signIn")}
             </button>
           </form>
 
@@ -590,7 +594,7 @@ export default function LoginPage(){
               color: "#64748b",
               maxWidth: "220px"
             }}>
-              Доступ открыт только для вашей роли и кабинета. Если ссылка кабинета потеряна, используйте восстановление.
+              {t("auth.accessInfo")}
             </div>
             <a
               href={buildForgotPasswordHref() || "#"}
@@ -603,7 +607,7 @@ export default function LoginPage(){
                 whiteSpace: "nowrap"
               }}
             >
-              Забыли пароль?
+              {t("auth.forgotLink")}
             </a>
           </div>
         </div>
@@ -611,3 +615,4 @@ export default function LoginPage(){
     </div>
   )
 }
+

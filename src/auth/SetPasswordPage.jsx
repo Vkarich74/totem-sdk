@@ -1,8 +1,10 @@
+import { useMarketContext } from "../market/MarketContext.jsx";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { setPassword } from "../api/internal";
 
 export default function SetPasswordPage(){
+  const { t } = useMarketContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -25,12 +27,12 @@ export default function SetPasswordPage(){
     const normalizedPassword = String(password || "");
 
     if(normalizedPassword.length < 8){
-      setError("Пароль должен быть не короче 8 символов");
+      setError("auth.passwordShort");
       return;
     }
 
     if(normalizedPassword !== String(confirmPassword || "")){
-      setError("Пароли не совпадают");
+      setError("auth.passwordMismatch");
       return;
     }
 
@@ -40,12 +42,12 @@ export default function SetPasswordPage(){
       const saveResult = await setPassword({ password: normalizedPassword });
 
       if(!saveResult?.ok){
-        setError("Не удалось сохранить пароль");
+        setError("auth.savePasswordFailed");
         setLoading(false);
         return;
       }
 
-      setSuccess("Пароль сохранён. Выполните вход заново.");
+      setSuccess("auth.passwordSaved");
 
       if(role && slug){
         const params = new URLSearchParams({
@@ -63,7 +65,7 @@ export default function SetPasswordPage(){
 
       navigate("/auth/login", { replace: true });
     }catch(e){
-      setError("Ошибка сохранения пароля");
+      setError("auth.savePasswordError");
     }finally{
       setLoading(false);
     }
@@ -90,19 +92,19 @@ export default function SetPasswordPage(){
           boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
         }}
       >
-        <h2 style={{ margin: "0 0 12px 0", fontSize: "24px" }}>Создание пароля</h2>
+        <h2 style={{ margin: "0 0 12px 0", fontSize: "24px" }}>{t("auth.setTitle")}</h2>
         <p style={{ margin: "0 0 16px 0", color: "#4b5563", fontSize: "14px" }}>
-          Задайте постоянный пароль для входа в кабинет.
+          {t("auth.setInfo")}
         </p>
 
         <form onSubmit={handleSubmit}>
           <label style={{ display: "block", marginBottom: "12px" }}>
-            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Новый пароль</div>
+            <div style={{ marginBottom: "6px", fontSize: "14px" }}>{t("auth.newPassword")}</div>
             <input
               type="password"
               value={password}
               onChange={(e) => setPasswordValue(e.target.value)}
-              placeholder="Минимум 8 символов"
+              placeholder={t("auth.passwordPlaceholder")}
               style={{
                 width: "100%",
                 height: "42px",
@@ -115,12 +117,12 @@ export default function SetPasswordPage(){
           </label>
 
           <label style={{ display: "block", marginBottom: "12px" }}>
-            <div style={{ marginBottom: "6px", fontSize: "14px" }}>Повторите пароль</div>
+            <div style={{ marginBottom: "6px", fontSize: "14px" }}>{t("auth.confirmPassword")}</div>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Повторите пароль"
+              placeholder={t("auth.confirmPassword")}
               style={{
                 width: "100%",
                 height: "42px",
@@ -133,14 +135,14 @@ export default function SetPasswordPage(){
           </label>
 
           {error ? (
-            <div style={{ color: "#b91c1c", marginBottom: "12px", fontSize: "14px" }}>
-              {error}
+            <div role="alert" style={{ color: "#b91c1c", marginBottom: "12px", fontSize: "14px" }}>
+              {t(error)}
             </div>
           ) : null}
 
           {success ? (
-            <div style={{ color: "#065f46", marginBottom: "12px", fontSize: "14px" }}>
-              {success}
+            <div role="status" aria-live="polite" style={{ color: "#065f46", marginBottom: "12px", fontSize: "14px" }}>
+              {t(success)}
             </div>
           ) : null}
 
@@ -158,10 +160,11 @@ export default function SetPasswordPage(){
               cursor: loading ? "default" : "pointer"
             }}
           >
-            {loading ? "Сохраняем..." : "Сохранить пароль"}
+            {loading ? t("auth.saving") : t("auth.savePassword")}
           </button>
         </form>
       </div>
     </div>
   );
 }
+

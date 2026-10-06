@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiMoney, uiTemplate, uiConcat, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
@@ -120,11 +121,11 @@ const minutes=diffMinutes%60
 
 let eta=""
 if(hours>0 && minutes>0){
-eta="через "+hours+" ч "+minutes+" мин"
+eta=uiConcat(uiConcat(uiConcat(uiConcat(uiMessage("master.s0288"), hours), uiMessage("master.s0289")), minutes), uiMessage("master.s0290"))
 }else if(hours>0){
-eta="через "+hours+" ч"
+eta=uiConcat(uiConcat(uiMessage("master.s0288"), hours), uiMessage("master.s0291"))
 }else{
-eta="через "+minutes+" мин"
+eta=uiConcat(uiConcat(uiMessage("master.s0288"), minutes), uiMessage("master.s0290"))
 }
 
 return{
@@ -150,10 +151,10 @@ return !isCancelledBooking(status)
 function statusLabel(s){
 s=normalizeStatus(s)
 
-if(s==="reserved")return"ожидает"
-if(s==="confirmed")return"подтверждена"
-if(s==="completed")return"завершена"
-if(s==="cancelled")return"отмена"
+if(s==="reserved")return uiMessage("master.s0292")
+if(s==="confirmed")return uiMessage("master.s0293")
+if(s==="completed")return uiMessage("master.s0294")
+if(s==="cancelled")return uiMessage("master.s0034")
 
 return s
 }
@@ -179,14 +180,14 @@ const hours=Math.floor(totalMinutes/60)
 const minutes=totalMinutes%60
 
 if(minutes===0){
-return hours+" ч"
+return uiConcat(hours, uiMessage("master.s0291"))
 }
 
 if(hours===0){
-return minutes+" мин"
+return uiConcat(minutes, uiMessage("master.s0290"))
 }
 
-return hours+" ч "+minutes+" мин"
+return uiConcat(uiConcat(uiConcat(hours, uiMessage("master.s0289")), minutes), uiMessage("master.s0290"))
 }
 
 function canShowMasterActions(status){
@@ -203,9 +204,7 @@ return true
 return false
 }
 
-function formatMoney(value){
-return String(value||0)+" сом"
-}
+function formatMoney(value, currency) { return uiMoney(value, currency); }
 
 function formatTimeHHMM(value){
 const date=new Date(value)
@@ -266,7 +265,7 @@ const percent=Math.min(100,Math.round((busyMinutes/totalMinutes)*100))
 if(percent<40){
 return{
 percent,
-label:"низкая",
+label:uiMessage("master.s0295"),
 color:"#2f9e44",
 bg:"#ebfbee"
 }
@@ -275,7 +274,7 @@ bg:"#ebfbee"
 if(percent<70){
 return{
 percent,
-label:"средняя",
+label:uiMessage("master.s0296"),
 color:"#e67700",
 bg:"#fff9db"
 }
@@ -283,7 +282,7 @@ bg:"#fff9db"
 
 return{
 percent,
-label:"высокая",
+label:uiMessage("master.s0297"),
 color:"#e03131",
 bg:"#fff5f5"
 }
@@ -338,6 +337,7 @@ return normalizeBookingsResponse(result)
 }
 
 export default function MasterSchedulePage(){
+ const { renderUi } = useUiMessages();
 
 const {
 loading: masterLoading,
@@ -361,7 +361,7 @@ async function refreshBookingsFromBackend(){
 if(!routeSlug){
 setBookings([])
 setBookingsLoading(false)
-setBookingsError("SLUG_MISSING")
+setBookingsError(uiError("SLUG_MISSING"))
 return []
 }
 
@@ -379,7 +379,7 @@ if(!routeSlug){
 if(!cancelled){
 setBookings([])
 setBookingsLoading(false)
-setBookingsError("SLUG_MISSING")
+setBookingsError(uiError("SLUG_MISSING"))
 }
 return
 }
@@ -397,7 +397,7 @@ console.error("MASTER_SCHEDULE_BOOKINGS_LOAD_FAILED",error)
 
 if(!cancelled){
 setBookings([])
-setBookingsError(error?.message || "MASTER_BOOKINGS_LOAD_FAILED")
+setBookingsError(uiError(error?.message || "MASTER_BOOKINGS_LOAD_FAILED"))
 }
 }finally{
 if(!cancelled){
@@ -431,13 +431,13 @@ return master?.slug || slug || ""
 function openBooking(id){
 const routeSlug=getMasterRouteSlug()
 if(!routeSlug)return
-window.location.hash=`/master/${routeSlug}/bookings/${id}`
+window.location.hash=uiTemplate(["/master/","/bookings/",""], [routeSlug, id])
 }
 
 function createBooking(time){
 const routeSlug=getMasterRouteSlug()
 if(!routeSlug)return
-window.location.hash=`/master/${routeSlug}/bookings/new?time=${encodeURIComponent(time)}&date=${encodeURIComponent(dateKey)}`
+window.location.hash=uiTemplate(["/master/","/bookings/new?time=","&date=",""], [routeSlug, encodeURIComponent(time), encodeURIComponent(dateKey)])
 }
 
 function resolveActionSalonSlug(){
@@ -468,12 +468,12 @@ try{
 const actionSalonSlug=resolveActionSalonSlug()
 
 if(!actionSalonSlug){
-alert("Салон для этой записи не определён. Обновите кабинет или войдите заново.")
+alert(renderUi(uiError(uiMessage("master.s0298"))))
 return
 }
 
 const response=await fetch(
-`${API_BASE}/public/salons/`+encodeURIComponent(actionSalonSlug)+"/bookings/"+booking.id+"/lifecycle",
+uiTemplate(["","/public/salons/"], [API_BASE])+encodeURIComponent(actionSalonSlug)+"/bookings/"+booking.id+"/lifecycle",
 {
 method:"POST",
 headers:{
@@ -498,9 +498,9 @@ return next
 
 }catch(error){
 if(error && error.message==="SALON_SLUG_NOT_FOUND"){
-alert("Салон для этой записи не определён. Обновите кабинет или войдите заново.")
+alert(renderUi(uiError(uiMessage("master.s0298"))))
 }else{
-alert("Статус не обновился")
+alert(renderUi(uiError(uiMessage("master.s0299"))))
 }
 }finally{
 setActionLoading((prev)=>{
@@ -600,45 +600,43 @@ return{calendar,skip}
 const loading=masterLoading || bookingsLoading
 const error=masterError || bookingsError
 
-if(loading)return<PageSection title="Календарь мастера"><div>Загрузка...</div></PageSection>
+if(loading)return<PageSection title={uiMessage("master.s0300")}><div><UiValue value={uiMessage("salon.s0118")} /></div></PageSection>
 
 if(error){
 return(
-<PageSection title="Календарь мастера">
+<PageSection title={uiMessage("master.s0300")}>
 <div style={{
 border:"1px solid #fecaca",
 background:"#fef2f2",
 color:"#991b1b",
 borderRadius:"10px",
 padding:"12px"
-}}>
-Ошибка загрузки календаря
-</div>
+}}><UiValue value={uiMessage("master.s0301")} /></div>
 </PageSection>
 )
 }
 
 return(
 
-<PageSection title="Календарь мастера">
+<PageSection title={uiMessage("master.s0300")}>
 
 <div>
 
 <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
 
-<h3 style={{margin:0}}>Календарь мастера</h3>
+<h3 style={{margin:0}}><UiValue value={uiMessage("master.s0300")} /></h3>
 
 <div style={{flex:1}}/>
 
 <button onClick={()=>setDateKey(addDays(dateKey,-1))}>←</button>
 
 <div style={{fontWeight:700,minWidth:"120px",textAlign:"center"}}>
-{formatDMY(dateKey)}
+<UiValue value={formatDMY(dateKey)} />
 </div>
 
 <button onClick={()=>setDateKey(addDays(dateKey,1))}>→</button>
 
-<button onClick={()=>setDateKey(todayKey())}>Сегодня</button>
+<button onClick={()=>setDateKey(todayKey())}><UiValue value={uiMessage("salon.s0213")} /></button>
 
 </div>
 
@@ -652,16 +650,16 @@ marginBottom:"12px",
 background:"#f1f8ff"
 }}>
 
-<div style={{fontSize:"12px",color:"#666"}}>Ближайшая запись</div>
+<div style={{fontSize:"12px",color:"#666"}}><UiValue value={uiMessage("master.s0303")} /></div>
 
 <div style={{marginTop:"4px",fontWeight:"700"}}>
-{nextBookingInfo.eta}
+<UiValue value={nextBookingInfo.eta} />
 </div>
 
 <div style={{marginTop:"4px",fontSize:"13px",color:"#333"}}>
-#{nextBookingInfo.id}
-{nextBookingInfo.serviceName ? " · "+nextBookingInfo.serviceName : ""}
-{nextBookingInfo.clientName ? " · "+nextBookingInfo.clientName : ""}
+#<UiValue value={nextBookingInfo.id} />
+<UiValue value={nextBookingInfo.serviceName ? " · "+nextBookingInfo.serviceName : ""} />
+<UiValue value={nextBookingInfo.clientName ? " · "+nextBookingInfo.clientName : ""} />
 </div>
 
 </div>
@@ -676,9 +674,9 @@ marginBottom:"12px",
 background:"#fafafa"
 }}>
 
-<div>Записей сегодня: <b>{stats.today}</b></div>
-<div>Вчера: <b>{stats.yesterday}</b></div>
-<div>Завтра: <b>{stats.tomorrow}</b></div>
+<div><UiValue value={uiMessage("master.s0304")} /><b><UiValue value={stats.today} /></b></div>
+<div><UiValue value={uiMessage("master.s0305")} /><b><UiValue value={stats.yesterday} /></b></div>
+<div><UiValue value={uiMessage("master.s0306")} /><b><UiValue value={stats.tomorrow} /></b></div>
 
 </div>
 
@@ -695,8 +693,8 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Записей в дне</div>
-<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>{dayKpi.bookingsCount}</div>
+<div style={{fontSize:"12px",color:"#666"}}><UiValue value={uiMessage("master.s0307")} /></div>
+<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}><UiValue value={dayKpi.bookingsCount} /></div>
 </div>
 
 <div style={{
@@ -705,21 +703,9 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Занято</div>
+<div style={{fontSize:"12px",color:"#666"}}><UiValue value={uiMessage("salon.s0247")} /></div>
 <div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
-{formatHoursMinutes(dayKpi.busyMinutes)}
-</div>
-</div>
-
-<div style={{
-border:"1px solid #ddd",
-borderRadius:"10px",
-padding:"10px",
-background:"#fafafa"
-}}>
-<div style={{fontSize:"12px",color:"#666"}}>Свободно</div>
-<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
-{formatHoursMinutes(dayKpi.freeMinutes)}
+<UiValue value={formatHoursMinutes(dayKpi.busyMinutes)} />
 </div>
 </div>
 
@@ -729,9 +715,21 @@ borderRadius:"10px",
 padding:"10px",
 background:"#fafafa"
 }}>
-<div style={{fontSize:"12px",color:"#666"}}>Сумма дня</div>
+<div style={{fontSize:"12px",color:"#666"}}><UiValue value={uiMessage("salon.s0241")} /></div>
 <div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
-{formatMoney(dayKpi.revenueTotal)}
+<UiValue value={formatHoursMinutes(dayKpi.freeMinutes)} />
+</div>
+</div>
+
+<div style={{
+border:"1px solid #ddd",
+borderRadius:"10px",
+padding:"10px",
+background:"#fafafa"
+}}>
+<div style={{fontSize:"12px",color:"#666"}}><UiValue value={uiMessage("master.s0310")} /></div>
+<div style={{marginTop:"4px",fontSize:"20px",fontWeight:"700"}}>
+<UiValue value={formatMoney(dayKpi.revenueTotal)} />
 </div>
 </div>
 
@@ -746,9 +744,9 @@ background:dayLoad.bg
 }}>
 
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
-<b>Загрузка дня</b>
+<b><UiValue value={uiMessage("master.s0311")} /></b>
 <span style={{fontWeight:"700",color:dayLoad.color}}>
-{dayLoad.percent}% · {dayLoad.label}
+<UiValue value={dayLoad.percent} />% · <UiValue value={dayLoad.label} />
 </span>
 </div>
 
@@ -791,10 +789,10 @@ transition:"all 0.15s ease"
 
 <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
 <b style={{minWidth:"60px",color:isPast&&!isNow?"#868e96":"inherit"}}>
-{isNow?"▶ "+s:s}
+<UiValue value={isNow?"▶ "+s:s} />
 </b>
 <span style={{color:b?"#111":"#999"}}>
-{b?"занято":isPast?"прошло":"свободно"}
+<UiValue value={b?uiMessage("master.s0312"):isPast?uiMessage("master.s0313"):uiMessage("master.s0314")} />
 </span>
 </div>
 
@@ -808,9 +806,7 @@ fontSize:"13px",
 color:"#2980b9",
 cursor:"pointer"
 }}
->
-+ запись
-</div>
+><UiValue value={uiMessage("master.s0315")} /></div>
 
 )}
 
@@ -820,9 +816,7 @@ cursor:"pointer"
 marginTop:"6px",
 fontSize:"12px",
 color:"#868e96"
-}}>
-время прошло
-</div>
+}}><UiValue value={uiMessage("master.s0316")} /></div>
 
 )}
 
@@ -847,33 +841,31 @@ boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 >
 
 <div style={{display:"flex",justifyContent:"space-between",gap:"8px"}}>
-<b>#{b.id}</b>
-<span style={{fontSize:"12px"}}>{statusLabel(b._status)}</span>
+<b>#<UiValue value={b.id} /></b>
+<span style={{fontSize:"12px"}}><UiValue value={statusLabel(b._status)} /></span>
 </div>
 
 {serviceLabel(b) && (
 <div style={{marginTop:"4px",fontWeight:"600"}}>
-{serviceLabel(b)}
+<UiValue value={serviceLabel(b)} />
 </div>
 )}
 
 <div style={{marginTop:"4px"}}>
-{formatTimeHHMM(b.start_at)}
-{" – "}
-{formatTimeHHMM(b.end_at)}
+<UiValue value={formatTimeHHMM(b.start_at)} />
+<UiValue value={" – "} />
+<UiValue value={formatTimeHHMM(b.end_at)} />
 </div>
 
 <div style={{marginTop:"4px"}}>
-{b.client_name||"клиент"}
+<UiValue value={b.client_name||uiMessage("master.s0317")} />
 </div>
 
 <div style={{marginTop:"4px",color:"#444"}}>
-{b.phone||"—"}
+<UiValue value={b.phone||"—"} />
 </div>
 
-<div style={{marginTop:"6px",fontSize:"12px"}}>
-длительность: {durationMinutes(b.start_at,b.end_at)} мин
-</div>
+<div style={{marginTop:"6px",fontSize:"12px"}}><UiValue value={uiMessage("master.s0318")} /><UiValue value={durationMinutes(b.start_at,b.end_at)} /><UiValue value={uiMessage("master.s0319")} /></div>
 
 <div style={{marginTop:"8px",display:"flex",gap:"6px",position:"sticky",bottom:0,background:statusColor(b._status),paddingTop:"4px"}}>
 
@@ -885,17 +877,13 @@ boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 onClick={(e)=>quickAction(e,b,"confirm")}
 disabled={bookingBusy}
 style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
->
-Подтвердить
-</button>
+><UiValue value={uiMessage("master.s0320")} /></button>
 
 <button
 onClick={(e)=>quickAction(e,b,"cancel")}
 disabled={bookingBusy}
 style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
->
-Отменить
-</button>
+><UiValue value={uiMessage("master.s0321")} /></button>
 </>
 )}
 
@@ -905,17 +893,13 @@ style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",backgro
 onClick={(e)=>quickAction(e,b,"done")}
 disabled={bookingBusy}
 style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
->
-Завершить
-</button>
+><UiValue value={uiMessage("master.s0322")} /></button>
 
 <button
 onClick={(e)=>quickAction(e,b,"cancel")}
 disabled={bookingBusy}
 style={{padding:"6px 10px",borderRadius:"6px",border:"1px solid #d0d7de",background:"#fff",cursor:bookingBusy?"not-allowed":"pointer"}}
->
-Отменить
-</button>
+><UiValue value={uiMessage("master.s0321")} /></button>
 </>
 )}
 </>

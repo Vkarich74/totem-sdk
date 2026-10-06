@@ -1,4 +1,6 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { NotificationText, NotificationLabel } from "../i18n/NotificationText.jsx";
+import { useMarketContext } from "../market/MarketContext.jsx";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getMobileConfig,
   getMobileCityHome,
@@ -1649,6 +1651,7 @@ function EmptyState({ text }) {
 }
 
 function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
+  const { t, formatDateTime: localeDate } = useMarketContext();
   const items = Array.isArray(announcements?.items) ? announcements.items : [];
   const loading = Boolean(announcements?.loading);
   const error = String(announcements?.error || "").trim();
@@ -1658,7 +1661,7 @@ function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
   return (
     <Card style={premiumPanelStyle}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <SectionTitle subtitle="Актуальные сообщения и акционные объявления.">Уведомления</SectionTitle>
+        <SectionTitle subtitle={t("notifications.current")}>{t("notifications.header")}</SectionTitle>
         {unreadCount > 0 ? (
           <span
             style={{
@@ -1674,30 +1677,30 @@ function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
               whiteSpace: "nowrap",
             }}
           >
-            Новых: {unreadCount}
+            {t("notifications.newCount", {count: unreadCount})}
           </span>
         ) : null}
       </div>
 
       {disabled ? (
         <MobileEmptyState
-          title="Уведомления скоро появятся"
-          description="Сейчас этот блок готовится к запуску."
+          title={t("notifications.soon")}
+          description={t("notifications.preparing")}
           style={{ textAlign: "left" }}
         />
       ) : loading ? (
         <MobileEmptyState
-          title="Загрузка уведомлений"
-          description="Подтягиваем свежие сообщения и объявления."
+          title={t("notifications.loadingTitle")}
+          description={t("notifications.loadingDetails")}
           style={{ textAlign: "left" }}
         />
       ) : error ? (
         <MobileEmptyState
-          title="Не удалось загрузить уведомления"
-          description="Обновите страницу и попробуйте ещё раз."
+          title={t("notifications.loadError")}
+          description={t("notifications.retry")}
           action={
             <MobileButton onClick={() => window.location.reload()} tone="secondary">
-              Обновить
+              {t("notifications.refresh")}
             </MobileButton>
           }
           style={{ textAlign: "left" }}
@@ -1715,8 +1718,8 @@ function AnnouncementsBlock({ announcements, onMarkRead, markingUid }) {
         </div>
       ) : (
         <MobileEmptyState
-          title="Уведомлений пока нет"
-          description="Когда появятся новые сообщения или акции, они сразу отобразятся здесь."
+          title={t("notifications.emptyTitle")}
+          description={t("notifications.emptyDetails")}
           style={{ textAlign: "left" }}
         />
       )}
@@ -2211,6 +2214,7 @@ function PushOptInBlock({
 }
 
 function AnnouncementItem({ item, onMarkRead, marking }) {
+  const { t, formatDateTime: localeDate } = useMarketContext();
   const actionUrl = String(item?.action_url || "").trim();
   const actionType = String(item?.action_type || "").trim();
   const isRead = Boolean(item?.is_read);
@@ -2221,14 +2225,14 @@ function AnnouncementItem({ item, onMarkRead, marking }) {
 
   return (
     <div style={announcementItemStyle}>
-      <div style={announcementTitleStyle}>{formatLabel(item?.title_ru || item?.title_en, "Уведомление")}</div>
-      <div style={announcementBodyStyle}>{formatLabel(item?.body_ru || item?.body_en, "")}</div>
+      <div style={announcementTitleStyle}>{<NotificationText notification={item} field="title" fallback={t("notifications.title")} />}</div>
+      <div style={announcementBodyStyle}>{<NotificationText notification={item} field="body" />}</div>
       <div style={announcementMetaStyle}>
-        <span>Приоритет: {formatLabel(item?.priority, "—")}</span>
-        {actionType ? <span>Тип: {formatLabel(actionType)}</span> : null}
-        {isRead ? <span>Прочитано</span> : <span>Не прочитано</span>}
-        {readAt ? <span>Прочитано: {formatLabel(readAt)}</span> : null}
-        {item?.created_at ? <span>Опубликовано: {formatLabel(item?.created_at)}</span> : null}
+        <span>{t("notifications.priorityLabel")} <NotificationLabel kind="priority" value={item?.priority} /></span>
+        {actionType ? <span>{t("notifications.actionLabel")} <NotificationLabel kind="action" value={actionType} /></span> : null}
+        {isRead ? <span>{t("notifications.read")}</span> : <span>{t("notifications.unread")}</span>}
+        {readAt ? <span>{t("notifications.readAt")} {localeDate(readAt)}</span> : null}
+        {item?.created_at ? <span>{t("notifications.published")} {localeDate(item?.created_at)}</span> : null}
       </div>
       {hasAction ? (
         <div style={{ marginTop: 10 }}>
@@ -2238,7 +2242,7 @@ function AnnouncementItem({ item, onMarkRead, marking }) {
             rel={isExternal ? "noreferrer" : undefined}
             style={announcementActionStyle}
           >
-            Подробнее
+            {t("notifications.details")}
           </a>
         </div>
       ) : null}
@@ -2254,7 +2258,7 @@ function AnnouncementItem({ item, onMarkRead, marking }) {
               cursor: "pointer",
             }}
           >
-            {marking ? "Отмечаем…" : "Отметить прочитанным"}
+            {marking ? t("notifications.marking") : t("notifications.markRead")}
           </button>
         </div>
       ) : null}

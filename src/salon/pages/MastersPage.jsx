@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiJoin, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { buildSalonPath, resolveSalonSlug } from "../SalonContext";
@@ -6,9 +7,9 @@ import { activateSalonMaster, getSalonMasters, provisionMaster, terminateSalonMa
 import PageSection from "../../cabinet/PageSection";
 
 function statusLabel(status) {
-  if (status === "active") return "Активен";
-  if (status === "pending") return "Ожидает";
-  if (status === "fired") return "Отключён";
+  if (status === "active") return uiMessage("salon.s0420");
+  if (status === "pending") return uiMessage("salon.s0042");
+  if (status === "fired") return uiMessage("salon.s0421");
   return status || "—";
 }
 
@@ -88,10 +89,10 @@ function StatCard({ title, value, note }) {
         padding: "16px"
       }}
     >
-      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>{title}</div>
-      <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827" }}>{value}</div>
+      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}><UiValue value={title} /></div>
+      <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827" }}><UiValue value={value} /></div>
       {note ? (
-        <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "6px", lineHeight: 1.4 }}>{note}</div>
+        <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "6px", lineHeight: 1.4 }}><UiValue value={note} /></div>
       ) : null}
     </div>
   );
@@ -107,12 +108,8 @@ function EmptyState() {
         padding: "24px"
       }}
     >
-      <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827", marginBottom: "8px" }}>
-        Мастеров пока нет
-      </div>
-      <div style={{ fontSize: "14px", color: "#6b7280", lineHeight: 1.5, marginBottom: "16px" }}>
-        Пригласите первого мастера и подключите его к работе салона.
-      </div>
+      <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827", marginBottom: "8px" }}><UiValue value={uiMessage("salon.s0422")} /></div>
+      <div style={{ fontSize: "14px", color: "#6b7280", lineHeight: 1.5, marginBottom: "16px" }}><UiValue value={uiMessage("salon.s0423")} /></div>
     </div>
   );
 }
@@ -127,15 +124,11 @@ function ErrorState({ error, onRetry }) {
         padding: "20px"
       }}
     >
-      <div style={{ fontSize: "18px", fontWeight: 800, color: "#b42318", marginBottom: "8px" }}>
-        Не удалось загрузить мастеров
-      </div>
+      <div style={{ fontSize: "18px", fontWeight: 800, color: "#b42318", marginBottom: "8px" }}><UiValue value={uiMessage("salon.s0424")} /></div>
       <div style={{ fontSize: "14px", color: "#7a271a", lineHeight: 1.5, marginBottom: "16px" }}>
-        {error || "Произошла ошибка при загрузке списка мастеров."}
+        <UiValue value={error || uiMessage("salon.s0425")} />
       </div>
-      <button onClick={onRetry} style={buttonStyle()}>
-        Повторить
-      </button>
+      <button onClick={onRetry} style={buttonStyle()}><UiValue value={uiMessage("salon.s0426")} /></button>
     </div>
   );
 }
@@ -175,7 +168,7 @@ function LoadingGrid() {
 function MasterCard({ master, processingId, onActivate, onTerminate, detailLink }) {
   const tone = statusTone(master.status);
   const busy = processingId === master.id;
-  const displayName = master.name || master.full_name || `Мастер #${master.id}`;
+  const displayName = master.name || master.full_name || uiMessage("salon.s0427", {p0: master.id});
   const phone = master.phone || master.phone_number || master.contact_phone || "—";
   const serviceCount = Number(master.services_count || master.service_count || master.services || 0) || 0;
   const bookingsCount = Number(master.bookings_count || master.booking_count || 0) || 0;
@@ -194,15 +187,15 @@ function MasterCard({ master, processingId, onActivate, onTerminate, detailLink 
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827", marginBottom: "6px" }}>{displayName}</div>
-          <div style={{ fontSize: "13px", color: "#667085", lineHeight: 1.45 }}>slug: {master.slug || "—"}</div>
+          <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827", marginBottom: "6px" }}><UiValue value={displayName} /></div>
+          <div style={{ fontSize: "13px", color: "#667085", lineHeight: 1.45 }}><UiValue value={uiMessage("salon.s0315")} /><UiValue value={master.slug || "—"} /></div>
         </div>
 
         <div
           style={{
             padding: "6px 10px",
             borderRadius: "999px",
-            border: `1px solid ${tone.border}`,
+            border: uiTemplate(["1px solid ",""], [tone.border]),
             background: tone.bg,
             color: tone.color,
             fontSize: "12px",
@@ -210,7 +203,7 @@ function MasterCard({ master, processingId, onActivate, onTerminate, detailLink 
             whiteSpace: "nowrap"
           }}
         >
-          {statusLabel(master.status)}
+          <UiValue value={statusLabel(master.status)} />
         </div>
       </div>
 
@@ -223,46 +216,46 @@ function MasterCard({ master, processingId, onActivate, onTerminate, detailLink 
         }}
       >
         <div style={{ padding: "10px 12px", borderRadius: "12px", background: "#f8fafc" }}>
-          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}>Телефон</div>
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}>{phone}</div>
+          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}><UiValue value={uiMessage("salon.s0230")} /></div>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}><UiValue value={phone} /></div>
         </div>
 
         <div style={{ padding: "10px 12px", borderRadius: "12px", background: "#f8fafc" }}>
-          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}>Услуги</div>
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}>{serviceCount}</div>
+          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}><UiValue value={uiMessage("salon.s0024")} /></div>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}><UiValue value={serviceCount} /></div>
         </div>
 
         <div style={{ padding: "10px 12px", borderRadius: "12px", background: "#f8fafc" }}>
-          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}>Записи</div>
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}>{bookingsCount}</div>
+          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}><UiValue value={uiMessage("salon.s0014")} /></div>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}><UiValue value={bookingsCount} /></div>
         </div>
 
         <div style={{ padding: "10px 12px", borderRadius: "12px", background: "#f8fafc" }}>
-          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}>Контракт</div>
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}>{contractLabel || "—"}</div>
+          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}><UiValue value={uiMessage("salon.s0428")} /></div>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}><UiValue value={contractLabel || "—"} /></div>
         </div>
       </div>
 
       {note ? (
-        <div style={{ marginTop: "12px", fontSize: "13px", color: "#475467", lineHeight: 1.5 }}>{note}</div>
+        <div style={{ marginTop: "12px", fontSize: "13px", color: "#475467", lineHeight: 1.5 }}><UiValue value={note} /></div>
       ) : null}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "16px" }}>
         {master.status === "pending" ? (
           <button onClick={() => onActivate(master.id)} disabled={busy} style={buttonStyle("primary")}>
-            {busy ? "Подключаем..." : "Активировать"}
+            <UiValue value={busy ? uiMessage("salon.s0429") : uiMessage("salon.s0430")} />
           </button>
         ) : null}
 
         {master.status === "active" ? (
           <button onClick={() => onTerminate(master.id)} disabled={busy} style={buttonStyle("danger")}>
-            {busy ? "Обновляем..." : "Прекратить"}
+            <UiValue value={busy ? uiMessage("salon.s0431") : uiMessage("salon.s0432")} />
           </button>
         ) : null}
 
         {master.status === "fired" ? (
           <button onClick={() => onActivate(master.id)} disabled={busy} style={buttonStyle()}>
-            {busy ? "Возвращаем..." : "Вернуть"}
+            <UiValue value={busy ? uiMessage("salon.s0433") : uiMessage("salon.s0434")} />
           </button>
         ) : null}
 
@@ -274,15 +267,14 @@ function MasterCard({ master, processingId, onActivate, onTerminate, detailLink 
             display: "inline-flex",
             alignItems: "center"
           }}
-        >
-          Открыть контракты
-        </Link>
+        ><UiValue value={uiMessage("salon.s0435")} /></Link>
       </div>
     </div>
   );
 }
 
 export default function MastersPage() {
+  const { renderUi } = useUiMessages();
   const { slug: routeSlug } = useParams();
   const slug = resolveSalonSlug(routeSlug);
 
@@ -295,7 +287,7 @@ export default function MastersPage() {
   async function loadMasters() {
     if (!slug) {
       setMasters([]);
-      setError("SLUG_MISSING");
+      setError(uiError("SLUG_MISSING"));
       setLoading(false);
       return;
     }
@@ -307,14 +299,14 @@ export default function MastersPage() {
       const result = await getSalonMasters(slug);
       if (!result?.ok) {
         const status = Number(result?.detail?.status || result?.detail?.response?.status || 0);
-        throw new Error(status ? `SALON_MASTERS_HTTP_${status}` : (result?.error || "LOAD_MASTERS_FAILED"));
+        throw new Error(status ? uiTemplate(["SALON_MASTERS_HTTP_",""], [status]) : (result?.error || "LOAD_MASTERS_FAILED"));
       }
 
       setMasters(Array.isArray(result?.masters) ? result.masters : []);
     } catch (loadError) {
       console.error("LOAD_MASTERS_ERROR", loadError);
       setMasters([]);
-      setError(loadError?.message || "LOAD_MASTERS_FAILED");
+      setError(uiError(loadError?.message || "LOAD_MASTERS_FAILED"));
     } finally {
       setLoading(false);
     }
@@ -326,7 +318,7 @@ export default function MastersPage() {
 
   async function terminate(masterId) {
     const confirmed = window.confirm(
-      "Прекратить сотрудничество с мастером?\n\nЭто действие:\n- архивирует активные и ожидающие контракты\n- отключит услуги мастера\n- уберёт мастера из активного списка салона"
+      renderUi(uiMessage("salon.s0436"))
     );
 
     if (!confirmed) return;
@@ -336,14 +328,14 @@ export default function MastersPage() {
 
       const result = await terminateSalonMaster(slug, masterId);
       if (!result?.ok) {
-        alert(result?.error || result?.detail?.json?.error || "Ошибка при прекращении сотрудничества");
+        alert(renderUi(uiError(result?.error || result?.detail?.json?.error || uiMessage("salon.s0437"))));
         return;
       }
 
       await loadMasters();
     } catch (requestError) {
       console.error("TERMINATE_ERROR", requestError);
-      alert("Ошибка сети");
+      alert(renderUi(uiError(uiMessage("salon.s0271"))));
     } finally {
       setProcessingId(null);
     }
@@ -355,24 +347,24 @@ export default function MastersPage() {
 
       const result = await activateSalonMaster(slug, id);
       if (!result?.ok) {
-        alert(result?.error || result?.detail?.json?.error || "Ошибка активации мастера");
+        alert(renderUi(uiError(result?.error || result?.detail?.json?.error || uiMessage("salon.s0438"))));
         return;
       }
 
       await loadMasters();
     } catch (requestError) {
       console.error("ACTIVATE_MASTER_ERROR", requestError);
-      alert("Ошибка активации мастера");
+      alert(renderUi(uiError(uiMessage("salon.s0438"))));
     } finally {
       setProcessingId(null);
     }
   }
 
   async function createMaster() {
-    const name = window.prompt("Имя мастера");
+    const name = window.prompt(renderUi(uiMessage("salon.s0439")));
     if (!name) return;
 
-    const email = window.prompt("Email мастера");
+    const email = window.prompt(renderUi(uiMessage("salon.s0440")));
     if (!email) return;
 
     try {
@@ -382,14 +374,14 @@ export default function MastersPage() {
       });
 
       if (!result?.ok) {
-        alert(result?.error || result?.detail?.json?.error || "Ошибка создания мастера");
+        alert(renderUi(uiError(result?.error || result?.detail?.json?.error || uiMessage("salon.s0441"))));
         return;
       }
 
       await loadMasters();
     } catch (requestError) {
       console.error("CREATE_MASTER_ERROR", requestError);
-      alert("Ошибка создания мастера");
+      alert(renderUi(uiError(uiMessage("salon.s0441"))));
     }
   }
 
@@ -408,7 +400,7 @@ export default function MastersPage() {
     if (!query) return masters;
 
     return masters.filter((master) => {
-      const haystack = [
+      const haystack = uiJoin([
         master.id,
         master.name,
         master.full_name,
@@ -418,8 +410,7 @@ export default function MastersPage() {
         master.contact_phone,
         master.status
       ]
-        .filter(Boolean)
-        .join(" ")
+        .filter(Boolean), " ")
         .toLowerCase();
 
       return haystack.includes(query);
@@ -429,7 +420,7 @@ export default function MastersPage() {
   const hasData = filtered.length > 0;
 
   return (
-    <PageSection title="Мастера салона">
+    <PageSection title={uiMessage("salon.s0442")}>
       <div
         style={{
           display: "grid",
@@ -438,10 +429,10 @@ export default function MastersPage() {
           marginBottom: "16px"
         }}
       >
-        <StatCard title="Всего мастеров" value={stats.total} note="Вся команда салона" />
-        <StatCard title="Активные" value={stats.active} note="Сейчас могут работать" />
-        <StatCard title="Ожидают" value={stats.pending} note="Требуют активации" />
-        <StatCard title="Отключены" value={stats.fired} note="Можно вернуть в работу" />
+        <StatCard title={uiMessage("salon.s0443")} value={stats.total} note={uiMessage("salon.s0444")} />
+        <StatCard title={uiMessage("salon.s0109")} value={stats.active} note={uiMessage("salon.s0445")} />
+        <StatCard title={uiMessage("salon.s0220")} value={stats.pending} note={uiMessage("salon.s0446")} />
+        <StatCard title={uiMessage("salon.s0447")} value={stats.fired} note={uiMessage("salon.s0448")} />
       </div>
 
       <div
@@ -455,10 +446,8 @@ export default function MastersPage() {
       >
         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827", marginBottom: "6px" }}>Команда салона</div>
-            <div style={{ fontSize: "14px", color: "#6b7280", lineHeight: 1.5 }}>
-              Управляйте списком мастеров, активацией и переходами к контрактам без лишних блоков и таблиц.
-            </div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827", marginBottom: "6px" }}><UiValue value={uiMessage("salon.s0449")} /></div>
+            <div style={{ fontSize: "14px", color: "#6b7280", lineHeight: 1.5 }}><UiValue value={uiMessage("salon.s0450")} /></div>
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
@@ -470,18 +459,14 @@ export default function MastersPage() {
                 display: "inline-flex",
                 alignItems: "center"
               }}
-            >
-              Контракты
-            </Link>
-            <button onClick={createMaster} style={buttonStyle("primary")}>
-              Пригласить мастера
-            </button>
+            ><UiValue value={uiMessage("salon.s0451")} /></Link>
+            <button onClick={createMaster} style={buttonStyle("primary")}><UiValue value={uiMessage("salon.s0452")} /></button>
           </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", marginTop: "16px" }}>
           <input
-            placeholder="Поиск по имени, slug, телефону..."
+            placeholder={renderUi(uiMessage("salon.s0453"))}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             style={{
@@ -508,9 +493,7 @@ export default function MastersPage() {
               fontSize: "14px",
               fontWeight: 700
             }}
-          >
-            Перейти к услугам мастеров
-          </Link>
+          ><UiValue value={uiMessage("salon.s0454")} /></Link>
         </div>
       </div>
 

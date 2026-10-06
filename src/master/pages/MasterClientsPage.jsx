@@ -1,3 +1,4 @@
+import { UiValue, uiMessage, uiError } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
@@ -37,9 +38,9 @@ function useIsMobile(){
 function SummaryCard({ label, value, hint }){
   return (
     <div style={styles.summaryCard}>
-      <div style={styles.summaryLabel}>{label}</div>
-      <div style={styles.summaryValue}>{value}</div>
-      {hint ? <div style={styles.summaryHint}>{hint}</div> : null}
+      <div style={styles.summaryLabel}><UiValue value={label} /></div>
+      <div style={styles.summaryValue}><UiValue value={value} /></div>
+      {hint ? <div style={styles.summaryHint}><UiValue value={hint} /></div> : null}
     </div>
   )
 }
@@ -65,7 +66,7 @@ export default function MasterClientsPage() {
         if(!cancelled){
           setClients([])
           setClientsLoading(false)
-          setClientsError("SLUG_MISSING")
+          setClientsError(uiError("SLUG_MISSING"))
           setEmpty(false)
         }
         return
@@ -94,7 +95,7 @@ export default function MasterClientsPage() {
 
         if(!cancelled){
           setClients([])
-          setClientsError(error?.message || "MASTER_CLIENTS_LOAD_FAILED")
+          setClientsError(uiError(error?.message || "MASTER_CLIENTS_LOAD_FAILED"))
           setEmpty(false)
         }
       }finally{
@@ -128,20 +129,17 @@ export default function MasterClientsPage() {
   if (error) {
     return (
       <div style={{ padding: "20px" }}>
-        <PageSection title="Клиенты">
+        <PageSection title={uiMessage("salon.s0016")}>
           <div style={{
             border: "1px solid #f5c2c7",
             background: "#fff5f5",
             color: "#b42318",
             borderRadius: "10px",
             padding: "12px"
-          }}>
-            Ошибка загрузки клиентов
-          </div>
+          }}><UiValue value={uiMessage("master.s0246")} /></div>
 
           {slug ? (
-            <div style={{ marginTop: "8px", color: "#666", fontSize: "14px" }}>
-              slug: {slug}
+            <div style={{ marginTop: "8px", color: "#666", fontSize: "14px" }}><UiValue value={uiMessage("salon.s0315")} /><UiValue value={slug} />
             </div>
           ) : null}
         </PageSection>
@@ -151,19 +149,17 @@ export default function MasterClientsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "20px" }}>
-        Загрузка...
-      </div>
+      <div style={{ padding: "20px" }}><UiValue value={uiMessage("salon.s0274")} /></div>
     )
   }
 
   if (empty) {
     return (
       <div style={{ padding: "20px" }}>
-        <PageSection title="Клиенты">
+        <PageSection title={uiMessage("salon.s0016")}>
           <EmptyState
-            title="Клиенты пока отсутствуют"
-            message="После первых записей клиенты появятся здесь"
+            title={uiMessage("master.s0248")}
+            message={uiMessage("master.s0249")}
           />
         </PageSection>
       </div>
@@ -172,28 +168,28 @@ export default function MasterClientsPage() {
 
   return (
     <div style={{ padding: isMobile ? "14px" : "20px" }}>
-      <PageSection title="Клиенты">
+      <PageSection title={uiMessage("salon.s0016")}>
         <div style={styles.summaryGrid}>
-          <SummaryCard label="Всего клиентов" value={summary.totalClients} />
-          <SummaryCard label="Всего визитов" value={summary.totalVisits} />
-          <SummaryCard label="Повторные" value={summary.frequent} hint="2+ визита" />
+          <SummaryCard label={uiMessage("master.s0250")} value={summary.totalClients} />
+          <SummaryCard label={uiMessage("master.s0251")} value={summary.totalVisits} />
+          <SummaryCard label={uiMessage("master.s0252")} value={summary.frequent} hint={uiMessage("master.s0253")} />
         </div>
 
         {isMobile ? (
           <div style={styles.cardsList}>
             {clients.map((c) => (
               <div key={c.id} style={styles.clientCard}>
-                <div style={styles.clientName}>{c.name || "Без имени"}</div>
+                <div style={styles.clientName}><UiValue value={c.name || uiMessage("salon.s0276")} /></div>
 
                 <div style={styles.metaGrid}>
                   <div>
-                    <div style={styles.metaLabel}>Телефон</div>
-                    <div style={styles.metaValue}>{c.phone || "—"}</div>
+                    <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0230")} /></div>
+                    <div style={styles.metaValue}><UiValue value={c.phone || "—"} /></div>
                   </div>
 
                   <div>
-                    <div style={styles.metaLabel}>Визитов</div>
-                    <div style={styles.metaValue}>{c.visits ?? 0}</div>
+                    <div style={styles.metaLabel}><UiValue value={uiMessage("master.s0255")} /></div>
+                    <div style={styles.metaValue}><UiValue value={c.visits ?? 0} /></div>
                   </div>
                 </div>
               </div>
@@ -204,9 +200,9 @@ export default function MasterClientsPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "8px" }}>Имя</th>
-                  <th style={{ textAlign: "left", padding: "8px" }}>Телефон</th>
-                  <th style={{ textAlign: "left", padding: "8px" }}>Визитов</th>
+                  <th style={{ textAlign: "left", padding: "8px" }}><UiValue value={uiMessage("salon.s0654")} /></th>
+                  <th style={{ textAlign: "left", padding: "8px" }}><UiValue value={uiMessage("salon.s0230")} /></th>
+                  <th style={{ textAlign: "left", padding: "8px" }}><UiValue value={uiMessage("master.s0255")} /></th>
                 </tr>
               </thead>
 
@@ -214,15 +210,15 @@ export default function MasterClientsPage() {
                 {clients.map(c => (
                   <tr key={c.id} style={{ borderTop: "1px solid #eee" }}>
                     <td style={{ padding: "8px" }}>
-                      {c.name || "Без имени"}
+                      <UiValue value={c.name || uiMessage("salon.s0276")} />
                     </td>
 
                     <td style={{ padding: "8px" }}>
-                      {c.phone || "—"}
+                      <UiValue value={c.phone || "—"} />
                     </td>
 
                     <td style={{ padding: "8px" }}>
-                      {c.visits ?? 0}
+                      <UiValue value={c.visits ?? 0} />
                     </td>
                   </tr>
                 ))}
