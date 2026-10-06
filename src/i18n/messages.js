@@ -3580,8 +3580,8 @@ const en = Object.freeze({
 });
 export const messages = Object.freeze({ ru, en });
 export function translate(locale, key, params = {}) {
-  const dictionary = locale === "en-KG" ? en : ru;
+  const dictionary = /^en(?:-|$)/i.test(String(locale || "")) ? en : ru;
   const text = dictionary[key] ?? ru[key] ?? key;
   return text.replace(/\{([a-zA-Z]\w*)\}/g, (token, name) => Object.hasOwn(params, name) ? String(params[name] ?? "") : token);
 }
-export const localeLabels = Object.freeze({ "ru-KG": "Русский", "en-KG": "English" });
+export const localeLabels = Object.freeze({ "ru-KG": "Русский", "en-KG": "English", "ru-KZ": "Русский", "en-KZ": "English" });
