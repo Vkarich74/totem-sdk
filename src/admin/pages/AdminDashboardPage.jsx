@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { clearAuthAccessToken } from "../../api/internal.js";
 import "./AdminDashboard.css";
 
 const API_BASE = (window.TOTEM_API_BASE || "https://api.totemv.com").replace(/\/$/, "");
@@ -8,27 +7,6 @@ const SOURCES = [
   { key: "leads", label: "Лиды", url: "/internal/admin/leads", icon: "users", href: "#/admin/leads" },
   { key: "cases", label: "Кейсы", url: "/internal/admin/moderation", icon: "shield", href: "#/admin/cases" },
   { key: "messages", label: "Сообщения", url: "/internal/admin/messages", icon: "message", href: "#/admin/messages" },
-];
-
-const GROUPS = [
-  { title: "Операции", items: [
-    ["Лиды", "#/admin/leads", "users"],
-    ["Кейсы", "#/admin/cases", "shield"],
-    ["Сообщения", "#/admin/messages", "message"],
-    ["Уведомления", "#/admin/notifications", "bell"],
-  ] },
-  { title: "Участники", items: [
-    ["Владельцы", "#/admin/owners", "building"],
-    ["Клиенты", "#/admin/clients", "clients"],
-    ["Открытие владельца", "#/admin/open-owner", "person-add"],
-  ] },
-  { title: "Финансы", items: [
-    ["Финансы", "#/admin/finance", "wallet"],
-    ["Центр вывода", "#/admin/withdrawals", "withdraw"],
-  ] },
-  { title: "Система", items: [
-    ["Мобильное", "#/admin/mobile", "mobile"],
-  ] },
 ];
 
 const ICONS = {
@@ -155,22 +133,9 @@ function Action({ to, icon, title, description, meta, alert }) {
 
 export default function AdminDashboardPage() {
   const token = getToken();
-  const [drawer, setDrawer] = useState(false);
   const [summary, setSummary] = useState(pending);
   const [refresh, setRefresh] = useState(0);
   const [checked, setChecked] = useState(null);
-
-  useEffect(() => {
-    document.body.classList.add("totem-admin-dashboard-body");
-    return () => document.body.classList.remove("totem-admin-dashboard-body");
-  }, []);
-
-  useEffect(() => {
-    if (!drawer) return undefined;
-    function onEsc(event) { if (event.key === "Escape") setDrawer(false); }
-    document.addEventListener("keydown", onEsc);
-    return () => document.removeEventListener("keydown", onEsc);
-  }, [drawer]);
 
   useEffect(() => {
     if (!token) return undefined;
@@ -216,12 +181,6 @@ export default function AdminDashboardPage() {
     hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bishkek",
   }) : "";
 
-  function logout() {
-    clearAuthAccessToken();
-    window.location.hash = "#/admin/login";
-    window.location.reload();
-  }
-
   if (!token) {
     return (
       <main className="totem-control-center tc-login-required">
@@ -232,54 +191,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="totem-control-center">
-      <a href="#tc-main" className="tc-skip" onClick={(event) => {
-        event.preventDefault();
-        document.getElementById("tc-main")?.focus();
-      }}>Перейти к содержимому</a>
-
-      <header className="tc-topbar">
-        <div className="tc-brand">
-          <span className="tc-brand__symbol"><Icon name="dashboard" size={22} /></span>
-          <span className="tc-brand__text"><strong>TOTEM</strong><small>CONTROL CENTER</small></span>
-        </div>
-        <div className="tc-topbar__end">
-          <span className="tc-role"><Icon name="check" size={16} /> Администратор</span>
-          <button className="tc-menu-toggle" type="button" aria-controls="tc-sidebar"
-            aria-expanded={drawer} aria-label={drawer ? "Закрыть меню" : "Открыть меню"}
-            onClick={() => setDrawer((value) => !value)}>
-            <Icon name={drawer ? "close" : "menu"} size={22} />
-          </button>
-        </div>
-      </header>
-
-      <div className="tc-layout">
-        {drawer ? <button className="tc-backdrop" type="button" aria-label="Закрыть меню" onClick={() => setDrawer(false)} /> : null}
-        <aside className={"tc-sidebar" + (drawer ? " tc-sidebar--open" : "")} id="tc-sidebar">
-          <div className="tc-sidebar__links">
-            <div className="tc-group-label">Рабочее пространство</div>
-            <Link to="#/admin" icon="dashboard" active className="tc-menu-link tc-menu-link--selected"
-              onNavigate={() => setDrawer(false)}>Обзор платформы</Link>
-            {GROUPS.map((group) => (
-              <nav className="tc-menu-group" key={group.title} aria-label={group.title}>
-                <div className="tc-group-label">{group.title}</div>
-                {group.items.map(([title, to, icon]) => (
-                  <Link key={to} to={to} icon={icon} className="tc-menu-link"
-                    onNavigate={() => setDrawer(false)}>{title}</Link>
-                ))}
-              </nav>
-            ))}
-          </div>
-          <div className="tc-sidebar__bottom">
-            <small>Административный доступ</small>
-            <button type="button" className="tc-logout" onClick={logout}>
-              <Icon name="logout" size={18} /> Выйти
-            </button>
-          </div>
-        </aside>
-
-        <main className="tc-main" id="tc-main" tabIndex={-1}>
-          <div className="tc-container">
+    <div className="tc-container tc-dashboard-content">
             <div className="tc-heading">
               <div>
                 <div className="tc-eyebrow"><span /> УПРАВЛЕНИЕ ПЛАТФОРМОЙ</div>
@@ -376,9 +288,6 @@ export default function AdminDashboardPage() {
               <span>TOTEM · Control Center</span>
               <span>Показатели выводятся из действующих API без тестовых записей.</span>
             </footer>
-          </div>
-        </main>
-      </div>
     </div>
   );
 }

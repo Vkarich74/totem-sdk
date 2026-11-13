@@ -1,0 +1,101 @@
+/* TOTEM Admin Control Center V2. Scoped to protected admin pages only. */
+.tc-admin-shell .tc-admin-content { min-width:0; max-width:100%; overflow-wrap:anywhere; }
+.tc-admin-shell .tc-admin-context {
+  display:flex; align-items:center; gap:8px; color:#a17c3e;
+  font-weight:800; font-size:11px; letter-spacing:.11em; margin-bottom:12px;
+}
+.tc-admin-shell .tc-admin-context > span {
+  width:7px; height:7px; flex-shrink:0; border-radius:50%; background:#c9a55d;
+}
+.tc-admin-shell .tc-admin-content > div:not(.tc-admin-context) {
+  min-width:0; max-width:100%; padding:0 !important;
+}
+.tc-admin-shell .tc-admin-content h1 {
+  color:#17283d; font-family:inherit; font-size:clamp(25px,3vw,34px);
+  line-height:1.2; font-weight:790; letter-spacing:-.03em;
+  margin:0 0 20px !important;
+}
+.tc-admin-shell .tc-admin-content h2 {
+  color:#1d3046; font-family:inherit; font-size:clamp(17px,2vw,22px);
+  font-weight:760; line-height:1.35; margin-bottom:14px;
+}
+.tc-admin-shell .tc-admin-content h3 { color:#22344c; font-weight:720; line-height:1.35; }
+.tc-admin-shell .tc-admin-content :is(p,label,td,th,li,span,div) { font-family:inherit; }
+.tc-admin-shell .tc-admin-content label { color:#36465d; font-size:13px; font-weight:660; }
+.tc-admin-shell .tc-admin-content :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),select,textarea) {
+  box-sizing:border-box; max-width:100%; min-height:42px;
+  border:1px solid #d9e2ed; border-radius:10px;
+  background:#fff; color:#182b43; padding:9px 11px; font-size:13px;
+  line-height:1.4; font-family:inherit; box-shadow:none;
+}
+.tc-admin-shell .tc-admin-content textarea { min-height:100px; resize:vertical; }
+.tc-admin-shell .tc-admin-content :is(input,select,textarea):focus-visible {
+  outline:2px solid #c9a55d; outline-offset:2px;
+}
+.tc-admin-shell .tc-admin-content button {
+  box-sizing:border-box; min-height:38px; max-width:100%;
+  border:1px solid #d2dce8; border-radius:10px; background:#fff;
+  color:#23364e; padding:8px 14px;
+  font-weight:690; font-size:13px;
+}
+.tc-admin-shell .tc-admin-content button:hover:not(:disabled) {
+  border-color:#c8a76d; box-shadow:0 4px 14px rgba(31,43,61,.08);
+}
+.tc-admin-shell .tc-admin-content button:disabled { opacity:.55; cursor:not-allowed; }
+.tc-admin-shell .tc-admin-content a { color:#936e2f; text-underline-offset:3px; }
+.tc-admin-shell .tc-admin-content a:hover { color:#6f501f; }
+.tc-admin-shell .tc-admin-content > div > div[style*="border"] {
+  background:#fff; border-color:#e4eaf1;
+  border-radius:16px; box-shadow:0 9px 30px rgba(19,36,56,.035);
+}
+.tc-admin-shell .tc-admin-content table {
+  max-width:100%; border-collapse:collapse; background:#fff;
+}
+.tc-admin-shell .tc-admin-content :is(th,td) {
+  border-bottom:1px solid #e8edf4;
+  padding:10px 12px; text-align:left; vertical-align:top; font-size:13px;
+}
+.tc-admin-shell .tc-admin-content th {
+  color:#54667f; background:#f4f7fb; font-weight:750;
+}
+.tc-admin-shell .tc-admin-content > div { max-width:100%; }
+@media(max-width:991px) {
+  .tc-admin-shell .tc-admin-content { padding-top:26px; }
+}
+@media(max-width:480px) {
+  .tc-admin-shell .tc-admin-content { padding:22px 14px; }
+  .tc-admin-shell .tc-admin-content h1 { font-size:27px; }
+}
+
+/* Existing Open Owner uses a fixed two-column grid (320px + 280px).
+ * Adapt it in the shared shell without modifying the business page. */
+@media (max-width: 899px) {
+  .tc-admin-shell .tc-admin-content [style*="grid-template-columns: minmax(320px"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* The original finance and mobile pages have intrinsic-width tables/grid children.
+ * Restrict only their narrow-screen presentation, leaving all page logic intact. */
+@media (max-width: 600px) {
+  .tc-admin-shell .tc-admin-content[data-admin-route="finance"] section,
+  .tc-admin-shell .tc-admin-content[data-admin-route="mobile"] section {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .tc-admin-shell .tc-admin-content[data-admin-route="finance"] section > div,
+  .tc-admin-shell .tc-admin-content[data-admin-route="mobile"] section > div {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tc-admin-shell .tc-admin-content[data-admin-route="mobile"] > div[style*="display: grid"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .tc-admin-shell .tc-admin-content[data-admin-route="mobile"] > div[style*="display: grid"] > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+}

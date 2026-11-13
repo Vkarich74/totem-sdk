@@ -50,6 +50,7 @@ import AdminLoginPage from "./admin/pages/AdminLoginPage";
 import AdminLeadsPage from "./admin/pages/AdminLeadsPage";
 import AdminCasesPage from "./admin/pages/AdminCasesPage";
 import AdminDashboardPage from "./admin/pages/AdminDashboardPage";
+import AdminLayout from "./admin/AdminLayout.jsx";
 import AdminClientsPage from "./admin/pages/AdminClientsPage";
 import AdminOpenOwnerPage from "./admin/pages/AdminOpenOwnerPage";
 import AdminOwnersPage from "./admin/pages/AdminOwnersPage";
@@ -820,7 +821,9 @@ export default function App() {
             <AdminRouter />
           ) : (
             <AdminAuthGate>
-              <AdminRouter />
+              <AdminLayout>
+                <AdminRouter />
+              </AdminLayout>
             </AdminAuthGate>
           )}
           </MarketContextProvider>
