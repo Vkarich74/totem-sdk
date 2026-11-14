@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import AdminNavigation from "../AdminNavigation"
 
 const API_BASE = (window.TOTEM_API_BASE || "https://api.totemv.com").replace(/\/$/, "")
@@ -89,6 +89,7 @@ export default function AdminClientsPage() {
   const [error, setError] = useState("")
   const [search, setSearch] = useState("")
 
+  const auditSequence = useRef(0)
   const [auditClientId, setAuditClientId] = useState("")
   const [auditItems, setAuditItems] = useState([])
   const [auditLoading, setAuditLoading] = useState(false)
@@ -111,7 +112,7 @@ export default function AdminClientsPage() {
           return
         }
 
-        const response = await fetch(`${API_BASE}/internal/admin/clients`, {
+        const response = await fetch(`${API_BASE}/internal/admin/clients?limit=200&offset=0`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -122,6 +123,10 @@ export default function AdminClientsPage() {
 
         if (!response.ok || payload?.ok === false) {
           throw new Error(payload?.error || `HTTP_${response.status}`)
+        }
+
+        if(!Array.isArray(payload?.data?.items)){
+          throw new Error("ADMIN_CLIENTS_API_CONTRACT_INVALID")
         }
 
         const list = normalizeClientsPayload(payload)
@@ -150,6 +155,7 @@ export default function AdminClientsPage() {
 
   async function loadClientAudit(clientId){
     const safeClientId = String(clientId || "").trim()
+    const sequence = ++auditSequence.current
 
     if(!safeClientId){
       return
@@ -180,14 +186,21 @@ export default function AdminClientsPage() {
         throw new Error(payload?.error || `HTTP_${response.status}`)
       }
 
+      if(!Array.isArray(payload?.data?.items)){
+        throw new Error("ADMIN_CLIENT_AUDIT_API_CONTRACT_INVALID")
+      }
+      if(sequence !== auditSequence.current) return
       setAuditItems(normalizeAuditPayload(payload))
     }catch(e){
+      if(sequence !== auditSequence.current) return
       setAuditItems([])
       setAuditError(e?.message || "AUDIT_LOAD_FAILED")
     }finally{
-      setAuditLoading(false)
+      if(sequence === auditSequence.current) setAuditLoading(false)
     }
   }
+
+  useEffect(() => () => { auditSequence.current += 1 }, [])
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -261,12 +274,12 @@ export default function AdminClientsPage() {
         }}
       >
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Клиенты</div>
+          <div style={styles.statLabel}>Клиенты (загружено)</div>
           <div style={styles.statValue}>{stats.clients}</div>
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>С booking</div>
+          <div style={styles.statLabel}>С записями</div>
           <div style={styles.statValue}>{stats.withBookings}</div>
         </div>
 
@@ -276,12 +289,14 @@ export default function AdminClientsPage() {
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Всего booking</div>
+          <div style={styles.statLabel}>Записей (загружено)</div>
           <div style={styles.statValue}>{stats.bookingsTotal}</div>
         </div>
       </div>
 
+      <p role="status" style={{color:"#475569"}}>Показано {items.length} клиентов (первая страница, максимум 200). Полное число клиентов API не сообщает. Поиск действует только на загруженную страницу.</p>
       <input
+        aria-label="Поиск клиентов"
         value={search}
         onChange={(event) => setSearch(event.target.value)}
         placeholder="Поиск по клиенту, телефону, салону"
@@ -309,19 +324,19 @@ export default function AdminClientsPage() {
                 padding: 12,
               }}
             >
-              <div><strong>id:</strong> {item.id || "-"}</div>
-              <div><strong>name:</strong> {item.name || "-"}</div>
-              <div><strong>phone:</strong> {item.phone || "-"}</div>
-              <div><strong>salon:</strong> {item.salon_slug || item.salon_name || "-"}</div>
-              <div><strong>bookings_total:</strong> {item.bookings_total ?? 0}</div>
-              <div><strong>last_booking_at:</strong> {formatDateTime(item.last_booking_at)}</div>
+              <div><strong>ID:</strong> {item.id || "-"}</div>
+              <div><strong>Имя:</strong> {item.name || "-"}</div>
+              <div><strong>Телефон:</strong> {item.phone || "-"}</div>
+              <div><strong>Салон:</strong> {item.salon_slug || item.salon_name || "-"}</div>
+              <div><strong>Всего записей:</strong> {item.bookings_total ?? 0}</div>
+              <div><strong>Последняя запись:</strong> {formatDateTime(item.last_booking_at)}</div>
 
               <button
                 type="button"
                 onClick={() => loadClientAudit(item.id)}
                 style={styles.auditButton}
               >
-                Audit
+                Аудит
               </button>
             </div>
           ))}
@@ -330,24 +345,24 @@ export default function AdminClientsPage() {
 
       {auditClientId ? (
         <div style={styles.auditPanel}>
-          <h2 style={{ margin: "0 0 12px" }}>Client audit: {auditClientId}</h2>
+          <h2 style={{ margin: "0 0 12px" }}>Аудит клиента: {auditClientId}</h2>
 
           {auditLoading ? (
-            <div>Загрузка audit...</div>
+            <div>Загрузка аудита...</div>
           ) : auditError ? (
-            <div style={styles.errorText}>Ошибка audit: {auditError}</div>
+            <div role="alert" style={styles.errorText}>Ошибка аудита: {auditError}. Отсутствие данных не подтверждено.</div>
           ) : auditItems.length === 0 ? (
-            <div>Audit пустой</div>
+            <div>Записей аудита нет по ответу API.</div>
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {auditItems.map((item) => (
                 <div key={item.id} style={styles.auditCard}>
-                  <div><strong>id:</strong> {item.id || "-"}</div>
-                  <div><strong>booking_id:</strong> {item.booking_id || "-"}</div>
-                  <div><strong>actor_type:</strong> {item.actor_type || "-"}</div>
-                  <div><strong>action:</strong> {item.action || "-"}</div>
-                  <div><strong>metadata:</strong> {stringifyMetadata(item.metadata)}</div>
-                  <div><strong>created_at:</strong> {formatDateTime(item.created_at)}</div>
+                  <div><strong>ID:</strong> {item.id || "-"}</div>
+                  <div><strong>ID записи:</strong> {item.booking_id || "-"}</div>
+                  <div><strong>Тип автора:</strong> {item.actor_type || "-"}</div>
+                  <div><strong>Действие:</strong> {item.action || "-"}</div>
+                  <div><strong>Дополнительные данные:</strong> {stringifyMetadata(item.metadata)}</div>
+                  <div><strong>Создано:</strong> {formatDateTime(item.created_at)}</div>
                 </div>
               ))}
             </div>

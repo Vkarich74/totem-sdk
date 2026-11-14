@@ -59,6 +59,9 @@ function isWithdrawCenterActionUrl(actionUrl) {
 
 function renderActionUrl(actionUrl) {
   const url = String(actionUrl || "").trim();
+  if (url && !url.startsWith("#/") && !/^https?:\/\//i.test(url) && !url.startsWith("/")) {
+    return "— (недопустимый адрес)";
+  }
 
   if (!url) {
     return "—";
@@ -170,13 +173,14 @@ function getItems(payload) {
     return payload.items;
   }
 
-  return [];
+  return null;
 }
 
-function getTotalCount(payload, fallback = 0) {
-  const raw = payload?.data?.total_count ?? payload?.total_count ?? fallback;
+function getTotalCount(payload) {
+  const raw = payload?.data?.total_count ?? payload?.total_count;
+  if (raw === undefined || raw === null || raw === "") return null;
   const total = Number(raw);
-  return Number.isFinite(total) ? total : fallback;
+  return Number.isSafeInteger(total) && total >= 0 ? total : null;
 }
 
 function statusTone(status) {
@@ -460,7 +464,7 @@ function sectionMeta(totalCount, limit) {
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
       <Pill tone="blue">Лимит {limit}</Pill>
-      <Pill>{totalCount}</Pill>
+      <Pill>{totalCount === null ? "— (нет COUNT)" : totalCount}</Pill>
     </div>
   );
 }
@@ -482,7 +486,7 @@ function renderSectionBody({ loading, error, items, emptyMessage, columns }) {
           fontSize: 14,
         }}
       >
-        Не удалось загрузить данные
+        Не удалось загрузить данные: {textValue(error)}. Пустая выборка не подтверждена.
       </div>
     );
   }
@@ -532,24 +536,18 @@ export default function AdminNotificationsPage() {
 
   async function loadDeliveries(limit = 50) {
     setDeliveriesState((prev) => ({ ...prev, loading: true, error: "" }));
-
-    const deliveriesRes = await getAdminNotificationDeliveries({ limit });
-    const applyResult = (result, fallbackError) => {
-      if (result.status === "fulfilled" && result.value?.ok !== false) {
-        const payload = result.value;
-        const items = getItems(payload);
-        const total = getTotalCount(payload, items.length);
-        return { items, total, loading: false, error: "" };
+    try {
+      const response = await getAdminNotificationDeliveries({ limit });
+      const items = getItems(response);
+      if (response?.ok !== true || !Array.isArray(items)) {
+        throw new Error(response?.error || "ADMIN_NOTIFICATION_DELIVERIES_CONTRACT_INVALID");
       }
-
-      const reason = result.status === "rejected" ? result.reason : result.value;
-      const error = reason?.error || reason?.message || fallbackError;
-      return { items: [], total: 0, loading: false, error };
-    };
-
-    setDeliveriesState(applyResult({ status: "fulfilled", value: deliveriesRes }, "ADMIN_NOTIFICATION_DELIVERIES_LOAD_FAILED"));
+      setDeliveriesState({ items, total: getTotalCount(response), loading: false, error: "" });
+    } catch (error) {
+      setDeliveriesState({ items: [], total: null, loading: false,
+        error: String(error?.error || error?.message || "ADMIN_NOTIFICATION_DELIVERIES_LOAD_FAILED") });
+    }
   }
-
   async function handleRetryDelivery(delivery) {
     if (!canRetryDelivery(delivery)) {
       setRetryError("Эту доставку нельзя повторить");
@@ -563,7 +561,7 @@ export default function AdminNotificationsPage() {
 
     try {
       const response = await retryAdminNotificationDelivery(delivery.id);
-      if (response?.ok === false) {
+      if (response?.ok !== true) {
         const errorCode = String(response?.error || "").trim();
         if (errorCode === "DELIVERY_RETRY_LIMIT_REACHED") {
           setRetryError("Достигнут лимит повторов");
@@ -586,7 +584,7 @@ export default function AdminNotificationsPage() {
             : "Повторная попытка записана, push не отправлен",
         );
       } else {
-        setRetryMessage("Повторная отправка выполнена");
+        setRetryError("Сервер не подтвердил результат повторной отправки");
       }
 
       await loadDeliveries();
@@ -624,16 +622,19 @@ export default function AdminNotificationsPage() {
       }
 
       const applyResult = (result, fallbackError) => {
-        if (result.status === "fulfilled" && result.value?.ok !== false) {
+        if (result.status === "fulfilled" && result.value?.ok === true) {
           const payload = result.value;
           const items = getItems(payload);
-          const total = getTotalCount(payload, items.length);
-          return { items, total, loading: false, error: "" };
+        if (!Array.isArray(items)) {
+          return { items: [], total: null, loading: false, error: "API_CONTRACT_INVALID" };
+        }
+        const total = getTotalCount(payload);
+        return { items, total, loading: false, error: "" };
         }
 
         const reason = result.status === "rejected" ? result.reason : result.value;
         const error = reason?.error || reason?.message || fallbackError;
-        return { items: [], total: 0, loading: false, error };
+        return { items: [], total: null, loading: false, error };
       };
 
       setNotificationsState(applyResult(notificationsRes, "ADMIN_NOTIFICATIONS_LOAD_FAILED"));
@@ -716,8 +717,8 @@ export default function AdminNotificationsPage() {
         </SectionCard>
 
         <SectionCard
-          title="Push subscriptions"
-          subtitle="Список из public.push_subscriptions без раскрытия p256dh/auth."
+          title="Push-подписки"
+          subtitle="Список подписок без раскрытия закрытых криптографических ключей."
           extra={sectionMeta(pushSubscriptionsState.total, 50)}
         >
           {renderSectionBody({

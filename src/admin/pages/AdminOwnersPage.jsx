@@ -74,7 +74,7 @@ export default function AdminOwnersPage(){
 
   const token = getAdminToken();
 
-  async function loadOwners(){
+  async function loadOwners({ preserveNotice = false } = {}){
     if(!token){
       setLoading(false);
       setError("NO_ADMIN_TOKEN");
@@ -84,7 +84,7 @@ export default function AdminOwnersPage(){
     try{
       setLoading(true);
       setError("");
-      setNotice("");
+      if(!preserveNotice){setNotice("");}
 
       const headers = buildHeaders();
       const [salonsResponse, mastersResponse] = await Promise.all([
@@ -105,12 +105,17 @@ export default function AdminOwnersPage(){
         throw new Error(mastersPayload?.error || `MASTERS_HTTP_${mastersResponse.status}`);
       }
 
-      setSalons(normalizeItems(salonsPayload));
-      setMasters(normalizeItems(mastersPayload));
+      const loadedSalons = normalizeItems(salonsPayload);
+      const loadedMasters = normalizeItems(mastersPayload);
+      setSalons(loadedSalons);
+      setMasters(loadedMasters);
+      return { salons: loadedSalons, masters: loadedMasters };
     }catch(e){
       setSalons([]);
       setMasters([]);
       setError(e?.message || "ADMIN_OWNERS_LOAD_FAILED");
+      if(preserveNotice){throw e;}
+      return null;
     }finally{
       setLoading(false);
     }
@@ -155,8 +160,21 @@ export default function AdminOwnersPage(){
         throw new Error(payload?.error || `OWNER_ACTION_HTTP_${response.status}`);
       }
 
-      setNotice(`${slug}: действие выполнено`);
-      await loadOwners();
+      const returned = payload?.data?.entity;
+      const expectedActive = action === "unsuspend";
+      const stateKey = ownerType === "salon" ? "enabled" : "active";
+      if(Number(returned?.id) !== id || typeof returned?.[stateKey] !== "boolean" ||
+         returned[stateKey] !== expectedActive){
+        throw new Error("OWNER_ACTION_SERVER_READBACK_MISMATCH");
+      }
+      const reloaded = await loadOwners({ preserveNotice: true });
+      const records = ownerType === "salon" ? reloaded.salons : reloaded.masters;
+      const fresh = records.find((item) => Number(item?.id) === id);
+      if(!fresh || typeof fresh[stateKey] !== "boolean" ||
+         fresh[stateKey] !== expectedActive){
+        throw new Error("OWNER_ACTION_LIST_READBACK_MISMATCH");
+      }
+      setNotice(slug + ": " + (expectedActive ? "активирован" : "деактивирован") + " — подтверждено обновлением списка.");
     }catch(e){
       setError(e?.message || "OWNER_ACTION_FAILED");
     }finally{
@@ -223,7 +241,7 @@ export default function AdminOwnersPage(){
       </label>
 
       <div style={styles.buttonRow}>
-        <button type="button" onClick={loadOwners} disabled={loading || actionLoading} style={styles.secondaryButton}>
+        <button type="button" onClick={() => void loadOwners()} disabled={loading || actionLoading} style={styles.secondaryButton}>
           Обновить
         </button>
       </div>

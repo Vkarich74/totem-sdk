@@ -749,7 +749,8 @@ function CabinetRouter() {
 }
 
 function AdminRouter() {
-  const hashParts = getHashParts();
+  const location = useLocation();
+  const hashParts = String(location.pathname || "").split("/").filter(Boolean);
   const pathParts = getPathParts();
   const adminParts = hashParts[0] === "admin" ? hashParts : pathParts;
   const adminRoute = adminParts[0] === "admin" ? adminParts[1] || "" : "";
@@ -802,7 +803,13 @@ function AdminRouter() {
     return <AdminNotificationsPage />;
   }
 
-  return <AdminDashboardPage />;
+  return (
+    <main role="alert" style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
+      <h1>Административный раздел не найден</h1>
+      <p>Такого раздела нет. Адрес не перенаправляется на обзор без уведомления.</p>
+      <a href="#/admin">Вернуться к обзору платформы</a>
+    </main>
+  );
 }
 
 function LocaleControls() {

@@ -54,8 +54,8 @@ async function fetchJson(path, init = {}) {
 
 function formatNumber(value) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return "0";
+  if (value === null || value === undefined || value === "" || !Number.isFinite(numeric)) {
+    return "—";
   }
 
   return new Intl.NumberFormat("ru-RU").format(numeric);
@@ -142,6 +142,8 @@ function SectionCard({ title, children, extra }) {
   return (
     <section
       style={{
+        minWidth: 0,
+        boxSizing: "border-box",
         background: "#fff",
         border: "1px solid #e5e7eb",
         borderRadius: 16,
@@ -180,7 +182,7 @@ function SummaryCard({ title, value, hint }) {
   );
 }
 
-function DataTable({ columns, rows }) {
+function DataTable({ columns, rows, error = "" }) {
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -204,10 +206,10 @@ function DataTable({ columns, rows }) {
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 ? (
+          {rows.length === 0 || error ? (
             <tr>
               <td colSpan={columns.length} style={{ padding: 12, color: "#6b7280" }}>
-                Данных пока нет
+                {error ? "Сбой загрузки раздела: " + error : "Данных пока нет"}
               </td>
             </tr>
           ) : (
@@ -265,6 +267,7 @@ export default function AdminMobilePage() {
   const token = getAuthToken();
   const [loading, setLoading] = useState(Boolean(token));
   const [error, setError] = useState("");
+  const [resourceErrors, setResourceErrors] = useState({});
   const [success, setSuccess] = useState("");
   const [overview, setOverview] = useState(null);
   const [feedbackItems, setFeedbackItems] = useState([]);
@@ -288,6 +291,7 @@ export default function AdminMobilePage() {
 
     setLoading(true);
     setError("");
+    setResourceErrors({});
 
     const responses = await Promise.allSettled([
       fetchJson("/internal/admin/mobile/overview"),
@@ -371,8 +375,25 @@ export default function AdminMobilePage() {
       failures.push(String(flagsRes.reason?.message || flagsRes.reason || "ADMIN_MOBILE_FLAGS_FAILED"));
     }
 
-    if (failures.length) {
-      setError(failures[0]);
+    const resourceKeys = ["overview", "feedback", "dataRequests", "referrals",
+      "referralEvents", "mobileEvents", "flags"];
+    const perResource = {};
+    responses.forEach((item, index) => {
+      const key = resourceKeys[index];
+      if (item.status === "rejected") {
+        perResource[key] = String(item.reason?.message || "Ошибка API");
+      } else if (key === "overview") {
+        if (!item.value?.data || typeof item.value.data !== "object") {
+          perResource[key] = "Некорректный ответ API";
+        }
+      } else if (!Array.isArray(item.value?.data?.items)) {
+        perResource[key] = "API вернул некорректный список";
+      }
+    });
+    setResourceErrors(perResource);
+    if (perResource.overview) setOverview(null);
+    if (failures.length || Object.keys(perResource).length) {
+      setError(failures[0] || "Некоторые разделы недоступны");
     } else {
       setError("");
     }
@@ -391,7 +412,7 @@ export default function AdminMobilePage() {
 
     const timeoutId = window.setTimeout(() => {
       setSuccess("");
-    }, 2000);
+    }, 7000);
 
     return () => window.clearTimeout(timeoutId);
   }, [success]);
@@ -955,7 +976,7 @@ export default function AdminMobilePage() {
   }
 
   return (
-    <div style={{ padding: 20, display: "grid", gap: 16 }}>
+    <div style={{ padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0, boxSizing: "border-box", gap: 16 }}>
       <AdminNavigation />
 
       <header style={{ display: "grid", gap: 8 }}>
@@ -965,6 +986,7 @@ export default function AdminMobilePage() {
 
       {loading ? <div style={{ color: "#6b7280" }}>Загружаем mobile control center…</div> : null}
 
+      {Object.keys(resourceErrors).length ? <div role="alert" style={{marginBottom:12, color:"#92400e"}}>Частичная загрузка: {Object.entries(resourceErrors).map(([key, detail]) => key + " — " + detail).join("; ")}. Пустые показатели не означают ноль.</div> : null}
       {error ? (
         <div
           style={{
@@ -1020,29 +1042,29 @@ export default function AdminMobilePage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Referral links">
-        <DataTable columns={referralLinkColumns} rows={referralLinks} />
+      <SectionCard title="Ссылки рекомендаций">
+        <DataTable columns={referralLinkColumns} rows={referralLinks} error={resourceErrors.referrals} />
       </SectionCard>
 
-      <SectionCard title="Referral events">
-        <DataTable columns={referralEventColumns} rows={referralEvents} />
+      <SectionCard title="События рекомендаций">
+        <DataTable columns={referralEventColumns} rows={referralEvents} error={resourceErrors.referralEvents} />
       </SectionCard>
 
-      <SectionCard title="Mobile events">
+      <SectionCard title="События мобильного приложения">
         <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 12 }}>Read-only события мобильной витрины из public.mobile_events.</div>
-        <DataTable columns={mobileEventColumns} rows={mobileEvents} />
+        <DataTable columns={mobileEventColumns} rows={mobileEvents} error={resourceErrors.mobileEvents} />
       </SectionCard>
 
-      <SectionCard title="Feedback">
-        <DataTable columns={feedbackColumns} rows={feedbackItems} />
+      <SectionCard title="Отзывы">
+        <DataTable columns={feedbackColumns} rows={feedbackItems} error={resourceErrors.feedback} />
       </SectionCard>
 
       <SectionCard title="Запросы данных">
-        <DataTable columns={dataRequestColumns} rows={dataRequestItems} />
+        <DataTable columns={dataRequestColumns} rows={dataRequestItems} error={resourceErrors.dataRequests} />
       </SectionCard>
 
-      <SectionCard title="Mobile flags">
-        <DataTable columns={flagColumns} rows={flags} />
+      <SectionCard title="Настройки мобильных функций">
+        <DataTable columns={flagColumns} rows={flags} error={resourceErrors.flags} />
       </SectionCard>
     </div>
   );

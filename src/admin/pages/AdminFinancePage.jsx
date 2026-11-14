@@ -261,6 +261,8 @@ function SectionCard({ title, children, extra }) {
   return (
     <section
       style={{
+        minWidth: 0,
+        boxSizing: "border-box",
         background: "#fff",
         border: "1px solid #e5e7eb",
         borderRadius: 16,
@@ -581,7 +583,7 @@ export default function AdminFinancePage() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: 20, minWidth: 0, boxSizing: "border-box" }}>
       <AdminNavigation />
 
       <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", marginTop: 16 }}>
@@ -819,7 +821,7 @@ export default function AdminFinancePage() {
         </div>
       </SectionCard>
 
-      <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16, marginTop: 16 }}>
         <SectionCard title="События провайдеров">
           <DataTable columns={providerEventsColumns} rows={providerEvents} />
         </SectionCard>

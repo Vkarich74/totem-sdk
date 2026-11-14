@@ -14,6 +14,8 @@ import {
 
 const PAGE_LABEL = "Центр вывода средств";
 const REQUESTS_LIMIT = 500;
+// Closed by design: prior approval and independent banking proof are absent.
+const STAGE09_FINANCIAL_WRITES_RELEASED = false;
 
 function getAuthToken() {
   try {
@@ -40,13 +42,31 @@ function formatDateTime(value) {
   }).format(date);
 }
 
-function formatMoney(value, currency = "KGS") {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return `0 ${currency}`;
-  }
+function formatMoney(value, currency = null) {
+  if (value === null || value === undefined || value === "") return "—";
+  const n=Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("ru-RU",{maximumFractionDigits:2}).format(n) + (currency ? " " + currency : "");
+}
+function safeCount(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const n=Number(value);
+  return Number.isSafeInteger(n) && n>=0 ? n : null;
+}
+function formatReconciliationState(value) {
+  if (value === true) return "Да";
+  if (value === false) return "Нет";
+  return "Нет данных";
+}
 
-  return `${new Intl.NumberFormat("ru-RU").format(numeric)} ${currency}`;
+function hasUnverifiedReconciliation(reconciliation) {
+  const keys = [
+    "owner_matches", "destination_matches", "amount_matches_locked",
+    "lock_ledger_found", "payout_execution_found",
+    "paid_out_evidence_found", "has_mismatch",
+  ];
+  return !reconciliation || keys.some((key) =>
+    reconciliation[key] !== true && reconciliation[key] !== false);
 }
 
 function textValue(value, fallback = "—") {
@@ -362,6 +382,8 @@ function normalizeStatusMatch(request, tabKey) {
 
 export default function AdminWithdrawalsPage() {
   const detailRef = useRef(null);
+  const listSerial = useRef(0);
+  const detailSerial = useRef(0);
   const selectedRequestIdHash = useMemo(() => getInitialSelectedRequestId(), []);
 
   const [loading, setLoading] = useState(true);
@@ -379,6 +401,8 @@ export default function AdminWithdrawalsPage() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [summaryError, setSummaryError] = useState("");
+  const [requestsError, setRequestsError] = useState("");
   const [actionLoading, setActionLoading] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
@@ -396,49 +420,34 @@ export default function AdminWithdrawalsPage() {
   });
 
   const loadSummaryAndRequests = useCallback(async () => {
-    const token = getAuthToken();
-    if (!token) {
-      setLoading(false);
+    const seq=++listSerial.current;
+    setLoading(true);setError("");setSummaryError("");setRequestsError("");
+    if (!getAuthToken()){
+      setSummary(null);setRequests([]);
       setError("Требуется вход администратора.");
-      setSummary(null);
-      setRequests([]);
-      return;
+      setSummaryError("Нет admin-сессии.");setRequestsError("Нет admin-сессии.");
+      setLoading(false);return;
     }
-
-    setLoading(true);
-    setError("");
-
     try {
-      const [summaryResult, requestsResult] = await Promise.all([
-        getAdminWithdrawRequestsSummary(),
-        getAdminWithdrawRequests({ limit: REQUESTS_LIMIT, offset: 0 }),
-      ]);
-
-      if (!summaryResult.ok) {
-        throw new Error(summaryResult.error || "SUMMARY_LOAD_FAILED");
-      }
-
-      if (!requestsResult.ok) {
-        throw new Error(requestsResult.error || "REQUESTS_LOAD_FAILED");
-      }
-
-      setSummary({
-        ...(summaryResult.summary || {}),
-        by_status: safeArray(summaryResult.by_status),
-        generated_at: summaryResult.generated_at || null,
-      });
-      setRequests(safeArray(requestsResult.requests));
-    } catch (err) {
-      setError(err?.message || "Не удалось загрузить Центр вывода.");
-      setSummary(null);
-      setRequests([]);
-    } finally {
-      setLoading(false);
-    }
+      const values=await Promise.allSettled([getAdminWithdrawRequestsSummary(),
+        getAdminWithdrawRequests({limit:REQUESTS_LIMIT,offset:0})]);
+      if(seq!==listSerial.current)return;
+      const a=values[0].status==="fulfilled"?values[0].value:null;
+      const b=values[1].status==="fulfilled"?values[1].value:null;
+      const summaryValid=a?.ok===true&&a.summary&&typeof a.summary==="object"&&
+        !Array.isArray(a.summary)&&safeCount(a.summary.total_count)!==null&&Array.isArray(a.by_status);
+      const rowset=b?.result?.data??b?.result?.requests;
+      const listValid=b?.ok===true&&Array.isArray(rowset);
+      if(summaryValid)setSummary({...a.summary,by_status:a.by_status,generated_at:a.generated_at||null});
+      else{setSummary(null);setSummaryError(a?.error||"Ошибка контракта сводки.");}
+      if(listValid)setRequests(rowset);
+      else{setRequests([]);setRequestsError(b?.error||"Ошибка контракта списка.");}
+      if(!summaryValid||!listValid)setError("Загрузка частичная. Неизвестные суммы и количества нельзя считать нулевыми.");
+    }finally{if(seq===listSerial.current)setLoading(false);}
   }, []);
-
   const loadDetail = useCallback(async (id) => {
     const safeId = String(id || "").trim();
+    const seq=++detailSerial.current;
     if (!safeId) {
       setSelectedRequest(null);
       setDetailError("");
@@ -457,6 +466,7 @@ export default function AdminWithdrawalsPage() {
 
     try {
       const result = await getAdminWithdrawRequestById(safeId);
+      if(seq!==detailSerial.current)return;
       if (!result.ok) {
         if (result.error === "ADMIN_WITHDRAW_REQUEST_GET_API_NOT_OK") {
           const status = Number(result.detail?.status || 0);
@@ -474,16 +484,19 @@ export default function AdminWithdrawalsPage() {
         return;
       }
 
-      setSelectedRequest(result.request || null);
+      const returnedId=result.request?.withdraw_request?.id??result.request?.id;
+      if(!result.request||String(returnedId)!==safeId){
+        setSelectedRequest(null);setDetailError("Ответ API относится к другой заявке.");return;
+      }
+      setSelectedRequest(result.request);
       if (detailRef.current) {
         detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     } catch (err) {
+      if(seq!==detailSerial.current)return;
       setDetailError(err?.message || "Не удалось загрузить заявку.");
       setSelectedRequest(null);
-    } finally {
-      setDetailLoading(false);
-    }
+    } finally {if(seq===detailSerial.current)setDetailLoading(false);}
   }, []);
 
   const selectedActionSet = useMemo(() => new Set(safeArray(selectedRequest?.admin_available_actions)), [selectedRequest]);
@@ -557,6 +570,10 @@ export default function AdminWithdrawalsPage() {
   }
 
   async function handleClaimAction() {
+    if (!STAGE09_FINANCIAL_WRITES_RELEASED) {
+      setActionError("Финансовые действия временно заблокированы.");
+      return;
+    }
     if (!selectedRequestId || actionLoading) {
       return;
     }
@@ -585,6 +602,10 @@ export default function AdminWithdrawalsPage() {
   }
 
   async function handleStartProcessingAction() {
+    if (!STAGE09_FINANCIAL_WRITES_RELEASED) {
+      setActionError("Финансовые действия временно заблокированы.");
+      return;
+    }
     if (!selectedRequestId || actionLoading) {
       return;
     }
@@ -619,6 +640,10 @@ export default function AdminWithdrawalsPage() {
 
   async function handleSubmitActionForm(event) {
     event.preventDefault();
+    if (!STAGE09_FINANCIAL_WRITES_RELEASED) {
+      setActionError("Финансовые действия временно заблокированы.");
+      return;
+    }
 
     if (!selectedRequestId || actionLoading) {
       return;
@@ -807,46 +832,44 @@ export default function AdminWithdrawalsPage() {
     });
   }, [filters, requestsWithDetails]);
 
-  const summaryData = summary || {};
-  const totalCount = Number(summaryData.total_count || 0);
-  const totalAmount = summaryData.total_amount || 0;
-  const currency = summaryData.currency || "KGS";
-
-  const tabs = useMemo(
-    () => [
-      { key: "all", label: "Все", count: totalCount },
-      { key: "new", label: "Новые", count: Number(summaryData.new_count || 0) },
-      { key: "review", label: "В проверке", count: Number(summaryData.review_count || 0) },
-      { key: "processing", label: "В процессе", count: Number(summaryData.processing_count || 0) },
-      { key: "completed", label: "Выполнены", count: Number(summaryData.completed_count || 0) },
-      { key: "rejected", label: "Отклонены", count: Number(summaryData.rejected_count || 0) },
-      { key: "failed", label: "Ошибки", count: Number(summaryData.failed_count || 0) },
-    ],
-    [
-      totalCount,
-      summaryData.new_count,
-      summaryData.review_count,
-      summaryData.processing_count,
-      summaryData.completed_count,
-      summaryData.rejected_count,
-      summaryData.failed_count,
-    ]
-  );
-
-  const kpis = useMemo(
-    () => [
-      { title: "Всего заявок", value: totalCount, hint: "Количество заявок в центре", tone: "slate" },
-      { title: "Новые", value: Number(summaryData.new_count || 0), hint: "pending_validation / created", tone: "amber" },
-      { title: "В проверке", value: Number(summaryData.review_count || 0), hint: "requires_review", tone: "amber" },
-      { title: "В процессе", value: Number(summaryData.processing_count || 0), hint: "locked / payout flow", tone: "blue" },
-      { title: "Выполнены", value: Number(summaryData.completed_count || 0), hint: "completed", tone: "green" },
-      { title: "Отклонены", value: Number(summaryData.rejected_count || 0), hint: "canceled / rejected", tone: "red" },
-      { title: "Ошибки выплаты", value: Number(summaryData.failed_count || 0), hint: "failed", tone: "red" },
-      { title: "Сумма заявок", value: formatMoney(totalAmount, currency), hint: `Валюта: ${currency}`, tone: "slate" },
-    ],
-    [currency, summaryData, totalAmount, totalCount]
-  );
-
+  const summaryData=summary||null;
+  const totalCount=summaryData?(safeCount(summaryData.total_count)??"—"):"—";
+  const currency=summaryData?.currency||null;
+  const amountText=summaryData?.mixed_currency?"— (несколько валют)":
+    summaryData?formatMoney(summaryData.total_amount,currency):"—";
+  const countFor=(key,group)=>{
+    if(!summaryData)return "—";
+    if(!summaryData.mixed_currency)return safeCount(summaryData[key])??"—";
+    const buckets=safeArray(summaryData.by_status);
+    if(!buckets.length&&safeCount(summaryData.total_count)>0)return "—";
+    let n=0;
+    for(const row of buckets){
+      if(getRequestStatusGroup(row.status)!==group)continue;
+      const value=safeCount(row.count);if(value===null)return "—";n+=value;
+    }
+    return n;
+  };
+  const groups={new:countFor("new_count","new"),review:countFor("review_count","review"),
+    processing:countFor("processing_count","processing"),completed:countFor("completed_count","completed"),
+    rejected:countFor("rejected_count","rejected"),failed:countFor("failed_count","failed")};
+  const tabs=[{key:"all",label:"Все",count:totalCount},
+    {key:"new",label:"Новые",count:groups.new},
+    {key:"review",label:"В проверке",count:groups.review},
+    {key:"processing",label:"В процессе",count:groups.processing},
+    {key:"completed",label:"Выполнены",count:groups.completed},
+    {key:"rejected",label:"Отклонены",count:groups.rejected},
+    {key:"failed",label:"Ошибки",count:groups.failed}];
+  const kpis=[{title:"Всего заявок",value:totalCount,hint:"Полный серверный COUNT",tone:"slate"},
+    {title:"Новые",value:groups.new,hint:"created/pending_validation",tone:"amber"},
+    {title:"В проверке",value:groups.review,hint:"requires_review",tone:"amber"},
+    {title:"В процессе",value:groups.processing,hint:"locked/payout flow",tone:"blue"},
+    {title:"Выполнены",value:groups.completed,hint:"completed",tone:"green"},
+    {title:"Отклонены",value:groups.rejected,hint:"canceled/rejected",tone:"red"},
+    {title:"Ошибки выплаты",value:groups.failed,hint:"failed",tone:"red"},
+    {title:"Сумма заявок",value:amountText,
+      hint:summaryData?.mixed_currency?"Несколько валют: не суммируем":
+        currency?"Валюта: "+currency:"Валюта не определена",tone:"slate"}];
+  const limitedList=typeof totalCount==="number"&&totalCount>requests.length;
   const selectedRequestDetail = selectedRequest?.withdraw_request || selectedRequest || null;
   const selectedOwner = selectedRequest?.owner || {};
   const selectedDestination = selectedRequest?.destination || null;
@@ -914,7 +937,7 @@ export default function AdminWithdrawalsPage() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <h1 style={{ margin: 0 }}>{PAGE_LABEL}</h1>
-            <Badge tone="slate">Только чтение</Badge>
+            <Badge tone="slate">Режим проверки: только чтение</Badge>
           </div>
           <p style={{ margin: "8px 0 0", color: "#6b7280" }}>
             Заявки мастеров и салонов на вывод средств
@@ -959,6 +982,11 @@ export default function AdminWithdrawalsPage() {
           />
         ))}
       </div>
+
+      {summaryError ? <div role="alert">Сводка недоступна: {summaryError}. Неизвестные суммы не равны нулю.</div> : null}
+      {requestsError ? <div role="alert">Список заявок недоступен: {requestsError}. Отсутствие заявок не подтверждено.</div> : null}
+      {summaryData?.mixed_currency ? <div role="alert">Несколько валют: общая сумма не суммируется.</div> : null}
+      {limitedList && !requestsError ? <div role="status">Загружено {requests.length} из {totalCount}. Поиск только среди загруженных заявок.</div> : null}
 
       <SectionCard
         title="Фильтры"
@@ -1021,7 +1049,7 @@ export default function AdminWithdrawalsPage() {
         </div>
 
         <div style={{ marginTop: 16, color: "#6b7280", fontSize: 13, lineHeight: 1.5 }}>
-          Список фильтруется на фронтенде. Статусы и KPI берутся из read-only summary endpoint.
+          Фильтры действуют только на загруженной странице; KPI — по полной серверной сводке.
         </div>
       </SectionCard>
 
@@ -1056,6 +1084,8 @@ export default function AdminWithdrawalsPage() {
       >
         {loading ? (
           <EmptyState title="Загрузка заявок…" subtitle="Получаем summary и список withdraw requests." />
+        ) : requestsError ? (
+          <EmptyState title="Список недоступен" subtitle="Сбой API не означает отсутствие заявок." />
         ) : filteredRequests.length === 0 ? (
           <EmptyState
             title="Заявок на вывод пока нет"
@@ -1233,14 +1263,19 @@ export default function AdminWithdrawalsPage() {
                 }}
               >
                 <SectionCard title="Сверка">
+                  {hasUnverifiedReconciliation(selectedReconciliation) ? (
+                    <div role="alert" style={{ color: "#92400e", background: "#fffbeb", padding: 10, borderRadius: 8, marginBottom: 12 }}>
+                      Данные сверки неполные: «Нет данных» не означает «Нет». Финансовые операции заблокированы.
+                    </div>
+                  ) : null}
                   <div style={{ display: "grid", gap: 14 }}>
-                    <Field label="owner_matches" value={String(Boolean(selectedReconciliation?.owner_matches))} />
-                    <Field label="destination_matches" value={String(Boolean(selectedReconciliation?.destination_matches))} />
-                    <Field label="amount_matches_locked" value={String(Boolean(selectedReconciliation?.amount_matches_locked))} />
-                    <Field label="lock_ledger_found" value={String(Boolean(selectedReconciliation?.lock_ledger_found))} />
-                    <Field label="payout_execution_found" value={String(Boolean(selectedReconciliation?.payout_execution_found))} />
-                    <Field label="paid_out_evidence_found" value={String(Boolean(selectedReconciliation?.paid_out_evidence_found))} />
-                    <Field label="has_mismatch" value={String(Boolean(selectedReconciliation?.has_mismatch))} />
+                    <Field label="owner_matches" value={formatReconciliationState(selectedReconciliation?.owner_matches)} />
+                    <Field label="destination_matches" value={formatReconciliationState(selectedReconciliation?.destination_matches)} />
+                    <Field label="amount_matches_locked" value={formatReconciliationState(selectedReconciliation?.amount_matches_locked)} />
+                    <Field label="lock_ledger_found" value={formatReconciliationState(selectedReconciliation?.lock_ledger_found)} />
+                    <Field label="payout_execution_found" value={formatReconciliationState(selectedReconciliation?.payout_execution_found)} />
+                    <Field label="paid_out_evidence_found" value={formatReconciliationState(selectedReconciliation?.paid_out_evidence_found)} />
+                    <Field label="has_mismatch" value={formatReconciliationState(selectedReconciliation?.has_mismatch)} />
                   </div>
                 </SectionCard>
 
@@ -1267,6 +1302,11 @@ export default function AdminWithdrawalsPage() {
               </div>
 
               <SectionCard title="Risk flags">
+                {selectedRiskFlags.some((flag) => normalizeStatus(flag) === "owner_destination_mismatch") ? (
+                  <div role="alert" style={{ color: "#991b1b", background: "#fef2f2", padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                    OWNER_DESTINATION_MISMATCH требует проверки серверного контракта. До независимого подтверждения владельца и реквизитов действия заблокированы.
+                  </div>
+                ) : null}
                 {selectedRiskFlags.length ? (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {selectedRiskFlags.map((flag) => (
@@ -1329,6 +1369,7 @@ export default function AdminWithdrawalsPage() {
                 )}
               </SectionCard>
 
+              {STAGE09_FINANCIAL_WRITES_RELEASED ? (
               <SectionCard
                 title="Действия администратора"
                 subtitle="Безопасные действия: claim, reject, comment. Деньги не меняются."
@@ -1668,6 +1709,11 @@ export default function AdminWithdrawalsPage() {
                   ) : null}
                 </div>
               </SectionCard>
+              ) : (
+                <SectionCard title="Действия администратора" subtitle="Режим только чтение: финансовые операции заблокированы.">
+                  <div role="alert">Финансовые действия недоступны до подтверждения банковской выплаты и отдельного разрешения на выпуск.</div>
+                </SectionCard>
+              )}
             </div>
           )}
         </SectionCard>

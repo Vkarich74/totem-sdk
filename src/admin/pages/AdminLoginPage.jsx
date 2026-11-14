@@ -17,6 +17,11 @@ function getAdminTargetHash(returnTo){
     "#/admin/messages",
     "#/admin/leads",
     "#/admin/cases",
+    "#/admin/clients",
+    "#/admin/owners",
+    "#/admin/open-owner",
+    "#/admin/withdrawals",
+    "#/admin/notifications",
     "#/admin/mobile",
     "#/admin/finance",
   ])
@@ -49,7 +54,7 @@ export default function AdminLoginPage() {
 
       const payload = await response.json()
 
-      if (!response.ok || payload?.ok === false) {
+      if (!response.ok || payload?.ok !== true) {
         throw new Error(payload?.error || `HTTP_${response.status}`)
       }
 
@@ -73,11 +78,11 @@ export default function AdminLoginPage() {
 
   return (
     <div style={{ padding: 20, maxWidth: 420 }}>
-      <h1 style={{ margin: "0 0 16px" }}>Admin Login</h1>
+      <h1 style={{ margin: "0 0 16px" }}>Вход администратора</h1>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
         <label style={{ display: "grid", gap: 6 }}>
-          <span>Email</span>
+          <span>Электронная почта</span>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -87,7 +92,7 @@ export default function AdminLoginPage() {
         </label>
 
         <label style={{ display: "grid", gap: 6 }}>
-          <span>Password</span>
+          <span>Пароль</span>
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -97,7 +102,7 @@ export default function AdminLoginPage() {
         </label>
 
         <button type="submit" disabled={loading}>
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Входим…" : "Войти"}
         </button>
       </form>
 

@@ -813,11 +813,13 @@ const styles = {
   },
   layoutGrid: {
     display: "grid",
-    gridTemplateColumns: "minmax(320px, 1.2fr) minmax(280px, 0.8fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
     gap: 16,
     alignItems: "start",
   },
   panel: {
+    minWidth: 0,
+    boxSizing: "border-box",
     border: "1px solid #ddd",
     borderRadius: 8,
     padding: 16,
