@@ -1,19 +1,27 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import { createStagingRouteSafety } from "./stagingRouteSafety.js";
 
-export default defineConfig({
-  plugins: [react()],
-  build: {
-    outDir: "dist",
-    assetsDir: "assets",
-    rollupOptions: {
-      output: {
-        // Unique entry filename prevents old Admin layouts from being served
-        // from the browser's 4-hour cached /assets/index.js after a release.
-        entryFileNames: "assets/index-[hash].js",
-        chunkFileNames: "assets/chunk-[hash].js",
-        assetFileNames: "assets/[name]-[hash].[ext]",
+// Normal Production builds: unchanged; no custom rewrite or CSP.
+// Staging builds: require explicitly isolated API/app/public origins.
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const routeSafety = createStagingRouteSafety({ mode, env });
+  return {
+    plugins: [react(), ...(routeSafety ? [routeSafety] : [])],
+    // Never copy public/assets/index.js or old service-worker JS into staging.
+    // Normal Production build retains its original publicDir behavior.
+    ...(routeSafety ? { publicDir: false } : {}),
+    build: {
+      outDir: "dist",
+      assetsDir: "assets",
+      rollupOptions: {
+        output: {
+          entryFileNames: "assets/index-[hash].js",
+          chunkFileNames: "assets/chunk-[hash].js",
+          assetFileNames: "assets/[name]-[hash].[ext]",
+        },
       },
     },
-  },
+  };
 });
