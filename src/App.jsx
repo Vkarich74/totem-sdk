@@ -9,7 +9,7 @@ import PublicMasterPage from "./public/PublicMasterPage";
 import MobileHomePage from "./public/MobileHomePage.jsx";
 import MobileLiteAdminPage from "./mobile/MobileLiteAdminPage.jsx";
 
-import BookingPage from "./room/BookingPage";
+import MarketBookingEntry from "./room/MarketBookingEntry";
 import SalonBookingsPage from "./room/SalonBookingsPage";
 import ClientCabinetPage from "./client/ClientCabinetPage";
 
@@ -407,7 +407,7 @@ function PublicPathRouter() {
   }
 
   if (publicRoute.type === "booking") {
-    return <BookingPage />;
+    return <MarketBookingEntry />;
   }
 
   return <PublicSalonPage slug={publicRoute.slug} />;
@@ -678,7 +678,7 @@ function CabinetRouter() {
         <Route path="reset" element={<ResetPasswordPage />} />
       </Route>
 
-      <Route path="booking" element={<BookingPage slug={slug} />} />
+      <Route path="booking" element={<MarketBookingEntry />} />
       <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
       <Route path="client/:clientId/:token" element={<ClientCabinetPage />} />
       <Route path="mobile/admin/master/:slug" element={<MobileLiteAdminRoute roleType="master" />} />
