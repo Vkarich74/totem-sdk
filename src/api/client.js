@@ -1,4 +1,9 @@
-const API_BASE = "https://api.totemv.com"
+// GEO-R: same API origin as the client cabinet page and US booking.
+const API_BASE = String(
+  import.meta.env.VITE_API_BASE ||
+  (typeof window !== "undefined" ? window.TOTEM_API_BASE : "") ||
+  "https://api.totemv.com"
+).replace(/\/$/, "");
 
 export async function apiGet(url) {
 

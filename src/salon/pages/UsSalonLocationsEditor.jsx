@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import { getAuthAccessToken } from "../../api/internal";
 
 const API = String(
-  typeof window !== "undefined" && window.TOTEM_API_BASE
-    ? window.TOTEM_API_BASE : "https://api.totemv.com"
+  import.meta.env.VITE_API_BASE ||
+  (typeof window !== "undefined" ? window.TOTEM_API_BASE : "") ||
+  "https://api.totemv.com"
 ).replace(/\/$/, "");
 
 const blank = Object.freeze({
@@ -30,6 +31,59 @@ const css = {
     display:"flex",gap:14,justifyContent:"space-between",
     alignItems:"flex-start",flexWrap:"wrap" },
 };
+
+// Only the US branch editor renders these statuses; KG/KZ is unchanged.
+// Codes are mapped deliberately, so no internal server stack/error leaks.
+const usGeoReasonLabels = Object.freeze({
+  US_GEO_NOT_CHECKED: "Not checked yet.",
+  US_GEO_EVIDENCE_EXPIRED: "Evidence expired. Save draft changes to recheck.",
+  US_GEO_CENSUS_UNAVAILABLE: "US Census address lookup is unavailable.",
+  US_GEO_DATASET_UNAVAILABLE: "Verified time-zone polygons are unavailable.",
+  US_GEO_CENSUS_NO_MATCH: "US Census could not match this street address.",
+  US_GEO_CENSUS_AMBIGUOUS: "US Census returned more than one address.",
+  US_GEO_ADDRESS_STATE_MISMATCH: "Address state differs from the selected state.",
+  US_GEO_COORDINATE_STATE_MISMATCH: "Coordinates point to another state or district.",
+  US_GEO_ZIP5_MISMATCH: "US Census ZIP5 differs from the entered ZIP.",
+  US_GEO_ZIP_PLUS4_REQUIRES_USPS_REVIEW: "ZIP+4 needs separate USPS verification.",
+  US_GEO_CITY_MISMATCH: "US Census city differs from the entered city.",
+  US_GEO_STREET_MISMATCH: "US Census street or house number differs.",
+  US_GEO_COORDINATES_INVALID: "US Census coordinates could not be validated.",
+  US_GEO_POLYGON_NOT_UNIQUE: "No unique IANA time-zone polygon matched.",
+  US_GEO_POLYGON_UNAVAILABLE: "The pinned time-zone boundaries cannot be read.",
+  US_GEO_IANA_TIMEZONE_MISMATCH: "Selected time zone differs from mapped location.",
+  US_GEO_NEAR_IANA_BORDER: "Location is near an IANA time-zone border.",
+});
+function geoReasonText(code) {
+  return usGeoReasonLabels[String(code)] || "Additional address review is required.";
+}
+function UsGeoStatus({ location }) {
+  const verified = location.geo_status === "VERIFIED_GEOMETRY";
+  const reasons = verified ? [] : (
+    Array.isArray(location.geo_reasons) && location.geo_reasons.length
+      ? location.geo_reasons : ["US_GEO_NOT_CHECKED"]
+  );
+  return (
+    <div aria-label={"Address verification for " + location.location_code}
+      style={{fontSize:13,marginTop:8,padding:"9px 10px",borderRadius:9,
+        border:"1px solid " + (verified ? "#a7e3bd" : "#f0ce91"),
+        background:verified ? "#effcf3" : "#fff9ed",
+        color:verified ? "#155b35" : "#7c4511"}}>
+      <strong>{verified ? "Geography consistent" : "Address needs review"}</strong>
+      <div>{verified
+        ? "US Census address, ZIP5 and mapped IANA zone agree."
+        : "The branch remains an inactive draft; review the details below."}</div>
+      {reasons.length > 0 && <ul style={{margin:"6px 0 3px 0",paddingLeft:18}}>
+        {reasons.map((code,i)=><li key={String(code)+i}>{geoReasonText(code)}</li>)}
+      </ul>}
+      <div style={{fontSize:12,marginTop:5}}>
+        {location.geo_source_version ? "Map version: " + location.geo_source_version + ". " : ""}
+        {location.geo_expires_at ? "Evidence expiry: " +
+          new Date(location.geo_expires_at).toLocaleDateString("en-US") + ". " : ""}
+        USPS delivery-point / ZIP+4 not certified. Activation locked.
+      </div>
+    </div>
+  );
+}
 
 function checkDraft(form, editing) {
   if (!editing && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.location_code))
@@ -202,6 +256,7 @@ export default function UsSalonLocationsEditor({ slug, canWrite }) {
             <div>{loc.street_line1}{loc.street_line2?` · ${loc.street_line2}`:""}</div>
             <div>{loc.city_name}, {loc.state_code} {loc.postal_code}</div>
             <small>{loc.timezone_name} · {loc.enabled?"Active · locked":"Inactive draft"}</small>
+            <UsGeoStatus location={loc} />
           </div>
           {!loc.enabled && (
             <button type="button" style={css.button} onClick={()=>edit(loc)}
@@ -267,9 +322,11 @@ export default function UsSalonLocationsEditor({ slug, canWrite }) {
             {editing && <button type="button" style={css.button}
               onClick={()=>edit(null)} disabled={saving}>Cancel edit</button>}
           </div>
-          <p style={css.note}>Address formatting is checked. USPS delivery-point
-            confirmation and the state's exact time-zone boundary are not
-            verified automatically. No branch activation or deletion is available.</p>
+          <p style={css.note}>Saving this US draft sends the street address to
+            the US Census Geocoder. The API checks the returned coordinates
+            against pinned 2026d IANA time-zone polygons. A geographic match
+            is not USPS delivery-point or ZIP+4 certification. Review results
+            appear above; activation and deletion remain unavailable.</p>
         </form>
       </div>
     </section>

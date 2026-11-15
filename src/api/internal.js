@@ -1,7 +1,12 @@
 import { safeJson } from "../utils/apiSafe";
 import { getSalonSlug, getMasterSlug } from "../utils/slug";
 
-const API_BASE = (window.TOTEM_API_BASE || "https://api.totemv.com") + "/internal";
+// GEO-R: use explicitly built API endpoint in isolated staging.
+const API_BASE = String(
+  import.meta.env.VITE_API_BASE ||
+  window.TOTEM_API_BASE ||
+  "https://api.totemv.com"
+).replace(/\/$/, "") + "/internal";
 const TEMPLATE_VERSION = "v1";
 const AUTH_TOKEN_STORAGE_KEYS = [
   "TOTEM_AUTH_TOKEN",
@@ -279,7 +284,11 @@ export function saveLocalePreference(marketCode, locale, options = {}) {
 }
 
 export async function getPublicMarketContext(salonSlug = null, { signal } = {}) {
-  const base = String(window.TOTEM_API_BASE || "https://api.totemv.com").replace(/\/$/, "");
+  const base = String(
+    import.meta.env.VITE_API_BASE ||
+    window.TOTEM_API_BASE ||
+    "https://api.totemv.com"
+  ).replace(/\/$/, "");
   const response = await fetch(base + "/public/market-context" + buildQuery({ salon_slug: salonSlug }), {
     method: "GET", headers: { Accept: "application/json" }, credentials: "omit", signal,
   });
@@ -1697,7 +1706,11 @@ export async function bookingAction(id, action){
       return { ok:false, error:"SALON_SLUG_MISSING" };
     }
 
-    const publicApiBase = window.TOTEM_API_BASE || "https://api.totemv.com";
+    const publicApiBase = String(
+      import.meta.env.VITE_API_BASE ||
+      window.TOTEM_API_BASE ||
+      "https://api.totemv.com"
+    ).replace(/\/$/, "");
     const r = await safeJson(
       `${publicApiBase}/public/salons/${encodeURIComponent(salonSlug)}/bookings/${id}/lifecycle`,
       {

@@ -1,4 +1,9 @@
-const API = "https://api.totemv.com";
+// GEO-R: staging push config must never query the Production API.
+const API = String(
+  import.meta.env.VITE_API_BASE ||
+  (typeof window !== "undefined" ? window.TOTEM_API_BASE : "") ||
+  "https://api.totemv.com"
+).replace(/\/$/, "");
 
 export async function getSalon(slug) {
   const res = await fetch(`${API}/public/salons/${slug}`);
