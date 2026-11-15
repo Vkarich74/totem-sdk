@@ -5,69 +5,17 @@ import { useParams } from "react-router-dom";
 import { getClientNotifications, markClientNotificationRead } from "../api/client.js";
 import { postMobileEvent } from "../api/publicApi.js";
 import ClientPushOptInCard from "../components/ClientPushOptInCard.jsx";
+import {
+  clientCabinetLabels, isUsClientDashboard, formatClientBookingTime,
+  formatClientBookingMoney, clientBookingStatusLabel,
+  clientBookingPaymentLabel,
+} from "./clientCabinetPresentation.js";
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE ||
   window.TOTEM_API_BASE ||
   "https://api.totemv.com"
 ).replace(/\/$/, "");
-
-function formatDateTime(value) {
-  if (!value) return "—";
-
-  try {
-    return new Date(value).toLocaleString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  } catch {
-    return "—";
-  }
-}
-
-function getBookingStatusLabel(status) {
-  const normalized = String(status || "").toLowerCase();
-
-  if (normalized === "reserved") return "Забронировано";
-  if (normalized === "confirmed") return "Подтверждено";
-  if (normalized === "completed") return "Завершено";
-  if (normalized === "canceled" || normalized === "cancelled") return "Отменено";
-
-  return status || "—";
-}
-
-function getPaymentLabelRu(booking) {
-  const explicitLabel = String(booking?.payment_label_ru || "").trim();
-
-  if (explicitLabel) {
-    return explicitLabel;
-  }
-
-  const provider = String(booking?.payment_provider || "").toLowerCase();
-  const status = String(booking?.payment_status || "").toLowerCase();
-
-  if (status === "failed") return "Оплата не прошла";
-  if (status === "refunded") return "Оплата возвращена";
-  if (provider === "direct" && status === "pending") return "Наличные ожидают подтверждения";
-  if (provider === "direct" && status === "confirmed") return "Оплата наличными подтверждена";
-  if (provider === "xpay" && status === "pending") return "Ожидаем оплату XPAY";
-  if (provider === "xpay" && status === "confirmed") return "Оплата получена";
-
-  return "Оплата не выбрана";
-}
-
-function formatMoney(value) {
-  const amount = Number(value || 0);
-
-  if (!Number.isFinite(amount)) {
-    return "0 сом";
-  }
-
-  return `${amount.toLocaleString("ru-RU")} сом`;
-}
 
 function getSafeBookingList(data) {
   return Array.isArray(data?.bookings) ? data.bookings : [];
@@ -244,6 +192,18 @@ export default function ClientCabinetPage() {
   const [saveOk, setSaveOk] = useState("");
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
 
+  // Region is from the authorized client API, not inferred from browser locale.
+  const copy = clientCabinetLabels(data);
+  const usClient = isUsClientDashboard(data);
+  const notificationCopy = {
+    header: usClient ? copy.notifications : t("notifications.header"),
+    loading: usClient ? copy.notificationsLoading : t("notifications.loading"),
+    error: usClient ? copy.notificationsError : t("notifications.loadError"),
+    empty: usClient ? copy.notificationsEmpty : t("notifications.empty"),
+    new: usClient ? copy.notificationsNew : t("notifications.new"),
+    read: usClient ? copy.notificationsRead : t("notifications.read"),
+    open: usClient ? copy.notificationsOpen : t("notifications.open"),
+  };
   const bookings = useMemo(() => getSafeBookingList(data), [data]);
   const latestBooking = useMemo(() => getLatestBooking(data), [data]);
   const notificationItems = useMemo(() => getSafeNotificationList(notifications), [notifications]);
@@ -253,7 +213,7 @@ export default function ClientCabinetPage() {
   async function loadClientCabinet() {
     if (!clientId || !token) {
       setLoading(false);
-      setError("Ссылка на кабинет неполная");
+      setError(copy.incompleteLink);
       return;
     }
 
@@ -360,7 +320,7 @@ export default function ClientCabinetPage() {
 
       setName(payload?.client?.name || "");
       setEmail(payload?.client?.email || "");
-      setSaveOk("Данные сохранены");
+      setSaveOk(copy.saved);
     } catch (err) {
       setSaveError(err?.message || "CLIENT_PROFILE_UPDATE_FAILED");
     } finally {
@@ -375,9 +335,9 @@ export default function ClientCabinetPage() {
 
     try {
       await window.navigator.clipboard.writeText(absoluteLink);
-      setCopyStatus("Ссылка скопирована");
+      setCopyStatus(copy.copied);
     } catch {
-      setCopyStatus("Скопируйте ссылку вручную");
+      setCopyStatus(copy.copyManual);
     }
   }
 
@@ -464,7 +424,7 @@ export default function ClientCabinetPage() {
     return (
       <div style={getPageStyle(isMobile)}>
         <div style={getCardStyle(isMobile)}>
-          <p style={styles.muted}>Загружаем кабинет клиента…</p>
+          <p style={styles.muted}>{copy.loading}</p>
         </div>
       </div>
     );
@@ -474,10 +434,10 @@ export default function ClientCabinetPage() {
     return (
       <div style={getPageStyle(isMobile)}>
         <div style={getCardStyle(isMobile)}>
-          <h1 style={getTitleStyle(isMobile)}>Кабинет клиента</h1>
+          <h1 style={getTitleStyle(isMobile)}>{copy.title}</h1>
           <p style={styles.error}>{error}</p>
           <button type="button" onClick={loadClientCabinet} style={getActionButtonStyle(styles.primaryButton, isMobile)}>
-            Повторить
+            {copy.retry}
           </button>
         </div>
       </div>
@@ -489,25 +449,25 @@ export default function ClientCabinetPage() {
       <div style={getHeaderStyle(isMobile)}>
         <div>
           <p style={styles.eyebrow}>TOTEM</p>
-          <h1 style={getTitleStyle(isMobile)}>Кабинет клиента</h1>
+          <h1 style={getTitleStyle(isMobile)}>{copy.title}</h1>
           <p style={styles.muted}>
-            Здесь хранится ваша запись, история посещений и личная ссылка на кабинет.
+            {copy.intro}
           </p>
         </div>
       </div>
 
       <div style={styles.grid}>
         <section style={getCardStyle(isMobile)}>
-          <h2 style={styles.sectionTitle}>Профиль</h2>
+          <h2 style={styles.sectionTitle}>{copy.profile}</h2>
 
           <form onSubmit={saveProfile} style={styles.form}>
             <label style={styles.label}>
-              Имя
+              {copy.name}
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 style={styles.input}
-                placeholder="Ваше имя"
+                placeholder={copy.yourName}
               />
             </label>
 
@@ -522,7 +482,7 @@ export default function ClientCabinetPage() {
             </label>
 
             <label style={styles.label}>
-              Телефон
+              {copy.phone}
               <input
                 value={data?.client?.phone || ""}
                 readOnly
@@ -532,46 +492,50 @@ export default function ClientCabinetPage() {
                   color: "#6b7280"
                 }}
               />
-              <span style={styles.hint}>Телефон в V1 нельзя менять из кабинета.</span>
+              <span style={styles.hint}>{copy.phoneReadOnly}</span>
             </label>
 
             {saveError ? <p style={styles.error}>{saveError}</p> : null}
             {saveOk ? <p style={styles.success}>{saveOk}</p> : null}
 
             <button type="submit" disabled={saving} style={getActionButtonStyle(styles.primaryButton, isMobile)}>
-              {saving ? "Сохраняем…" : "Сохранить"}
+              {saving ? copy.saving : copy.save}
             </button>
           </form>
         </section>
 
         <section style={getCardStyle(isMobile)}>
-          <h2 style={styles.sectionTitle}>Личная ссылка</h2>
+          <h2 style={styles.sectionTitle}>{copy.personalLink}</h2>
           <p style={styles.muted}>
-            Сохраните ссылку. По ней можно вернуться в кабинет без пароля.
+            {copy.personalLinkNote}
           </p>
 
           <div style={styles.linkBox}>{personalLink}</div>
 
           <button type="button" onClick={copyPersonalLink} style={getActionButtonStyle(styles.secondaryButton, isMobile)}>
-            Скопировать ссылку
+            {copy.copyLink}
           </button>
 
           {copyStatus ? <p style={styles.success}>{copyStatus}</p> : null}
         </section>
 
-        <ClientPushOptInCard clientId={clientId} token={token} />
+        {usClient ? (
+          <p role="note" style={styles.muted}>{copy.pushUnavailable}</p>
+        ) : (
+          <ClientPushOptInCard clientId={clientId} token={token} />
+        )}
       </div>
 
       <section style={getCardStyle(isMobile)}>
         <div style={styles.sectionHeaderWithBadge}>
-          <h2 style={styles.sectionTitle}>{t("notifications.header")}</h2>
-          <span style={styles.unreadBadge}>{t("notifications.newCount", {count: unreadCount})}</span>
+          <h2 style={styles.sectionTitle}>{notificationCopy.header}</h2>
+          <span style={styles.unreadBadge}>{usClient ? "New: " + unreadCount : t("notifications.newCount", {count: unreadCount})}</span>
         </div>
 
         {notificationsLoading ? (
-          <p style={styles.muted}>{t("notifications.loading")}</p>
+          <p style={styles.muted}>{notificationCopy.loading}</p>
         ) : notificationsError ? (
-          <p style={styles.error}>{t("notifications.loadError")}</p>
+          <p style={styles.error}>{notificationCopy.error}</p>
         ) : notificationItems.length ? (
           <div style={styles.notificationList}>
             {notificationItems.map((notification) => {
@@ -589,7 +553,12 @@ export default function ClientCabinetPage() {
                     <div style={styles.notificationMeta}>
                       <span style={styles.badge}><NotificationLabel kind="target" value={notification.target_type || "client"} /></span>
                       <span style={styles.notificationPill}><NotificationLabel kind="priority" value={notification.priority || "normal"} /></span>
-                      <span style={styles.notificationTime}>{localeDate(notification.created_at)}</span>
+                      <span style={styles.notificationTime}>{usClient
+    ? new Intl.DateTimeFormat("en-US", {
+        timeZone: "UTC", timeZoneName: "short", month: "short",
+        day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+      }).format(new Date(notification.created_at))
+    : localeDate(notification.created_at)}</span>
                     </div>
                     {hasAction ? (
                       <div style={{ marginTop: 8 }}>
@@ -599,7 +568,7 @@ export default function ClientCabinetPage() {
                           rel={isExternal ? "noreferrer" : undefined}
                           style={getActionLinkStyle(styles.secondaryButton, isMobile)}
                         >
-                          {t("notifications.open")}
+                          {notificationCopy.open}
                         </a>
                       </div>
                     ) : null}
@@ -607,7 +576,7 @@ export default function ClientCabinetPage() {
 
                   <div style={styles.notificationRight}>
                     <span style={isRead ? styles.notificationRead : styles.notificationUnread}>
-                      {isRead ? t("notifications.read") : t("notifications.new")}
+                      {isRead ? notificationCopy.read : notificationCopy.new}
                     </span>
                     {!isRead && notificationUid ? (
                       <button
@@ -616,7 +585,7 @@ export default function ClientCabinetPage() {
                         disabled={readingNotificationUid === notificationUid}
                         style={getActionButtonStyle(styles.secondaryButton, isMobile)}
                       >
-                        {t("notifications.read")}
+                        {notificationCopy.read}
                       </button>
                     ) : null}
                   </div>
@@ -625,79 +594,79 @@ export default function ClientCabinetPage() {
             })}
           </div>
         ) : (
-          <p style={styles.muted}>{t("notifications.empty")}</p>
+          <p style={styles.muted}>{notificationCopy.empty}</p>
         )}
       </section>
 
       <section style={getCardStyle(isMobile)}>
-        <h2 style={styles.sectionTitle}>Текущая запись</h2>
+        <h2 style={styles.sectionTitle}>{copy.currentBooking}</h2>
 
         {latestBooking ? (
           <div style={styles.bookingCard}>
             <div>
-              <strong>{latestBooking.service_name || "Услуга"}</strong>
-              <p style={styles.muted}>{formatDateTime(latestBooking.start_at)}</p>
+              <strong>{latestBooking.service_name || copy.service}</strong>
+              <p style={styles.muted}>{formatClientBookingTime(latestBooking)}</p>
             </div>
 
             <div style={styles.bookingMeta}>
-              <span style={styles.badge}>{getBookingStatusLabel(latestBooking.status)}</span>
-              <span>{formatMoney(latestBooking.price_snapshot)}</span>
+              <span style={styles.badge}>{clientBookingStatusLabel(latestBooking)}</span>
+              <span>{formatClientBookingMoney(latestBooking)}</span>
             </div>
 
             <div style={styles.bookingDetails}>
-              <span>Мастер: {latestBooking.master_name || "—"}</span>
-              <span>Салон: {latestBooking.salon_name || latestBooking.salon_slug || "—"}</span>
+              <span>{copy.master}: {latestBooking.master_name || "—"}</span>
+              <span>{copy.salon}: {latestBooking.salon_name || latestBooking.salon_slug || "—"}</span>
             </div>
 
             <button type="button" onClick={() => repeatBooking(latestBooking)} style={getActionButtonStyle(styles.secondaryButton, isMobile)}>
-              Повторить запись
+              {copy.repeat}
             </button>
           </div>
         ) : (
-          <p style={styles.muted}>Записей пока нет.</p>
+          <p style={styles.muted}>{copy.noBooking}</p>
         )}
       </section>
 
       <section style={getCardStyle(isMobile)}>
-        <h2 style={styles.sectionTitle}>История записей</h2>
+        <h2 style={styles.sectionTitle}>{copy.bookingHistory}</h2>
 
         {bookings.length ? (
           <div style={styles.list}>
             {bookings.map((booking) => (
               <div key={booking.id} style={getHistoryRowStyle(isMobile)}>
                 <div>
-                  <strong>{booking.service_name || "Услуга"}</strong>
-                  <p style={styles.muted}>{formatDateTime(booking.start_at)}</p>
+                  <strong>{booking.service_name || copy.service}</strong>
+                  <p style={styles.muted}>{formatClientBookingTime(booking)}</p>
                   <p style={styles.muted}>
-                    {booking.master_name || "Мастер"} · {booking.salon_name || booking.salon_slug || "Салон"}
+                    {booking.master_name || copy.master} · {booking.salon_name || booking.salon_slug || copy.salon}
                   </p>
                 </div>
 
                 <div style={getHistoryRightStyle(isMobile)}>
-                  <span style={styles.badge}>{getBookingStatusLabel(booking.status)}</span>
-                  <span style={styles.paymentBadge}>{getPaymentLabelRu(booking)}</span>
-                  <span>{formatMoney(booking.price_snapshot)}</span>
+                  <span style={styles.badge}>{clientBookingStatusLabel(booking)}</span>
+                  <span style={styles.paymentBadge}>{clientBookingPaymentLabel(booking)}</span>
+                  <span>{formatClientBookingMoney(booking)}</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p style={styles.muted}>История появится после первой записи.</p>
+          <p style={styles.muted}>{copy.noHistory}</p>
         )}
       </section>
 
       <section style={styles.statsGrid}>
         <div style={styles.statCard}>
           <span style={styles.statValue}>{data?.stats?.bookings_total || 0}</span>
-          <span style={styles.statLabel}>Всего записей</span>
+          <span style={styles.statLabel}>{copy.total}</span>
         </div>
         <div style={styles.statCard}>
           <span style={styles.statValue}>{data?.stats?.active_bookings || 0}</span>
-          <span style={styles.statLabel}>Активные</span>
+          <span style={styles.statLabel}>{copy.active}</span>
         </div>
         <div style={styles.statCard}>
           <span style={styles.statValue}>{data?.stats?.completed_bookings || 0}</span>
-          <span style={styles.statLabel}>Завершённые</span>
+          <span style={styles.statLabel}>{copy.completed}</span>
         </div>
       </section>
     </div>
