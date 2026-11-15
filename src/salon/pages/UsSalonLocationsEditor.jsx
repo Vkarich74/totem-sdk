@@ -1,5 +1,5 @@
-// TOTEM US-05 — salon-owner-only US branch and address editor.
-// Production US market and branches stay inactive; this UI edits DRAFTS only.
+// TOTEM US-07 — real US branches with verified-only activation.
+// No fabricated or empty salons/locations are generated.
 // The backend revalidates owner auth, market, billing, state, zone and ZIP.
 import { useEffect, useState } from "react";
 import { getAuthAccessToken } from "../../api/internal";
@@ -79,7 +79,11 @@ function UsGeoStatus({ location }) {
         {location.geo_source_version ? "Map version: " + location.geo_source_version + ". " : ""}
         {location.geo_expires_at ? "Evidence expiry: " +
           new Date(location.geo_expires_at).toLocaleDateString("en-US") + ". " : ""}
-        USPS delivery-point / ZIP+4 not certified. Activation locked.
+        USPS delivery-point / ZIP+4 not certified. {location.enabled
+          ? "Location is active."
+          : location.activation_allowed
+            ? "Verified location may be activated."
+            : "Activation requires current verified evidence."}
       </div>
     </div>
   );
@@ -157,7 +161,7 @@ export default function UsSalonLocationsEditor({ slug, canWrite }) {
          !Array.isArray(payload.states) || payload.states.length!==51 ||
          !Array.isArray(payload.timezones) || payload.timezones.length!==29 ||
          !Array.isArray(payload.locations) ||
-         payload.activation_allowed!==false){
+         typeof payload.activation_allowed!=="boolean"){
         throw new Error("US_LOCATIONS_CONTRACT_MISMATCH");
       }
       setStates(payload.states);
@@ -217,14 +221,32 @@ export default function UsSalonLocationsEditor({ slug, canWrite }) {
       await request(slug,editing?"PUT":"POST",
         editing?`/${encodeURIComponent(editing)}`:"",body);
       const fresh=await request(slug);
-      if(fresh.market_code!=="US"||fresh.activation_allowed!==false)
+      if(fresh.market_code!=="US"||typeof fresh.activation_allowed!=="boolean")
         throw new Error("US_LOCATIONS_CONTRACT_MISMATCH");
       setLocations(fresh.locations);
       setEditing("");
       setForm({...blank});
-      setNotice("Draft branch saved. Booking activation is locked.");
+      setNotice("Branch saved. Activation requires current US Census/IANA verification.");
     }catch(e){
       setError(String(e.message||"Could not save the branch."));
+    }finally{setSaving(false);}
+  }
+
+  async function activateLocation(location) {
+    if(!canWrite || saving || !marketActive ||
+       location?.activation_allowed!==true || location.enabled)return;
+    setSaving(true);setError("");setNotice("");
+    try {
+      await request(slug,"POST",`/${encodeURIComponent(location.location_code)}/activate`);
+      const fresh=await request(slug);
+      if(fresh.market_code!=="US"||fresh.currency_code!=="USD"||
+         typeof fresh.activation_allowed!=="boolean"||!Array.isArray(fresh.locations)){
+        throw new Error("US_LOCATIONS_CONTRACT_MISMATCH");
+      }
+      setLocations(fresh.locations);
+      setNotice("Verified US branch activated. Booking is now available for its schedule.");
+    }catch(e){
+      setError(String(e.message||"Could not activate the branch."));
     }finally{setSaving(false);}
   }
 
@@ -243,7 +265,7 @@ export default function UsSalonLocationsEditor({ slug, canWrite }) {
         Each location has its own local calendar. A state does not determine the
         time zone automatically; verify the IANA zone against the physical address.</p>
       <p style={{...css.note,color:"#92400e"}} role="status">
-        {marketActive ? "US test market flag detected; branch activation remains locked." :
+        {marketActive ? "US market is active. Only verified branches may be activated." :
           "US market is not live. All new branches remain inactive drafts."}
         {" "}Online payments are not available.
       </p>
@@ -259,8 +281,19 @@ export default function UsSalonLocationsEditor({ slug, canWrite }) {
             <UsGeoStatus location={loc} />
           </div>
           {!loc.enabled && (
-            <button type="button" style={css.button} onClick={()=>edit(loc)}
-              disabled={!canWrite || saving}>Edit</button>
+            <div style={{display:"flex",gap:9,flexWrap:"wrap"}}>
+              <button type="button" style={css.button} onClick={()=>edit(loc)}
+                disabled={!canWrite || saving}>Edit</button>
+              <button type="button" style={css.button}
+                onClick={()=>activateLocation(loc)}
+                disabled={!canWrite || saving || !marketActive ||
+                  loc.activation_allowed!==true}
+                title={loc.activation_allowed
+                  ? "Activate this verified existing branch"
+                  : "Verify the address before activation"}>
+                Activate verified branch
+              </button>
+            </div>
           )}
         </div>
       ))}
@@ -326,7 +359,8 @@ export default function UsSalonLocationsEditor({ slug, canWrite }) {
             the US Census Geocoder. The API checks the returned coordinates
             against pinned 2026d IANA time-zone polygons. A geographic match
             is not USPS delivery-point or ZIP+4 certification. Review results
-            appear above; activation and deletion remain unavailable.</p>
+            appear above. Activation requires current matching verification;
+            deleting branches remains unavailable.</p>
         </form>
       </div>
     </section>
