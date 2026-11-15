@@ -6,6 +6,7 @@ import { getSalonTemplatePublished } from "../api/internal";
 import { setMeta, setCanonical, setJSONLD } from "../api/seo";
 import Skeleton from "../layout/Skeleton";
 import { buildSalonTemplateViewModel } from "../utils/buildViewModel";
+import { stageLinkPolicy } from "../staging/stageLinkRuntime.js";
 
 function pickFirstString(...values) {
   for (const value of values) {
@@ -592,10 +593,10 @@ export default function PublicSalonPage({ slug }) {
     viewCta.bookingLabel,
     "Записаться онлайн",
   );
-  const bookingUrl = pickFirstString(
+  const bookingUrl = stageLinkPolicy.safe(pickFirstString(
     viewCta.bookingUrl,
     "/booking",
-  );
+  ), "booking");
   const servicesLabel = pickFirstString(
     viewCta.servicesLabel,
     "Смотреть услуги",
@@ -714,6 +715,7 @@ export default function PublicSalonPage({ slug }) {
   };
 
   function goToBooking() {
+    if (stageLinkPolicy.strict && !bookingUrl) return; // unsafe remote CTA
     if (/^https?:\/\//i.test(bookingUrl)) {
       window.location.href = bookingUrl;
       return;

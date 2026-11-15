@@ -1,6 +1,7 @@
 ﻿import { NotificationText, NotificationLabel } from "../i18n/NotificationText.jsx";
 import { useMarketContext } from "../market/MarketContext.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { stageLinkPolicy } from "../staging/stageLinkRuntime.js";
 import {
   getMobileConfig,
   getMobileCityHome,
@@ -1733,7 +1734,7 @@ function ReferralBlock({ referral }) {
   const data = referral?.data || null;
   const enabled = Boolean(data?.enabled);
   const available = Boolean(data?.available);
-  const shareUrl = String(data?.share_url || "").trim();
+  const shareUrl = stageLinkPolicy.safe(data?.share_url || "", "referral");
   const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
@@ -2215,7 +2216,7 @@ function PushOptInBlock({
 
 function AnnouncementItem({ item, onMarkRead, marking }) {
   const { t, formatDateTime: localeDate } = useMarketContext();
-  const actionUrl = String(item?.action_url || "").trim();
+  const actionUrl = stageLinkPolicy.safe(item?.action_url || "", "action");
   const actionType = String(item?.action_type || "").trim();
   const isRead = Boolean(item?.is_read);
   const readAt = String(item?.read_at || "").trim();

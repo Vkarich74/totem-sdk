@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { normalizeMasterTemplatePayload } from "../utils/normalizeTemplate.js";
 import { buildMasterTemplateViewModel } from "../utils/buildViewModel.js";
+import { stageLinkPolicy } from "../staging/stageLinkRuntime.js";
 
 const PUBLIC_API_BASE =
   String(import.meta.env.VITE_PUBLIC_API_BASE || "https://api.totemv.com/public").trim() ||
@@ -361,7 +362,10 @@ export default function PublicMasterPage({ slug }) {
     }))
     .filter((item) => item.imageUrl);
   const stats = normalizeStats(view.stats);
-  const bookingBand = normalizeBookingBand(view.bookingBand);
+  const initialBookingBand = normalizeBookingBand(view.bookingBand);
+  const bookingBand = stageLinkPolicy.strict
+    ? { ...initialBookingBand, booking_cta_url: stageLinkPolicy.safe(initialBookingBand.booking_cta_url, "booking") }
+    : initialBookingBand;
   const salonSlug = pickFirstString(
     rawMaster.salon_slug,
     rawMaster.salonSlug,
@@ -374,7 +378,7 @@ export default function PublicMasterPage({ slug }) {
     rawMaster.masterId,
     resolvedSlug,
   );
-  const bookingUrl = pickFirstString(
+  const bookingUrl = stageLinkPolicy.safe(pickFirstString(
     view.bookingUrl,
     rawMaster.booking_url,
     rawMaster.bookingUrl,
@@ -382,7 +386,7 @@ export default function PublicMasterPage({ slug }) {
       ? `https://app.totemv.com/#/booking?salon=${encodeURIComponent(salonSlug)}&master=${encodeURIComponent(bookingMasterId)}`
       : "",
     resolvedSlug ? `https://app.totemv.com/#/booking?master=${encodeURIComponent(resolvedSlug)}` : "",
-  );
+  ), "booking");
   const cabinetLoginUrl = resolvedSlug
     ? `https://app.totemv.com/#/auth/login?role=master&slug=${encodeURIComponent(resolvedSlug)}`
     : "";

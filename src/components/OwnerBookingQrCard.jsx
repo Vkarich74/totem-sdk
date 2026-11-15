@@ -1,6 +1,7 @@
 import { UiValue, uiMessage, uiTemplate, uiError, useUiMessages } from "../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { getOwnerBookingQrPayload, getOwnerBookingQrPngBlob } from "../api/internal"
+import { stageLinkPolicy } from "../staging/stageLinkRuntime.js"
 
 function normalizeOwnerType(ownerType) {
   const value = String(ownerType || "").trim().toLowerCase()
@@ -150,6 +151,16 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
       }
 
       const nextPayload = payloadResult.payload || null
+      if (stageLinkPolicy.strict) {
+        const bookingTarget = String(nextPayload?.booking_url || nextPayload?.qr_target_url || "").trim()
+        const qrTarget = String(nextPayload?.qr_target_url || "").trim()
+        if (!stageLinkPolicy.safe(bookingTarget, "booking") ||
+            (qrTarget && stageLinkPolicy.safe(qrTarget, "booking") !== bookingTarget)) {
+          setPayloadError("STAGING_BOOKING_QR_TARGET_REJECTED")
+          setLoading(false)
+          return // Never expose an unverified QR image from a response.
+        }
+      }
       setPayload(nextPayload)
 
       if (pngResult?.ok && pngResult.blob) {
@@ -173,7 +184,7 @@ export default function OwnerBookingQrCard({ ownerType, slug, title, subtitle })
     }
   }, [safeOwnerType, safeSlug])
 
-  const bookingUrl = String(payload?.booking_url || payload?.qr_target_url || "").trim()
+  const bookingUrl = stageLinkPolicy.safe(payload?.booking_url || payload?.qr_target_url || "", "booking")
   const qrAlt = title ? uiMessage("salon.s1198", {p0: title}) : uiMessage("salon.s1199")
 
   async function copyBookingLink() {

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getClientNotifications, markClientNotificationRead } from "../api/client.js";
 import { postMobileEvent } from "../api/publicApi.js";
+import { stageLinkPolicy } from "../staging/stageLinkRuntime.js";
 import ClientPushOptInCard from "../components/ClientPushOptInCard.jsx";
 import {
   clientCabinetLabels, isUsClientDashboard, formatClientBookingTime,
@@ -541,7 +542,7 @@ export default function ClientCabinetPage() {
             {notificationItems.map((notification) => {
               const notificationUid = getNotificationUid(notification);
               const isRead = Boolean(notification?.read_at || notification?.is_read);
-              const actionUrl = String(notification?.action_url || "").trim();
+              const actionUrl = stageLinkPolicy.safe(notification?.action_url || "", "action");
               const hasAction = Boolean(actionUrl);
               const isExternal = /^https?:\/\//i.test(actionUrl);
 
