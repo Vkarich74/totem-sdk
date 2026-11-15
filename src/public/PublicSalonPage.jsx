@@ -6,6 +6,7 @@ import { getSalonTemplatePublished } from "../api/internal";
 import { setMeta, setCanonical, setJSONLD } from "../api/seo";
 import Skeleton from "../layout/Skeleton";
 import { buildSalonTemplateViewModel } from "../utils/buildViewModel";
+import { buildUsSalonBookingUrl } from "../us/usBookingNavigation.js";
 
 function pickFirstString(...values) {
   for (const value of values) {
@@ -714,6 +715,13 @@ export default function PublicSalonPage({ slug }) {
   };
 
   function goToBooking() {
+    // US is an additive market in the shared SDK, not a separate app.
+    // Only US changes its booking destination; KG/KZ retain the legacy route.
+    if (String(salon?.market_code || "").trim().toUpperCase() === "US") {
+      const target = buildUsSalonBookingUrl({ salonSlug: resolvedSlug, bookingUrl });
+      if (target) window.location.assign(target);
+      return; // Reject untrusted or malformed US template destinations.
+    }
     if (/^https?:\/\//i.test(bookingUrl)) {
       window.location.href = bookingUrl;
       return;
