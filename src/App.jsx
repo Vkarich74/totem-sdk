@@ -5,6 +5,7 @@ import { MarketContextProvider, useMarketContext } from "./market/MarketContext.
 import LanguageSelector from "./i18n/LanguageSelector.jsx";
 
 import PublicSalonPage from "./public/PublicSalonPage";
+import { shouldUseStageBookingHash } from "./staging/stageSalonBookingRoute.js";
 import PublicMasterPage from "./public/PublicMasterPage";
 import MobileHomePage from "./public/MobileHomePage.jsx";
 import MobileLiteAdminPage from "./mobile/MobileLiteAdminPage.jsx";
@@ -291,6 +292,12 @@ function CanonicalPublicRedirect({ type, slug }) {
 function getPublicRouteFromPathname() {
   const pathParts = getPathParts();
   const hashParts = getHashParts();
+
+  // Strict Staging: when a public salon/master opened booking via HashRouter,
+  // prefer the booking screen over the original public pathname.
+  if (shouldUseStageBookingHash(pathParts, hashParts, import.meta.env.VITE_STAGE_STRICT === "1")) {
+    return { type: "booking", source: "staging-public-hash" };
+  }
 
   if (pathParts[0] === "m") {
     if (pathParts[1] === "booking") {

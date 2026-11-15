@@ -7,6 +7,7 @@ import { setMeta, setCanonical, setJSONLD } from "../api/seo";
 import Skeleton from "../layout/Skeleton";
 import { buildSalonTemplateViewModel } from "../utils/buildViewModel";
 import { stageLinkPolicy } from "../staging/stageLinkRuntime.js";
+import { buildStageSalonBookingRoute } from "../staging/stageSalonBookingRoute.js";
 
 function pickFirstString(...values) {
   for (const value of values) {
@@ -715,7 +716,13 @@ export default function PublicSalonPage({ slug }) {
   };
 
   function goToBooking() {
-    if (stageLinkPolicy.strict && !bookingUrl) return; // unsafe remote CTA
+    if (stageLinkPolicy.strict) {
+      // Stage navigation must carry the visible salon slug into the booking
+      // selector and stay within the approved SPA route, never a remote URL.
+      const bookingRoute = buildStageSalonBookingRoute(bookingUrl, resolvedSlug, stageLinkPolicy);
+      if (bookingRoute) navigate(bookingRoute);
+      return;
+    }
     if (/^https?:\/\//i.test(bookingUrl)) {
       window.location.href = bookingUrl;
       return;
