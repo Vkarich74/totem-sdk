@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
+import UsSalonLocationsEditor from "./UsSalonLocationsEditor.jsx"
 import {
   createSalonOwnerQrDestination,
   deactivateSalonOwnerQrDestination,
@@ -749,6 +750,9 @@ export default function SettingsPage() {
             />
           </div>
         </Block>
+
+        {/* US-05: only US owners see the editor; KG/KZ GET returns 404 and hides it. */}
+        <UsSalonLocationsEditor slug={slug} canWrite={canWrite} />
 
         <OwnerQrDestinationEditor
           slug={slug}
