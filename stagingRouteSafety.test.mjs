@@ -22,6 +22,48 @@ test("staging_requires_api_origin",()=>{
     mode:"staging",env:{...ok,VITE_API_BASE:""},
   }),/STAGING_API_URL_REQUIRED/);
 });
+test("real_isolated_railway_https_origins_are_accepted",()=>{
+  const data={...ok,
+    VITE_API_BASE:"https://totem-us-staging-api-staging.up.railway.app",
+    VITE_STAGE_APP_ORIGIN:"https://totem-us-staging-sdk-staging.up.railway.app",
+    VITE_STAGE_PUBLIC_ORIGIN:"https://totem-us-staging-sdk-staging.up.railway.app",
+  };
+  assert.doesNotThrow(()=>createStagingRouteSafety({
+    mode:"staging",env:data,
+  }));
+  assert.equal(checkStagingOrigin(
+    data.VITE_API_BASE,"API"),
+    data.VITE_API_BASE);
+});
+test("all_other_railway_hosts_refused",()=>{
+  for(const host of [
+    "totem-p0-api-production.up.railway.app",
+    "totem-admin-production.up.railway.app",
+    "rogue-staging.up.railway.app",
+    "totem-us-staging-api-staging.up.railway.app.evil.test",
+  ]){
+    assert.throws(()=>checkStagingOrigin("https://"+host,"API"),
+      /STAGING_API_ORIGIN_REJECTED/);
+  }
+});
+test("fake_production_domains_with_suffixes_are_rejected",()=>{
+  for (const host of [
+    "api.totemv.com.evil.test",
+    "app.totemv.com.evil.test",
+    "totemv.com.evil.test",
+    "honey.totemv.com.evil.test",
+    "totem-us-staging-api-staging.up.railway.app.evil.test",
+  ]) {
+    assert.throws(()=>checkStagingOrigin("https://"+host,"API"),
+      /STAGING_API_ORIGIN_REJECTED/);
+  }
+});
+test("production_railway_is_not_a_staging_fallback",()=>{
+  assert.throws(()=>createStagingRouteSafety({
+    mode:"staging",env:{...ok,
+      VITE_STAGE_APP_ORIGIN:"https://totem-admin-production.up.railway.app"},
+  }),/STAGING_APP_ORIGIN_REJECTED/);
+});
 test("staging_rejects_production_api",()=>{
   assert.throws(()=>createStagingRouteSafety({
     mode:"staging",env:{...ok,VITE_API_BASE:"https://api.totemv.com"},

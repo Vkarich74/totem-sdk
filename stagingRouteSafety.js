@@ -34,12 +34,22 @@ export function checkStagingOrigin(value, purpose) {
   let url;
   try { url = new URL(input); }
   catch { throw new Error("STAGING_" + purpose + "_URL_INVALID"); }
-  const localhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  const hostname = url.hostname.toLowerCase();
+  const localhost = hostname === "localhost" || hostname === "127.0.0.1";
+  const forbiddenProductionLike = STAGING_FORBIDDEN_HOSTS.some(
+    host => hostname === host || hostname.startsWith(host + ".")
+  );
   if ((url.protocol !== "https:" && !(url.protocol === "http:" && localhost)) ||
       url.username || url.password || url.search || url.hash ||
       url.pathname !== "/" || !url.hostname ||
-      STAGING_FORBIDDEN_HOSTS.includes(url.hostname.toLowerCase()) ||
-      /^(.+\.)?(?:railway\.app|cloudflare\.com|odoo\.com)$/i.test(url.hostname)) {
+      forbiddenProductionLike ||
+      (
+        // Reject all other Railway hosts AND .railway.app.evil lookalikes.
+        /railway\.app/i.test(hostname) &&
+        !/^totem-us-staging-(?:api|sdk)-staging\.up\.railway\.app$/i
+          .test(hostname)
+      ) ||
+      /^(.+\.)?(?:cloudflare\.com|odoo\.com)$/i.test(url.hostname)) {
     throw new Error("STAGING_" + purpose + "_ORIGIN_REJECTED");
   }
   return url.origin;
