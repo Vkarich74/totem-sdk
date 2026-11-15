@@ -12,6 +12,17 @@ export default defineConfig(({ mode }) => {
     // Never copy public/assets/index.js or old service-worker JS into staging.
     // Normal Production build retains its original publicDir behavior.
     ...(routeSafety ? { publicDir: false } : {}),
+    // Railway's own deploy healthcheck has Host: healthcheck.railway.app.
+    // Vite preview responds 403 unless it is explicitly allowed.
+    // Strict ONLY for stage; no broad .railway.app wildcard or Production.
+    ...(routeSafety ? {
+      preview: {
+        allowedHosts: [
+          "healthcheck.railway.app",
+          new URL(env.VITE_STAGE_APP_ORIGIN).hostname,
+        ],
+      },
+    } : {}),
     build: {
       outDir: "dist",
       assetsDir: "assets",
