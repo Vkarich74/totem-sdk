@@ -52,6 +52,18 @@ function stringifyValue(value){
   }
 }
 
+const OPEN_OWNER_PHONE_MESSAGES = Object.freeze({
+  PHONE_REQUIRED: "Укажите контактный телефон",
+  PHONE_INVALID_FORMAT: "Неверный телефон: укажите действительный номер с кодом страны",
+  PHONE_COUNTRY_CODE_REQUIRED: "Укажите код страны телефона, например +7 или +996",
+})
+
+function renderOpenOwnerErrors(errors){
+  if(!Array.isArray(errors)) return stringifyValue(errors)
+  if(!errors.length) return "-"
+  return errors.map(code => OPEN_OWNER_PHONE_MESSAGES[String(code)] || String(code)).join("; ")
+}
+
 function buildDefaultForm(){
   return {
     owner_type: "salon",
@@ -515,9 +527,12 @@ export default function AdminOpenOwnerPage(){
             <label style={styles.label}>
               Телефон
               <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 value={form.phone}
                 onChange={(event) => updateFormField("phone", event.target.value)}
-                placeholder="+996555123456"
+                placeholder="+7 925 608 20 00 / +996 555 123 456"
                 style={styles.input}
               />
             </label>
@@ -609,7 +624,7 @@ export default function AdminOpenOwnerPage(){
             <div style={styles.resultBox}>
               <h3 style={styles.smallTitle}>Результат проверки</h3>
               <div><strong>Действителен:</strong> {String(Boolean(precheckResult.valid))}</div>
-              <div><strong>Ошибки:</strong> {stringifyValue(precheckResult.errors || [])}</div>
+              <div><strong>Ошибки:</strong> {renderOpenOwnerErrors(precheckResult.errors || [])}</div>
               <div><strong>Нормализовано:</strong> {stringifyValue(precheckResult.normalized)}</div>
             </div>
           ) : null}
