@@ -55,6 +55,38 @@ export function normalizeUsPayC11Response(payload, bookingId) {
     }
   }
 
+  // TAX-06: total is valid only if the signed-off server's immutable US
+  // tax snapshot matches the original service base and exact half-up cents.
+  // Never create a total from legacy price_snapshot or browser-only math.
+  let breakdown = null;
+  const serverTax = payload.service_tax;
+  const serverTotal = payload.charge_total_minor;
+  if (price &&
+      serverTax?.source === "us_booking_service_tax_snapshots" &&
+      payload.total_source === "us_booking_service_tax_snapshots" &&
+      serverTax.currency_code === "USD" &&
+      Number.isSafeInteger(serverTax.rate_bps) &&
+      serverTax.rate_bps >= 0 && serverTax.rate_bps <= 10000 &&
+      typeof serverTax.amount_minor === "string" &&
+      /^\d+$/.test(serverTax.amount_minor) &&
+      typeof serverTotal === "string" &&
+      /^[1-9]\d*$/.test(serverTotal)) {
+    const base=BigInt(price.amount_minor);
+    const tax=BigInt(serverTax.amount_minor);
+    const total=BigInt(serverTotal);
+    const exact=(base*BigInt(serverTax.rate_bps)+5000n)/10000n;
+    if(total<=MAX_US_CENTS && tax===exact && total===base+tax) {
+      breakdown=Object.freeze({
+        service_base_minor:base.toString(),
+        service_tax_minor:tax.toString(),
+        charge_total_minor:total.toString(),
+        rate_bps:serverTax.rate_bps,
+        currency_code:"USD",
+        source:"us_booking_service_tax_snapshots",
+      });
+    }
+  }
+
   let collector = null;
   const rawCollector = payload.collector;
   if (rawCollector?.verified === true &&
@@ -73,7 +105,9 @@ export function normalizeUsPayC11Response(payload, bookingId) {
   const provider = payload.payment?.provider;
   // A non-Stripe/legacy status cannot ever assert "paid" for a US booking.
   const safePaymentStatus = PAYMENT_STATUSES.has(paymentStatus) &&
-    (provider === "stripe" || (provider === null && paymentStatus === "requires_review"))
+    (provider === "stripe" || (provider === null && paymentStatus === "requires_review")) &&
+    // Without a verified gross, a LIVE signed paid status is not displayable.
+    (breakdown || paymentStatus !== "paid")
     ? paymentStatus : "requires_review";
 
   return Object.freeze({
@@ -84,6 +118,13 @@ export function normalizeUsPayC11Response(payload, bookingId) {
     currency_code: "USD",
     booking_status: bookingStatus,
     price,
+    service_tax: breakdown ? Object.freeze({
+      rate_bps: breakdown.rate_bps,
+      amount_minor: breakdown.service_tax_minor,
+      currency_code: "USD",
+    }) : null,
+    charge_total_minor: breakdown?.charge_total_minor ?? null,
+    breakdown,
     collector,
     payment: Object.freeze({
       service_payment_status: safePaymentStatus,
@@ -94,17 +135,23 @@ export function normalizeUsPayC11Response(payload, bookingId) {
 }
 
 export function getUsPayC11Detail(booking) {
-  if (!isUsPayC11Booking(booking)) return null;
+  if (!isUsPayC11Booking(booking) || booking?.currency_code!=="USD") return null;
   return normalizeUsPayC11Response(booking?.us_pay_c11, booking?.id);
 }
 
+export function formatUsPayC11Cents(raw) {
+  if(typeof raw!=="string" || !/^\d+$/.test(raw) ||
+     BigInt(raw)>MAX_US_CENTS) return null;
+  const cents=BigInt(raw);
+  return "$"+(cents/100n).toLocaleString("en-US")+"."+
+    String(cents%100n).padStart(2,"0");
+}
+
 export function formatUsPayC11Amount(booking) {
-  const price = getUsPayC11Detail(booking)?.price;
-  if (!price) return "Price unavailable";
-  const cents = BigInt(price.amount_minor);
-  const dollars = (cents / 100n).toLocaleString("en-US");
-  const fractional = String(cents % 100n).padStart(2, "0");
-  return `$${dollars}.${fractional}`;
+  const detail=getUsPayC11Detail(booking);
+  if(!detail?.price)return "Price unavailable";
+  if(!detail.breakdown)return "Total unavailable";
+  return formatUsPayC11Cents(detail.breakdown.charge_total_minor);
 }
 
 export function formatUsPayC11Status(booking) {

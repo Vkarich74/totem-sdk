@@ -7,6 +7,7 @@ import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import UsPayC11LiveConnectCard from "../../us/UsPayC11LiveConnectCard.jsx"
+import UsServiceTaxSettingsCard from "../../usTax/UsServiceTaxSettingsCard.jsx"
 import {
   createMasterOwnerQrDestination,
   deactivateMasterOwnerQrDestination,
@@ -707,6 +708,14 @@ export default function MasterSettingsPage() {
           ownerType="master"
           ownerId={master?.id}
           isUsMarket={marketContext?.market_code === "US"}
+        />
+
+        {/* TAX-06: this master's US service tax is independent of the salon. */}
+        <UsServiceTaxSettingsCard
+          ownerType="master"
+          ownerSlug={slug}
+          isUsMarket={marketContext?.market_code === "US"}
+          canWrite={canWrite}
         />
 
         <OwnerQrDestinationEditor

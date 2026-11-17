@@ -10,9 +10,20 @@ import {
 const checks=[];
 function check(name,fn){fn();checks.push(name);console.log("US06_CABINET_UNIT_PASS",name)}
 const ny={
+  id:500,
   market_code:"US",currency_code:"USD",booking_timezone:"America/New_York",
   start_at:"2027-01-18T16:00:00.000Z",price_snapshot:125,
   status:"reserved",payment_status:null,payment_provider:null,
+  us_pay_c11:{
+    ok:true,contract_version:"US-PAY-C11-read-v1",
+    booking_id:500,market_code:"US",currency_code:"USD",
+    booking_status:"reserved",payment_ready:false,
+    price:{amount_minor:"12500",currency_code:"USD",source:"us_booking_price_snapshots"},
+    service_tax:{rate_bps:0,amount_minor:"0",currency_code:"USD",source:"us_booking_service_tax_snapshots"},
+    charge_total_minor:"12500",total_source:"us_booking_service_tax_snapshots",
+    collector:{owner_type:"salon",display_name:"US SALON",verified:true},
+    payment:{service_payment_status:"requires_review",provider:null},
+  },
 };
 const legacy={
   market_code:"KG",currency_code:"KGS",start_at:"2027-01-18T16:00:00.000Z",
@@ -35,15 +46,19 @@ check("US_BOOKING_ONLY_COMPATIBLE_BACKEND_FALLBACK",()=>{
  assert.equal(isUsClientDashboard({bookings:[ny,legacy]}),false);
  assert.equal(isUsClientDashboard({bookings:[]}),false);
 });
-check("USD_EXPLICIT_PRICE",()=>{
+check("USD_VERIFIED_IMMUTABLE_GROSS_NOT_LEGACY_CATALOG_PRICE",()=>{
  assert.equal(formatClientBookingMoney(ny),"$125.00");
- assert.equal(formatClientBookingMoney({...ny,price_snapshot:0}),"$0.00");
- assert.equal(formatClientBookingMoney({...ny,price_snapshot:"145.9"}),"$145.90");
+ assert.equal(formatClientBookingMoney({...ny,price_snapshot:0}),"$125.00");
+ assert.equal(formatClientBookingMoney({...ny,price_snapshot:"145.9"}),"$125.00");
+ assert.equal(formatClientBookingMoney({...ny,us_pay_c11:null}),"Price unavailable");
 });
 check("US_CANNOT_ACCIDENTALLY_DISPLAY_KGS_OR_MISSING_AS_USD",()=>{
  assert.equal(formatClientBookingMoney({...ny,currency_code:"KGS"}),"Price unavailable");
  assert.equal(formatClientBookingMoney({...ny,currency_code:null}),"Price unavailable");
- assert.equal(formatClientBookingMoney({...ny,price_snapshot:null}),"Price unavailable");
+ assert.equal(formatClientBookingMoney({...ny,price_snapshot:null}),"$125.00");
+ assert.equal(formatClientBookingMoney({
+   ...ny,us_pay_c11:{...ny.us_pay_c11,service_tax:null},
+ }),"Total unavailable");
 });
 check("LEGACY_KG_MONEY_PRESERVED",()=>{
  assert.equal(formatClientBookingMoney(legacy),"1 200 сом".replace(" ","\u00a0").replace(/^1\u00a0200/, (1200).toLocaleString("ru-RU")));
@@ -78,18 +93,21 @@ check("US_MISSING_BRANCH_TZ_FAILS_CLOSED",()=>{
 check("US_INVALID_INSTANT_FAILS_CLOSED",()=>{
  assert.equal(formatClientBookingTime({...ny,start_at:"invalid"}),"Time unavailable");
 });
-check("STATUS_US_EN_LEGACY_RU",()=>{
+check("STATUS_US_SERVER_IS_AUTHORITATIVE_LEGACY_RU",()=>{
  assert.equal(clientBookingStatusLabel(ny),"Reserved");
- assert.equal(clientBookingStatusLabel({...ny,status:"confirmed"}),"Confirmed");
+ assert.equal(clientBookingStatusLabel({...ny,status:"confirmed"}),"Reserved");
+ assert.equal(clientBookingStatusLabel({...ny,us_pay_c11:{
+   ...ny.us_pay_c11,booking_status:"confirmed",
+ }}),"Confirmed");
  assert.equal(clientBookingStatusLabel(legacy),"Забронировано");
 });
-check("PAYMENT_US_EN_LEGACY_RU",()=>{
- assert.equal(clientBookingPaymentLabel({...ny,payment_provider:"direct",payment_status:"pending"}),"Payment pending at salon");
- assert.equal(clientBookingPaymentLabel({...ny,payment_status:"refunded"}),"Payment refunded");
+check("PAYMENT_US_VERIFIED_ONLY_LEGACY_KG_UNCHANGED",()=>{
+ assert.equal(clientBookingPaymentLabel({...ny,payment_provider:"direct",payment_status:"pending"}),"Payment status unavailable");
+ assert.equal(clientBookingPaymentLabel({...ny,payment_status:"refunded"}),"Payment status unavailable");
  assert.equal(clientBookingPaymentLabel(legacy),"Наличные ожидают подтверждения");
 });
 check("US_IGNORES_RUSSIAN_LEGACY_PAYMENT_LABEL",()=>{
- assert.equal(clientBookingPaymentLabel({...ny,payment_label_ru:"Ожидаем оплату XPAY"}),"Payment not selected");
+ assert.equal(clientBookingPaymentLabel({...ny,payment_label_ru:"Ожидаем оплату XPAY"}),"Payment status unavailable");
 });
 check("PAGE_COPY_EN_RU_PARITY_AND_NO_RUBLES",()=>{
  assert.equal(CLIENT_CABINET_EN.title,"Client dashboard");

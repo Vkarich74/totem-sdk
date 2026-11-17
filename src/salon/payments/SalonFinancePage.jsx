@@ -2,6 +2,8 @@ import { UiValue, uiMessage, uiMoney, uiDate, uiJoin, uiTemplate, uiError, useUi
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonContext"
+import { useMarketContext } from "../../market/MarketContext.jsx"
+import UsServiceTaxReportCard from "../../usTax/UsServiceTaxReportCard.jsx"
 import { createSalonWithdrawDestination, getMoneyCoreDestinationProviders, getMoneyCoreFlags, getSalonContracts, getSalonLostProfit, getSalonMetrics, getSalonMoneyCoreSummary, getSalonOwnerQrDestinations, getSalonPaymentProjections, getSalonPayouts, getSalonSettlements, getSalonSplitAllocations, getSalonWalletBalance, getSalonWithdrawDestinations, getSalonWithdrawRequests, getSalonWithdrawSettings } from "../../api/internal"
 
 function money(value, currency) { return uiMoney(value, currency); }
@@ -553,7 +555,9 @@ export default function SalonFinancePage(){
   const { slug: routeSlug } = useParams()
   const slug = resolveSalonSlug(routeSlug)
 
+  const { context: marketContext } = useMarketContext()
   const {
+    identity,
     billingAccess,
     canWrite,
     canWithdraw,
@@ -1023,6 +1027,14 @@ export default function SalonFinancePage(){
           <h1 style={styles.pageTitle}><UiValue value={uiMessage("salon.s0908")} /></h1>
           <p style={styles.pageSubtitle}><UiValue value={uiMessage("salon.s0909")} /></p>
         </header>
+
+        {/* TAX-07: separate signed US service-tax reconciliation.
+            Do not mix the USA service tax into the KG/KZ wallet metrics. */}
+        <UsServiceTaxReportCard
+          ownerType="salon"
+          ownerId={identity?.id}
+          isUsMarket={marketContext?.market_code === "US"}
+        />
 
         <section
           style={{

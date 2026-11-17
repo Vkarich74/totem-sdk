@@ -6,6 +6,7 @@ import { getClientNotifications, markClientNotificationRead } from "../api/clien
 import { postMobileEvent } from "../api/publicApi.js";
 import { fetchUsPayC11Details } from "./usPayC11Client.js";
 import UsPayC11LivePaymentCard from "./UsPayC11LivePaymentCard.jsx";
+import UsServiceTaxBreakdown from "./UsServiceTaxBreakdown.jsx";
 import { isUsPayC11Booking } from "./usPayC11Model.js";
 import ClientPushOptInCard from "../components/ClientPushOptInCard.jsx";
 import {
@@ -669,6 +670,10 @@ export default function ClientCabinetPage() {
               ) : null}
             </div>
 
+            {isUsPayC11Booking(latestBooking) ? (
+              <UsServiceTaxBreakdown booking={latestBooking} />
+            ) : null}
+
             <div style={styles.bookingDetails}>
               <span>{copy.master}: {latestBooking.master_name || "—"}</span>
               <span>{copy.salon}: {latestBooking.salon_name || latestBooking.salon_slug || "—"}</span>
@@ -705,6 +710,9 @@ export default function ClientCabinetPage() {
                   <p style={styles.muted}>
                     {booking.master_name || copy.master} · {booking.salon_name || booking.salon_slug || copy.salon}
                   </p>
+                  {isUsPayC11Booking(booking) ? (
+                    <UsServiceTaxBreakdown booking={booking} compact />
+                  ) : null}
                 </div>
 
                 <div style={getHistoryRightStyle(isMobile)}>

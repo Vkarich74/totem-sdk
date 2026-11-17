@@ -7,6 +7,7 @@ import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import UsSalonLocationsEditor from "./UsSalonLocationsEditor.jsx"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import UsPayC11LiveConnectCard from "../../us/UsPayC11LiveConnectCard.jsx"
+import UsServiceTaxSettingsCard from "../../usTax/UsServiceTaxSettingsCard.jsx"
 import {
   createSalonOwnerQrDestination,
   deactivateSalonOwnerQrDestination,
@@ -760,6 +761,15 @@ export default function SettingsPage() {
           ownerType="salon"
           ownerId={identity?.id}
           isUsMarket={marketContext?.market_code === "US"}
+        />
+
+        {/* TAX-06: separate owner setting, services only, US market only.
+            Requires the real server TAX-02 contract; never caches a fake rate. */}
+        <UsServiceTaxSettingsCard
+          ownerType="salon"
+          ownerSlug={slug}
+          isUsMarket={marketContext?.market_code === "US"}
+          canWrite={canWrite}
         />
 
         {/* US-05: only US owners see the editor; KG/KZ GET returns 404 and hides it. */}
