@@ -2,6 +2,8 @@ import { UiValue, uiMessage, uiMoney, uiDate, uiJoin, uiTemplate, uiConcat, uiEr
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMaster } from "../MasterContext";
+import { useMarketContext } from "../../market/MarketContext.jsx";
+import UsServiceTaxReportCard from "../../usTax/UsServiceTaxReportCard.jsx";
 
 import {
   getMoneyCoreDestinationProviders,
@@ -763,6 +765,7 @@ function FinanceNav({ masterSlug, active }) {
 
 export default function MasterFinancePage() {
   const { renderUi } = useUiMessages();
+  const { context: marketContext } = useMarketContext();
   const { master, slug: contextSlug } = useMaster() || {};
   const masterSlug = master?.slug || contextSlug || null;
 
@@ -1466,6 +1469,13 @@ export default function MasterFinancePage() {
         </header>
 
         {masterSlug ? <FinanceNav masterSlug={masterSlug} active="finance" /> : null}
+
+        {/* TAX-07: the master's US service tax is separate from salon and KGS. */}
+        <UsServiceTaxReportCard
+          ownerType="master"
+          ownerId={master?.id}
+          isUsMarket={marketContext?.market_code === "US"}
+        />
 
         {loading ? <div style={styles.loadingCard}><UiValue value={uiMessage("master.s0671")} /></div> : null}
 
