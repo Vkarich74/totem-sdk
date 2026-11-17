@@ -3,6 +3,7 @@
 // No write endpoints, no payment initiation and no financial guessing.
 import { useEffect,useState } from "react";
 import { useMarketContext } from "../market/MarketContext.jsx";
+import { getAuthAccessToken } from "../api/internal.js";
 import {
   fetchUsServiceTaxReport,formatUsTaxReportMoney,
 } from "./usServiceTaxReportClient.js";
@@ -104,6 +105,7 @@ export default function UsServiceTaxReportCard({
   const {locale}=useMarketContext();
   const c=locale?.toLowerCase().startsWith("ru")?RU:EN;
   const id=Number(ownerId);
+  const token=getAuthAccessToken();
   const eligible=isUsMarket && ["salon","master"].includes(ownerType) &&
     Number.isSafeInteger(id) && id>0;
   const [state,setState]=useState({
@@ -119,7 +121,7 @@ export default function UsServiceTaxReportCard({
     const controller=new AbortController();
     setState({loading:true,report:null,error:false});
     fetchUsServiceTaxReport({
-      ownerType,ownerId:id,signal:controller.signal,
+      ownerType,ownerId:id,token,signal:controller.signal,
     }).then(report=>{
       if(live)setState({loading:false,report,error:false});
     }).catch(()=>{
@@ -128,7 +130,7 @@ export default function UsServiceTaxReportCard({
       }
     });
     return()=>{live=false;controller.abort();};
-  },[eligible,ownerType,id,reload]);
+  },[eligible,ownerType,id,token,reload]);
   if(!isUsMarket)return null;
   const {report,loading,error}=state;
   const totals=report?.totals;
