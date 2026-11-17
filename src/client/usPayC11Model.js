@@ -125,6 +125,7 @@ export function formatUsPayC11PaymentStatus(booking) {
     unpaid: "Payment not received",
     awaiting_payment: "Awaiting payment",
     paid: "Payment received",
+    partially_refunded: "Payment partially refunded",
     refunded: "Payment refunded",
     disputed: "Payment disputed",
   };
