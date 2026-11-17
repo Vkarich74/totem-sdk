@@ -1,6 +1,6 @@
 // TOTEM USA / TAX-07 — read-only, owner-scoped signed service tax report.
 // Not a tax return, remittance statement or Stripe payout statement.
-import { getAuthAccessToken } from "../api/internal.js";
+// Caller supplies the existing authentication token; no browser module dependencies.
 const MAX_BOOKINGS=500;
 const COLUMNS=[
   "quoted_service_base_minor","quoted_service_tax_minor","quoted_gross_minor",
@@ -108,7 +108,7 @@ export function normalizeUsServiceTaxReport(body,ownerType,ownerId){
 
 export async function fetchUsServiceTaxReport({
   ownerType,ownerId,apiBase,fetchImpl=globalThis.fetch,
-  token=getAuthAccessToken(),signal,
+  token,signal,
 }={}){
   const id=Number(ownerId);
   if(!["salon","master"].includes(ownerType) ||
