@@ -11,6 +11,9 @@ on:
       - src/client/clientCabinetPresentation.js
       - src/client/ClientCabinetPage.jsx
       - src/us/UsBookingPage.jsx
+      - src/salon/usPayC11OwnerApi.js
+      - src/salon/components/UsPayC11CollectorCard.jsx
+      - src/salon/pages/BookingsPage.jsx
       - .github/workflows/us-pay-c11-sdk.yml
   workflow_dispatch:
 
