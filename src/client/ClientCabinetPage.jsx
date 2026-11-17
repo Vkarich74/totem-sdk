@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getClientNotifications, markClientNotificationRead } from "../api/client.js";
 import { postMobileEvent } from "../api/publicApi.js";
+import { fetchUsPayC11Details } from "./usPayC11Client.js";
+import { isUsPayC11Booking } from "./usPayC11Model.js";
 import ClientPushOptInCard from "../components/ClientPushOptInCard.jsx";
 import {
   clientCabinetLabels, isUsClientDashboard, formatClientBookingTime,
   formatClientBookingMoney, clientBookingStatusLabel,
-  clientBookingPaymentLabel,
+  clientBookingPaymentLabel, clientBookingRecipientLabel,
 } from "./clientCabinetPresentation.js";
 
 const API_BASE = (
@@ -175,6 +177,9 @@ export default function ClientCabinetPage() {
   const { clientId, token } = useParams();
 
   const [data, setData] = useState(null);
+  const [usPayRead, setUsPayRead] = useState({
+    scope: "", loading: false, byId: Object.create(null),
+  });
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
@@ -205,7 +210,16 @@ export default function ClientCabinetPage() {
     open: usClient ? copy.notificationsOpen : t("notifications.open"),
   };
   const bookings = useMemo(() => getSafeBookingList(data), [data]);
-  const latestBooking = useMemo(() => getLatestBooking(data), [data]);
+  const usPayScope = `${clientId || ""}:${token || ""}`;
+  const presentedBookings = useMemo(() => bookings.map(booking => {
+    if (!isUsPayC11Booking(booking)) return booking;
+    const details = usPayRead.scope === usPayScope
+      ? usPayRead.byId[String(booking.id)] || null : null;
+    return { ...booking, us_pay_c11: details };
+  }), [bookings, usPayRead, usPayScope]);
+  const latestBooking = useMemo(() => getLatestBooking({
+    bookings: presentedBookings,
+  }), [presentedBookings]);
   const notificationItems = useMemo(() => getSafeNotificationList(notifications), [notifications]);
 
   const personalLink = data?.personal_link || `#/client/${clientId}/${token}`;
@@ -270,6 +284,36 @@ export default function ClientCabinetPage() {
     loadClientCabinet();
     loadClientNotifications();
   }, [clientId, token]);
+
+  // Only US appointments require this extra authoritative, read-only request.
+  // A missing/failed response means unavailable, never a legacy KGS/USD fallback.
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    const hasUsBookings = bookings.some(isUsPayC11Booking);
+    setUsPayRead({
+      scope: usPayScope,
+      loading: Boolean(clientId && token && hasUsBookings),
+      byId: Object.create(null),
+    });
+
+    if (clientId && token && hasUsBookings) {
+      fetchUsPayC11Details({
+        apiBase: API_BASE, clientId, token, bookings,
+        signal: controller.signal,
+      }).then(byId => {
+        if (active) setUsPayRead({ scope: usPayScope, loading: false, byId });
+      }).catch(() => {
+        if (active) setUsPayRead({
+          scope: usPayScope, loading: false, byId: Object.create(null),
+        });
+      });
+    }
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [clientId, token, bookings, usPayScope]);
 
   useEffect(() => {
     function handleResize() {
@@ -600,6 +644,11 @@ export default function ClientCabinetPage() {
 
       <section style={getCardStyle(isMobile)}>
         <h2 style={styles.sectionTitle}>{copy.currentBooking}</h2>
+        {usPayRead.scope === usPayScope && usPayRead.loading ? (
+          <p role="status" style={styles.muted}>
+            Verifying USD amount, appointment status and payment recipient…
+          </p>
+        ) : null}
 
         {latestBooking ? (
           <div style={styles.bookingCard}>
@@ -611,6 +660,12 @@ export default function ClientCabinetPage() {
             <div style={styles.bookingMeta}>
               <span style={styles.badge}>{clientBookingStatusLabel(latestBooking)}</span>
               <span>{formatClientBookingMoney(latestBooking)}</span>
+              {isUsPayC11Booking(latestBooking) ? (
+                <>
+                  <span style={styles.paymentBadge}>{clientBookingPaymentLabel(latestBooking)}</span>
+                  <span>{clientBookingRecipientLabel(latestBooking)}</span>
+                </>
+              ) : null}
             </div>
 
             <div style={styles.bookingDetails}>
@@ -632,7 +687,7 @@ export default function ClientCabinetPage() {
 
         {bookings.length ? (
           <div style={styles.list}>
-            {bookings.map((booking) => (
+            {presentedBookings.map((booking) => (
               <div key={booking.id} style={getHistoryRowStyle(isMobile)}>
                 <div>
                   <strong>{booking.service_name || copy.service}</strong>
@@ -646,6 +701,9 @@ export default function ClientCabinetPage() {
                   <span style={styles.badge}>{clientBookingStatusLabel(booking)}</span>
                   <span style={styles.paymentBadge}>{clientBookingPaymentLabel(booking)}</span>
                   <span>{formatClientBookingMoney(booking)}</span>
+                  {isUsPayC11Booking(booking) ? (
+                    <span style={styles.muted}>{clientBookingRecipientLabel(booking)}</span>
+                  ) : null}
                 </div>
               </div>
             ))}
