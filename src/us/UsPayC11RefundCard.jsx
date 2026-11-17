@@ -175,7 +175,7 @@ export default function UsPayC11RefundCard({
                 }} style={{minHeight:44,maxWidth:340}}>
                   <option value="requested_by_customer">По запросу клиента</option>
                   <option value="duplicate">Дублирование платежа</option>
-                  <option value="fraudulent">Подозрение на мошенничество</option>
+                  <option value="fraudulent">Мошенничество (Stripe может заблокировать карту)</option>
                 </select>
               </label>
               <label style={{display:"flex",gap:8,alignItems:"start"}}>
