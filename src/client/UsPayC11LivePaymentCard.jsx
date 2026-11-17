@@ -3,7 +3,7 @@
 // https://js.stripe.com/v3/. OFF until explicitly enabled at both SDK+API.
 // Never infer "paid" from browser success/redirect: signed API readback only.
 import { useEffect,useRef,useState } from "react";
-import { getUsPayC11Detail } from "./usPayC11Model.js";
+import { getUsPayC11Detail,formatUsPayC11Cents } from "./usPayC11Model.js";
 
 const URL_STRIPE_JS="https://js.stripe.com/v3/";
 const RETURN_URL="https://app.totemv.com/#/client-payment-return";
@@ -42,6 +42,7 @@ function checkSdkContract(body,bookingId,expectedMinor) {
      body.payment_ready!==false ||
      body.booking_id!==id ||
      String(body.amount_minor)!==String(expectedMinor) ||
+     body.amount_source!=="us_booking_service_tax_snapshots" ||
      !/^pk_live_[A-Za-z0-9_]+$/.test(String(body.stripe_publishable_key||"")) ||
      !/^acct_[A-Za-z0-9]{8,}$/.test(String(body.stripe_account_id||"")) ||
      !/^pi_[A-Za-z0-9_]{8,}_secret_[A-Za-z0-9_]+$/.test(
@@ -67,6 +68,9 @@ export default function UsPayC11LivePaymentCard({
   const isAvailable=import.meta.env.VITE_US_PAY_C11_LIVE_PAYMENTS_ENABLED==="true";
   const eligible=isAvailable && detail?.market_code==="US" &&
     detail?.price?.currency_code==="USD" &&
+    detail?.breakdown?.currency_code==="USD" &&
+    detail?.breakdown?.source==="us_booking_service_tax_snapshots" &&
+    typeof detail?.breakdown?.charge_total_minor==="string" &&
     detail?.collector?.verified===true &&
     ["reserved","confirmed"].includes(detail.booking_status) &&
     !["paid","partially_refunded","refunded","disputed"].includes(
@@ -133,7 +137,7 @@ export default function UsPayC11LivePaymentCard({
         throw new Error(String(body?.error||"US_C11_PAYMENT_NOT_AVAILABLE"));
       }
       const result=checkSdkContract(
-        body,bookingId,detail.price.amount_minor
+        body,bookingId,detail.breakdown.charge_total_minor
       );
       setCheckout(result);
       setPhase("mounting");
@@ -175,7 +179,7 @@ export default function UsPayC11LivePaymentCard({
       <h3 style={{margin:0,fontSize:18}}>Secure payment · Stripe</h3>
       <p style={{margin:0,fontSize:14}}>
         Total: <strong>
-          {("$"+(Number(detail.price.amount_minor)/100).toFixed(2))}
+          {formatUsPayC11Cents(detail.breakdown.charge_total_minor)}
         </strong>{" · "}Payee: {detail.collector.display_name}
       </p>
       {phase==="idle"||phase==="error" ? (
