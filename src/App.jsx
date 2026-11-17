@@ -12,6 +12,7 @@ import MobileLiteAdminPage from "./mobile/MobileLiteAdminPage.jsx";
 import MarketBookingEntry from "./room/MarketBookingEntry";
 import SalonBookingsPage from "./room/SalonBookingsPage";
 import ClientCabinetPage from "./client/ClientCabinetPage";
+import UsPayC11PaymentReturnPage from "./client/UsPayC11PaymentReturnPage.jsx";
 
 import SalonLayout from "./salon/SalonLayout";
 
@@ -681,6 +682,7 @@ function CabinetRouter() {
       <Route path="booking" element={<MarketBookingEntry />} />
       <Route path="bookings" element={<SalonBookingsPage slug={slug} />} />
       <Route path="client/:clientId/:token" element={<ClientCabinetPage />} />
+      <Route path="client-payment-return" element={<UsPayC11PaymentReturnPage />} />
       <Route path="mobile/admin/master/:slug" element={<MobileLiteAdminRoute roleType="master" />} />
       <Route path="mobile/admin/salon/:slug" element={<MobileLiteAdminRoute roleType="salon" />} />
       <Route path="mobile/admin/:roleType/:slug" element={<MobileLiteAdminDynamicRoute />} />
