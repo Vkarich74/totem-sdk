@@ -93,9 +93,12 @@ check("US_MISSING_BRANCH_TZ_FAILS_CLOSED",()=>{
 check("US_INVALID_INSTANT_FAILS_CLOSED",()=>{
  assert.equal(formatClientBookingTime({...ny,start_at:"invalid"}),"Time unavailable");
 });
-check("STATUS_US_EN_LEGACY_RU",()=>{
+check("STATUS_US_SERVER_IS_AUTHORITATIVE_LEGACY_RU",()=>{
  assert.equal(clientBookingStatusLabel(ny),"Reserved");
- assert.equal(clientBookingStatusLabel({...ny,status:"confirmed"}),"Confirmed");
+ assert.equal(clientBookingStatusLabel({...ny,status:"confirmed"}),"Reserved");
+ assert.equal(clientBookingStatusLabel({...ny,us_pay_c11:{
+   ...ny.us_pay_c11,booking_status:"confirmed",
+ }}),"Confirmed");
  assert.equal(clientBookingStatusLabel(legacy),"Забронировано");
 });
 check("PAYMENT_US_VERIFIED_ONLY_LEGACY_KG_UNCHANGED",()=>{
