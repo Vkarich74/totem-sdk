@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import { getClientNotifications, markClientNotificationRead } from "../api/client.js";
 import { postMobileEvent } from "../api/publicApi.js";
 import { fetchUsPayC11Details } from "./usPayC11Client.js";
+import UsPayC11LivePaymentCard from "./UsPayC11LivePaymentCard.jsx";
 import { isUsPayC11Booking } from "./usPayC11Model.js";
 import ClientPushOptInCard from "../components/ClientPushOptInCard.jsx";
 import {
@@ -672,6 +673,15 @@ export default function ClientCabinetPage() {
               <span>{copy.master}: {latestBooking.master_name || "—"}</span>
               <span>{copy.salon}: {latestBooking.salon_name || latestBooking.salon_slug || "—"}</span>
             </div>
+
+            {isUsPayC11Booking(latestBooking) ? (
+              <UsPayC11LivePaymentCard
+                clientId={clientId}
+                token={token}
+                booking={latestBooking}
+                onRefresh={loadClientCabinet}
+              />
+            ) : null}
 
             <button type="button" onClick={() => repeatBooking(latestBooking)} style={getActionButtonStyle(styles.secondaryButton, isMobile)}>
               {copy.repeat}
