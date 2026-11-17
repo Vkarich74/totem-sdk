@@ -23,6 +23,12 @@ const trusted = Object.freeze({
     amount_minor: "1050", currency_code: "USD",
     source: "us_booking_price_snapshots",
   },
+  service_tax: {
+    rate_bps: 0, amount_minor: "0", currency_code: "USD",
+    source: "us_booking_service_tax_snapshots",
+  },
+  charge_total_minor: "1050",
+  total_source: "us_booking_service_tax_snapshots",
   collector: {
     owner_type: "salon", display_name: "SYNTHETIC_US_A", verified: true,
   },
@@ -48,9 +54,14 @@ test("US shows verified USD cents, booking state, recipient and no false paid cl
 });
 
 test("US minimum cent is $0.01, no IEEE754 rounding", () => {
-  const payload = { ...trusted, price: { ...trusted.price, amount_minor: "1" } };
+  const payload = {
+    ...trusted,price:{...trusted.price,amount_minor:"1"},charge_total_minor:"1",
+  };
   assert.equal(formatUsPayC11Amount(us(payload)), "$0.01");
-  const more = { ...trusted, price: { ...trusted.price, amount_minor: "99999999" } };
+  const more = {
+    ...trusted,price:{...trusted.price,amount_minor:"99999999"},
+    charge_total_minor:"99999999",
+  };
   assert.equal(formatUsPayC11Amount(us(more)), "$999,999.99");
 });
 
@@ -110,6 +121,61 @@ test("US never inherits legacy payment confirmed, even if server payload is miss
     service_payment_status: "paid", provider: "xpay",
   } };
   assert.equal(clientBookingPaymentLabel(us(fakePaid)), "Payment status unavailable");
+});
+
+test("7.25% tax is displayed separately and the checkout total is $107.30",()=>{
+  const paid={...trusted,
+    price:{...trusted.price,amount_minor:"10005"},
+    service_tax:{...trusted.service_tax,rate_bps:725,amount_minor:"725"},
+    charge_total_minor:"10730",
+    payment:{service_payment_status:"paid",provider:"stripe"},
+  };
+  const detail=normalizeUsPayC11Response(paid,500);
+  assert.equal(detail.breakdown.service_base_minor,"10005");
+  assert.equal(detail.breakdown.service_tax_minor,"725");
+  assert.equal(detail.breakdown.charge_total_minor,"10730");
+  assert.equal(detail.breakdown.rate_bps,725);
+  assert.equal(formatUsPayC11Amount(us(paid)),"$107.30");
+  assert.equal(detail.payment.service_payment_status,"paid");
+});
+
+test("SDK rejects missing or inconsistent tax total instead of displaying base as total",()=>{
+  const invalid=[
+    {...trusted,service_tax:null},
+    {...trusted,charge_total_minor:null},
+    {...trusted,total_source:"legacy"},
+    {...trusted,service_tax:{...trusted.service_tax,source:"unknown"}},
+    {...trusted,service_tax:{...trusted.service_tax,amount_minor:"1"}},
+    {...trusted,service_tax:{...trusted.service_tax,rate_bps:7.25}},
+    {...trusted,service_tax:{...trusted.service_tax,rate_bps:10001}},
+    {...trusted,charge_total_minor:"1051"},
+    {...trusted,charge_total_minor:"999999999"},
+    {...trusted,service_tax:{...trusted.service_tax,currency_code:"KGS"}},
+  ];
+  for(const payload of invalid){
+    const detail=normalizeUsPayC11Response(payload,500);
+    assert.equal(detail.breakdown,null,JSON.stringify(payload));
+    assert.equal(formatUsPayC11Amount(us(payload)),"Total unavailable");
+  }
+  const fakePaid={...invalid[0],payment:{
+    service_payment_status:"paid",provider:"stripe",
+  }};
+  assert.equal(normalizeUsPayC11Response(fakePaid,500)
+    .payment.service_payment_status,"requires_review");
+});
+
+test("100% service rate is permitted only if gross stays below Stripe cap",()=>{
+  const fine={...trusted,
+    price:{...trusted.price,amount_minor:"2000"},
+    service_tax:{...trusted.service_tax,amount_minor:"2000",rate_bps:10000},
+    charge_total_minor:"4000",
+  };
+  assert.equal(formatUsPayC11Amount(us(fine)),"$40.00");
+  assert.equal(normalizeUsPayC11Response({...fine,
+    price:{...fine.price,amount_minor:"99999999"},
+    service_tax:{...fine.service_tax,amount_minor:"99999999"},
+    charge_total_minor:"199999998",
+  },500).breakdown,null);
 });
 
 test("KG/KZ presentation is not modified by US contract", () => {
