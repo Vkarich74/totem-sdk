@@ -101,9 +101,11 @@ export default function UsPayC11LiveConnectCard({
     }}>
       <h3 style={{fontSize:18,margin:0}}>Stripe Connect · USA</h3>
       <p style={{margin:0,color:"#374151",lineHeight:1.5}}>
-        Connect your own verified United States Stripe account to receive
-        client payments directly as a salon or independent professional.
-        Stripe handles the identity and bank verification.
+        Set up a new US Stripe Standard seller account for your own salon or
+        independent professional business. Stripe handles identity and bank
+        verification. If you already have a Stripe account, do not start:
+        this flow creates a separate connected account and does not connect
+        an existing account.
       </p>
       {state.loading ? (
         <p role="status">Checking connection…</p>
@@ -129,8 +131,10 @@ export default function UsPayC11LiveConnectCard({
                 <span>
                   I confirm I am the account holder or authorized representative
                   of this {ownerType==="salon"?"salon":"professional"} and authorize
-                  TOTEM to initiate Stripe Connect onboarding for my own business.
-                  I will review Stripe's verification and service terms there.
+                  TOTEM to create one new Stripe Standard connected account
+                  for my own business. I understand this does not import or
+                  reuse an existing Stripe account. I will review Stripe's
+                  verification and service terms there.
                 </span>
               </label>
               <button type="button" onClick={begin}
@@ -139,8 +143,8 @@ export default function UsPayC11LiveConnectCard({
                   background:"#111827",color:"white",fontWeight:700,
                   maxWidth:360,opacity:disabled||!consent?.5:1,cursor:"pointer"}}>
                 {working ? "Opening Stripe…" :
-                  stateCode==="not_started" ? "Connect my Stripe account" :
-                  "Continue Stripe onboarding"}
+                  stateCode==="not_started" ? "Create new Stripe Standard account" :
+                  "Continue existing onboarding"}
               </button>
             </>
           ) : null}
