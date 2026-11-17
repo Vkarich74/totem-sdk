@@ -8,7 +8,7 @@ const STATUSES = Object.freeze({
   cancelled: "Canceled",
 });
 const PAYMENT_STATUSES = new Set([
-  "unpaid", "awaiting_payment", "paid", "refunded", "disputed", "requires_review",
+  "unpaid", "awaiting_payment", "paid", "partially_refunded", "refunded", "disputed", "requires_review",
 ]);
 const MAX_US_CENTS = 99999999n;
 
