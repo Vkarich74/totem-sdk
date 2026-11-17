@@ -69,7 +69,7 @@ export default function UsPayC11LivePaymentCard({
     detail?.price?.currency_code==="USD" &&
     detail?.collector?.verified===true &&
     ["reserved","confirmed"].includes(detail.booking_status) &&
-    !["paid","refunded","disputed"].includes(
+    !["paid","partially_refunded","refunded","disputed"].includes(
       detail.payment?.service_payment_status
     );
   const bookingId=Number(booking?.id);
