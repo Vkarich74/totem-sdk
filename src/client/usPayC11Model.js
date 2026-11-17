@@ -135,7 +135,7 @@ export function normalizeUsPayC11Response(payload, bookingId) {
 }
 
 export function getUsPayC11Detail(booking) {
-  if (!isUsPayC11Booking(booking)) return null;
+  if (!isUsPayC11Booking(booking) || booking?.currency_code!=="USD") return null;
   return normalizeUsPayC11Response(booking?.us_pay_c11, booking?.id);
 }
 
