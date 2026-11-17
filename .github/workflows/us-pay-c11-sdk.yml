@@ -10,6 +10,9 @@ on:
       - src/client/usPayC11Client.js
       - src/client/clientCabinetPresentation.js
       - src/client/ClientCabinetPage.jsx
+      - src/client/UsPayC11LivePaymentCard.jsx
+      - src/client/UsPayC11PaymentReturnPage.jsx
+      - src/App.jsx
       - src/us/UsBookingPage.jsx
       - src/salon/usPayC11OwnerApi.js
       - src/salon/components/UsPayC11CollectorCard.jsx
