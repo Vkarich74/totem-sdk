@@ -1,0 +1,64 @@
+name: US-PAY-C11-SDK verified USD client acceptance
+
+on:
+  push:
+    branches:
+      - feature/us-pay-c11-sdk
+    paths:
+      - src/client/usPayC11Model.js
+      - src/client/usPayC11Model.test.js
+      - src/client/usPayC11Client.js
+      - src/client/clientCabinetPresentation.js
+      - src/client/ClientCabinetPage.jsx
+      - src/client/UsPayC11LivePaymentCard.jsx
+      - src/client/UsPayC11PaymentReturnPage.jsx
+      - src/App.jsx
+      - src/us/UsPayC11RefundCard.jsx
+      - src/salon/pages/BookingsPage.jsx
+      - src/master/pages/MasterBookingsPage.jsx
+      - src/us/UsBookingPage.jsx
+      - src/salon/usPayC11OwnerApi.js
+      - src/salon/components/UsPayC11CollectorCard.jsx
+      - src/salon/pages/BookingsPage.jsx
+      - src/salon/pages/SettingsPage.jsx
+      - src/master/pages/MasterSettingsPage.jsx
+      - src/us/usPayC11LiveConnectClient.js
+      - src/us/UsPayC11LiveConnectCard.jsx
+      - .github/workflows/us-pay-c11-sdk.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  us-sdk-read-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify US-only financial presentation and transport
+        run: |
+          set -euo pipefail
+          node --test src/client/usPayC11Model.test.js
+
+      - name: Verify full SDK compiles for production
+        run: |
+          set -euo pipefail
+          npm run build
+          test -f dist/index.html
+          echo 'US_PAY_C11_SDK_BUILD_PASS'
+
+      - name: No forbidden payment actions
+        run: |
+          set -euo pipefail
+          ! grep -E '(checkout|PaymentIntent|payment_intent|Stripe\.redirect|/payments/create)' \
+            src/client/usPayC11Client.js src/client/usPayC11Model.js
+          echo 'US_PAY_C11_SDK_PAYMENT_WRITE_DISABLED'

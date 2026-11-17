@@ -2,9 +2,12 @@ import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError, useUiMessages
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import * as api from "../../api/internal"
-import { resolveSalonSlug } from "../SalonContext"
+import { resolveSalonSlug, useSalonContext } from "../SalonContext"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
+import { useMarketContext } from "../../market/MarketContext.jsx"
+import UsPayC11CollectorCard from "../components/UsPayC11CollectorCard.jsx"
+import UsPayC11RefundCard from "../../us/UsPayC11RefundCard.jsx"
 
 function statusColor(status){
   const value = String(status || "reserved").toLowerCase()
@@ -116,6 +119,9 @@ function SummaryCard({ label, value, hint }){
 
 export default function BookingsPage(){
   const { renderUi } = useUiMessages();
+  const { context: ownerMarketContext } = useMarketContext();
+  const { identity: salonIdentity } = useSalonContext();
+  const isUsMarket = ownerMarketContext?.market_code === "US";
   const { slug: routeSlug } = useParams()
   const isMobile = useIsMobile()
   const salonSlug = resolveSalonSlug(routeSlug)
@@ -413,9 +419,33 @@ export default function BookingsPage(){
                   <DetailItem label={uiMessage("salon.s0230")} value={selectedBooking.phone || "—"} />
                   <DetailItem label={uiMessage("salon.s0094")} value={selectedBooking.master_name} />
                   <DetailItem label={uiMessage("salon.s0231")} value={selectedBooking.service_name} />
-                  <DetailItem label={uiMessage("salon.s0232")} value={formatMoney(selectedBooking.price, selectedBooking?.currency_code || selectedBooking?.currency)} />
+                  <DetailItem
+                    label={uiMessage("salon.s0232")}
+                    value={isUsMarket ? "Authoritative USD price shown below" :
+                      formatMoney(selectedBooking.price, selectedBooking?.currency_code || selectedBooking?.currency)}
+                  />
                   <DetailItem label={uiMessage("salon.s0233")} value={formatDateTime(selectedBooking.start_at)} />
                 </div>
+
+                {isUsMarket ? (
+                  <UsPayC11CollectorCard
+                    key={String(selectedBooking.id)}
+                    bookingId={selectedBooking.id}
+                    bookingStatus={selectedBooking.status}
+                    salonName={selectedBooking.salon_name || salonSlug || "Salon"}
+                    masterName={selectedBooking.master_name || "Professional"}
+                  />
+                ) : null}
+
+                {isUsMarket ? (
+                  <UsPayC11RefundCard
+                    key={"refund-"+String(selectedBooking.id)}
+                    ownerType="salon"
+                    ownerId={salonIdentity?.id}
+                    bookingId={selectedBooking.id}
+                    isUsMarket={isUsMarket}
+                  />
+                ) : null}
 
                 <div style={styles.actionsRow}>
                   {selectedBooking.status === "reserved" && (

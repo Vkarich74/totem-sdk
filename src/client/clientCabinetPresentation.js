@@ -1,3 +1,12 @@
+import {
+  formatUsPayC11Amount,
+  formatUsPayC11Status,
+  formatUsPayC11PaymentStatus,
+  formatUsPayC11Recipient,
+} from "./usPayC11Model.js";
+
+export { formatUsPayC11Recipient as clientBookingRecipientLabel } from "./usPayC11Model.js";
+
 // TOTEM US06-CABINET — US-only presentation contract for shared client data.
 // USD and business time zone derive from server-bound booking market/location.
 // KG/KZ presentation is deliberately identical to its earlier legacy behavior.
@@ -122,30 +131,17 @@ export function formatClientBookingTime(booking) {
   }
 }
 export function formatClientBookingMoney(booking) {
+  // US: only the immutable cents snapshot returned by US-PAY-C11.
+  if (isUsBooking(booking)) return formatUsPayC11Amount(booking);
   const value = booking?.price_snapshot;
-  if (!isUsBooking(booking)) {
-    // Keep the existing KGS/KZ legacy display untouched in this US-only gate.
-    const amount = Number(value || 0);
-    if (!Number.isFinite(amount)) return "0 сом";
-    return `${amount.toLocaleString("ru-RU")} сом`;
-  }
-  if (String(booking?.currency_code || "").toUpperCase() !== "USD") {
-    return "Price unavailable";
-  }
-  if (value === null || value === undefined || value === "" ||
-      !Number.isFinite(Number(value))) return "Price unavailable";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency", currency: "USD",
-  }).format(Number(value));
+  // Keep the existing KGS/KZ legacy display untouched.
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) return "0 сом";
+  return `${amount.toLocaleString("ru-RU")} сом`;
 }
 export function clientBookingStatusLabel(booking) {
   const status = String(booking?.status || "").toLowerCase();
-  if (isUsBooking(booking)) {
-    return ({
-      reserved: "Reserved", confirmed: "Confirmed",
-      completed: "Completed", canceled: "Canceled", cancelled: "Canceled",
-    })[status] || String(booking?.status || "—");
-  }
+  if (isUsBooking(booking)) return formatUsPayC11Status(booking);
   return ({
     reserved: "Забронировано", confirmed: "Подтверждено",
     completed: "Завершено", canceled: "Отменено", cancelled: "Отменено",
@@ -165,13 +161,6 @@ export function clientBookingPaymentLabel(booking) {
     if (provider === "xpay" && status === "confirmed") return "Оплата получена";
     return "Оплата не выбрана";
   }
-  const provider = String(booking?.payment_provider || "").toLowerCase();
-  const status = String(booking?.payment_status || "").toLowerCase();
-  if (status === "failed") return "Payment failed";
-  if (status === "refunded") return "Payment refunded";
-  if (provider === "direct" && status === "pending") return "Payment pending at salon";
-  if (provider === "direct" && status === "confirmed") return "Payment confirmed";
-  if (status === "confirmed") return "Payment received";
-  if (status === "pending") return "Payment pending";
-  return "Payment not selected";
+  // US: never promote a legacy direct/xPay payment to a Stripe-confirmed state.
+  return formatUsPayC11PaymentStatus(booking);
 }

@@ -5,6 +5,8 @@ import { buildSalonPath, resolveSalonSlug, useSalonContext } from "../SalonConte
 import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import UsSalonLocationsEditor from "./UsSalonLocationsEditor.jsx"
+import { useMarketContext } from "../../market/MarketContext.jsx"
+import UsPayC11LiveConnectCard from "../../us/UsPayC11LiveConnectCard.jsx"
 import {
   createSalonOwnerQrDestination,
   deactivateSalonOwnerQrDestination,
@@ -582,6 +584,7 @@ export default function SettingsPage() {
     loading,
     error
   } = useSalonContext()
+  const { context: marketContext } = useMarketContext()
 
   const [name, setName] = useState("")
   const [photo, setPhoto] = useState("")
@@ -750,6 +753,14 @@ export default function SettingsPage() {
             />
           </div>
         </Block>
+
+        {/* Owner must onboard their own LIVE Stripe Standard account; no
+            account can be opened on behalf of a master from this page. */}
+        <UsPayC11LiveConnectCard
+          ownerType="salon"
+          ownerId={identity?.id}
+          isUsMarket={marketContext?.market_code === "US"}
+        />
 
         {/* US-05: only US owners see the editor; KG/KZ GET returns 404 and hides it. */}
         <UsSalonLocationsEditor slug={slug} canWrite={canWrite} />

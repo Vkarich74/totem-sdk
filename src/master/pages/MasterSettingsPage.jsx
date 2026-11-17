@@ -5,6 +5,8 @@ import { Link } from "react-router-dom"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
+import { useMarketContext } from "../../market/MarketContext.jsx"
+import UsPayC11LiveConnectCard from "../../us/UsPayC11LiveConnectCard.jsx"
 import {
   createMasterOwnerQrDestination,
   deactivateMasterOwnerQrDestination,
@@ -558,6 +560,7 @@ export default function MasterSettingsPage() {
     canWithdraw,
     billingBlockReason
   } = useMaster()
+  const { context: marketContext } = useMarketContext()
 
   const [name, setName] = useState("")
   const [photo, setPhoto] = useState("")
@@ -698,6 +701,13 @@ export default function MasterSettingsPage() {
             ><UiValue value={uiMessage("master.s0189")} /></Link>
           </div>
         </Block>
+
+        {/* Master connects only their OWN Standard Stripe account. */}
+        <UsPayC11LiveConnectCard
+          ownerType="master"
+          ownerId={master?.id}
+          isUsMarket={marketContext?.market_code === "US"}
+        />
 
         <OwnerQrDestinationEditor
           slug={slug}

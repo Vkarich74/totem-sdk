@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { getAuthAccessToken, getMasterBookings, getMasterServices } from "../../api/internal"
+import { useMarketContext } from "../../market/MarketContext.jsx"
+import UsPayC11RefundCard from "../../us/UsPayC11RefundCard.jsx"
 
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
@@ -80,6 +82,7 @@ function SummaryCard({ label, value, hint }){
 
 export default function MasterBookingsPage() {
   const { renderUi } = useUiMessages();
+  const { context: marketContext } = useMarketContext();
   const { bookingId } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -469,6 +472,15 @@ export default function MasterBookingsPage() {
 
           <div><UiValue value={uiMessage("salon.s0351")} /><UiValue value={booking.phone || "—"} />
           </div>
+          {marketContext?.market_code === "US" ? (
+            <UsPayC11RefundCard
+              key={"refund-"+String(booking.id)}
+              ownerType="master"
+              ownerId={master?.id}
+              bookingId={booking.id}
+              isUsMarket={true}
+            />
+          ) : null}
         </PageSection>
       </div>
     )
