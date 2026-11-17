@@ -266,7 +266,8 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
         location,
         master: masters.find(item => Number(item.id) === Number(masterId))?.name || "",
         service: service.name,
-        price: formatUsPrice(service.price),
+        // Catalog price is not the immutable booking price snapshot.
+        price: null,
         cabinet: response.client_cabinet.url,
       });
       retryKey.current = null;
@@ -312,7 +313,8 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
               <strong>{tr("us.book.bookingNumber", { number: confirmation.id })}</strong>
               <p>{confirmation.date} · {confirmation.slot} · {confirmation.location.timezone}</p>
               <p>{formatUsLocationAddress(confirmation.location)}</p>
-              <p>{confirmation.master} · {confirmation.service} · {confirmation.price}</p>
+              <p>{confirmation.master} · {confirmation.service}</p>
+              <p>Verified USD price and payment recipient: see your client dashboard.</p>
               <a href={confirmation.cabinet}>{tr("us.book.clientCabinet")}</a>
               <p style={styles.help}>{tr("us.book.noOnlinePayment")}</p>
             </div>
@@ -490,7 +492,8 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
             <p style={styles.help}>{tr("us.book.phoneHelp")}</p>
             {service && (
               <div style={styles.address}>
-                <strong>{tr("us.book.price")}: {formatUsPrice(service.price)}</strong>
+                <strong>Estimated catalog price: {formatUsPrice(service.price)}</strong>
+                <p style={styles.help}>Your final booking price is shown after server verification.</p>
                 <p style={styles.help}>{tr("us.book.noOnlinePayment")}</p>
               </div>
             )}
