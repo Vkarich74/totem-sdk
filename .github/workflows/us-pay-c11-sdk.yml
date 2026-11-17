@@ -14,6 +14,10 @@ on:
       - src/salon/usPayC11OwnerApi.js
       - src/salon/components/UsPayC11CollectorCard.jsx
       - src/salon/pages/BookingsPage.jsx
+      - src/salon/pages/SettingsPage.jsx
+      - src/master/pages/MasterSettingsPage.jsx
+      - src/us/usPayC11LiveConnectClient.js
+      - src/us/UsPayC11LiveConnectCard.jsx
       - .github/workflows/us-pay-c11-sdk.yml
   workflow_dispatch:
 
