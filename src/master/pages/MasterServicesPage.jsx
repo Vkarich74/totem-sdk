@@ -1,6 +1,8 @@
 import { UiValue, uiMessage, uiMoney, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
+import { useMarketContext } from "../../market/MarketContext.jsx"
+import UsOwnerPriceEditor from "../../us/UsOwnerPriceEditor.jsx"
 import {
   createMasterService,
   deleteMasterService,
@@ -55,7 +57,9 @@ function getServiceKey(service, index) {
 
 export default function MasterServicesPage() {
   const { renderUi } = useUiMessages();
-  const { master, slug: contextSlug } = useMaster() || {}
+  const { master, slug: contextSlug, canWrite } = useMaster() || {}
+  const { status: marketStatus, context: marketContext } = useMarketContext()
+  const isUsMarket = marketStatus === "ready" && marketContext?.market_code === "US"
 
   const slug = useMemo(() => {
     return master?.slug || contextSlug || null
@@ -76,6 +80,8 @@ export default function MasterServicesPage() {
   const [deletingId, setDeletingId] = useState(null)
 
   const visibleServices = useMemo(() => {
+    // Each US USD price belongs to one exact salon_master_services.id link.
+    if (isUsMarket) return services
     const map = new Map()
     services.forEach((s) => {
       const key = s?.service_pk || s?.catalog_service_id || s?.name
@@ -83,7 +89,7 @@ export default function MasterServicesPage() {
       map.set(key, s)
     })
     return Array.from(map.values())
-  }, [services])
+  }, [services, isUsMarket])
 
   async function loadServices() {
     if (!slug) {
@@ -151,7 +157,7 @@ export default function MasterServicesPage() {
   function validate() {
     const name = String(form.name || "").trim()
     const duration = Number(form.duration_min)
-    const price = Number(form.price)
+    const price = isUsMarket ? 0 : Number(form.price)
 
     if (!name) {
       return uiMessage("master.s0203")
@@ -193,7 +199,7 @@ export default function MasterServicesPage() {
       const payload = {
         name: String(form.name || "").trim(),
         duration_min: Number(form.duration_min),
-        price: Number(form.price)
+        price: isUsMarket ? 0 : Number(form.price)
       }
 
       if (editingId) {
@@ -214,6 +220,7 @@ export default function MasterServicesPage() {
   }
 
   function startEdit(service) {
+    if (isUsMarket) return // USD owner price is versioned and stored separately.
     setError("")
     setSuccess("")
     setEditingId(service?.id || service?.service_id || null)
@@ -465,32 +472,40 @@ export default function MasterServicesPage() {
             />
           </div>
 
-          <div>
-            <div
-              style={{
-                fontSize: "13px",
-                color: "#666",
-                marginBottom: "6px"
-              }}
-            ><UiValue value={uiMessage("salon.s0779")} /></div>
-
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={form.price}
-              onChange={(e) => updateForm("price", e.target.value)}
-              placeholder={renderUi(uiMessage("master.s0227"))}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid #d9d9d9",
-                borderRadius: "10px",
-                outline: "none",
-                boxSizing: "border-box"
-              }}
-            />
-          </div>
+          {!isUsMarket ? (
+            <div>
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#666",
+                  marginBottom: "6px"
+                }}
+              ><UiValue value={uiMessage("salon.s0779")} /></div>
+  
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.price}
+                onChange={(e) => updateForm("price", e.target.value)}
+                placeholder={renderUi(uiMessage("master.s0227"))}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #d9d9d9",
+                  borderRadius: "10px",
+                  outline: "none",
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
+          ) : (
+            <p style={{fontSize:13,color:"#475569",lineHeight:1.5}}>
+              В США создаётся техническая услуга без назначенной цены.
+              После привязки к действующему салону установите отдельную
+              цену USD ниже. Наследуемая стоимость не конвертируется.
+            </p>
+          )}
         </div>
 
         {error && (
@@ -689,7 +704,7 @@ export default function MasterServicesPage() {
                     }}
                   >
                     <div><UiValue value={uiMessage("master.s0239")} /><UiValue value={formatDuration(duration)} /></div>
-                    <div><UiValue value={uiMessage("master.s0240")} /><UiValue value={formatPrice(price, service?.currency_code || service?.currency)} /></div>
+                    <div><UiValue value={uiMessage("master.s0240")} />{isUsMarket ? "Цена USD — ниже" : <UiValue value={formatPrice(price, service?.currency_code || service?.currency)} />}</div>
                   </div>
 
                   <div
@@ -699,20 +714,22 @@ export default function MasterServicesPage() {
                       flexWrap: "wrap"
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => startEdit(service)}
-                      disabled={isDeleting || isToggling || saving}
-                      style={{
-                        padding: "10px 12px",
-                        borderRadius: "10px",
-                        border: "1px solid #d0d0d0",
-                        background: "#fff",
-                        color: "#111",
-                        cursor: isDeleting || isToggling || saving ? "not-allowed" : "pointer",
-                        fontWeight: "600"
-                      }}
-                    ><UiValue value={uiMessage("master.s0241")} /></button>
+                    {!isUsMarket ? (
+                      <button
+                        type="button"
+                        onClick={() => startEdit(service)}
+                        disabled={isDeleting || isToggling || saving}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: "10px",
+                          border: "1px solid #d0d0d0",
+                          background: "#fff",
+                          color: "#111",
+                          cursor: isDeleting || isToggling || saving ? "not-allowed" : "pointer",
+                          fontWeight: "600"
+                        }}
+                      ><UiValue value={uiMessage("master.s0241")} /></button>
+                    ) : null}
 
                     <button
                       type="button"
@@ -752,6 +769,16 @@ export default function MasterServicesPage() {
                       <UiValue value={isDeleting ? uiMessage("master.s0244") : uiMessage("salon.s0594")} />
                     </button>
                   </div>
+                  {isUsMarket && isActive && serviceId ? (
+                    <UsOwnerPriceEditor
+                      key={`master-usd-${slug}-${serviceId}`}
+                      ownerType="master"
+                      ownerSlug={slug}
+                      serviceLinkId={serviceId}
+                      isUsMarket={isUsMarket}
+                      canWrite={canWrite === true}
+                    />
+                  ) : null}
                 </div>
               )
             })}
