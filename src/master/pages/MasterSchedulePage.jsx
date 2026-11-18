@@ -5,6 +5,7 @@ import PageSection from "../../cabinet/PageSection"
 import { getMasterBookings } from "../../api/internal"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import { normalizeUsMasterScheduleFeed } from "../../us/usBookingModel.js"
+import UsMasterWorkingHoursEditor from "./UsMasterWorkingHoursEditor.jsx"
 
 const API_BASE = import.meta.env.VITE_API_BASE || window.API_BASE || "https://api.totemv.com"
 
@@ -353,7 +354,8 @@ loading: masterLoading,
 error: masterError,
 master,
 slug,
-salonSlug
+salonSlug,
+canWrite
 }=useMaster()
 
 const [bookings,setBookings]=useState([])
@@ -635,7 +637,11 @@ if(isUsMarket && !loading && !error){
   const shown=bookings.filter(b=>b.local_date===chosen)
   return (
     <PageSection title="Расписание мастера · США">
-      <p style={{fontSize:13,color:"#475569",lineHeight:1.6,marginTop:0}}>
+      <UsMasterWorkingHoursEditor
+        masterSlug={routeSlug}
+        canWrite={canWrite===true}
+      />
+      <p style={{fontSize:13,color:"#475569",lineHeight:1.6,marginTop:16}}>
         Время каждой записи соответствует часовому поясу физического
         филиала, подтверждённому сервером. При работе в нескольких
         штатах записи не объединяются по часовому поясу компьютера.
