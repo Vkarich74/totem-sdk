@@ -1,0 +1,73 @@
+name: US salon calendar — existing location scope (no deployment)
+on:
+  push:
+    branches:
+      - work/us-calendar-cabinet-20261118
+    paths:
+      - src/us/usBookingModel.js
+      - src/us/usBookingModel.test.mjs
+      - src/api/internal.js
+      - src/salon/pages/UsSalonLocationsEditor.jsx
+      - src/salon/pages/CalendarPage.jsx
+      - .github/workflows/us-calendar-cabinet-isolated.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  us-calendar-no-duplicates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      RAILWAY_TOKEN: ""
+      ODOO_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned deps without lifecycle scripts
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: US locations and IANA business-date tests (pure, no DB)
+        run: |
+          set -euo pipefail
+          node src/us/usBookingModel.test.mjs
+          node --test src/us/usBookingNavigation.test.mjs
+      - name: Contract guard: reuse core calendar and central SDK API
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          const read = path=>fs.readFileSync(path,"utf8");
+          const api=read("src/api/internal.js");
+          const calendar=read("src/salon/pages/CalendarPage.jsx");
+          const editor=read("src/salon/pages/UsSalonLocationsEditor.jsx");
+          assert.match(api,/getSalonCalendar\([\s\S]*locationCode/);
+          assert.match(api,/location_code:/);
+          assert.match(api,/getSalonUsLocations\(/);
+          assert.match(calendar,/getSalonCalendar\(/);
+          assert.match(calendar,/verifyUsCalendarLocationResponse\(/);
+          assert.match(calendar,/getUsCalendarLocations\(/);
+          assert.match(calendar,/emptySlotState.canBook && !isUsMarket/);
+          assert.doesNotMatch(editor,/fetch\(/);
+          assert.doesNotMatch(editor,/getAuthAccessToken/);
+          assert.doesNotMatch(editor,/VITE_API_BASE/);
+          assert.match(editor,/getSalonUsLocations/);
+          assert.match(editor,/mutateSalonUsLocation/);
+          console.log("US_CALENDAR_NO_DUPLICATE_CORE_OR_SDK=PASS");
+          NODE
+      - name: Build the real owner cabinets
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html
+          echo 'US_LOCATION_SCOPED_CALENDAR_SDK_BUILD_PASS'
+      - name: No test salons and no deployment
+        run: |
+          test -z "${DATABASE_URL:-}"
+          echo 'NO_TEST_SALONS; NO_POSTGRES; NO_DEPLOY; NO_ODOO'
