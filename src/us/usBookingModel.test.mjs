@@ -3,6 +3,7 @@ import {
   US_STATE_CODES, validateUsLocationCatalog, usLocationsForState,
   normalizeUsPhoneDraft, getUsBusinessDate, formatUsPrice,
   getUsCalendarLocations, verifyUsCalendarLocationResponse,
+  normalizeUsMasterScheduleFeed,
   formatUsLocationAddress, isValidUsSlot, createUsBookingRequest,
 } from "./usBookingModel.js";
 import { translate, localeLabels, messages } from "../i18n/messages.js";
@@ -131,6 +132,62 @@ for(const invalid of [
 );
 assert.equal(getUsBusinessDate(
   "2026-11-18T03:30:00.000Z","America/Los_Angeles"),"2026-11-17");
+
+
+// US master schedule: only immutable location-linked bookings, not a new
+// salon/master or a mock PostgreSQL write.
+const makeUsMasterBooking=(changes={})=>({
+  id:501,status:"confirmed",client_name:"Existing client",
+  salon_id:18,salon_slug:"existing-salon",salon_name:"Existing salon",
+  location_code:"ny",location_timezone:"America/New_York",
+  start_at:"2026-11-01T05:30:00.000Z",
+  end_at:"2026-11-01T06:00:00.000Z",
+  ...changes,
+});
+const usMasterFeed=bookings=>({
+  ok:true,calendar_scope:"us_location",market_code:"US",bookings
+});
+const dstRows=normalizeUsMasterScheduleFeed(usMasterFeed([
+  makeUsMasterBooking({id:503,start_at:"2026-11-01T06:30:00.000Z",
+    end_at:"2026-11-01T07:00:00.000Z"}),
+  makeUsMasterBooking({id:502,start_at:"2026-11-01T05:30:00.000Z",
+    end_at:"2026-11-01T06:00:00.000Z"}),
+]));
+assert.deepEqual(dstRows.map(x=>x.id),[502,503]);
+assert.equal(dstRows[0].local_date,"2026-11-01");
+assert.equal(dstRows[0].local_time,"01:30");
+assert.equal(dstRows[1].local_time,"01:30");
+assert.equal(dstRows[0].utc_offset,"GMT-4");
+assert.equal(dstRows[1].utc_offset,"GMT-5");
+assert.ok(Object.isFrozen(dstRows));
+const laRows=normalizeUsMasterScheduleFeed(usMasterFeed([
+  makeUsMasterBooking({
+    id:504,location_code:"la",location_timezone:"America/Los_Angeles",
+    start_at:"2027-01-01T07:45:00.000Z",
+    end_at:"2027-01-01T08:15:00.000Z"
+  }),
+]));
+assert.equal(laRows[0].local_date,"2026-12-31");
+assert.equal(laRows[0].local_time,"23:45");
+assert.equal(laRows[0].local_end_date,"2027-01-01");
+assert.equal(laRows[0].local_end_time,"00:15");
+assert.equal(laRows[0].utc_offset,"GMT-8");
+assert.deepEqual(normalizeUsMasterScheduleFeed(usMasterFeed([])),[]);
+for (const bad of [
+  {...usMasterFeed([]),market_code:"KG"},
+  {...usMasterFeed([]),calendar_scope:"generic"},
+  {...usMasterFeed([]),bookings:null},
+  usMasterFeed([makeUsMasterBooking({location_timezone:"Asia/Bishkek",
+    location_code:"ny",salon_slug:""} )]),
+  usMasterFeed([makeUsMasterBooking({location_timezone:"Etc/UTC"})]),
+  usMasterFeed([makeUsMasterBooking({location_timezone:"Invalid/Zone"})]),
+  usMasterFeed([makeUsMasterBooking({location_code:"../other"})]),
+  usMasterFeed([makeUsMasterBooking({start_at:"2026-11-01 01:30:00"})]),
+  usMasterFeed([makeUsMasterBooking({start_at:null})]),
+  usMasterFeed([makeUsMasterBooking({end_at:"bad"})]),
+  usMasterFeed([makeUsMasterBooking(),makeUsMasterBooking()]),
+]) assert.throws(()=>normalizeUsMasterScheduleFeed(bad));
+console.log("US_MASTER_BOOKING_TIMEZONE_READ_ONLY=PASS");
 
 console.log("US04_SDK_MODEL_TRANSLATION_UNIT=PASS",JSON.stringify({
   states_and_dc:51,translations_en_ru:37,location_address_zip:true,
