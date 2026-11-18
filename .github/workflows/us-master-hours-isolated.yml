@@ -5,6 +5,7 @@ on:
       - work/us-master-hours-20261118
       - work/us-master-market-scope-20261118
       - work/us-hours-services-slots-20261118
+      - work/us-public-service-price-20261119
     paths:
       - src/master/pages/MasterSchedulePage.jsx
       - src/master/pages/UsMasterWorkingHoursEditor.jsx
@@ -57,6 +58,12 @@ jobs:
           ! grep -F 'formatUsPrice(service.price)' src/us/UsBookingPage.jsx
           ! grep -F 'formatUsPrice(item.price)' src/us/UsBookingPage.jsx
           grep -Fq 'us.book.serviceNotReady' src/i18n/messages.js
+          grep -Fq 'normalizeUsPublicServiceCatalog(servicesPayload)' src/us/UsBookingPage.jsx
+          grep -Fq 'verifyUsAvailabilityBasePrice(payload,service)' src/us/UsBookingPage.jsx
+          grep -Fq 'expected_us_price_version:freshPrice.price_version' src/us/UsBookingPage.jsx
+          grep -Fq 'expected_us_amount_minor:String(freshPrice.amount_minor)' src/us/UsBookingPage.jsx
+          grep -Fq 'us.book.verifiedBasePrice' src/us/UsBookingPage.jsx
+          ! grep -E 'formatUsPrice\((item|service)\.price\)' src/us/UsBookingPage.jsx
           echo 'ONE_SDK_TRANSPORT; US_ONLY_EDIT; KG_KZ_LEGACY_MASTER_SCHEDULE_UNCHANGED'
       - name: Full React Vite owner cabinets build
         run: |
