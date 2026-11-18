@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - work/us-master-hours-20261118
+      - work/us-master-market-scope-20261118
     paths:
       - src/master/pages/MasterSchedulePage.jsx
       - src/master/pages/UsMasterWorkingHoursEditor.jsx
@@ -46,6 +47,9 @@ jobs:
           grep -Fq '<UsMasterWorkingHoursEditor' src/master/pages/MasterSchedulePage.jsx
           ! grep -E 'fetch\(|getAuthAccessToken|VITE_API_BASE|/salons/.*/working-hours' src/master/pages/UsMasterWorkingHoursEditor.jsx
           grep -Fq 'verifyUsMasterHoursSaved' src/master/pages/UsMasterWorkingHoursEditor.jsx
+          grep -Fq 'classifyUnresolvedMasterMarketProbe(raw)' src/master/pages/MasterSchedulePage.jsx
+          grep -Fq 'MASTER_US_MIXED_MARKETS' src/us/usBookingModel.js
+          grep -Fq 'marketProbePending' src/master/pages/MasterSchedulePage.jsx
           echo 'ONE_SDK_TRANSPORT; US_ONLY_EDIT; KG_KZ_LEGACY_MASTER_SCHEDULE_UNCHANGED'
       - name: Full React Vite owner cabinets build
         run: |
