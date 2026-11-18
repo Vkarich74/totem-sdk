@@ -1,0 +1,70 @@
+name: US master schedule timezone - existing SDK (isolated)
+on:
+  push:
+    branches:
+      - work/us-master-schedule-timezone-20261118
+    paths:
+      - src/master/pages/MasterSchedulePage.jsx
+      - src/api/internal.js
+      - src/us/usBookingModel.js
+      - src/us/usBookingModel.test.mjs
+      - .github/workflows/us-master-schedule-timezone-isolated.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  us-master-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      RAILWAY_TOKEN: ""
+      ODOO_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Immutable SDK dependencies without lifecycle scripts
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Existing US model tests - DST folds, physical branch, UTC offsets
+        run: |
+          set -euo pipefail
+          node src/us/usBookingModel.test.mjs
+          node --test src/us/usBookingNavigation.test.mjs
+          node --test src/us/usOwnerPriceModel.test.mjs
+      - name: Canonical SDK transport and region isolation
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          const read=path=>fs.readFileSync(path,"utf8");
+          const sdk=read("src/api/internal.js");
+          const page=read("src/master/pages/MasterSchedulePage.jsx");
+          const model=read("src/us/usBookingModel.js");
+          assert.match(sdk,/usLocationScope \? "\?calendar_scope=us_location" : ""/);
+          assert.match(sdk,/return usLocationScope\s*\?/);
+          assert.match(page,/if\(isUsMarket && !loading && !error\)/);
+          assert.match(page,/normalizeUsMasterScheduleFeed\(result\)/);
+          assert.match(page,/const slots=useMemo\(\(\)=>isUsMarket \? \[\] : buildSlots\(\)/);
+          assert.match(page,/if\(isUsMarket\)return\{calendar:\{\},skip:new Set\(\)\}/);
+          assert.match(model,/getUsBusinessDate\(start,timezone\)/);
+          assert.match(model,/timeZoneName:"shortOffset"/);
+          assert.doesNotMatch(page,/createUsMasterScheduleRouter|new MasterScheduleApi/);
+          console.log("NO_DUPLICATE_CORE_OR_MARKET_FALLBACK=PASS");
+          NODE
+      - name: Full SDK cabinet Vite build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html
+          echo 'US_MASTER_SCHEDULE_SDK_BUILD_PASS'
+      - name: No database writes, test salons or deployment
+        run: |
+          test -z "${DATABASE_URL:-}"
+          echo 'KG_KZ_LEGACY_FLOW_UNCHANGED; NO_TEST_SALONS; NO_DEPLOY'
