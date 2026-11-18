@@ -176,6 +176,12 @@ export default function MasterServicesPage() {
 
   async function handleCreate(e) {
     e.preventDefault()
+    // This legacy endpoint picks the last active salon rather than an explicit
+    // US salon. Never create a cross-market service link through it.
+    if (isUsMarket) {
+      setError("US_MASTER_SERVICE_SALON_SCOPE_REQUIRED")
+      return
+    }
 
     const validationError = validate()
 
@@ -335,6 +341,7 @@ export default function MasterServicesPage() {
         ><UiValue value={uiMessage("master.s0217")} /></div>
       </div>
 
+      {!isUsMarket ? (
       <div
         style={{
           border: "1px solid #e7e7e7",
@@ -390,8 +397,20 @@ export default function MasterServicesPage() {
           }}
         ><UiValue value={uiMessage("master.s0219")} /></div>
       </div>
+      ) : (
+        <div role="status" style={{
+          padding:16,border:"1px solid #f5c978",borderRadius:12,
+          background:"#fffbeb",color:"#854d0e",lineHeight:1.6,
+        }}>
+          Для создания новой услуги США требуется выбрать конкретный
+          действующий салон США. Старый маршрут мастера автоматически
+          выбирает последний салон и не подтверждает рынок — поэтому
+          создание пока заблокировано. Существующие услуги можно
+          настраивать ниже, в отдельных ценах USD.
+        </div>
+      )}
 
-      <form
+      {!isUsMarket ? (<form
         onSubmit={handleCreate}
         style={{
           border: "1px solid #e7e7e7",
@@ -570,7 +589,7 @@ export default function MasterServicesPage() {
             <UiValue value={editingId ? uiMessage("master.s0230") : uiMessage("master.s0231")} />
           </button>
         </div>
-      </form>
+      </form>) : null}
 
       <div
         style={{
