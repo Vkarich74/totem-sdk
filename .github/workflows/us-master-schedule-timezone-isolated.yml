@@ -47,7 +47,8 @@ jobs:
           const sdk=read("src/api/internal.js");
           const page=read("src/master/pages/MasterSchedulePage.jsx");
           const model=read("src/us/usBookingModel.js");
-          assert.match(sdk,/usLocationScope \? "\?calendar_scope=us_location" : ""/);
+          assert.match(sdk,/calendar_scope=us_location/);
+          assert.match(sdk,/usLocationScope \? \{method:"GET",cache:"no-store"\} : \{method:"GET"\}/);
           assert.match(sdk,/return usLocationScope\s*\?/);
           assert.match(page,/if\(isUsMarket && !loading && !error\)/);
           assert.match(page,/normalizeUsMasterScheduleFeed\(result\)/);
