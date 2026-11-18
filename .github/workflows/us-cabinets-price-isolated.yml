@@ -1,0 +1,50 @@
+name: US cabinets — USD service pricing (isolated, no salon fixtures)
+on:
+  push:
+    branches:
+      - work/us-cabinets-price-20261118
+    paths:
+      - src/us/usOwnerPriceModel.js
+      - src/us/usOwnerPriceModel.test.mjs
+      - src/us/usOwnerPriceClient.js
+      - src/us/UsOwnerPriceEditor.jsx
+      - src/salon/pages/ServicesPage.jsx
+      - src/master/pages/MasterServicesPage.jsx
+      - .github/workflows/us-cabinets-price-isolated.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cabinet-us-price:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install frozen project dependencies (including Vite)
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Exact USD cents, owner scope and versioned readback (mock-only)
+        run: |
+          set -euo pipefail
+          node --test src/us/usOwnerPriceModel.test.mjs
+      - name: Existing US booking/currency model regressions
+        run: |
+          set -euo pipefail
+          node --test src/us/usBookingModel.test.mjs src/us/usBookingNavigation.test.mjs
+      - name: Full React/Vite cabinet build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html
+          echo 'US_CABINET_PRICE_BUILD_PASS'
+      - name: No deploy or DB fixtures
+        run: |
+          test -z "${DATABASE_URL:-}"
+          echo 'OFFLINE_ONLY; NO_TEST_SALONS; NO_DB_WRITES; NO_DEPLOY'
