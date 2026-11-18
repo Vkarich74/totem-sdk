@@ -67,6 +67,9 @@ function renderOpenOwnerErrors(errors){
 function buildDefaultForm(){
   return {
     owner_type: "salon",
+    market_code: "",
+    state_code: "",
+    postal_code: "",
     name: "",
     slug: "",
     email: "",
@@ -254,9 +257,22 @@ export default function AdminOpenOwnerPage(){
         [name]: value,
       }
 
-      if(name === "owner_type" && value === "salon"){
-        next.work_mode = "independent"
+      if(name === "market_code"){
+        next.city = value === "US" ? "" : "Бишкек"
+        next.phone = ""
+        next.state_code = ""
+        next.postal_code = ""
+        next.work_mode = next.owner_type === "master" && value === "US"
+          ? "attached_to_salon" : "independent"
         next.salon_slug = ""
+      }
+      if(name === "owner_type"){
+        next.work_mode = value === "master" && next.market_code === "US"
+          ? "attached_to_salon" : "independent"
+        next.salon_slug = ""
+      }
+      if(name === "work_mode" && next.market_code === "US"){
+        next.work_mode = "attached_to_salon"
       }
 
       return next
@@ -495,6 +511,18 @@ export default function AdminOpenOwnerPage(){
             </label>
 
             <label style={styles.label}>
+              Рынок
+              <select
+                value={form.market_code}
+                onChange={(event) => updateFormField("market_code", event.target.value)}
+                style={styles.input}
+              >
+                <option value="">Текущий рынок (KG/KZ — без изменений)</option>
+                <option value="US">США — US / USD</option>
+              </select>
+            </label>
+
+            <label style={styles.label}>
               Название / имя
               <input
                 value={form.name}
@@ -532,7 +560,7 @@ export default function AdminOpenOwnerPage(){
                 autoComplete="tel"
                 value={form.phone}
                 onChange={(event) => updateFormField("phone", event.target.value)}
-                placeholder="+7 925 608 20 00 / +996 555 123 456"
+                placeholder={form.market_code === "US" ? "+1 202 555 0143" : "+7 925 608 20 00 / +996 555 123 456"}
                 style={styles.input}
               />
             </label>
@@ -542,10 +570,34 @@ export default function AdminOpenOwnerPage(){
               <input
                 value={form.city}
                 onChange={(event) => updateFormField("city", event.target.value)}
-                placeholder="Бишкек"
+                placeholder={form.market_code === "US" ? "Например, New York" : "Бишкек"}
                 style={styles.input}
               />
             </label>
+
+            {form.market_code === "US" && form.owner_type === "salon" ? (
+              <>
+                <label style={styles.label}>
+                  Штат США (2 буквы)
+                  <input
+                    value={form.state_code}
+                    onChange={(event) => updateFormField("state_code", event.target.value.toUpperCase())}
+                    placeholder="NY"
+                    maxLength={2}
+                    style={styles.input}
+                  />
+                </label>
+                <label style={styles.label}>
+                  Почтовый индекс ZIP
+                  <input
+                    value={form.postal_code}
+                    onChange={(event) => updateFormField("postal_code", event.target.value)}
+                    placeholder="10001"
+                    style={styles.input}
+                  />
+                </label>
+              </>
+            ) : null}
 
             <label style={styles.label}>
               Адрес
@@ -576,12 +628,16 @@ export default function AdminOpenOwnerPage(){
                     onChange={(event) => updateFormField("work_mode", event.target.value)}
                     style={styles.input}
                   >
-                    <option value="independent">Независимый мастер</option>
-                    <option value="attached_to_salon">Прикрепить к салону</option>
+                    {form.market_code !== "US" ? (
+                      <option value="independent">Независимый мастер</option>
+                    ) : null}
+                    <option value="attached_to_salon">
+                      {form.market_code === "US" ? "Только через действующий салон США" : "Прикрепить к салону"}
+                    </option>
                   </select>
                 </label>
 
-                {form.work_mode === "attached_to_salon" ? (
+                {(form.work_mode === "attached_to_salon" || form.market_code === "US") ? (
                   <label style={styles.label}>
                     Слаг салона
                     <input
@@ -666,6 +722,13 @@ export default function AdminOpenOwnerPage(){
             <div><strong>Статус:</strong> {selectedRequest.status || "-"}</div>
             <div><strong>Статус email:</strong> {selectedRequest.email_status || "-"}</div>
             <div><strong>Тип:</strong> {selectedRequest.owner_type || "-"}</div>
+            <div><strong>Рынок:</strong> {selectedRequest.precheck_result_json?.normalized?.market_code || "наследуемый"}</div>
+            {selectedRequest.precheck_result_json?.normalized?.market_code === "US" ? (
+              <div><strong>US штат / ZIP:</strong> {selectedRequest.precheck_result_json?.normalized?.state_code || "—"} / {selectedRequest.precheck_result_json?.normalized?.postal_code || "—"}</div>
+            ) : null}
+            {selectedRequest.owner_type === "master" ? (
+              <div><strong>Салон мастера:</strong> {selectedRequest.salon_slug || "—"}</div>
+            ) : null}
             <div><strong>Слаг:</strong> {selectedRequest.slug_final || "-"}</div>
             <div><strong>email:</strong> {selectedRequest.email || "-"}</div>
             <div><strong>Телефон:</strong> {selectedRequest.phone_normalized || selectedRequest.phone_raw || "-"}</div>
