@@ -85,9 +85,11 @@ assert.throws(()=>createUsBookingRequest({...booking,
 assert.equal(localeLabels["en-US"],"English");
 const ruKeys=Object.keys(messages.ru).filter(x=>x.startsWith("us.book."));
 const enKeys=Object.keys(messages.en).filter(x=>x.startsWith("us.book."));
-assert.equal(enKeys.length,37);
+assert.equal(enKeys.length,38);
 assert.deepEqual(ruKeys.sort(),enKeys.sort());
 assert.equal(translate("en-US","us.book.title"),"Book an appointment");
+assert.match(translate("en-US","us.book.serviceNotReady"),/USD price/);
+assert.match(translate("ru-KG","us.book.serviceNotReady"),/долларах США/);
 assert.equal(translate("ru-KG","us.book.title"),"Запись в салон");
 assert.equal(translate("en-US","us.book.bookingNumber",{number:52}),"Booking number: 52");
 
