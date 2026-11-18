@@ -1421,11 +1421,13 @@ export async function getMasterMetrics(masterSlug = getMasterSlug()){
 export async function getMasterBookings(
   masterSlug = getMasterSlug(), {usLocationScope = false} = {}
 ){
-  const slug = encodeURIComponent(String(masterSlug || "").trim());
-  const suffix = usLocationScope ? "?calendar_scope=us_location" : "";
-  const r = await safeInternalJson(`/masters/${slug}/bookings${suffix}`, {
-    method:"GET", cache:usLocationScope ? "no-store" : undefined
-  });
+  // Keep the KG/KZ request EXACTLY as it was: URL and fetch options.
+  // Location enrichment is opt-in only for the US master schedule.
+  const path = usLocationScope
+    ? `/masters/${encodeURIComponent(String(masterSlug || "").trim())}/bookings?calendar_scope=us_location`
+    : `/masters/${masterSlug}/bookings`;
+  const r = await safeInternalJson(path,
+    usLocationScope ? {method:"GET",cache:"no-store"} : {method:"GET"});
   if(!r.ok) return { ok:false, error:"MASTER_BOOKINGS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_BOOKINGS_API_NOT_OK", detail:j };
