@@ -34,7 +34,9 @@ jobs:
       - name: Existing US model tests - DST folds, physical branch, UTC offsets
         run: |
           set -euo pipefail
-          node src/us/usBookingModel.test.mjs
+          TZ=Asia/Bishkek node src/us/usBookingModel.test.mjs
+          TZ=America/Los_Angeles node src/us/usBookingModel.test.mjs
+          TZ=Pacific/Honolulu node src/us/usBookingModel.test.mjs
           node --test src/us/usBookingNavigation.test.mjs
           node --test src/us/usOwnerPriceModel.test.mjs
       - name: Canonical SDK transport and region isolation
