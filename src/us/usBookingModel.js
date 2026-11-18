@@ -391,6 +391,81 @@ export function normalizeUsMasterScheduleFeed(payload) {
   return Object.freeze(rows.sort((a,b)=>a.starts_ms-b.starts_ms));
 }
 
+// Verified public US service BASE prices come from the same USD-cent
+// authority used by booking snapshots. Tax, tips, fees and settlement
+// totals are deliberately not inferred here.
+function usVerifiedServiceBasePrice(raw,allowUnconfigured=false){
+  if(!raw || typeof raw!=="object" ||
+     raw.source!=="us_service_price_amounts" ||
+     raw.currency_code!=="USD" ||
+     raw.amount_type!=="service_base_only" ||
+     typeof raw.configured!=="boolean") {
+    throw new Error("US_PUBLIC_SERVICE_PRICE_INVALID");
+  }
+  if(!raw.configured && allowUnconfigured &&
+     raw.amount_minor===null && raw.price_version===0){
+    return Object.freeze({
+      configured:false,amount_minor:null,price_version:0,
+      display:null,currency_code:"USD",amount_type:"service_base_only",
+      source:"us_service_price_amounts",
+    });
+  }
+  if(raw.configured!==true ||
+     typeof raw.amount_minor!=="string" ||
+     !/^[1-9][0-9]*$/.test(raw.amount_minor) ||
+     !Number.isSafeInteger(Number(raw.amount_minor)) ||
+     Number(raw.amount_minor)>99999999 ||
+     !Number.isSafeInteger(raw.price_version) ||
+     raw.price_version<1){
+    throw new Error("US_PUBLIC_SERVICE_PRICE_INVALID");
+  }
+  return Object.freeze({
+    configured:true,
+    amount_minor:Number(raw.amount_minor),
+    price_version:raw.price_version,
+    display:formatUsPrice(Number(raw.amount_minor)/100),
+    currency_code:"USD",amount_type:"service_base_only",
+    source:"us_service_price_amounts",
+  });
+}
+
+export function normalizeUsPublicServiceCatalog(payload){
+  if(!payload || payload.ok!==true || payload.market_code!=="US" ||
+     payload.currency_code!=="USD" || !Array.isArray(payload.services)){
+    throw new Error("US_PUBLIC_SERVICE_CATALOG_INVALID");
+  }
+  const seen=new Set();
+  const services=payload.services.map(raw=>{
+    const id=Number(raw?.id),masterId=Number(raw?.master_id);
+    const duration=Number(raw?.duration_min);
+    if(!Number.isSafeInteger(id)||id<1||seen.has(id)||
+       !Number.isSafeInteger(masterId)||masterId<1 ||
+       !Number.isSafeInteger(duration)||duration<1||duration>1440 ||
+       typeof raw?.name!=="string"||!raw.name.trim() ||
+       raw.active===false ||
+       Object.hasOwn(raw,"price")||Object.hasOwn(raw,"currency_code")){
+      throw new Error("US_PUBLIC_SERVICE_CATALOG_INVALID");
+    }
+    seen.add(id);
+    return Object.freeze({
+      id,master_id:masterId,name:raw.name.trim(),
+      duration_min:duration,
+      service_price:usVerifiedServiceBasePrice(raw.service_price,true),
+    });
+  });
+  return Object.freeze(services);
+}
+
+export function verifyUsAvailabilityBasePrice(payload, selectedService){
+  if(!payload || payload.ok!==true ||
+     Number(payload.service_id)!==Number(selectedService?.id) ||
+     !selectedService?.service_price?.configured ||
+     selectedService.service_price.source!=="us_service_price_amounts"){
+    throw new Error("US_AVAILABILITY_PRICE_MISMATCH");
+  }
+  return usVerifiedServiceBasePrice(payload.service_price);
+}
+
 export function formatUsPrice(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
