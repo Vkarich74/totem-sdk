@@ -1,0 +1,34 @@
+name: US salon-first SDK isolated build (no deployment)
+
+on:
+  push:
+    branches:
+      - work/us-salon-first-20261118
+    paths:
+      - src/admin/pages/AdminOpenOwnerPage.jsx
+      - .github/workflows/us-salon-first-isolated.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vite-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build React/Vite in ephemeral runner
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html
+          echo 'US_SALON_FIRST_SDK_BUILD_PASS; NO_DEPLOY'
