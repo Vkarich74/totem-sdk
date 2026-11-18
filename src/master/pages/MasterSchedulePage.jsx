@@ -328,7 +328,9 @@ return slot<currentSlot()
 }
 
 async function fetchMasterBookingsSnapshot(routeSlug, usScoped = false){
-const result = await getMasterBookings(routeSlug, {usLocationScope:usScoped})
+const result = usScoped
+  ? await getMasterBookings(routeSlug, {usLocationScope:true})
+  : await getMasterBookings(routeSlug)
 
 if(!result?.ok){
 const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
