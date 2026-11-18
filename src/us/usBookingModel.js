@@ -300,6 +300,28 @@ export function verifyUsMasterHoursSaved(before,written,fresh,desiredHours) {
   return fresh;
 }
 
+// An unresolved master context can be the platform's KG UI default even
+// when the actual master works in multiple US IANA zones. The existing
+// authenticated US-scoped bookings route is the sole market probe.
+// Never infer US from a browser timezone, profile text or client selection.
+export function classifyUnresolvedMasterMarketProbe(response) {
+  if (response?.ok === true) {
+    return Object.freeze({
+      mode:"us",
+      bookings:normalizeUsMasterScheduleFeed(response),
+    });
+  }
+  const status=Number(response?.detail?.status || 0);
+  const code=String(response?.detail?.json?.error || "");
+  if(status===409 && code==="MASTER_US_MARKET_SCOPE_REQUIRED") {
+    return Object.freeze({mode:"legacy",bookings:null});
+  }
+  if(status===409 && code==="MASTER_US_MIXED_MARKETS") {
+    return Object.freeze({mode:"mixed",bookings:null});
+  }
+  throw new Error("MASTER_US_MARKET_SCOPE_UNVERIFIED");
+}
+
 export function normalizeUsMasterScheduleFeed(payload) {
   if (!payload || payload.ok !== true ||
       payload.market_code !== "US" ||
