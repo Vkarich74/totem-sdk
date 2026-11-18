@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           node src/us/usBookingModel.test.mjs
           node --test src/us/usBookingNavigation.test.mjs
-      - name: Contract guard: reuse core calendar and central SDK API
+      - name: "Contract guard — reuse core calendar and central SDK API"
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
