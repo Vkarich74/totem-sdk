@@ -4,6 +4,8 @@ import {
   normalizeUsPhoneDraft, getUsBusinessDate, formatUsPrice,
   getUsCalendarLocations, verifyUsCalendarLocationResponse,
   normalizeUsMasterScheduleFeed,
+  normalizeUsMasterHoursLocations,normalizeUsMasterHoursDetail,
+  prepareUsMasterHoursPut,verifyUsMasterHoursSaved,
   formatUsLocationAddress, isValidUsSlot, createUsBookingRequest,
 } from "./usBookingModel.js";
 import { translate, localeLabels, messages } from "../i18n/messages.js";
@@ -188,6 +190,92 @@ for (const bad of [
   usMasterFeed([makeUsMasterBooking(),makeUsMasterBooking()]),
 ]) assert.throws(()=>normalizeUsMasterScheduleFeed(bad));
 console.log("US_MASTER_BOOKING_TIMEZONE_READ_ONLY=PASS");
+
+
+// Master-US weekly hours: pure models; no create/insert/update of any salon.
+const US_HOURS_A="a".repeat(64),US_HOURS_B="b".repeat(64);
+const locationHourScope={
+  location_id:78,salon_id:34,salon_slug:"existing-salon",
+  salon_name:"Existing Salon",location_code:"primary",
+  city_name:"Los Angeles",state_code:"CA",
+  timezone:"America/Los_Angeles",is_primary:true,
+};
+const hourLocations=normalizeUsMasterHoursLocations({
+  ok:true,market_code:"US",owner_type:"master",
+  owner_slug:"existing-master",locations:[locationHourScope],
+},"existing-master");
+assert.equal(hourLocations.length,1);
+assert.ok(Object.isFrozen(hourLocations));
+const existingHours=[{weekday:1,start_time:"09:00",end_time:"17:00",
+  break_start:"12:00",break_end:"13:00"}];
+const weekFrom=hours=>Array.from({length:7},(_,weekday)=>{
+  const row=hours.find(h=>h.weekday===weekday);
+  return {weekday,weekday_name:[
+    "sunday","monday","tuesday","wednesday","thursday","friday","saturday",
+  ][weekday],configured:Boolean(row),...(row||{
+    start_time:null,end_time:null,break_start:null,break_end:null,
+  })};
+});
+const serverHours=(hours=existingHours,revision=US_HOURS_A,saved=false)=>({
+  ok:true,market_code:"US",owner_type:"master",
+  owner_slug:"existing-master",master_id:41,
+  location:{...locationHourScope},hours,week:weekFrom(hours),
+  revision,saved,
+});
+const existing=normalizeUsMasterHoursDetail(
+  serverHours(),"existing-master",hourLocations[0]);
+assert.equal(existing.hours[0].start_time,"09:00");
+const days=existing.week.map(d=>({
+  ...d,configured:d.configured,
+  start_time:d.start_time??"09:00",end_time:d.end_time??"18:00",
+  has_break:d.break_start!==null,
+  break_start:d.break_start??"12:00",break_end:d.break_end??"13:00",
+}));
+const afterForm=days.map(d=>d.weekday===1?{...d,start_time:"08:00"}:d);
+const body=prepareUsMasterHoursPut(existing,afterForm);
+assert.equal(body.revision,US_HOURS_A);
+assert.deepEqual(body.hours,[{...existingHours[0],start_time:"08:00"}]);
+const written=normalizeUsMasterHoursDetail(
+  serverHours(body.hours,US_HOURS_B,true),"existing-master",hourLocations[0]);
+const reread=normalizeUsMasterHoursDetail(
+  serverHours(body.hours,US_HOURS_B,false),"existing-master",hourLocations[0]);
+assert.equal(verifyUsMasterHoursSaved(
+  existing,written,reread,body.hours).revision,US_HOURS_B);
+assert.throws(()=>verifyUsMasterHoursSaved(
+  existing,written,existing,body.hours),
+  /US_MASTER_HOURS_SAVE_NOT_CONFIRMED/);
+for(const invalid of [
+  {...serverHours(),market_code:"KG"},
+  {...serverHours(),owner_slug:"other-master"},
+  {...serverHours(),revision:"wrong"},
+  {...serverHours(),location:{...locationHourScope,location_code:"other"}},
+  {...serverHours(),week:weekFrom([])},
+  {...serverHours(),hours:[existingHours[0],existingHours[0]]},
+  {...serverHours(),hours:null},
+])assert.throws(()=>normalizeUsMasterHoursDetail(
+  invalid,"existing-master",hourLocations[0]));
+for(const invalid of [
+  [{...afterForm[0],weekday:8},...afterForm.slice(1)],
+  afterForm.map(d=>d.weekday===1?{...d,end_time:"07:00"}:d),
+  afterForm.map(d=>d.weekday===1?{...d,break_end:"18:00"}:d),
+])assert.throws(()=>prepareUsMasterHoursPut(existing,invalid));
+for(const invalid of [
+  {ok:true,market_code:"KG",owner_type:"master",
+    owner_slug:"existing-master",locations:[locationHourScope]},
+  {ok:true,market_code:"US",owner_type:"master",
+    owner_slug:"existing-master",locations:[
+      locationHourScope,locationHourScope]},
+  {ok:true,market_code:"US",owner_type:"master",
+    owner_slug:"existing-master",locations:[{
+      ...locationHourScope,timezone:"Etc/UTC"}]},
+])assert.throws(()=>normalizeUsMasterHoursLocations(
+  invalid,"existing-master"));
+assert.deepEqual(
+  normalizeUsMasterHoursLocations({
+    ok:true,market_code:"US",owner_type:"master",
+    owner_slug:"existing-master",locations:[],
+  },"existing-master"),[]);
+console.log("US_MASTER_LOCATION_HOURS_MODEL=PASS");
 
 console.log("US04_SDK_MODEL_TRANSLATION_UNIT=PASS",JSON.stringify({
   states_and_dc:51,translations_en_ru:37,location_address_zip:true,
