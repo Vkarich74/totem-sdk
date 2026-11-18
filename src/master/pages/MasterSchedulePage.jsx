@@ -671,8 +671,12 @@ if(isUsMarket && !loading && !error){
               </span>
             </div>
             <div style={{marginTop:9,fontSize:17,fontWeight:700}}>
-              {b.local_date} · {b.local_time}
-              {b.local_end_time ? " — "+b.local_end_time : ""}
+              {b.local_date} · {b.local_time} ({b.utc_offset})
+              {b.local_end_time
+                ? " — "+(b.local_end_date !== b.local_date
+                  ? b.local_end_date+" · " : "")+
+                  b.local_end_time+" ("+b.local_end_offset+")"
+                : ""}
             </div>
             <div style={{fontSize:13,color:"#475569",marginTop:5}}>
               {b.salon_name || b.salon_slug} · {b.location_code}
