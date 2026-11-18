@@ -266,7 +266,17 @@ export function prepareUsMasterHoursPut(record, days) {
      !Array.isArray(days)||days.length!==7) {
     throw new Error("US_MASTER_HOURS_INPUT_INVALID");
   }
-  const rows=days.filter(d=>d?.configured===true).map(day=>({
+  // The UI must carry all seven uniquely identified weekdays, including
+  // closed days. Never permit a duplicate/forged hidden weekday to vanish.
+  const seen=new Set();
+  for(const day of days){
+    if(!Number.isInteger(day?.weekday) || day.weekday<0 || day.weekday>6 ||
+       seen.has(day.weekday) || typeof day.configured!=="boolean"){
+      throw new Error("US_MASTER_HOURS_INPUT_INVALID");
+    }
+    seen.add(day.weekday);
+  }
+  const rows=days.filter(d=>d.configured===true).map(day=>({
     weekday:day.weekday,start_time:String(day.start_time||""),
     end_time:String(day.end_time||""),
     break_start:day.has_break ? String(day.break_start||"") : null,
