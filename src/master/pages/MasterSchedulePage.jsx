@@ -383,7 +383,7 @@ const marketScopeKey=JSON.stringify([
 const probeIsCurrent=probedScope.key===marketScopeKey
 const isUsMarket=explicitUsMarket ||
   (unresolvedMasterMarket && probeIsCurrent && probedScope.mode==="us")
-const marketProbePending=unresolvedMasterMarket &&
+const marketProbePending=Boolean(routeSlug) && unresolvedMasterMarket &&
   (!probeIsCurrent || probedScope.mode==="checking" ||
     probedScope.mode==="pending")
 const mixedMarketBlocked=unresolvedMasterMarket &&
