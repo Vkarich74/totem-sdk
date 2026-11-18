@@ -1418,12 +1418,22 @@ export async function getMasterMetrics(masterSlug = getMasterSlug()){
   return { ok:true, metrics: j.metrics || {} };
 }
 
-export async function getMasterBookings(masterSlug = getMasterSlug()){
-  const r = await safeInternalJson(`/masters/${masterSlug}/bookings`, { method: "GET" });
+export async function getMasterBookings(
+  masterSlug = getMasterSlug(), {usLocationScope = false} = {}
+){
+  const slug = encodeURIComponent(String(masterSlug || "").trim());
+  const suffix = usLocationScope ? "?calendar_scope=us_location" : "";
+  const r = await safeInternalJson(`/masters/${slug}/bookings${suffix}`, {
+    method:"GET", cache:usLocationScope ? "no-store" : undefined
+  });
   if(!r.ok) return { ok:false, error:"MASTER_BOOKINGS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_BOOKINGS_API_NOT_OK", detail:j };
-  return { ok:true, bookings: j.bookings || [] };
+  // The regular KG/KZ bookings contract is unchanged.
+  return usLocationScope
+    ? {ok:true,bookings:j.bookings || [],calendar_scope:j.calendar_scope,
+       market_code:j.market_code}
+    : {ok:true,bookings:j.bookings || []};
 }
 
 export async function getMasterPendingCashBookings(masterSlug = getMasterSlug()){
