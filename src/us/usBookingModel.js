@@ -152,6 +152,144 @@ export function verifyUsCalendarLocationResponse(payload, selectedLocation) {
 // Existing US master bookings feed, opt-in to canonical location metadata.
 // Calendar dates and times are derived from each booking's immutable
 // US booking→location link. Never use browser TZ or country-wide UTC.
+// Existing US-03 master/branch hours. Read-only model and closed PUT
+// allowlist; the Backend is the sole authority for validation and storage.
+const US_HOURS_REVISION = /^[a-f0-9]{64}$/;
+const US_HOURS_CLOCK = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+const US_HOURS_SLUG = /^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/;
+const US_HOURS_LOCATION = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function validUsMasterBranch(raw) {
+  const id=Number(raw?.location_id);
+  const salonId=Number(raw?.salon_id);
+  const tz=String(raw?.timezone||"");
+  if (!Number.isSafeInteger(id) || id<1 ||
+      !Number.isSafeInteger(salonId) || salonId<1 ||
+      !US_HOURS_SLUG.test(String(raw?.salon_slug||"")) ||
+      !US_HOURS_LOCATION.test(String(raw?.location_code||"")) ||
+      !tz || tz==="UTC" || tz==="Etc/UTC") {
+    throw new Error("US_MASTER_HOURS_LOCATION_INVALID");
+  }
+  try { new Intl.DateTimeFormat("en-US",{timeZone:tz}).format(new Date()); }
+  catch { throw new Error("US_MASTER_HOURS_LOCATION_INVALID"); }
+  return {
+    location_id:id,salon_id:salonId,salon_slug:raw.salon_slug,
+    salon_name:String(raw.salon_name||""),
+    location_code:raw.location_code,
+    city_name:String(raw.city_name||""),
+    state_code:String(raw.state_code||""),
+    timezone:tz,is_primary:raw.is_primary===true,
+  };
+}
+
+export function normalizeUsMasterHoursLocations(payload, masterSlug) {
+  if(!payload || payload.ok!==true || payload.market_code!=="US" ||
+     payload.owner_type!=="master" || payload.owner_slug!==masterSlug ||
+     !Array.isArray(payload.locations) || payload.locations.length>100) {
+    throw new Error("US_MASTER_HOURS_LOCATIONS_CONTRACT_INVALID");
+  }
+  const keys=new Set();
+  const locations=payload.locations.map(raw=>{
+    const row=validUsMasterBranch(raw);
+    const key=row.salon_slug+"/"+row.location_code;
+    if(keys.has(key))throw new Error("US_MASTER_HOURS_LOCATIONS_CONTRACT_INVALID");
+    keys.add(key);
+    return Object.freeze(row);
+  });
+  return Object.freeze(locations);
+}
+
+function canonicalUsHourRows(hours) {
+  if(!Array.isArray(hours)||hours.length>7)
+    throw new Error("US_MASTER_HOURS_INPUT_INVALID");
+  const days=new Set();
+  return hours.map(raw=>{
+    const weekday=raw?.weekday;
+    if(!Number.isInteger(weekday)||weekday<0||weekday>6||
+       days.has(weekday)||!US_HOURS_CLOCK.test(String(raw?.start_time||""))||
+       !US_HOURS_CLOCK.test(String(raw?.end_time||""))) {
+      throw new Error("US_MASTER_HOURS_INPUT_INVALID");
+    }
+    days.add(weekday);
+    const toMinutes=v=>Number(v.slice(0,2))*60+Number(v.slice(3,5));
+    const start=toMinutes(raw.start_time),end=toMinutes(raw.end_time);
+    const breakStart=raw.break_start??null,breakEnd=raw.break_end??null;
+    if(start>=end ||
+       (breakStart===null)!==(breakEnd===null) ||
+       (breakStart!==null &&
+         (!US_HOURS_CLOCK.test(breakStart)||!US_HOURS_CLOCK.test(breakEnd)||
+          toMinutes(breakStart)<start||toMinutes(breakEnd)>end||
+          toMinutes(breakStart)>=toMinutes(breakEnd)))) {
+      throw new Error("US_MASTER_HOURS_INPUT_INVALID");
+    }
+    return {
+      weekday,start_time:raw.start_time,end_time:raw.end_time,
+      break_start:breakStart,break_end:breakEnd,
+    };
+  }).sort((a,b)=>a.weekday-b.weekday);
+}
+
+export function normalizeUsMasterHoursDetail(payload, masterSlug, location) {
+  const scope=validUsMasterBranch(location);
+  if(!payload || payload.ok!==true || payload.market_code!=="US" ||
+     payload.owner_type!=="master" || payload.owner_slug!==masterSlug ||
+     payload.location?.salon_slug!==scope.salon_slug ||
+     payload.location?.location_code!==scope.location_code ||
+     payload.location?.timezone!==scope.timezone ||
+     !US_HOURS_REVISION.test(String(payload.revision||"")) ||
+     !Array.isArray(payload.week)||payload.week.length!==7 ||
+     typeof payload.saved!=="boolean") {
+    throw new Error("US_MASTER_HOURS_READBACK_INVALID");
+  }
+  const hours=canonicalUsHourRows(payload.hours);
+  const seen=new Set();
+  for(const day of payload.week) {
+    if(!Number.isInteger(day?.weekday) || day.weekday<0 ||
+       day.weekday>6 || seen.has(day.weekday) ||
+       typeof day.configured!=="boolean") {
+      throw new Error("US_MASTER_HOURS_READBACK_INVALID");
+    }
+    seen.add(day.weekday);
+    if(day.configured !== hours.some(row=>row.weekday===day.weekday)) {
+      throw new Error("US_MASTER_HOURS_READBACK_INVALID");
+    }
+  }
+  return Object.freeze({
+    location:scope,hours,revision:payload.revision,
+    saved:payload.saved,
+    week:Object.freeze(payload.week.map(day=>Object.freeze({...day}))),
+  });
+}
+
+export function prepareUsMasterHoursPut(record, days) {
+  if(!record || !US_HOURS_REVISION.test(String(record.revision||"")) ||
+     !Array.isArray(days)||days.length!==7) {
+    throw new Error("US_MASTER_HOURS_INPUT_INVALID");
+  }
+  const rows=days.filter(d=>d?.configured===true).map(day=>({
+    weekday:day.weekday,start_time:String(day.start_time||""),
+    end_time:String(day.end_time||""),
+    break_start:day.has_break ? String(day.break_start||"") : null,
+    break_end:day.has_break ? String(day.break_end||"") : null,
+  }));
+  return {revision:record.revision,hours:canonicalUsHourRows(rows)};
+}
+
+export function verifyUsMasterHoursSaved(before,written,fresh,desiredHours) {
+  if(!before||!written||!fresh||written.saved!==true||
+     fresh.saved!==false ||
+     written.revision!==fresh.revision ||
+     before.location.salon_slug!==fresh.location.salon_slug ||
+     before.location.location_code!==fresh.location.location_code ||
+     before.location.timezone!==fresh.location.timezone ||
+     JSON.stringify(written.hours)!==JSON.stringify(fresh.hours) ||
+     JSON.stringify(fresh.hours)!==
+       JSON.stringify(canonicalUsHourRows(desiredHours))) {
+    throw new Error("US_MASTER_HOURS_SAVE_NOT_CONFIRMED");
+  }
+  return fresh;
+}
+
 export function normalizeUsMasterScheduleFeed(payload) {
   if (!payload || payload.ok !== true ||
       payload.market_code !== "US" ||
