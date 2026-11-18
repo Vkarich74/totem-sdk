@@ -376,6 +376,12 @@ export default function ServicesPage() {
   }
 
   async function attachService() {
+    // US requires a separate, direct-owner-scoped salon service attach API.
+    // Never attach a US link from a legacy numeric price in this route.
+    if (isUsMarket) {
+      setError("US_SERVICE_LINK_ENDPOINT_REQUIRED");
+      return;
+    }
     if (!selectedServiceId) {
       setError(uiError(uiMessage("salon.s0749")));
       return;
@@ -474,6 +480,14 @@ export default function ServicesPage() {
 
         <div style={cardStyle()}>
           <h3 style={sectionTitleStyle()}><UiValue value={uiMessage("salon.s0758")} /></h3>
+          {isUsMarket ? (
+            <p style={{fontSize:13,color:"#92400e",lineHeight:1.5}}>
+              В США добавление услуги через общий маршрут временно закрыто:
+              он не проверяет прямое владение US-салоном и допускает
+              наследуемые цены. Для уже подключённых услуг отдельная
+              подтверждённая цена USD доступна в карточках ниже.
+            </p>
+          ) : null}
 
           <div
             style={{
@@ -506,8 +520,8 @@ export default function ServicesPage() {
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button
                 onClick={attachService}
-                disabled={attachLoading || !hasAvailableMasterServices}
-                style={buttonStyle("primary", attachLoading || !hasAvailableMasterServices)}
+                disabled={isUsMarket || attachLoading || !hasAvailableMasterServices}
+                style={buttonStyle("primary", isUsMarket || attachLoading || !hasAvailableMasterServices)}
               >
                 <UiValue value={attachLoading ? uiMessage("salon.s0429") : uiMessage("salon.s0763")} />
               </button>
