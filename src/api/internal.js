@@ -1044,13 +1044,18 @@ export async function getSalonUsLocations(salonSlug = getSalonSlug(), {signal} =
 }
 
 export async function mutateSalonUsLocation(
-  salonSlug, method, locationCode = "", payload = null, {signal} = {}
+  salonSlug, method, locationCode = "", payload = null, {signal, activate = false} = {}
 ){
-  if(!["POST","PUT"].includes(method)) throw new Error("US_LOCATIONS_METHOD_INVALID");
+  if(!["POST","PUT"].includes(method) ||
+     (activate && method !== "POST") ||
+     (activate && !locationCode) ||
+     (locationCode && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(locationCode))) {
+    throw new Error("US_LOCATIONS_METHOD_INVALID");
+  }
   const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
   const suffix = locationCode
     ? `/${encodeURIComponent(String(locationCode))}` : "";
-  const path = `/salons/${safeSlug}/us-locations${suffix}`;
+  const path = `/salons/${safeSlug}/us-locations${suffix}${activate ? "/activate" : ""}`;
   const r = await safeInternalJson(path, {
     method,cache:"no-store",signal,
     ...(payload ? {body:JSON.stringify(payload)} : {})
