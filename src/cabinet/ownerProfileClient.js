@@ -1,56 +1,49 @@
-import { getAuthAccessToken } from "../api/internal.js";
+// Thin SDK adapter over the existing src/api/internal.js transport.
+// No separate base URL, token parser or network layer.
+import {
+  getSalon, getMaster, patchSalonProfile, patchMasterProfile,
+} from "../api/internal.js";
 import {
   assertOwnerProfileTarget, validateOwnerProfileReply, profilePayload,
 } from "./ownerProfileModel.js";
 
-function apiUrl(ownerType, ownerSlug) {
-  assertOwnerProfileTarget(ownerType, ownerSlug);
-  const base = String(
-    import.meta.env.VITE_API_BASE ||
-    (typeof window !== "undefined" ? window.TOTEM_API_BASE : "") ||
-    "https://api.totemv.com"
-  ).replace(/\/$/, "");
-  return base + "/internal/cabinet-profile/" +
-    encodeURIComponent(ownerType) + "/" + encodeURIComponent(ownerSlug);
-}
-
-async function request(ownerType, ownerSlug, method, body, signal) {
-  const token = getAuthAccessToken();
-  if (!token) throw Object.assign(
-    new Error("PROFILE_SESSION_REQUIRED"), {status:401}
-  );
-  const response = await fetch(apiUrl(ownerType, ownerSlug), {
-    method, signal, cache: "no-store", credentials: "omit",
-    headers: {
-      Authorization: "Bearer " + token,
-      Accept: "application/json",
-      ...(method === "PATCH" ? {"Content-Type":"application/json"} : {}),
-    },
-    ...(method === "PATCH" ? {body:JSON.stringify(body)} : {}),
-  });
-  if (!(response.headers.get("content-type") || "").toLowerCase()
-    .includes("application/json")) {
-    throw Object.assign(
-      new Error("PROFILE_RESPONSE_NOT_JSON"), {status:response.status}
-    );
+function verifiedContract(raw, ownerType, ownerSlug) {
+  const detail = raw?.detail?.json || raw?.detail || {};
+  if (!raw?.ok) {
+    const error = new Error(String(detail?.error || raw?.error || "PROFILE_REQUEST_FAILED"));
+    error.status = Number(raw?.detail?.status || 0);
+    throw error;
   }
-  const raw = await response.json();
-  if (!response.ok || raw?.ok !== true) {
-    throw Object.assign(
-      new Error(String(raw?.error || "PROFILE_REQUEST_FAILED")),
-      {status:response.status}
-    );
+  if (!raw.profile || !raw.profile_revision) {
+    throw new Error("PROFILE_CANONICAL_ENDPOINT_UNAVAILABLE");
   }
-  return validateOwnerProfileReply(raw, ownerType, ownerSlug);
+  return validateOwnerProfileReply({
+    ok:true,
+    owner_type:ownerType,
+    owner_slug:ownerSlug,
+    profile:raw.profile,
+    revision:raw.profile_revision,
+    editable_fields:raw.profile_editable_fields,
+    unsupported_fields:raw.profile_unsupported_fields,
+    can_write:raw.profile_can_write,
+    saved:raw.profile_saved === true,
+  },ownerType,ownerSlug);
 }
 
 export async function getOwnerCabinetProfile(ownerType, ownerSlug, {signal} = {}) {
-  return request(ownerType, ownerSlug, "GET", null, signal);
+  assertOwnerProfileTarget(ownerType,ownerSlug);
+  const response = ownerType === "salon"
+    ? await getSalon(ownerSlug,{signal})
+    : await getMaster(ownerSlug,{signal});
+  return verifiedContract(response,ownerType,ownerSlug);
 }
 
 export async function saveOwnerCabinetProfile(record, values, {signal} = {}) {
-  return request(
-    record.owner_type, record.owner_slug,
-    "PATCH", profilePayload(record, values), signal
-  );
+  const {ownerType,ownerSlug} =
+    assertOwnerProfileTarget(record.owner_type,record.owner_slug);
+  const payload = profilePayload(record,values);
+  const result = ownerType === "salon"
+    ? await patchSalonProfile(ownerSlug,payload,{signal})
+    : await patchMasterProfile(ownerSlug,payload,{signal});
+  return verifiedContract(result,ownerType,ownerSlug);
 }
