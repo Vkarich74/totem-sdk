@@ -149,6 +149,56 @@ export function verifyUsCalendarLocationResponse(payload, selectedLocation) {
   return payload;
 }
 
+// Existing US master bookings feed, opt-in to canonical location metadata.
+// Calendar dates and times are derived from each booking's immutable
+// US booking→location link. Never use browser TZ or country-wide UTC.
+export function normalizeUsMasterScheduleFeed(payload) {
+  if (!payload || payload.ok !== true ||
+      payload.market_code !== "US" ||
+      payload.calendar_scope !== "us_location" ||
+      !Array.isArray(payload.bookings)) {
+    throw new Error("US_MASTER_SCHEDULE_FEED_INVALID");
+  }
+  const ids = new Set();
+  const rows = payload.bookings.map(raw => {
+    const id = Number(raw?.id);
+    const salonId = Number(raw?.salon_id);
+    const salonSlug = String(raw?.salon_slug || "");
+    const locationCode = String(raw?.location_code || "");
+    const timezone = String(raw?.location_timezone || "");
+    const start = new Date(raw?.start_at);
+    const end = raw?.end_at == null ? null : new Date(raw.end_at);
+    if (!Number.isSafeInteger(id) || id < 1 || ids.has(id) ||
+        !Number.isSafeInteger(salonId) || salonId < 1 ||
+        !/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(salonSlug) ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(locationCode) ||
+        !timezone || timezone === "Etc/UTC" || timezone === "UTC" ||
+        !Number.isFinite(start.getTime()) ||
+        (end && (!Number.isFinite(end.getTime()) || end <= start))) {
+      throw new Error("US_MASTER_BOOKING_LOCATION_INVALID");
+    }
+    try {
+      const localDate = getUsBusinessDate(start,timezone);
+      const timeFormatter = new Intl.DateTimeFormat("en-US",{
+        timeZone:timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23",
+      });
+      const localTime = timeFormatter.format(start);
+      const localEndTime = end ? timeFormatter.format(end) : null;
+      ids.add(id);
+      return Object.freeze({
+        ...raw,id,salon_id:salonId,salon_slug:salonSlug,
+        location_code:locationCode,location_timezone:timezone,
+        local_date:localDate,local_time:localTime,
+        local_end_time:localEndTime,
+        starts_ms:start.getTime(),
+      });
+    } catch {
+      throw new Error("US_MASTER_BOOKING_LOCATION_INVALID");
+    }
+  });
+  return Object.freeze(rows.sort((a,b)=>a.starts_ms-b.starts_ms));
+}
+
 export function formatUsPrice(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
