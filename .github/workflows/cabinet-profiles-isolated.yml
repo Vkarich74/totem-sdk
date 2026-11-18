@@ -1,0 +1,61 @@
+name: Cabinet profiles — Backend contract SDK consumer (offline)
+on:
+  push:
+    branches:
+      - work/cabinet-profiles-20261118
+    paths:
+      - src/cabinet/**
+      - src/salon/pages/SettingsPage.jsx
+      - src/master/pages/MasterSettingsPage.jsx
+      - .github/workflows/cabinet-profiles-isolated.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sdk-cabinet-profiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      ODOO_URL: ""
+      RAILWAY_TOKEN: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install project-pinned dependencies
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Profile contract, SQL readback consumer and backward-compatible USD tests
+        run: |
+          set -euo pipefail
+          node --test \
+            src/cabinet/ownerProfileModel.test.mjs \
+            src/us/usOwnerPriceModel.test.mjs \
+            src/us/usBookingModel.test.mjs \
+            src/us/usBookingNavigation.test.mjs
+      - name: No fake profile save in salon and master settings
+        run: |
+          set -euo pipefail
+          if grep -E 'SALON SETTINGS|MASTER SETTINGS|onClick=\{save\}' \
+            src/salon/pages/SettingsPage.jsx \
+            src/master/pages/MasterSettingsPage.jsx; then
+            echo 'FAKE_PROFILE_SAVE_REMAINS'
+            exit 1
+          fi
+          grep -q 'OwnerProfileSettings' src/salon/pages/SettingsPage.jsx
+          grep -q 'OwnerProfileSettings' src/master/pages/MasterSettingsPage.jsx
+      - name: Complete React/Vite cabinet build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html
+          echo 'CABINET_PROFILE_SDK_BUILD_PASS'
+      - name: No production connections, no test salons, no deploy
+        run: |
+          test -z "${DATABASE_URL:-}"
+          echo 'MOCK_ONLY; NO_SALON_CREATION; NO_DB_WRITES; NO_DEPLOY'
