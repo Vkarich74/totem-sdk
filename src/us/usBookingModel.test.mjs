@@ -3,7 +3,7 @@ import {
   US_STATE_CODES, validateUsLocationCatalog, usLocationsForState,
   normalizeUsPhoneDraft, getUsBusinessDate, formatUsPrice,
   getUsCalendarLocations, verifyUsCalendarLocationResponse,
-  normalizeUsMasterScheduleFeed,
+  normalizeUsMasterScheduleFeed,classifyUnresolvedMasterMarketProbe,
   normalizeUsMasterHoursLocations,normalizeUsMasterHoursDetail,
   prepareUsMasterHoursPut,verifyUsMasterHoursSaved,
   formatUsLocationAddress, isValidUsSlot, createUsBookingRequest,
@@ -275,6 +275,56 @@ assert.deepEqual(
     ok:true,market_code:"US",owner_type:"master",
     owner_slug:"existing-master",locations:[],
   },"existing-master"),[]);
+// Unresolved master business contexts may come from different US timezones.
+// Only the existing authenticated /masters/:slug/bookings?calendar_scope=us_location
+// is an acceptable proof. An ordinary platform KG default never is.
+const goodMultiZoneFeed={
+  ok:true,market_code:"US",calendar_scope:"us_location",
+  bookings:[
+    {
+      id:901, salon_id:34,salon_slug:"existing-salon",
+      location_code:"east",location_timezone:"America/New_York",
+      start_at:"2026-11-18T15:00:00.000Z",
+      end_at:"2026-11-18T15:30:00.000Z",status:"confirmed",
+    },
+    {
+      id:902, salon_id:35,salon_slug:"other-existing-salon",
+      location_code:"west",location_timezone:"America/Los_Angeles",
+      start_at:"2026-11-18T16:00:00.000Z",
+      end_at:"2026-11-18T16:30:00.000Z",status:"confirmed",
+    },
+  ],
+};
+const multiZone=classifyUnresolvedMasterMarketProbe(goodMultiZoneFeed);
+assert.equal(multiZone.mode,"us");
+assert.equal(multiZone.bookings.length,2);
+assert.deepEqual(multiZone.bookings.map(b=>b.location_timezone),[
+  "America/New_York","America/Los_Angeles",
+]);
+assert.deepEqual(classifyUnresolvedMasterMarketProbe({
+  ok:true,market_code:"US",calendar_scope:"us_location",bookings:[],
+}),{mode:"us",bookings:[]});
+const nonUsScopeFailure={
+  ok:false,error:"MASTER_BOOKINGS_FETCH_FAILED",
+  detail:{status:409,json:{ok:false,error:"MASTER_US_MARKET_SCOPE_REQUIRED"}},
+};
+assert.equal(classifyUnresolvedMasterMarketProbe(nonUsScopeFailure).mode,"legacy");
+const mixedScopeFailure={
+  ok:false,error:"MASTER_BOOKINGS_FETCH_FAILED",
+  detail:{status:409,json:{ok:false,error:"MASTER_US_MIXED_MARKETS"}},
+};
+assert.equal(classifyUnresolvedMasterMarketProbe(mixedScopeFailure).mode,"mixed");
+for(const invalid of [
+  {ok:true,market_code:"KG",calendar_scope:"us_location",bookings:[]},
+  {ok:true,market_code:"US",bookings:[]},
+  {ok:false,detail:{status:403,json:{error:"FORBIDDEN"}}},
+  {ok:false,detail:{status:503,json:{error:"STORAGE_UNAVAILABLE"}}},
+  {ok:false,detail:{status:409,json:{error:"MASTER_US_BOOKING_LOCATION_REQUIRED"}}},
+  {ok:false,detail:{status:200,json:{error:"MASTER_US_MARKET_SCOPE_REQUIRED"}}},
+  {ok:false,detail:{status:409,json:{error:"MASTER_US_MARKET_SCOPE_UNEXPECTED"}}},
+])assert.throws(()=>classifyUnresolvedMasterMarketProbe(invalid));
+console.log("US_MASTER_MULTI_ZONE_MARKET_FALLBACK_GUARD=PASS");
+
 console.log("US_MASTER_LOCATION_HOURS_MODEL=PASS");
 
 console.log("US04_SDK_MODEL_TRANSLATION_UNIT=PASS",JSON.stringify({
