@@ -6,7 +6,7 @@ import {
 import { translate } from "../i18n/messages.js";
 import {
   validateUsLocationCatalog, usLocationsForState,
-  getUsBusinessDate, formatUsLocationAddress, formatUsPrice,
+  getUsBusinessDate, formatUsLocationAddress,
   isValidUsSlot, createUsBookingRequest, normalizeUsPhoneDraft,
 } from "./usBookingModel.js";
 
@@ -63,6 +63,10 @@ function getUsErrorMessage(tr, error) {
   const code = String(error?.message || "");
   if (code === "US_SLOT_UNAVAILABLE" || code === "TIME_SLOT_CONFLICT")
     return tr("us.book.conflict");
+  if (code === "US_SERVICE_PRICE_NOT_CONFIGURED" ||
+      code === "US_SERVICE_PRICE_INVALID" ||
+      code === "US_SERVICE_PRICE_CONTEXT_INVALID")
+    return tr("us.book.serviceNotReady");
   if (code === "US_DST_GAP" || code === "US_DST_FOLD" ||
       code === "US_BOOKING_INSTANT_MISMATCH")
     return tr("us.book.timeError");
@@ -416,7 +420,7 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
                 <option value="">{tr("us.book.chooseService")}</option>
                 {filteredServices.map(item => (
                   <option key={item.id} value={item.id}>
-                    {item.name} · {formatUsPrice(item.price)} · {item.duration_min} min
+                    {item.name} · {item.duration_min} min
                   </option>
                 ))}
               </select>
@@ -492,8 +496,7 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
             <p style={styles.help}>{tr("us.book.phoneHelp")}</p>
             {service && (
               <div style={styles.address}>
-                <strong>Estimated catalog price: {formatUsPrice(service.price)}</strong>
-                <p style={styles.help}>Your final booking price is shown after server verification.</p>
+                <p style={styles.help}>The service price is verified from the salon's configured USD price by the server at booking time.</p>
                 <p style={styles.help}>{tr("us.book.noOnlinePayment")}</p>
               </div>
             )}
