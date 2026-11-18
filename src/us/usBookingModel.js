@@ -166,14 +166,21 @@ export function normalizeUsMasterScheduleFeed(payload) {
     const salonSlug = String(raw?.salon_slug || "");
     const locationCode = String(raw?.location_code || "");
     const timezone = String(raw?.location_timezone || "");
-    const start = new Date(raw?.start_at);
-    const end = raw?.end_at == null ? null : new Date(raw.end_at);
+    // Require explicit UTC/offset instants. "2026-11-18 10:00" must
+    // never be interpreted by the client's own operating-system timezone.
+    const absolute = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/;
+    const validStart = typeof raw?.start_at === "string" &&
+      absolute.test(raw.start_at);
+    const validEnd = raw?.end_at == null ||
+      (typeof raw.end_at === "string" && absolute.test(raw.end_at));
+    const start = validStart ? new Date(raw.start_at) : new Date(NaN);
+    const end = validEnd && raw?.end_at != null ? new Date(raw.end_at) : null;
     if (!Number.isSafeInteger(id) || id < 1 || ids.has(id) ||
         !Number.isSafeInteger(salonId) || salonId < 1 ||
         !/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(salonSlug) ||
         !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(locationCode) ||
         !timezone || timezone === "Etc/UTC" || timezone === "UTC" ||
-        !Number.isFinite(start.getTime()) ||
+        !validEnd || !Number.isFinite(start.getTime()) ||
         (end && (!Number.isFinite(end.getTime()) || end <= start))) {
       throw new Error("US_MASTER_BOOKING_LOCATION_INVALID");
     }
@@ -184,12 +191,27 @@ export function normalizeUsMasterScheduleFeed(payload) {
       });
       const localTime = timeFormatter.format(start);
       const localEndTime = end ? timeFormatter.format(end) : null;
+      // UTC offset disambiguates the repeated 01:30 on autumn DST folds.
+      const offsetFormatter = new Intl.DateTimeFormat("en-US",{
+        timeZone:timezone,timeZoneName:"shortOffset",
+      });
+      const offsetAt = date => offsetFormatter.formatToParts(date)
+        .find(part=>part.type === "timeZoneName")?.value || null;
+      const utcOffset = offsetAt(start);
+      const endUtcOffset = end ? offsetAt(end) : null;
+      const localEndDate = end ? getUsBusinessDate(end,timezone) : null;
+      if (!utcOffset || (end && !endUtcOffset)) {
+        throw new Error("US_MASTER_BOOKING_OFFSET_UNRESOLVED");
+      }
       ids.add(id);
       return Object.freeze({
         ...raw,id,salon_id:salonId,salon_slug:salonSlug,
         location_code:locationCode,location_timezone:timezone,
         local_date:localDate,local_time:localTime,
+        utc_offset:utcOffset,
+        local_end_date:localEndDate,
         local_end_time:localEndTime,
+        local_end_offset:endUtcOffset,
         starts_ms:start.getTime(),
       });
     } catch {
