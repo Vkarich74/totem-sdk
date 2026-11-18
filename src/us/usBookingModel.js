@@ -95,6 +95,60 @@ export function getUsBusinessDate(now, timezone) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
+// Read-only US salon calendar uses the existing owner location registry.
+// Disabled drafts and market-wide Etc/UTC are never treated as real branches.
+export function getUsCalendarLocations(payload) {
+  if (!payload || payload.ok !== true || payload.market_code !== "US" ||
+      payload.currency_code !== "USD" || !Array.isArray(payload.locations)) {
+    throw new Error("US_CALENDAR_LOCATION_REGISTRY_INVALID");
+  }
+  const seen = new Set();
+  const enabled = [];
+  for (const item of payload.locations) {
+    if (item?.enabled !== true) continue;
+    const code = String(item.location_code || "");
+    const timezone = String(item.timezone_name || "");
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(code) || seen.has(code) ||
+        !timezone || timezone === "UTC" || timezone === "Etc/UTC") {
+      throw new Error("US_CALENDAR_LOCATION_INVALID");
+    }
+    try {
+      new Intl.DateTimeFormat("en-US", {timeZone: timezone}).format(new Date());
+    } catch {
+      throw new Error("US_CALENDAR_LOCATION_INVALID");
+    }
+    seen.add(code);
+    enabled.push(Object.freeze({
+      location_code:code,
+      timezone,
+      city_name:String(item.city_name || ""),
+      state_code:String(item.state_code || ""),
+      is_primary:item.is_primary === true,
+    }));
+  }
+  return Object.freeze(enabled.sort((a,b)=>
+    Number(b.is_primary)-Number(a.is_primary) ||
+    a.location_code.localeCompare(b.location_code)
+  ));
+}
+
+export function verifyUsCalendarLocationResponse(payload, selectedLocation) {
+  const code = String(selectedLocation?.location_code || "");
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(code) ||
+      !payload || payload.ok !== true || payload.market_code !== "US" ||
+      payload.date?.location_code !== code ||
+      payload.location?.location_code !== code ||
+      payload.date?.timezone !== selectedLocation.timezone ||
+      payload.location?.timezone !== selectedLocation.timezone ||
+      typeof payload.date?.requested_date !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(payload.date.requested_date) ||
+      !Array.isArray(payload.masters) || !Array.isArray(payload.working_hours) ||
+      !Array.isArray(payload.events)) {
+    throw new Error("US_CALENDAR_LOCATION_READBACK_MISMATCH");
+  }
+  return payload;
+}
+
 export function formatUsPrice(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
