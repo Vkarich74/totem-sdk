@@ -49,6 +49,14 @@ jobs:
           fi
           grep -q 'OwnerProfileSettings' src/salon/pages/SettingsPage.jsx
           grep -q 'OwnerProfileSettings' src/master/pages/MasterSettingsPage.jsx
+      - name: Guarantee one SDK API transport and canonical cabinet roots
+        run: |
+          set -euo pipefail
+          ! grep -E '(^|[^[:alpha:]])fetch\\(|getAuthAccessToken|API_BASE|/cabinet-profile/' src/cabinet/ownerProfileClient.js
+          grep -Fq 'getSalon(ownerSlug' src/cabinet/ownerProfileClient.js
+          grep -Fq 'getMaster(ownerSlug' src/cabinet/ownerProfileClient.js
+          grep -Fq 'patchSalonProfile' src/api/internal.js
+          grep -Fq 'patchMasterProfile' src/api/internal.js
       - name: Complete React/Vite cabinet build
         run: |
           set -euo pipefail
