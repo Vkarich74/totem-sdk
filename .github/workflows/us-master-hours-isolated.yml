@@ -4,12 +4,15 @@ on:
     branches:
       - work/us-master-hours-20261118
       - work/us-master-market-scope-20261118
+      - work/us-hours-services-slots-20261118
     paths:
       - src/master/pages/MasterSchedulePage.jsx
       - src/master/pages/UsMasterWorkingHoursEditor.jsx
       - src/api/internal.js
       - src/us/usBookingModel.js
       - src/us/usBookingModel.test.mjs
+      - src/us/UsBookingPage.jsx
+      - src/i18n/messages.js
       - .github/workflows/us-master-hours-isolated.yml
   workflow_dispatch:
 permissions:
@@ -50,6 +53,10 @@ jobs:
           grep -Fq 'classifyUnresolvedMasterMarketProbe(raw)' src/master/pages/MasterSchedulePage.jsx
           grep -Fq 'MASTER_US_MIXED_MARKETS' src/us/usBookingModel.js
           grep -Fq 'marketProbePending' src/master/pages/MasterSchedulePage.jsx
+          grep -Fq 'us.book.serviceNotReady' src/us/UsBookingPage.jsx
+          ! grep -F 'formatUsPrice(service.price)' src/us/UsBookingPage.jsx
+          ! grep -F 'formatUsPrice(item.price)' src/us/UsBookingPage.jsx
+          grep -Fq 'us.book.serviceNotReady' src/i18n/messages.js
           echo 'ONE_SDK_TRANSPORT; US_ONLY_EDIT; KG_KZ_LEGACY_MASTER_SCHEDULE_UNCHANGED'
       - name: Full React Vite owner cabinets build
         run: |
