@@ -3,6 +3,7 @@ import { UiValue, uiMessage, uiDate, uiJoin, uiTemplate, uiError, useUiMessages 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { useMaster } from "../MasterContext"
+import OwnerProfileSettings from "../../cabinet/OwnerProfileSettings.jsx"
 import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
 import { useMarketContext } from "../../market/MarketContext.jsx"
@@ -552,35 +553,16 @@ function getBillingUi(billingAccess, billingBlockReason){
 }
 
 export default function MasterSettingsPage() {
- const { renderUi } = useUiMessages();
   const {
     master,
     slug,
     billingAccess,
     canWrite,
     canWithdraw,
-    billingBlockReason
+    billingBlockReason,
+    reload,
   } = useMaster()
   const { context: marketContext } = useMarketContext()
-
-  const [name, setName] = useState("")
-  const [photo, setPhoto] = useState("")
-  const [bio, setBio] = useState("")
-  const [phone, setPhone] = useState("")
-  const [email, setEmail] = useState("")
-  const [whatsapp, setWhatsapp] = useState("")
-  const [slot, setSlot] = useState("15")
-  const [minBefore, setMinBefore] = useState("60")
-  const [advance, setAdvance] = useState("30")
-
-  useEffect(() => {
-    setName(master?.name || "")
-    setPhoto(master?.photo || master?.avatar || master?.image || "")
-    setBio(master?.bio || master?.about || "")
-    setPhone(master?.phone || "")
-    setEmail(master?.email || "")
-    setWhatsapp(master?.whatsapp || master?.phone || "")
-  }, [master])
 
   const billingUi = useMemo(
     () => getBillingUi(billingAccess, billingBlockReason),
@@ -602,23 +584,6 @@ export default function MasterSettingsPage() {
     billingAccess?.currentPeriodEnd ||
     null
 
-  function save() {
-    console.log("MASTER SETTINGS", {
-      slug,
-      name,
-      photo,
-      bio,
-      phone,
-      email,
-      whatsapp,
-      slot,
-      minBefore,
-      advance
-    })
-
-    alert(renderUi(uiError(uiMessage("salon.s0807"))))
-  }
-
   return (
     <div style={{ padding: "20px" }}>
       <PageSection title={uiMessage("master.s0165")}>
@@ -636,22 +601,13 @@ export default function MasterSettingsPage() {
           </div>
         </div>
 
-        <Block title={uiMessage("master.s0166")} hint={uiMessage("master.s0167")}>
-          <Field label={uiMessage("salon.s0654")} value={name} onChange={setName} />
-          <Field label={uiMessage("master.s0169")} value={photo} onChange={setPhoto} placeholder={uiMessage("salon.s0796")} />
-          <Field label={uiMessage("salon.s0597")} value={bio} onChange={setBio} />
-        </Block>
-
-        <Block title={uiMessage("salon.s0457")} hint={uiMessage("master.s0172")}>
-          <Field label={uiMessage("salon.s0230")} value={phone} onChange={setPhone} />
-          <Field label={uiMessage("salon.s0815")} value={email} onChange={setEmail} />
-          <Field label={uiMessage("salon.s0574")} value={whatsapp} onChange={setWhatsapp} />
-        </Block>
-
-        <Block title={uiMessage("master.s0176")} hint={uiMessage("master.s0177")}>
-          <Field label={uiMessage("salon.s0818")} value={slot} onChange={setSlot} type="number" />
-          <Field label={uiMessage("salon.s0819")} value={minBefore} onChange={setMinBefore} type="number" />
-          <Field label={uiMessage("salon.s0820")} value={advance} onChange={setAdvance} type="number" />
+        <Block title="Профиль мастера" hint="Подтверждённая запись в существующую БД и повторное чтение">
+          <OwnerProfileSettings
+            ownerType="master"
+            ownerSlug={slug}
+            canWrite={canWrite}
+            onPersisted={reload}
+          />
         </Block>
 
         <Block title={uiMessage("salon.s0821")} hint={uiMessage("salon.s0822")}>
@@ -738,18 +694,7 @@ export default function MasterSettingsPage() {
           />
         </Block>
 
-        <button
-          onClick={save}
-          style={{
-            padding: "12px 18px",
-            borderRadius: "10px",
-            border: "none",
-            background: "#111",
-            color: "#fff",
-            cursor: "pointer",
-            fontWeight: 600
-          }}
-        ><UiValue value={uiMessage("salon.s0838")} /></button>
+
       </PageSection>
     </div>
   )
