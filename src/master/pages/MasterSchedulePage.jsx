@@ -631,7 +631,7 @@ if(loading)return<PageSection title={uiMessage("master.s0300")}><div><UiValue va
 // US is an exact per-booking location timeline. There is no trustworthy
 // global 07:00–21:00 grid for a master operating across several US zones.
 // Do not display fake availability or invoke the legacy public status API.
-if(isUsMarket && !loading && !error){
+if(isUsMarket && !masterLoading && !masterError && !bookingsLoading){
   const dates=[...new Set(bookings.map(b=>b.local_date))].sort()
   const chosen=dates.includes(usSelectedDay) ? usSelectedDay : (dates.at(-1) || "")
   const shown=bookings.filter(b=>b.local_date===chosen)
@@ -641,6 +641,13 @@ if(isUsMarket && !loading && !error){
         masterSlug={routeSlug}
         canWrite={canWrite===true}
       />
+      {bookingsError ? (
+        <p role="alert" style={{color:"#b42318",fontSize:13}}>
+          Записи не удалось проверить: {bookingsError}.
+          Настройка рабочих часов доступна отдельно; сохранение с
+          предстоящими записями будет заблокировано сервером.
+        </p>
+      ) : null}
       <p style={{fontSize:13,color:"#475569",lineHeight:1.6,marginTop:16}}>
         Время каждой записи соответствует часовому поясу физического
         филиала, подтверждённому сервером. При работе в нескольких
@@ -659,13 +666,13 @@ if(isUsMarket && !loading && !error){
             ))}
           </select>
         </label>
-      ) : (
+      ) : !bookingsError ? (
         <p role="status" style={{padding:14,background:"#f8fafc",
           border:"1px solid #cbd5e1",borderRadius:10}}>
           Подтверждённых записей в филиалах США пока нет.
           Свободные слоты не предполагаются без точного расписания филиала.
         </p>
-      )}
+      ) : null}
       <div style={{display:"grid",gap:12,marginTop:16}}>
         {shown.map(b=>(
           <article key={b.id} style={{padding:15,
