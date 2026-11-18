@@ -1,11 +1,13 @@
 import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
+import { useMarketContext } from "../../market/MarketContext.jsx"
+import { getUsCalendarLocations, verifyUsCalendarLocationResponse } from "../../us/usBookingModel.js"
 import { useLocation, useParams } from "react-router-dom"
 import { resolveSalonSlug } from "../SalonContext"
 import { generateTimeSlots } from "../../calendar/calendarEngine"
 import PageSection from "../../cabinet/PageSection"
 import EmptyState from "../../cabinet/EmptyState"
-import { getSalonCalendar } from "../../api/internal"
+import { getSalonCalendar, getSalonUsLocations } from "../../api/internal"
 
 
 function useIsMobile(){
@@ -331,6 +333,13 @@ export default function CalendarPage(){
   const location = useLocation()
   const salonSlug = resolveSalonSlug(routeSlug)
   const isMobile = useIsMobile()
+  const { status: marketStatus, context: marketContext } = useMarketContext()
+  const isUsMarket = marketStatus === "ready" && marketContext?.market_code === "US"
+  const [usRegistry, setUsRegistry] = useState({
+    status: "idle", locations: [], error: "",
+  })
+  const [usLocationCode, setUsLocationCode] = useState("")
+  const [retry, setRetry] = useState(0)
 
   const routeDay = useMemo(() => parseCalendarSearchDate(location.search), [location.search])
   const [selectedDay, setSelectedDay] = useState(() => routeDay || getLocalTodayKey())
@@ -344,41 +353,128 @@ export default function CalendarPage(){
     }
   }, [routeDay, selectedDay])
 
-  async function load(){
-    if(!salonSlug){
+  // US requires an explicit active, location-specific IANA zone. Reuse
+  // the existing branch registry; no invented market timezone or calendar.
+  useEffect(() => {
+    if (marketStatus !== "ready") {
+      setUsRegistry({status:"idle",locations:[],error:""})
+      return undefined
+    }
+    if (!isUsMarket) {
+      setUsRegistry({status:"not_us",locations:[],error:""})
+      setUsLocationCode("")
+      return undefined
+    }
+    if (!salonSlug) {
+      setUsRegistry({status:"error",locations:[],error:"SALON_SLUG_MISSING"})
+      return undefined
+    }
+    let active = true
+    const abort = new AbortController()
+    setUsRegistry({status:"loading",locations:[],error:""})
+    setCalendarResponse(null)
+    setLoading(true)
+    getSalonUsLocations(salonSlug,{signal:abort.signal}).then(payload => {
+      if (!active || abort.signal.aborted) return
+      const locations = getUsCalendarLocations(payload)
+      setUsRegistry({status:"ready",locations,error:""})
+      setUsLocationCode(locations[0]?.location_code || "")
+      // Only the Backend knows a US branch's local business date.
+      setSelectedDay(routeDay || "")
+    }).catch(problem => {
+      if (!active || abort.signal.aborted || problem?.name === "AbortError") return
+      setUsRegistry({
+        status:"error",locations:[],
+        error:String(problem?.message || "US_LOCATIONS_REQUEST_FAILED")
+      })
+      setLoading(false)
+    })
+    return () => { active=false; abort.abort() }
+  },[salonSlug,marketStatus,isUsMarket])
+
+  const selectedUsLocation = isUsMarket
+    ? usRegistry.locations.find(item=>item.location_code === usLocationCode) || null
+    : null
+
+  useEffect(() => {
+    if (marketStatus !== "ready") return undefined
+    if (!salonSlug) {
       setCalendarResponse(null)
       setError(uiError("SALON_SLUG_MISSING"))
       setLoading(false)
-      return
+      return undefined
     }
-
-    try{
-      setLoading(true)
-      setError("")
-
-      const result = await getSalonCalendar(salonSlug, selectedDay)
-      if(!result?.ok){
-        throw new Error("SALON_CALENDAR_LOAD_FAILED")
+    if (isUsMarket && usRegistry.status !== "ready") {
+      if (usRegistry.status === "error") {
+        setError(usRegistry.error || "US_CALENDAR_LOCATION_REGISTRY_INVALID")
+        setLoading(false)
       }
-
-      setCalendarResponse(result)
-
-      const backendRequestedDate = normalizeCalendarDateKey(result?.date?.requested_date)
-      if(backendRequestedDate && backendRequestedDate !== selectedDay){
-        setSelectedDay(backendRequestedDate)
-      }
-    }catch(loadError){
-      console.error("SALON CALENDAR LOAD ERROR", loadError)
+      return undefined
+    }
+    if (isUsMarket && !selectedUsLocation) {
+      // No activated US branch: never fall back to KG calendar or UTC.
       setCalendarResponse(null)
-      setError(uiError(loadError?.message || "SALON_CALENDAR_LOAD_FAILED"))
-    }finally{
+      setError("")
       setLoading(false)
+      return undefined
     }
+    let active=true
+    setLoading(true)
+    setError("")
+    // An empty US date means "today in this branch's timezone" to the API.
+    getSalonCalendar(
+      salonSlug,selectedDay || null,
+      isUsMarket ? selectedUsLocation.location_code : ""
+    ).then(result => {
+      if (!active) return
+      if (!result?.ok) {
+        throw new Error(String(result?.detail?.json?.error ||
+          result?.error || "SALON_CALENDAR_LOAD_FAILED"))
+      }
+      if (isUsMarket) verifyUsCalendarLocationResponse(result,selectedUsLocation)
+      setCalendarResponse(result)
+      const backendDate=normalizeCalendarDateKey(result?.date?.requested_date)
+      if (backendDate && backendDate !== selectedDay) setSelectedDay(backendDate)
+    }).catch(problem => {
+      if (!active) return
+      console.error("SALON_CALENDAR_LOAD_ERROR",problem)
+      setCalendarResponse(null)
+      setError(String(problem?.message || "SALON_CALENDAR_LOAD_FAILED"))
+    }).finally(() => { if (active) setLoading(false) })
+    return () => { active=false }
+  },[
+    salonSlug,selectedDay,marketStatus,isUsMarket,usLocationCode,
+    usRegistry.status,retry
+  ])
+
+  function reload(){
+    setRetry(value=>value+1)
   }
 
-  useEffect(() => {
-    load()
-  }, [salonSlug, selectedDay])
+  function renderUsBranchSelector(){
+    if (!isUsMarket || usRegistry.locations.length < 2) return null
+    return (
+      <div style={styles.fieldGroup}>
+        <label style={styles.label} htmlFor="us-calendar-location">
+          Филиал США · часовой пояс
+        </label>
+        <select id="us-calendar-location" style={styles.select}
+          value={usLocationCode}
+          onChange={event=>{
+            setCalendarResponse(null)
+            setSelectedDay(routeDay || "")
+            setUsLocationCode(event.target.value)
+          }}>
+          {usRegistry.locations.map(item=>(
+            <option key={item.location_code} value={item.location_code}>
+              {item.city_name || item.location_code}, {item.state_code}
+              {" · "}{item.timezone}
+            </option>
+          ))}
+        </select>
+      </div>
+    )
+  }
 
   const slots = useMemo(() => generateTimeSlots(), [])
   const masters = calendarResponse?.masters || []
@@ -425,7 +521,8 @@ export default function CalendarPage(){
       })
   }, [events, selectedDay])
 
-  const todayDate = normalizeCalendarDateKey(dateMeta.salon_today) || getLocalTodayKey()
+  const todayDate = normalizeCalendarDateKey(dateMeta.salon_today) ||
+    (isUsMarket ? "" : getLocalTodayKey())
   const prevDate = normalizeCalendarDateKey(dateMeta.prev_date) || addDaysKey(selectedDay || todayDate, -1)
   const nextDate = normalizeCalendarDateKey(dateMeta.next_date) || addDaysKey(selectedDay || todayDate, 1)
 
@@ -471,7 +568,7 @@ export default function CalendarPage(){
         </div>
         {event?.service_name ? <div style={styles.mobileService}><UiValue value={event.service_name} /></div> : null}
         {event?.client_phone ? <div style={styles.mobilePhone}><UiValue value={event.client_phone} /></div> : null}
-        {event?.price !== null && event?.price !== undefined ? <div style={styles.mobilePaymentLabel}><UiValue value={formatCurrency(event.price, event?.currency_code || event?.currency)} /></div> : null}
+        {!isUsMarket && event?.price !== null && event?.price !== undefined ? <div style={styles.mobilePaymentLabel}><UiValue value={formatCurrency(event.price, event?.currency_code || event?.currency)} /></div> : null}
       </div>
     )
   }
@@ -490,7 +587,19 @@ export default function CalendarPage(){
         <div style={styles.errorCard}>
           <div style={styles.errorTitle}><UiValue value={uiMessage("salon.s0250")} /></div>
           <div style={styles.errorText}><UiValue value={error} /></div>
-          <button style={styles.primaryButton} onClick={load}><UiValue value={uiMessage("salon.s0251")} /></button>
+          <button style={styles.primaryButton} onClick={reload}><UiValue value={uiMessage("salon.s0251")} /></button>
+        </div>
+      </PageSection>
+    )
+  }
+
+  if (isUsMarket && !selectedUsLocation && usRegistry.status === "ready") {
+    return (
+      <PageSection title={uiMessage("salon.s0248")}>
+        <div role="status" style={styles.availabilityNote}>
+          Активных филиалов США нет. Календарь недоступен, пока
+          действующий филиал с проверенным часовым поясом не активирован
+          в настройках существующего салона.
         </div>
       </PageSection>
     )
@@ -499,6 +608,7 @@ export default function CalendarPage(){
   if(!masters.length){
     return (
       <PageSection title={uiMessage("salon.s0248")}>
+        {renderUsBranchSelector()}
         <EmptyState title={uiMessage("salon.s0252")} description={uiMessage("salon.s0253")} />
       </PageSection>
     )
@@ -507,6 +617,15 @@ export default function CalendarPage(){
   return (
     <PageSection title={uiMessage("salon.s0248")}>
       <div style={styles.pageHint}><UiValue value={uiMessage("salon.s0254")} /></div>
+      {isUsMarket && selectedUsLocation ? (
+        <div role="status" style={styles.availabilityNote}>
+          Филиал: {selectedUsLocation.city_name || selectedUsLocation.location_code}
+          {" · "}{selectedUsLocation.timezone}.
+          Данные расписания получены для конкретного филиала.
+          Запись в США из общего календаря не создаётся до подтверждения
+          доступных слотов через действующий US booking flow.
+        </div>
+      ) : null}
 
       <div style={styles.summaryGrid}>
         <SummaryCard label={uiMessage("salon.s0255")} value={activeMastersCount} hint={uiMessage("salon.s0256")} />
@@ -516,6 +635,7 @@ export default function CalendarPage(){
       </div>
 
       <div style={styles.toolbar}>
+        {renderUsBranchSelector()}
         <div style={styles.calendarNav}>
           <button
             type="button"
@@ -626,7 +746,7 @@ export default function CalendarPage(){
                       ) : (
                         <div style={styles.unknownSlotCell}>
                           <div style={styles.unknownSlotTitle}><UiValue value={emptySlotState.label} /></div>
-                          {emptySlotState.canBook ? (
+                          {emptySlotState.canBook && !isUsMarket ? (
                             <button
                               type="button"
                               style={{
