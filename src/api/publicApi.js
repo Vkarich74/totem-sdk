@@ -5,6 +5,28 @@ const API = String(
   "https://api.totemv.com"
 ).replace(/\/$/, "");
 
+// Existing master schedule lifecycle endpoint belongs to the canonical
+// public API client. Keep its legacy request (POST, JSON body and raw Response)
+// without a second fetch implementation in a cabinet page.
+export async function postSalonBookingLifecycle(salonSlug, bookingId, action) {
+  // Respect the previously supported public cabinet window.API_BASE override.
+  // The public client normally uses its existing API constant.
+  const base = String(
+    import.meta.env.VITE_API_BASE ||
+    (typeof window !== "undefined" ? window.API_BASE : "") ||
+    API
+  ).replace(/\/$/, "");
+  return fetch(
+    base + "/public/salons/" + encodeURIComponent(salonSlug) +
+      "/bookings/" + bookingId + "/lifecycle",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    }
+  );
+}
+
 export async function getSalon(slug) {
   const res = await fetch(`${API}/public/salons/${slug}`);
   if (res.status === 404) return null;
