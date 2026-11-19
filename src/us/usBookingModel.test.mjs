@@ -7,6 +7,7 @@ import {
   normalizeUsMasterHoursLocations,normalizeUsMasterHoursDetail,
   prepareUsMasterHoursPut,verifyUsMasterHoursSaved,
   formatUsLocationAddress, isValidUsSlot, createUsBookingRequest,
+  normalizeUsPublicServiceCatalog,verifyUsAvailabilityBasePrice,
 } from "./usBookingModel.js";
 import { translate, localeLabels, messages } from "../i18n/messages.js";
 
@@ -70,6 +71,86 @@ const slot={location_code:"ny",local_time:"11:00",
   start_at:"2027-01-18T16:00:00.000Z",end_at:"2027-01-18T16:30:00.000Z"};
 assert.equal(isValidUsSlot(slot,"ny"),true);
 assert.equal(isValidUsSlot(slot,"az"),false);
+// Actual US public services response: legacy sms.price is removed by API.
+const publicUsdServices={
+  ok:true,market_code:"US",currency_code:"USD",
+  services:[
+    {id:701,master_id:41,name:"Existing haircut",duration_min:30,
+      service_price:{
+        configured:true,source:"us_service_price_amounts",
+        amount_type:"service_base_only",currency_code:"USD",
+        amount_minor:"4501",price_version:3,
+      }},
+    {id:702,master_id:41,name:"Existing styling",duration_min:60,
+      service_price:{
+        configured:false,source:"us_service_price_amounts",
+        amount_type:"service_base_only",currency_code:"USD",
+        amount_minor:null,price_version:0,
+      }},
+  ],
+};
+const publicPrices=normalizeUsPublicServiceCatalog(publicUsdServices);
+assert.equal(publicPrices[0].service_price.display,"$45.01");
+assert.equal(publicPrices[0].service_price.amount_minor,4501);
+assert.equal(publicPrices[0].service_price.price_version,3);
+assert.equal(publicPrices[1].service_price.display,null);
+assert.equal(publicPrices[1].service_price.configured,false);
+assert.equal(Object.hasOwn(publicPrices[0],"price"),false);
+assert.equal(Object.isFrozen(publicPrices),true);
+const freshPrice=verifyUsAvailabilityBasePrice({
+  ok:true,service_id:701,
+  service_price:{...publicUsdServices.services[0].service_price,
+    amount_minor:"5601",price_version:4},
+},publicPrices[0]);
+assert.equal(freshPrice.display,"$56.01");
+assert.notEqual(freshPrice.amount_minor,publicPrices[0].service_price.amount_minor);
+assert.notEqual(freshPrice.price_version,publicPrices[0].service_price.price_version);
+for(const invalid of [
+  {...publicUsdServices,market_code:"KG"},
+  {...publicUsdServices,currency_code:"KGS"},
+  {...publicUsdServices,services:[{
+    ...publicUsdServices.services[0],price:999999,
+  }]},
+  {...publicUsdServices,services:[{
+    ...publicUsdServices.services[0],currency_code:"USD",
+  }]},
+  {...publicUsdServices,services:[
+    publicUsdServices.services[0],publicUsdServices.services[0],
+  ]},
+  {...publicUsdServices,services:[{
+    ...publicUsdServices.services[0],
+    service_price:{...publicUsdServices.services[0].service_price,
+      amount_minor:"45.01"},
+  }]},
+  {...publicUsdServices,services:[{
+    ...publicUsdServices.services[0],
+    service_price:{...publicUsdServices.services[0].service_price,
+      source:"salon_master_services"},
+  }]},
+  {...publicUsdServices,services:[{
+    ...publicUsdServices.services[0],
+    service_price:{...publicUsdServices.services[0].service_price,
+      currency_code:"KGS"},
+  }]},
+  {...publicUsdServices,services:[{
+    ...publicUsdServices.services[1],
+    service_price:{...publicUsdServices.services[1].service_price,
+      amount_minor:"5"},
+  }]},
+])assert.throws(()=>normalizeUsPublicServiceCatalog(invalid));
+for(const invalid of [
+  {ok:true,service_id:702,service_price:publicUsdServices.services[1].service_price},
+  {ok:true,service_id:701,service_price:{...publicUsdServices.services[0].service_price,
+    currency_code:"KGS"}},
+  {ok:true,service_id:701,service_price:{...publicUsdServices.services[0].service_price,
+    price_version:0}},
+  {ok:true,service_id:999,service_price:publicUsdServices.services[0].service_price},
+])assert.throws(()=>verifyUsAvailabilityBasePrice(invalid,publicPrices[0]));
+assert.match(translate("en-US","us.book.verifiedBasePrice"),/base price/);
+assert.match(translate("en-US","us.book.priceChanged"),/changed/);
+assert.match(translate("ru-KG","us.book.basePriceNotice"),/налогов/);
+console.log("US_PUBLIC_VERIFIED_USD_BASE_PRICE=PASS");
+
 const booking=createUsBookingRequest({
   masterId:401,serviceId:601,location:valid.locations[0],date:"2027-01-18",
   slot,clientName:" Test Client ",clientPhone:"213-373-4253",
@@ -85,9 +166,11 @@ assert.throws(()=>createUsBookingRequest({...booking,
 assert.equal(localeLabels["en-US"],"English");
 const ruKeys=Object.keys(messages.ru).filter(x=>x.startsWith("us.book."));
 const enKeys=Object.keys(messages.en).filter(x=>x.startsWith("us.book."));
-assert.equal(enKeys.length,37);
+assert.equal(enKeys.length,43);
 assert.deepEqual(ruKeys.sort(),enKeys.sort());
 assert.equal(translate("en-US","us.book.title"),"Book an appointment");
+assert.match(translate("en-US","us.book.serviceNotReady"),/USD price/);
+assert.match(translate("ru-KG","us.book.serviceNotReady"),/долларах США/);
 assert.equal(translate("ru-KG","us.book.title"),"Запись в салон");
 assert.equal(translate("en-US","us.book.bookingNumber",{number:52}),"Booking number: 52");
 

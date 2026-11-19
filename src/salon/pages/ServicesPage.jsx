@@ -1,7 +1,9 @@
 import { UiValue, uiMessage, uiMoney, uiJoin, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { resolveSalonSlug } from "../SalonContext";
+import { resolveSalonSlug, useSalonContext } from "../SalonContext";
+import { useMarketContext } from "../../market/MarketContext.jsx";
+import UsOwnerPriceEditor from "../../us/UsOwnerPriceEditor.jsx";
 import { attachSalonService, getMasterServices, getSalonMasters, getSalonServices, updateMasterService } from "../../api/internal";
 
 import PageSection from "../../cabinet/PageSection";
@@ -121,13 +123,15 @@ function normalizeServicesResponse(data) {
   return [];
 }
 
-function getAttachOptionLabel(service) {
+function getAttachOptionLabel(service, isUsMarket = false) {
   const parts = [];
   if (service?.master_name) parts.push(service.master_name);
   if (service?.name) parts.push(service.name);
 
   const tail = [];
-  if (Number.isFinite(Number(service?.price))) {
+  if (isUsMarket) {
+    tail.push("Цена USD задаётся после привязки");
+  } else if (Number.isFinite(Number(service?.price))) {
     tail.push(uiMoney(service.price, service.currency_code || service.currency));
   }
   if (Number.isFinite(Number(service?.duration_min))) {
@@ -150,6 +154,9 @@ export default function ServicesPage() {
   const { renderUi } = useUiMessages();
   const { slug: routeSlug } = useParams();
   const slug = resolveSalonSlug(routeSlug);
+  const { canWrite } = useSalonContext();
+  const { status: marketStatus, context: marketContext } = useMarketContext();
+  const isUsMarket = marketStatus === "ready" && marketContext?.market_code === "US";
 
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -302,6 +309,7 @@ export default function ServicesPage() {
   }
 
   async function updatePrice(service) {
+    if (isUsMarket) return; // USD price has a separate cents-only contract.
     const input = window.prompt(renderUi(uiMessage("salon.s0741")), String(service.price ?? ""));
     if (input === null) return;
 
@@ -368,6 +376,12 @@ export default function ServicesPage() {
   }
 
   async function attachService() {
+    // US requires a separate, direct-owner-scoped salon service attach API.
+    // Never attach a US link from a legacy numeric price in this route.
+    if (isUsMarket) {
+      setError("US_SERVICE_LINK_ENDPOINT_REQUIRED");
+      return;
+    }
     if (!selectedServiceId) {
       setError(uiError(uiMessage("salon.s0749")));
       return;
@@ -466,6 +480,14 @@ export default function ServicesPage() {
 
         <div style={cardStyle()}>
           <h3 style={sectionTitleStyle()}><UiValue value={uiMessage("salon.s0758")} /></h3>
+          {isUsMarket ? (
+            <p style={{fontSize:13,color:"#92400e",lineHeight:1.5}}>
+              В США добавление услуги через общий маршрут временно закрыто:
+              он не проверяет прямое владение US-салоном и допускает
+              наследуемые цены. Для уже подключённых услуг отдельная
+              подтверждённая цена USD доступна в карточках ниже.
+            </p>
+          ) : null}
 
           <div
             style={{
@@ -486,7 +508,7 @@ export default function ServicesPage() {
                 <option value=""><UiValue value={hasAvailableMasterServices ? uiMessage("salon.s0760") : uiMessage("salon.s0761")} /></option>
                 {availableMasterServices.map((service) => (
                   <option key={uiTemplate(["","-",""], [service.master_id || "master", service.id])} value={service.id}>
-                    <UiValue value={getAttachOptionLabel(service)} />
+                    <UiValue value={getAttachOptionLabel(service, isUsMarket)} />
                   </option>
                 ))}
               </select>
@@ -498,8 +520,8 @@ export default function ServicesPage() {
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button
                 onClick={attachService}
-                disabled={attachLoading || !hasAvailableMasterServices}
-                style={buttonStyle("primary", attachLoading || !hasAvailableMasterServices)}
+                disabled={isUsMarket || attachLoading || !hasAvailableMasterServices}
+                style={buttonStyle("primary", isUsMarket || attachLoading || !hasAvailableMasterServices)}
               >
                 <UiValue value={attachLoading ? uiMessage("salon.s0429") : uiMessage("salon.s0763")} />
               </button>
@@ -631,7 +653,7 @@ export default function ServicesPage() {
                       <div>
                         <div style={labelStyle()}><UiValue value={uiMessage("salon.s0232")} /></div>
                         <div style={{ fontSize: "15px", fontWeight: 600, color: "#111827" }}>
-                          <UiValue value={formatMoney(service.price, service?.currency_code || service?.currency)} />
+                          {isUsMarket ? "Тариф в USD — ниже" : <UiValue value={formatMoney(service.price, service?.currency_code || service?.currency)} />}
                         </div>
                       </div>
                       <div>
@@ -651,11 +673,13 @@ export default function ServicesPage() {
                         <UiValue value={service.active ? uiMessage("salon.s0777") : uiMessage("salon.s0778")} />
                       </button>
 
-                      <button
-                        onClick={() => updatePrice(service)}
-                        disabled={isProcessing || attachLoading}
-                        style={buttonStyle("default", isProcessing || attachLoading)}
-                      ><UiValue value={uiMessage("salon.s0779")} /></button>
+                      {!isUsMarket ? (
+                        <button
+                          onClick={() => updatePrice(service)}
+                          disabled={isProcessing || attachLoading}
+                          style={buttonStyle("default", isProcessing || attachLoading)}
+                        ><UiValue value={uiMessage("salon.s0779")} /></button>
+                      ) : null}
 
                       <button
                         onClick={() => updateDuration(service)}
@@ -663,6 +687,16 @@ export default function ServicesPage() {
                         style={buttonStyle("default", isProcessing || attachLoading)}
                       ><UiValue value={uiMessage("salon.s0780")} /></button>
                     </div>
+                    {isUsMarket && service.active && service.id ? (
+                      <UsOwnerPriceEditor
+                        key={`salon-usd-${slug}-${service.id}`}
+                        ownerType="salon"
+                        ownerSlug={slug}
+                        serviceLinkId={service.id}
+                        isUsMarket={isUsMarket}
+                        canWrite={canWrite}
+                      />
+                    ) : null}
                   </div>
                 );
               })}

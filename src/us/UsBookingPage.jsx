@@ -6,8 +6,9 @@ import {
 import { translate } from "../i18n/messages.js";
 import {
   validateUsLocationCatalog, usLocationsForState,
-  getUsBusinessDate, formatUsLocationAddress, formatUsPrice,
+  getUsBusinessDate, formatUsLocationAddress,
   isValidUsSlot, createUsBookingRequest, normalizeUsPhoneDraft,
+  normalizeUsPublicServiceCatalog, verifyUsAvailabilityBasePrice,
 } from "./usBookingModel.js";
 
 const API_BASE = String(
@@ -39,8 +40,8 @@ const styles = {
 function serviceRowsForMaster(services, masterId) {
   return services.filter(service =>
     Number(service.master_id) === Number(masterId) &&
-    service.active !== false && service.currency_code === "USD" &&
-    Number.isFinite(Number(service.duration_min)) && Number(service.duration_min) > 0
+    Number.isSafeInteger(Number(service.duration_min)) &&
+    Number(service.duration_min) > 0
   );
 }
 
@@ -63,6 +64,13 @@ function getUsErrorMessage(tr, error) {
   const code = String(error?.message || "");
   if (code === "US_SLOT_UNAVAILABLE" || code === "TIME_SLOT_CONFLICT")
     return tr("us.book.conflict");
+  if (code === "US_SERVICE_PRICE_NOT_CONFIGURED" ||
+      code === "US_SERVICE_PRICE_INVALID" ||
+      code === "US_SERVICE_PRICE_CONTEXT_INVALID")
+    return tr("us.book.serviceNotReady");
+  if (code === "US_SERVICE_PRICE_CHANGED" ||
+      code === "US_EXPECTED_SERVICE_PRICE_INVALID")
+    return tr("us.book.priceChanged");
   if (code === "US_DST_GAP" || code === "US_DST_FOLD" ||
       code === "US_BOOKING_INSTANT_MISMATCH")
     return tr("us.book.timeError");
@@ -89,6 +97,8 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
   const [date, setDate] = useState("");
   const [slotStartAt, setSlotStartAt] = useState("");
   const [slots, setSlots] = useState([]);
+  const [checkedPrice,setCheckedPrice] = useState(null);
+  const [acceptedPriceChange,setAcceptedPriceChange] = useState(false);
   const [slotLoading, setSlotLoading] = useState(false);
   const [slotError, setSlotError] = useState("");
   const [clientName, setClientName] = useState("");
@@ -114,6 +124,13 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
     [services, masterId]
   );
   const service = filteredServices.find(item => String(item.id) === serviceId) || null;
+  const freshPrice=checkedPrice?.serviceId===Number(service?.id)
+    ? checkedPrice.price : null;
+  const basePrice=freshPrice||service?.service_price||null;
+  const hasPriceChanged=Boolean(freshPrice && service?.service_price &&
+    (freshPrice.price_version!==service.service_price.price_version ||
+     freshPrice.amount_minor!==service.service_price.amount_minor));
+  const priceAccepted=!hasPriceChanged||acceptedPriceChange;
   const selectedSlot = slots.find(item => item.start_at === slotStartAt) || null;
   const minDate = useMemo(
     () => location ? getUsBusinessDate(new Date(), location.timezone) : "",
@@ -150,7 +167,7 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
       );
       setCatalog(normalized);
       setMasters(activeMasters);
-      setServices(Array.isArray(servicesPayload.services) ? servicesPayload.services : []);
+      setServices(normalizeUsPublicServiceCatalog(servicesPayload));
     }).catch(error => {
       if (!active || error?.name === "AbortError") return;
       setCatalog(null);
@@ -166,8 +183,11 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
     const abort = new AbortController();
     setSlots([]);
     setSlotStartAt("");
+    setCheckedPrice(null);
+    setAcceptedPriceChange(false);
     setSlotError("");
-    if (!location || !masterId || !service || !date) {
+    if (!location || !masterId || !service ||
+        service.service_price?.configured!==true || !date) {
       setSlotLoading(false);
       return () => abort.abort();
     }
@@ -193,6 +213,8 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
       if (rows.some(row => !isValidUsSlot(row, location.location_code))) {
         throw new Error("US_SLOT_RESPONSE_INVALID");
       }
+      const verifiedPrice=verifyUsAvailabilityBasePrice(payload,service);
+      setCheckedPrice({serviceId:Number(service.id),price:verifiedPrice});
       setSlots(rows);
     }).catch(error => {
       if (!active || error?.name === "AbortError") return;
@@ -227,14 +249,18 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
 
   async function submitBooking(event) {
     event.preventDefault();
-    if (posting || submitLock.current || !location || !selectedSlot || !service)
-      return;
+    if (posting || submitLock.current || !location || !selectedSlot ||
+        !service || !freshPrice || !priceAccepted) return;
     let body;
     try {
-      body = createUsBookingRequest({
-        masterId, serviceId, location, date, slot: selectedSlot,
-        clientName, clientPhone,
-      });
+      body = {
+        ...createUsBookingRequest({
+          masterId, serviceId, location, date, slot: selectedSlot,
+          clientName, clientPhone,
+        }),
+        expected_us_price_version:freshPrice.price_version,
+        expected_us_amount_minor:String(freshPrice.amount_minor),
+      };
     } catch (error) {
       setSubmitError(getUsErrorMessage(tr, error));
       return;
@@ -274,6 +300,13 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
     } catch (error) {
       if (Number(error.status) >= 400 && Number(error.status) < 500) {
         retryKey.current = null;
+      }
+      if(error?.message==="US_SERVICE_PRICE_CHANGED"){
+        // No submission with stale USD amount after price edit.
+        setSlotStartAt("");
+        setSlots([]);
+        setCheckedPrice(null);
+        setDate("");
       }
       setSubmitError(getUsErrorMessage(tr, error));
     } finally {
@@ -415,8 +448,12 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
               >
                 <option value="">{tr("us.book.chooseService")}</option>
                 {filteredServices.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · {formatUsPrice(item.price)} · {item.duration_min} min
+                  <option key={item.id} value={item.id}
+                    disabled={!item.service_price?.configured}>
+                    {item.name} · {item.duration_min} min ·{" "}
+                    {item.service_price?.configured
+                      ? item.service_price.display
+                      : tr("us.book.serviceNotReady")}
                   </option>
                 ))}
               </select>
@@ -428,7 +465,7 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
                 type="date"
                 value={date}
                 required
-                disabled={!location || !service}
+                disabled={!location || !service || !service.service_price?.configured}
                 min={minDate}
                 onChange={e => {
                   setDate(e.target.value);
@@ -443,7 +480,8 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
                 style={styles.control}
                 value={slotStartAt}
                 required
-                disabled={!date || !service || slotLoading || slots.length === 0}
+                disabled={!date || !service || !freshPrice ||
+                  slotLoading || slots.length === 0}
                 onChange={e => { setSlotStartAt(e.target.value); retryKey.current = null; }}
               >
                 <option value="">{tr("us.book.chooseTime")}</option>
@@ -492,8 +530,25 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
             <p style={styles.help}>{tr("us.book.phoneHelp")}</p>
             {service && (
               <div style={styles.address}>
-                <strong>Estimated catalog price: {formatUsPrice(service.price)}</strong>
-                <p style={styles.help}>Your final booking price is shown after server verification.</p>
+                {basePrice?.configured
+                  ? <strong>{tr("us.book.verifiedBasePrice")}: {basePrice.display}</strong>
+                  : <p role="status" style={styles.notice}>
+                      {tr("us.book.serviceNotReady")}
+                    </p>}
+                <p style={styles.help}>{tr("us.book.basePriceNotice")}</p>
+                {hasPriceChanged && (
+                  <label style={{...styles.label,marginTop:8}}>
+                    <span role="alert">{tr("us.book.priceChangedTo",{
+                      price:freshPrice.display,
+                    })}</span>
+                    <span>
+                      <input type="checkbox"
+                        checked={acceptedPriceChange}
+                        onChange={e=>setAcceptedPriceChange(e.target.checked)}/>
+                      {" "}{tr("us.book.acceptUpdatedPrice")}
+                    </span>
+                  </label>
+                )}
                 <p style={styles.help}>{tr("us.book.noOnlinePayment")}</p>
               </div>
             )}
@@ -501,7 +556,8 @@ export default function UsBookingPage({ slug, salonName = "", marketContext }) {
             <MobileButton
               tone="primary"
               type="submit"
-              disabled={!selectedSlot || !location || !service || posting}
+              disabled={!selectedSlot || !location || !service ||
+                !freshPrice || !priceAccepted || posting}
             >
               {posting ? tr("us.book.submitting") : tr("us.book.confirm")}
             </MobileButton>
