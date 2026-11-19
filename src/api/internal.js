@@ -1418,12 +1418,24 @@ export async function getMasterMetrics(masterSlug = getMasterSlug()){
   return { ok:true, metrics: j.metrics || {} };
 }
 
-export async function getMasterBookings(masterSlug = getMasterSlug()){
-  const r = await safeInternalJson(`/masters/${masterSlug}/bookings`, { method: "GET" });
+export async function getMasterBookings(
+  masterSlug = getMasterSlug(), {usLocationScope = false} = {}
+){
+  // Keep the KG/KZ request EXACTLY as it was: URL and fetch options.
+  // Location enrichment is opt-in only for the US master schedule.
+  const path = usLocationScope
+    ? `/masters/${encodeURIComponent(String(masterSlug || "").trim())}/bookings?calendar_scope=us_location`
+    : `/masters/${masterSlug}/bookings`;
+  const r = await safeInternalJson(path,
+    usLocationScope ? {method:"GET",cache:"no-store"} : {method:"GET"});
   if(!r.ok) return { ok:false, error:"MASTER_BOOKINGS_FETCH_FAILED", detail:r };
   const j = r.json;
   if(!j || !j.ok) return { ok:false, error:"MASTER_BOOKINGS_API_NOT_OK", detail:j };
-  return { ok:true, bookings: j.bookings || [] };
+  // The regular KG/KZ bookings contract is unchanged.
+  return usLocationScope
+    ? {ok:true,bookings:j.bookings || [],calendar_scope:j.calendar_scope,
+       market_code:j.market_code}
+    : {ok:true,bookings:j.bookings || []};
 }
 
 export async function getMasterPendingCashBookings(masterSlug = getMasterSlug()){
