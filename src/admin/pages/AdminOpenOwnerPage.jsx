@@ -263,6 +263,116 @@ export default function AdminOpenOwnerPage(){
   const [audit, setAudit] = useState(null)
   const [auditLoading, setAuditLoading] = useState(false)
 
+  const [marketCatalog, setMarketCatalog] = useState([])
+  const [marketCatalogError, setMarketCatalogError] = useState("")
+  const [marketCatalogLoading, setMarketCatalogLoading] = useState(true)
+  const [geoCatalog, setGeoCatalog] = useState(null)
+  const [geoCatalogError, setGeoCatalogError] = useState("")
+  const [geoCatalogLoading, setGeoCatalogLoading] = useState(false)
+  const [geoDraft, setGeoDraft] = useState(blankUsGeoDraft)
+  const [geoReadback, setGeoReadback] = useState(null)
+  const [geoSubmitting, setGeoSubmitting] = useState(false)
+  const [requestDetailLoading, setRequestDetailLoading] = useState(false)
+  const [selectedDetailVerified, setSelectedDetailVerified] = useState(false)
+  const formEpoch = useRef(0)
+  const selectionEpoch = useRef(0)
+
+  const formMarket = form.market_code === "US" ? "US" : "KG"
+  const usCatalogRecord = marketCatalog.find(item => item.market_code === "US")
+  const usOwnerEnabled = usCatalogRecord?.owner_activation_enabled === true &&
+    usCatalogRecord?.admin_operation_enabled === true &&
+    usCatalogRecord?.currency_code === "USD"
+  const requestMarket = requestMarketCode(selectedRequest)
+  const selectedUsReady = requestMarket !== "US" ||
+    (usOwnerEnabled && selectedDetailVerified && !requestDetailLoading)
+  const selectedMutationsAllowed = canMutateOwnerRequest(selectedRequest, marketCatalog) &&
+    selectedUsReady
+
+  async function loadMarketCatalog(){
+    try {
+      setMarketCatalogLoading(true)
+      setMarketCatalogError("")
+      const result = await getAdminMarketCatalog()
+      if(!result.ok) throw new Error(result.error || "ADMIN_MARKETS_UNAVAILABLE")
+      const actual = result.markets.filter(item => ["KG", "US", "KZ"].includes(item.market_code))
+      if(!actual.some(item => item.market_code === "KG" && item.admin_operation_enabled === true)){
+        throw new Error("KG_ADMIN_MARKET_NOT_READY")
+      }
+      setMarketCatalog(actual)
+    }catch(e){
+      // Do not break the old KG workflow if the additive catalog is unavailable.
+      // For US this is intentionally fail-closed.
+      setMarketCatalog([])
+      setMarketCatalogError(e?.message || "ADMIN_MARKETS_UNAVAILABLE")
+    }finally{
+      setMarketCatalogLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadMarketCatalog()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if(form.market_code !== "US") return undefined
+    let active = true
+    async function readCatalog(){
+      setGeoCatalogLoading(true)
+      setGeoCatalogError("")
+      try {
+        const result = await getAdminUsGeoCatalog()
+        if(!result.ok) throw new Error(result.error || "US_GEO_CATALOG_UNAVAILABLE")
+        if(active) setGeoCatalog({ states:result.states, timezones:result.timezones })
+      }catch(e){
+        if(active){setGeoCatalog(null);setGeoCatalogError(e?.message || "US_GEO_CATALOG_UNAVAILABLE")}
+      }finally{
+        if(active) setGeoCatalogLoading(false)
+      }
+    }
+    readCatalog()
+    return () => {active=false}
+  }, [form.market_code])
+
+  async function loadSelectedRequest(requestId){
+    const safeId = String(requestId || "").trim()
+    if(!safeId) return
+    const epoch = ++selectionEpoch.current
+    setRequestDetailLoading(true)
+    setSelectedDetailVerified(false)
+    setGeoReadback(null)
+    setGeoDraft(blankUsGeoDraft())
+    try{
+      const result = await getAdminOpenOwnerRequest(safeId)
+      if(epoch !== selectionEpoch.current) return
+      if(!result.ok || !result.request || String(result.request.id) !== safeId){
+        throw new Error(result.error || "OWNER_OPENING_DETAIL_READ_FAILED")
+      }
+      const detail = result.request
+      const market = requestMarketCode(detail)
+      setSelectedRequest(detail)
+      setSelectedDetailVerified(true)
+      setGeoDraft(blankUsGeoDraft(detail))
+      if(market === "US" && detail.owner_type === "salon" &&
+         ["provisioned", "activated", "email_ready", "email_sent", "email_failed"].includes(detail.status)){
+        const location = await getAdminUsPrimaryLocation(safeId)
+        if(epoch !== selectionEpoch.current) return
+        if(!location.ok) throw new Error(location.error || "US_PRIMARY_LOCATION_READ_FAILED")
+        const primary = location.locations.find(item => item.is_primary === true)
+        if(primary) setGeoDraft(normalizeGeoDraft(primary))
+        setGeoReadback(location)
+      }
+    }catch(e){
+      if(epoch === selectionEpoch.current){
+        setError(e?.message || "OWNER_OPENING_DETAIL_READ_FAILED")
+        setSelectedDetailVerified(false)
+        setGeoReadback(null)
+      }
+    }finally{
+      if(epoch === selectionEpoch.current) setRequestDetailLoading(false)
+    }
+  }
+
   async function loadData(){
     try{
       setLoading(true)
@@ -287,10 +397,8 @@ export default function AdminOpenOwnerPage(){
       setStats(nextStats)
       setRequests(nextRequests)
 
-      if(selectedRequestId){
-        const found = nextRequests.find((item) => String(item.id) === String(selectedRequestId))
-        setSelectedRequest(found || null)
-      }
+      // Keep the separately verified detail/readback; list cards are partial DTOs.
+      // A selected item may also be outside the most recent 100 rows.
     }catch(e){
       setStats(null)
       setRequests([])
