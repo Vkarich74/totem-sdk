@@ -1,0 +1,60 @@
+name: RELEASE stage 3 salon bookings privacy & cabinet owner route
+on:
+  push:
+    branches:
+      - release/sdk-private-salon-bookings-20261119
+    paths:
+      - src/room/SalonBookingsPage.jsx
+      - src/room/SalonBookingsPrivacyBoundary.test.mjs
+      - .github/workflows/sdk-private-salon-bookings.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-salon-bookings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      RAILWAY_TOKEN: ""
+      ODOO_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Pinned offline install
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Source syntax validation
+        run: |
+          set -euo pipefail
+          node --check src/room/SalonBookingsPrivacyBoundary.test.mjs
+      - name: Owner route, auth, legacy KG/KZ, US IANA boundaries
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          node --test src/room/SalonBookingsPrivacyBoundary.test.mjs
+          node --test src/api/masterCabinetTransportBoundary.test.mjs
+          node --test src/us/usCabinetBookingBoundary.test.mjs
+          node --test src/us/usMasterBookingsReadScope.test.mjs
+      - name: Existing DST and market/booking contract across browser zones
+        run: |
+          set -euo pipefail
+          for tz in America/New_York America/Los_Angeles Asia/Bishkek; do
+            TZ="$tz" node --test src/us/usBookingModel.test.mjs
+          done
+      - name: No legacy public personal reads or test data
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          ! grep -Eq 'fetch\s*\(|/public/salons/|/lifecycle' src/room/SalonBookingsPage.jsx
+          grep -Fq 'Navigate' src/room/SalonBookingsPage.jsx
+          grep -Fq 'SessionGate' src/salon/SalonLayout.jsx
+          echo 'EXISTING_AUTHENTICATED_SALON_CABINET_ONLY; NO_DB_OR_USER_CREATION'
+      - name: Production SDK Vite build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html
