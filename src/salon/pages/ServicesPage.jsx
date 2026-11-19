@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { resolveSalonSlug, useSalonContext } from "../SalonContext";
 import { useMarketContext } from "../../market/MarketContext.jsx";
 import UsOwnerPriceEditor from "../../us/UsOwnerPriceEditor.jsx";
+import UsServiceLinkEditor from "../../us/UsServiceLinkEditor.jsx";
 import { attachSalonService, getMasterServices, getSalonMasters, getSalonServices, updateMasterService } from "../../api/internal";
 
 import PageSection from "../../cabinet/PageSection";
@@ -478,6 +479,15 @@ export default function ServicesPage() {
           ]}
         />
 
+        {isUsMarket ? (
+          <UsServiceLinkEditor
+            ownerType="salon"
+            ownerSlug={slug}
+            canWrite={canWrite === true}
+            onSaved={() => {loadServices(true);loadMasterServices(false);}}
+          />
+        ) : null}
+        {!isUsMarket ? (
         <div style={cardStyle()}>
           <h3 style={sectionTitleStyle()}><UiValue value={uiMessage("salon.s0758")} /></h3>
           {isUsMarket ? (
@@ -553,6 +563,8 @@ export default function ServicesPage() {
             <div style={{ fontSize: "13px", color: "#667085" }}><UiValue value={uiMessage("salon.s0767")} /></div>
           )}
         </div>
+
+        ) : null}
 
         {success && (
           <div
@@ -664,6 +676,7 @@ export default function ServicesPage() {
                       </div>
                     </div>
 
+                    {!isUsMarket ? (<>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <button
                         onClick={() => toggleActive(service)}
@@ -687,6 +700,7 @@ export default function ServicesPage() {
                         style={buttonStyle("default", isProcessing || attachLoading)}
                       ><UiValue value={uiMessage("salon.s0780")} /></button>
                     </div>
+                    </>) : null}
                     {isUsMarket && service.active && service.id ? (
                       <UsOwnerPriceEditor
                         key={`salon-usd-${slug}-${service.id}`}
