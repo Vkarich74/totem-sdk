@@ -9,6 +9,7 @@ import {
   normalizeUsMasterScheduleFeed, classifyUnresolvedMasterMarketProbe,
 } from "../../us/usBookingModel.js"
 import UsPayC11RefundCard from "../../us/UsPayC11RefundCard.jsx"
+import UsMasterManualBooking from "../../us/UsMasterManualBooking.jsx"
 
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
@@ -110,7 +111,8 @@ export default function MasterBookingsPage() {
     loading: masterLoading,
     error: masterError,
     master,
-    slug
+    slug,
+    canWrite
   } = useMaster()
 
   const [bookings, setBookings] = useState([])
@@ -332,6 +334,28 @@ export default function MasterBookingsPage() {
 
   if (loading) {
     return <div style={{ padding: "20px" }}><UiValue value={uiMessage("salon.s0118")} /></div>
+  }
+
+  // US manual booking uses explicit physical branch, offered slot and
+  // server-verified USD. Mixed-market masters choose the US branch explicitly.
+  // Keep the KG/KZ quick-booking form untouched.
+  if (isCreateMode && !legacyQuickBookingAllowed &&
+      (explicitUsMarket || unresolvedMasterMarket)) {
+    return <div style={{padding:"20px"}}>
+      <button
+        type="button"
+        onClick={() => navigate("/master/"+encodeURIComponent(masterSlug)+"/schedule")}
+        style={styles.backButton}
+      >Назад к расписанию</button>
+      <PageSection title="Ручная запись мастера · США">
+        <UsMasterManualBooking
+          masterSlug={masterSlug}
+          canWrite={canWrite===true}
+          initialDate={bookingDate}
+          onBooked={() => navigate("/master/"+encodeURIComponent(masterSlug)+"/schedule")}
+        />
+      </PageSection>
+    </div>
   }
 
   if (error) {
