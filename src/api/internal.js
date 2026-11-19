@@ -965,8 +965,10 @@ export async function adminFailWithdrawRequest(id, payload = {}) {
    SALON (OWNER) API
 ================================ */
 
-export async function getSalon(salonSlug = getSalonSlug()){
-  const r = await safeInternalJson(`/salons/${salonSlug}`, { method: "GET" });
+export async function getSalon(salonSlug = getSalonSlug(), { signal } = {}){
+  const r = await safeInternalJson(`/salons/${encodeURIComponent(String(salonSlug || "").trim())}`, {
+    method: "GET", cache: "no-store", signal
+  });
   if(!r.ok) return { ok:false, error:"SALON_FETCH_FAILED", detail:r };
 
   const j = r.json;
@@ -975,7 +977,13 @@ export async function getSalon(salonSlug = getSalonSlug()){
   return {
     ok:true,
     salon: j.salon,
-    billing_access: j.billing_access || null
+    billing_access: j.billing_access || null,
+    profile: j.profile || null,
+    profile_revision: j.profile_revision || null,
+    profile_editable_fields: j.profile_editable_fields || null,
+    profile_unsupported_fields: j.profile_unsupported_fields || null,
+    profile_can_write: j.profile_can_write,
+    profile_saved: j.profile_saved,
   };
 }
 
@@ -1308,12 +1316,39 @@ export async function provisionMaster(payload = {}){
   return { ok:true, result: j };
 }
 
+// Profile changes use the EXISTING canonical salon/master root paths.
+// Transport, bearer header and locale are supplied by safeInternalJson only.
+async function patchCanonicalOwnerProfile(ownerType, ownerSlug, payload, { signal } = {}){
+  const section = ownerType === "salon" ? "salons" : ownerType === "master" ? "masters" : null;
+  if(!section || !ownerSlug) throw new Error("PROFILE_TARGET_INVALID");
+  const r = await safeInternalJson(`/${section}/${encodeURIComponent(String(ownerSlug).trim())}`, {
+    method: "PATCH", cache: "no-store", signal,
+    body: JSON.stringify(payload)
+  });
+  if(!r.ok || !r.json?.ok) {
+    const problem = new Error(String(r.json?.error || "PROFILE_UPDATE_FAILED"));
+    problem.status = r.status || r.json?.status || 0;
+    throw problem;
+  }
+  return r.json;
+}
+
+export function patchSalonProfile(salonSlug, payload, options = {}){
+  return patchCanonicalOwnerProfile("salon", salonSlug, payload, options);
+}
+
+export function patchMasterProfile(masterSlug, payload, options = {}){
+  return patchCanonicalOwnerProfile("master", masterSlug, payload, options);
+}
+
 /* ===============================
    MASTER API
 ================================ */
 
-export async function getMaster(masterSlug = getMasterSlug()){
-  const r = await safeInternalJson(`/masters/${masterSlug}`, { method: "GET" });
+export async function getMaster(masterSlug = getMasterSlug(), { signal } = {}){
+  const r = await safeInternalJson(`/masters/${encodeURIComponent(String(masterSlug || "").trim())}`, {
+    method: "GET", cache: "no-store", signal
+  });
   if(!r.ok) return { ok:false, error:"MASTER_FETCH_FAILED", detail:r };
 
   const j = r.json;
@@ -1322,7 +1357,13 @@ export async function getMaster(masterSlug = getMasterSlug()){
   return {
     ok:true,
     master: j.master,
-    billing_access: j.billing_access || null
+    billing_access: j.billing_access || null,
+    profile: j.profile || null,
+    profile_revision: j.profile_revision || null,
+    profile_editable_fields: j.profile_editable_fields || null,
+    profile_unsupported_fields: j.profile_unsupported_fields || null,
+    profile_can_write: j.profile_can_write,
+    profile_saved: j.profile_saved,
   };
 }
 
