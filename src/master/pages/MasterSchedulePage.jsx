@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
 import { getMasterBookings } from "../../api/internal"
+import { useMarketContext } from "../../market/MarketContext.jsx"
+import { normalizeUsMasterScheduleFeed } from "../../us/usBookingModel.js"
 
 const API_BASE = import.meta.env.VITE_API_BASE || window.API_BASE || "https://api.totemv.com"
 
@@ -325,19 +327,26 @@ if(dateKey!==todayKey())return dateKey<todayKey()
 return slot<currentSlot()
 }
 
-async function fetchMasterBookingsSnapshot(routeSlug){
-const result = await getMasterBookings(routeSlug)
+async function fetchMasterBookingsSnapshot(routeSlug, usScoped = false){
+const result = usScoped
+  ? await getMasterBookings(routeSlug, {usLocationScope:true})
+  : await getMasterBookings(routeSlug)
 
 if(!result?.ok){
 const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
 throw new Error(status ? "MASTER_BOOKINGS_HTTP_" + status : (result?.error || "MASTER_BOOKINGS_LOAD_FAILED"))
 }
 
-return normalizeBookingsResponse(result)
+return usScoped
+  ? normalizeUsMasterScheduleFeed(result)
+  : normalizeBookingsResponse(result)
 }
 
 export default function MasterSchedulePage(){
  const { renderUi } = useUiMessages();
+ const {status:marketStatus,context:marketContext} = useMarketContext()
+ const isUsMarket = marketStatus === "ready" && marketContext?.market_code === "US"
+ const [usSelectedDay,setUsSelectedDay] = useState("")
 
 const {
 loading: masterLoading,
@@ -366,7 +375,7 @@ return []
 }
 
 setBookingsError("")
-const nextBookings = await fetchMasterBookingsSnapshot(routeSlug)
+const nextBookings = await fetchMasterBookingsSnapshot(routeSlug,isUsMarket)
 setBookings(nextBookings)
 return nextBookings
 }
@@ -375,6 +384,14 @@ useEffect(()=>{
 let cancelled=false
 
 async function loadBookings(){
+if(marketStatus !== "ready"){
+  if(!cancelled){
+    setBookings([])
+    setBookingsLoading(marketStatus !== "error")
+    setBookingsError(marketStatus === "error" ? "MARKET_CONTEXT_UNAVAILABLE" : "")
+  }
+  return
+}
 if(!routeSlug){
 if(!cancelled){
 setBookings([])
@@ -387,10 +404,15 @@ return
 try{
 setBookingsLoading(true)
 setBookingsError("")
-const nextBookings = await fetchMasterBookingsSnapshot(routeSlug)
+const nextBookings = await fetchMasterBookingsSnapshot(routeSlug,isUsMarket)
 
 if(!cancelled){
 setBookings(nextBookings)
+if(isUsMarket){
+  const future = nextBookings.find(b=>b.starts_ms >= Date.now())
+  const days = [...new Set(nextBookings.map(b=>b.local_date))].sort()
+  setUsSelectedDay(future?.local_date || days.at(-1) || "")
+}
 }
 }catch(error){
 console.error("MASTER_SCHEDULE_BOOKINGS_LOAD_FAILED",error)
@@ -411,7 +433,7 @@ loadBookings()
 return()=>{
 cancelled=true
 }
-},[master?.slug,slug])
+},[master?.slug,slug,marketStatus,isUsMarket])
 
 useEffect(()=>{
 const timer=setInterval(()=>{
@@ -421,8 +443,8 @@ setClockTick(v=>v+1)
 return()=>clearInterval(timer)
 },[])
 
-const slots=useMemo(()=>buildSlots(),[])
-const nowSlot=currentSlot()
+const slots=useMemo(()=>isUsMarket ? [] : buildSlots(),[isUsMarket])
+const nowSlot=isUsMarket ? "" : currentSlot()
 
 function getMasterRouteSlug(){
 return master?.slug || slug || ""
@@ -512,6 +534,7 @@ return next
 }
 
 const stats=useMemo(()=>{
+if(isUsMarket)return{today:0,yesterday:0,tomorrow:0}
 
 const today=todayKey()
 const yesterday=addDays(today,-1)
@@ -541,21 +564,22 @@ yesterday:y,
 tomorrow:tm
 }
 
-},[bookings])
+},[bookings,isUsMarket])
 
 const dayLoad=useMemo(()=>{
-return getDayLoadMeta(bookings,dateKey)
-},[bookings,dateKey,clockTick])
+return isUsMarket ? null : getDayLoadMeta(bookings,dateKey)
+},[bookings,dateKey,clockTick,isUsMarket])
 
 const dayKpi=useMemo(()=>{
-return getDayKpi(bookings,dateKey)
-},[bookings,dateKey])
+return isUsMarket ? null : getDayKpi(bookings,dateKey)
+},[bookings,dateKey,isUsMarket])
 
 const nextBookingInfo=useMemo(()=>{
-return getNextBookingInfo(bookings,dateKey)
-},[bookings,dateKey,clockTick])
+return isUsMarket ? null : getNextBookingInfo(bookings,dateKey)
+},[bookings,dateKey,clockTick,isUsMarket])
 
 const {calendar,skip}=useMemo(()=>{
+if(isUsMarket)return{calendar:{},skip:new Set()}
 
 const calendar={}
 const skip=new Set()
@@ -595,12 +619,84 @@ skip.add(k)
 
 return{calendar,skip}
 
-},[bookings,dateKey,statusOverrides,clockTick])
+},[bookings,dateKey,statusOverrides,clockTick,isUsMarket])
 
 const loading=masterLoading || bookingsLoading
 const error=masterError || bookingsError
 
 if(loading)return<PageSection title={uiMessage("master.s0300")}><div><UiValue value={uiMessage("salon.s0118")} /></div></PageSection>
+
+// US is an exact per-booking location timeline. There is no trustworthy
+// global 07:00–21:00 grid for a master operating across several US zones.
+// Do not display fake availability or invoke the legacy public status API.
+if(isUsMarket && !loading && !error){
+  const dates=[...new Set(bookings.map(b=>b.local_date))].sort()
+  const chosen=dates.includes(usSelectedDay) ? usSelectedDay : (dates.at(-1) || "")
+  const shown=bookings.filter(b=>b.local_date===chosen)
+  return (
+    <PageSection title="Расписание мастера · США">
+      <p style={{fontSize:13,color:"#475569",lineHeight:1.6,marginTop:0}}>
+        Время каждой записи соответствует часовому поясу физического
+        филиала, подтверждённому сервером. При работе в нескольких
+        штатах записи не объединяются по часовому поясу компьютера.
+      </p>
+      {dates.length ? (
+        <label style={{display:"grid",gap:6,maxWidth:300,
+          fontSize:13,fontWeight:650,color:"#334155"}}>
+          Дата записи по местному времени филиала
+          <select value={chosen}
+            onChange={e=>setUsSelectedDay(e.target.value)}
+            style={{padding:"10px 12px",borderRadius:9,
+              border:"1px solid #94a3b8",fontSize:15}}>
+            {dates.map(day=>(
+              <option key={day} value={day}>{day}</option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <p role="status" style={{padding:14,background:"#f8fafc",
+          border:"1px solid #cbd5e1",borderRadius:10}}>
+          Подтверждённых записей в филиалах США пока нет.
+          Свободные слоты не предполагаются без точного расписания филиала.
+        </p>
+      )}
+      <div style={{display:"grid",gap:12,marginTop:16}}>
+        {shown.map(b=>(
+          <article key={b.id} style={{padding:15,
+            border:"1px solid #cbd5e1",borderRadius:12,
+            background:"#fff"}}>
+            <div style={{display:"flex",justifyContent:"space-between",
+              alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <strong>Запись #{b.id}</strong>
+              <span style={{fontSize:13,color:"#475569"}}>
+                <UiValue value={statusLabel(b.status)} />
+              </span>
+            </div>
+            <div style={{marginTop:9,fontSize:17,fontWeight:700}}>
+              {b.local_date} · {b.local_time} ({b.utc_offset})
+              {b.local_end_time
+                ? " — "+(b.local_end_date !== b.local_date
+                  ? b.local_end_date+" · " : "")+
+                  b.local_end_time+" ("+b.local_end_offset+")"
+                : ""}
+            </div>
+            <div style={{fontSize:13,color:"#475569",marginTop:5}}>
+              {b.salon_name || b.salon_slug} · {b.location_code}
+              {" · "}{b.location_timezone}
+            </div>
+            <div style={{marginTop:8,fontSize:14}}>
+              {b.client_name || "Клиент"}
+            </div>
+            <p style={{fontSize:12,color:"#64748b",marginBottom:0}}>
+              Просмотр расписания. Изменение статуса и создание записи
+              через старый публичный маршрут в США недоступны.
+            </p>
+          </article>
+        ))}
+      </div>
+    </PageSection>
+  )
+}
 
 if(error){
 return(
