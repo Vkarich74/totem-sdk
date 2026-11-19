@@ -157,7 +157,8 @@ export default function ServicesPage() {
   const slug = resolveSalonSlug(routeSlug);
   const { canWrite } = useSalonContext();
   const { status: marketStatus, context: marketContext } = useMarketContext();
-  const isUsMarket = marketStatus === "ready" && marketContext?.market_code === "US";
+  const marketReady = marketStatus === "ready" && Boolean(marketContext?.market_code);
+  const isUsMarket = marketReady && marketContext?.market_code === "US";
 
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -479,6 +480,12 @@ export default function ServicesPage() {
           ]}
         />
 
+        {!marketReady ? (
+          <div role="status" style={{padding:14,border:"1px solid #f59e0b",
+            borderRadius:10,color:"#854d0e"}}>
+            Рынок салона не подтверждён. Изменение услуг заблокировано.
+          </div>
+        ) : null}
         {isUsMarket ? (
           <UsServiceLinkEditor
             ownerType="salon"
@@ -487,7 +494,7 @@ export default function ServicesPage() {
             onSaved={() => {loadServices(true);loadMasterServices(false);}}
           />
         ) : null}
-        {!isUsMarket ? (
+        {marketReady && !isUsMarket ? (
         <div style={cardStyle()}>
           <h3 style={sectionTitleStyle()}><UiValue value={uiMessage("salon.s0758")} /></h3>
           {isUsMarket ? (
@@ -598,14 +605,14 @@ export default function ServicesPage() {
           </div>
         )}
 
-        {!loading && services.length === 0 && !error && (
+        {marketReady && !loading && services.length === 0 && !error && (
           <EmptyState
             title={uiMessage("salon.s0769")}
             text={uiMessage("salon.s0770")}
           />
         )}
 
-        {!loading && services.length > 0 && (
+        {marketReady && !loading && services.length > 0 && (
           <>
             <div style={{ ...cardStyle(), padding: "16px" }}>
               <div
