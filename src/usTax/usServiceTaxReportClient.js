@@ -140,3 +140,79 @@ export async function fetchUsServiceTaxReport({
   }
   return normalizeUsServiceTaxReport(payload,ownerType,id);
 }
+
+
+// FINANCE-US-03 — existing server-scoped, read-only Stripe case evidence.
+// Never treats absence of a LIVE intent as proof of settlement or a refund.
+// This request cannot acknowledge or close a reconciliation case.
+export async function fetchUsC11LiveReconciliation({
+  ownerType,ownerId,bookingId,apiBase,
+  fetchImpl=globalThis.fetch,token,signal,
+}={}) {
+  const id=Number(ownerId),booking=Number(bookingId);
+  if(!["salon","master"].includes(ownerType)||
+     !Number.isSafeInteger(id)||id<1||
+     !Number.isSafeInteger(booking)||booking<1||
+     typeof token!=="string"||token.length<12||
+     typeof fetchImpl!=="function"){
+    throw Error("US_C11_RECONCILIATION_REQUEST_INVALID");
+  }
+  const base=String(apiBase || (typeof window!=="undefined"?
+    window.TOTEM_API_BASE:null) || "https://api.totemv.com").replace(/\/$/,"");
+  const url=new URL(base);
+  if(url.protocol!=="https:" &&
+     !["127.0.0.1","localhost"].includes(url.hostname)){
+    throw Error("US_C11_RECONCILIATION_ENDPOINT_INVALID");
+  }
+  const response=await fetchImpl(
+    base+"/internal/us-pay-c11/live-connect/"+ownerType+"/"+id+
+    "/bookings/"+booking+"/reconciliation",{
+      method:"GET",signal,cache:"no-store",credentials:"omit",
+      headers:{Accept:"application/json",Authorization:"Bearer "+token},
+    }
+  );
+  const body=await response.json().catch(()=>null);
+  if(!response.ok){
+    throw Error(typeof body?.error==="string"&&
+      /^US_C11_[A-Z_]{3,100}$/.test(body.error)
+        ? body.error:"US_C11_RECONCILIATION_UNAVAILABLE");
+  }
+  const row=body?.reconciliation;
+  if(body?.ok!==true||
+     body.contract_version!=="US-PAY-C11-reconciliation-read-v1"||
+     body.market_code!=="US"||body.currency_code!=="USD"||
+     body.booking_id!==booking||
+     body.read_only!==true||
+     body.persistent_review_acknowledgment!==false||
+     body.financial_operation_performed!==false||
+     !row || !["no_live_attempt","manual_review"].includes(row.case_status) ||
+     typeof row.reason_code!=="string"||
+     !/^US_C11_[A-Z_]+$/.test(row.reason_code)||
+     typeof row.manual_review_required!=="boolean"||
+     row.review_closed!==false||
+     row.automatic_refund_allowed!==false||
+     row.safe_to_cancel_via_reconciliation!==false||
+     !Array.isArray(row.next_steps)||
+     row.next_steps.some(x=>typeof x!=="string"||
+       !/^[A-Z_]{3,100}$/.test(x))){
+    throw Error("US_C11_RECONCILIATION_CONTRACT_INVALID");
+  }
+  return Object.freeze({
+    booking_id:booking,booking_status:String(body.booking_status||""),
+    case_status:row.case_status,reason_code:row.reason_code,
+    manual_review_required:row.manual_review_required,
+    payment_intent_status:row.payment_intent_status||null,
+    verified_signed_evidence:row.verified_signed_evidence===true,
+    signed_success_observed:row.signed_success_observed===true,
+    connected_seller_is_reviewer:row.connected_seller_is_reviewer===true,
+    succeeded_refund_minor:row.succeeded_refund_minor??null,
+    dispute_count:Number.isSafeInteger(row.dispute_count)
+      ? row.dispute_count:null,
+    stripe_payment_intent_reference:
+      row.connected_seller_is_reviewer===true
+        ? row.stripe_payment_intent_reference||null:null,
+    last_verified_event_type:row.last_verified_event_type||null,
+    next_steps:Object.freeze([...row.next_steps]),
+    review_closed:false,read_only:true,
+  });
+}
