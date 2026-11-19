@@ -275,6 +275,7 @@ export default function AdminOpenOwnerPage(){
   const [requestDetailLoading, setRequestDetailLoading] = useState(false)
   const [selectedDetailVerified, setSelectedDetailVerified] = useState(false)
   const formEpoch = useRef(0)
+  const precheckSignature = useRef("")
   const selectionEpoch = useRef(0)
 
   const formMarket = form.market_code === "US" ? "US" : "KG"
@@ -315,7 +316,7 @@ export default function AdminOpenOwnerPage(){
   }, [])
 
   useEffect(() => {
-    if(form.market_code !== "US") return undefined
+    if(form.market_code !== "US" && requestMarket !== "US") return undefined
     let active = true
     async function readCatalog(){
       setGeoCatalogLoading(true)
@@ -332,7 +333,7 @@ export default function AdminOpenOwnerPage(){
     }
     readCatalog()
     return () => {active=false}
-  }, [form.market_code])
+  }, [form.market_code, requestMarket])
 
   async function loadSelectedRequest(requestId){
     const safeId = String(requestId || "").trim()
@@ -413,45 +414,79 @@ export default function AdminOpenOwnerPage(){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+
   function updateFormField(name, value){
+    formEpoch.current += 1
+    precheckSignature.current = ""
+    setPrecheckResult(null)
+    setEmailPreview(null)
+    setNotice("")
     setForm((current) => {
-      const next = {
-        ...current,
-        [name]: value,
+      if(name === "market_code"){
+        // A switch of jurisdiction never reuses a KG phone, address, or owner.
+        const fresh=buildDefaultForm()
+        fresh.owner_type=current.owner_type
+        if(value === "US"){
+          return {
+            ...fresh,market_code:"US",phone:"",city:"",address:"",
+            state_code:"",postal_code:"",
+            work_mode:current.owner_type === "master" ? "attached_to_salon" : "independent",
+          }
+        }
+        return fresh // KG retains the original blank market field contract.
       }
-
-      if(name === "owner_type" && value === "salon"){
-        next.work_mode = "independent"
+      const next={...current,[name]:value}
+      if(name === "owner_type"){
+        next.work_mode = value === "master" && current.market_code === "US"
+          ? "attached_to_salon" : "independent"
         next.salon_slug = ""
+        if(value === "master"){
+          next.state_code = ""
+          next.postal_code = ""
+        }
       }
-
       return next
     })
   }
 
+
   async function runPrecheck(){
+    if(formMarket === "US" && (!usOwnerEnabled || marketCatalogLoading)){
+      setError("US_ADMIN_ACTIVATION_HOLD")
+      return
+    }
+    const epoch=formEpoch.current
     try{
       setActionLoading(true)
       setError("")
       setNotice("")
       setPrecheckResult(null)
+      precheckSignature.current = ""
 
-      const result = await precheckAdminOpenOwner(form)
+      const result=await precheckAdminOpenOwner(form)
+      if(epoch !== formEpoch.current) return
+      if(!result.ok) throw new Error(result.error || "PRECHECK_FAILED")
 
-      if(!result.ok){
-        throw new Error(result.error || "PRECHECK_FAILED")
-      }
-
-      setPrecheckResult(result.result || result)
-      setNotice(result.valid ? "Проверка пройдена" : "Проверка не пройдена")
+      const checked=result.result || result
+      setPrecheckResult(checked)
+      if(checked.valid) precheckSignature.current=JSON.stringify(form)
+      setNotice(checked.valid ? "Проверка пройдена" : "Проверка не пройдена")
     }catch(e){
-      setError(e?.message || "PRECHECK_FAILED")
+      if(epoch === formEpoch.current) setError(e?.message || "PRECHECK_FAILED")
     }finally{
       setActionLoading(false)
     }
   }
 
   async function createRequest(){
+    if(!precheckResult?.valid || precheckSignature.current !== JSON.stringify(form)){
+      setError("RECHECK_REQUIRED_AFTER_FORM_CHANGE")
+      return
+    }
+    if(formMarket === "US" && !usOwnerEnabled){
+      setError("US_ADMIN_ACTIVATION_HOLD")
+      return
+    }
     try{
       setActionLoading(true)
       setError("")
@@ -469,9 +504,12 @@ export default function AdminOpenOwnerPage(){
       setPrecheckResult(null)
       setEmailPreview(null)
       setAudit(null)
+      formEpoch.current += 1
+      precheckSignature.current = ""
       setForm(buildDefaultForm())
 
       await loadData()
+      if(result.request?.id) await loadSelectedRequest(result.request.id)
     }catch(e){
       setError(e?.message || "CREATE_REQUEST_FAILED")
     }finally{
@@ -485,6 +523,10 @@ export default function AdminOpenOwnerPage(){
       return
     }
 
+    if(!selectedMutationsAllowed || requestMarket === "KZ"){
+      setError("OWNER_MARKET_NOT_READY")
+      return
+    }
     try{
       setActionLoading(true)
       setError("")
@@ -499,6 +541,7 @@ export default function AdminOpenOwnerPage(){
       setSelectedRequest(result.request || selectedRequest)
       setNotice(`${actionName}: выполнено`)
       await loadData()
+      await loadSelectedRequest(selectedRequest.id)
     }catch(e){
       setError(e?.message || `${actionName}: ошибка`)
     }finally{
@@ -512,6 +555,10 @@ export default function AdminOpenOwnerPage(){
       return
     }
 
+    if(!selectedMutationsAllowed){
+      setError("OWNER_MARKET_NOT_READY")
+      return
+    }
     try{
       setActionLoading(true)
       setError("")
@@ -528,6 +575,7 @@ export default function AdminOpenOwnerPage(){
       setEmailPreview(result.preview || null)
       setNotice("Предпросмотр email готов")
       await loadData()
+      await loadSelectedRequest(selectedRequest.id)
     }catch(e){
       setError(e?.message || "EMAIL_PREVIEW_FAILED")
     }finally{
@@ -536,6 +584,11 @@ export default function AdminOpenOwnerPage(){
   }
 
   async function runActivate(){
+    if(requestMarket === "US" && selectedRequest?.owner_type === "salon" &&
+       geoReadback?.location_ready !== true){
+      setError("US_PRIMARY_LOCATION_NOT_READY")
+      return
+    }
     await runRequestAction("Активация", activateAdminOpenOwnerRequest)
   }
 
@@ -572,13 +625,63 @@ export default function AdminOpenOwnerPage(){
     }
   }
 
+
   function selectRequest(request){
+    selectionEpoch.current += 1
     setSelectedRequestId(String(request?.id || ""))
     setSelectedRequest(request || null)
+    setSelectedDetailVerified(false)
+    setGeoReadback(null)
+    setGeoDraft(blankUsGeoDraft())
     setEmailPreview(null)
     setAudit(null)
     setNotice("")
     setError("")
+    if(request?.id) loadSelectedRequest(request.id)
+  }
+
+  function updateGeoField(name,value){
+    setGeoDraft(current => ({...current,[name]:value}))
+    setNotice("")
+  }
+
+  async function runPrepareUsLocation(){
+    if(!selectedRequest?.id || requestMarket !== "US" ||
+       selectedRequest.owner_type !== "salon" ||
+       selectedRequest.status !== "provisioned" ||
+       !selectedMutationsAllowed || !geoCatalog ||
+       geoReadback?.location_ready === true){
+      setError("US_PRIMARY_LOCATION_NOT_AVAILABLE")
+      return
+    }
+    if(!geoCatalog.states.some(item=>item.code===geoDraft.state_code) ||
+       !geoCatalog.timezones.includes(geoDraft.timezone_name) ||
+       !geoDraft.street_line1.trim() || !geoDraft.city_name.trim() ||
+       !geoDraft.postal_code.trim() || !geoDraft.location_code.trim()){
+      setError("US_PRIMARY_LOCATION_FIELDS_REQUIRED")
+      return
+    }
+    try{
+      setGeoSubmitting(true)
+      setError("")
+      setNotice("")
+      const result=await prepareAdminUsPrimaryLocation(selectedRequest.id,{
+        ...geoDraft,is_primary:true,
+      })
+      if(!result.ok) throw new Error(result.error || "US_PRIMARY_LOCATION_PREPARE_FAILED")
+      const readback=await getAdminUsPrimaryLocation(selectedRequest.id)
+      if(!readback.ok || readback.location_ready !== true){
+        throw new Error(readback.error || "US_PRIMARY_LOCATION_NOT_READY")
+      }
+      setGeoReadback(readback)
+      setNotice(result.idempotent ? "Филиал уже подтверждён" :
+        "Геопроверка филиала подтверждена на сервере")
+      await loadAudit(selectedRequest.id)
+    }catch(e){
+      setError(e?.message || "US_PRIMARY_LOCATION_PREPARE_FAILED")
+    }finally{
+      setGeoSubmitting(false)
+    }
   }
 
   const visibleStats = useMemo(() => {
