@@ -284,8 +284,12 @@ export default function ServicesPage() {
 
   useEffect(() => {
     loadServices(true);
-    loadMasterServices(false);
-  }, [slug]);
+    // The US editor obtains only explicitly authorized same-salon
+    // catalog choices from its dedicated owner-scoped endpoint.
+    // Never enumerate master cabinets or unrelated markets in US mode.
+    if (marketReady && !isUsMarket) loadMasterServices(false);
+    else setMasterServices([]);
+  }, [slug, marketReady, isUsMarket]);
 
   async function toggleActive(service) {
     try {
@@ -491,7 +495,7 @@ export default function ServicesPage() {
             ownerType="salon"
             ownerSlug={slug}
             canWrite={canWrite === true}
-            onSaved={() => {loadServices(true);loadMasterServices(false);}}
+            onSaved={() => loadServices(true)}
           />
         ) : null}
         {marketReady && !isUsMarket ? (
