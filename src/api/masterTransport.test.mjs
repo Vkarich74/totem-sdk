@@ -13,8 +13,8 @@ const apiExports = [
 
 function mount(handler) {
   const importLine = 'import { masterCabinetLegacyJson } from "./internal.js";';
-  assert.ok(source.startsWith(importLine), "Facade imports only canonical SDK transport");
-  const moduleBody = source.slice(importLine.length)
+  assert.equal(source.split(importLine).length, 2, "Facade imports only canonical SDK transport once");
+  const moduleBody = source.replace(importLine, "")
     .replace(/^export\s+/gm, "");
   const ctor = new Function("masterCabinetLegacyJson",
     moduleBody + "\nreturn {" + apiExports.join(",") + "};");
