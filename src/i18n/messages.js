@@ -1,4 +1,5 @@
 const ru = Object.freeze({
+  "master.quickBookingUnavailable": "Ручная запись для этого рынка недоступна. Используйте бронирование с проверкой филиала, рабочего времени, услуги и цены.",
   "us.book.title": "Запись в салон",
   "us.book.subtitle": "Запишитесь в {salon}",
   "us.book.details": "Данные записи",
@@ -1832,6 +1833,7 @@ const ru = Object.freeze({
   "master.validation.unknown": "Проверьте настройки страницы.",
 });
 const en = Object.freeze({
+  "master.quickBookingUnavailable": "Manual booking is unavailable for this market. Use booking with verified location, working hours, service and price.",
   "us.book.title": "Book an appointment",
   "us.book.subtitle": "Book at {salon}",
   "us.book.details": "Appointment details",

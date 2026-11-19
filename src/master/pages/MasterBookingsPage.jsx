@@ -4,6 +4,7 @@ import { useMaster } from "../MasterContext"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { masterCabinetLegacyJson, getMasterBookings, getMasterServices } from "../../api/internal"
 import { useMarketContext } from "../../market/MarketContext.jsx"
+import { allowsLegacyMasterQuickBooking } from "../../us/usBookingModel.js"
 import UsPayC11RefundCard from "../../us/UsPayC11RefundCard.jsx"
 
 import PageSection from "../../cabinet/PageSection"
@@ -77,7 +78,16 @@ function SummaryCard({ label, value, hint }){
 
 export default function MasterBookingsPage() {
   const { renderUi } = useUiMessages();
-  const { context: marketContext } = useMarketContext();
+  const {
+    context: marketContext, status: marketStatus,
+    context_source: marketContextSource,
+    business_context_status: businessContextStatus,
+  } = useMarketContext();
+  const legacyQuickBookingAllowed = allowsLegacyMasterQuickBooking({
+    status:marketStatus,context:marketContext,
+    context_source:marketContextSource,
+    business_context_status:businessContextStatus,
+  });
   const { bookingId } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -118,7 +128,7 @@ export default function MasterBookingsPage() {
     let cancelled = false
 
     async function loadServiceOptions(){
-      if(!isCreateMode || !masterSlug){
+      if(!isCreateMode || !masterSlug || !legacyQuickBookingAllowed){
         if(!cancelled){
           setServiceOptions([])
           setServiceOptionsLoading(false)
@@ -177,7 +187,7 @@ export default function MasterBookingsPage() {
     return () => {
       cancelled = true
     }
-  }, [isCreateMode, masterSlug])
+  }, [isCreateMode, masterSlug, legacyQuickBookingAllowed])
 
   useEffect(()=>{
     let cancelled = false
@@ -283,6 +293,12 @@ export default function MasterBookingsPage() {
   }
 
   async function createBooking(date, time) {
+    // US master bookings require the canonical location-specific public
+    // availability/price transaction. Never send KG +06:00 legacy payload.
+    if(!legacyQuickBookingAllowed){
+      setCreateError(uiMessage("master.quickBookingUnavailable"))
+      return
+    }
     if (!masterSlug) return
 
     if (!date || !time || !client.trim()) {
@@ -313,6 +329,22 @@ export default function MasterBookingsPage() {
       console.error("createBooking error", e)
       setCreateError(uiError(e?.message || "MASTER_BOOKING_CREATE_FAILED"))
     }
+  }
+
+  if (isCreateMode && !legacyQuickBookingAllowed) {
+    return (
+      <div style={{ padding: "20px" }}>
+        <button
+          onClick={() => navigate(uiTemplate(["/master/","/schedule"], [masterSlug]))}
+          style={styles.backButton}
+        ><UiValue value={uiMessage("master.s0265")} /></button>
+        <PageSection title={uiMessage("master.s0266")}>
+          <div style={styles.errorBanner}>
+            <UiValue value={uiMessage("master.quickBookingUnavailable")} />
+          </div>
+        </PageSection>
+      </div>
+    )
   }
 
   if (isCreateMode) {

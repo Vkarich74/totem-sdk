@@ -1,3 +1,5 @@
+import { getAuthAccessToken } from "./internal.js";
+
 // GEO-R: staging push config must never query the Production API.
 const API = String(
   import.meta.env.VITE_API_BASE ||
@@ -16,12 +18,16 @@ export async function postSalonBookingLifecycle(salonSlug, bookingId, action) {
     (typeof window !== "undefined" ? window.API_BASE : "") ||
     API
   ).replace(/\/$/, "");
+  const token = getAuthAccessToken();
   return fetch(
     base + "/public/salons/" + encodeURIComponent(salonSlug) +
       "/bookings/" + bookingId + "/lifecycle",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: "Bearer " + token } : {}),
+      },
       body: JSON.stringify({ action }),
     }
   );

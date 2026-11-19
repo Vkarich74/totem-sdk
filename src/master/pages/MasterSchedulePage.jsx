@@ -543,7 +543,11 @@ setActionLoading((prev)=>( {
 }))
 
 try{
-const actionSalonSlug=resolveActionSalonSlug()
+// A US master can work in multiple salons; the booking's verified salon
+// identity is authoritative. Never fall back to the currently selected salon.
+const actionSalonSlug=isUsMarket
+  ? String(booking?.salon_slug||"").trim()
+  : resolveActionSalonSlug()
 
 if(!actionSalonSlug){
 alert(renderUi(uiError(uiMessage("master.s0298"))))
