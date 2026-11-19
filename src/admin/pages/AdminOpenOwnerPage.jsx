@@ -718,6 +718,13 @@ export default function AdminOpenOwnerPage(){
       <AdminNavigation />
 
       <h1 style={{ margin: "0 0 16px" }}>Открытие владельца</h1>
+      <div style={styles.marketNotice}>
+        <strong>Рынки регистрации:</strong> KG — действующий; US — отдельный контур;
+        KZ — неактивен. Рынок записи определяется сервером, не номером телефона.
+        {marketCatalogError ? <div style={styles.inlineWarning}>
+          Не удалось получить каталог рынков: {marketCatalogError}. Открытие US заблокировано; прежний KG-контур доступен.
+        </div> : null}
+      </div>
 
       {error ? <div style={styles.errorBox}>Ошибка: {error}</div> : null}
       {notice ? <div style={styles.noticeBox}>{notice}</div> : null}
@@ -751,6 +758,29 @@ export default function AdminOpenOwnerPage(){
           <h2 style={styles.panelTitle}>Новый салон / мастер</h2>
 
           <div style={styles.formGrid}>
+            <label style={styles.label}>
+              Рынок (ручной выбор)
+              <select
+                value={formMarket}
+                onChange={(event) => updateFormField("market_code", event.target.value)}
+                disabled={actionLoading}
+                style={styles.input}
+              >
+                <option value="KG">Кыргызстан · KG</option>
+                <option value="US">США · US {usOwnerEnabled ? "· готов к ручной активации" : "· HOLD"}</option>
+                <option value="KZ" disabled>Казахстан · KZ · неактивен</option>
+              </select>
+            </label>
+            <div style={{...styles.label, justifyContent:"center"}}>
+              <strong>Валюта: {formMarket === "US" ? "USD" : "KGS"}</strong>
+              {formMarket === "US"
+                ? <span style={styles.inlineWarning}>
+                    {marketCatalogLoading ? "Проверяется разрешение US…"
+                      : usOwnerEnabled ? "Разрешённый сервером US-контур"
+                      : "US АКТИВАЦИЯ ВЫКЛЮЧЕНА. Записи не создаются до серверного разрешения."}
+                  </span>
+                : <span style={styles.helperText}>Исторический порядок регистрации KG сохранён.</span>}
+            </div>
             <label style={styles.label}>
               Тип
               <select
@@ -801,7 +831,7 @@ export default function AdminOpenOwnerPage(){
                 autoComplete="tel"
                 value={form.phone}
                 onChange={(event) => updateFormField("phone", event.target.value)}
-                placeholder="+7 925 608 20 00 / +996 555 123 456"
+                placeholder={formMarket === "US" ? "+1 212 555 0100" : "+7 925 608 20 00 / +996 555 123 456"}
                 style={styles.input}
               />
             </label>
@@ -811,17 +841,48 @@ export default function AdminOpenOwnerPage(){
               <input
                 value={form.city}
                 onChange={(event) => updateFormField("city", event.target.value)}
-                placeholder="Бишкек"
+                placeholder={formMarket === "US" ? "Город в США" : "Бишкек"}
                 style={styles.input}
               />
             </label>
 
-            <label style={styles.label}>
+            {formMarket === "US" && form.owner_type === "salon" ? (
+              <>
+                <label style={styles.label}>
+                  Штат США / DC
+                  <select
+                    value={form.state_code || ""}
+                    onChange={(event) => updateFormField("state_code", event.target.value)}
+                    style={styles.input}
+                    disabled={!geoCatalog}
+                  >
+                    <option value="">Выберите штат</option>
+                    {(geoCatalog?.states || []).map((state) => (
+                      <option key={state.code} value={state.code}>
+                        {state.name_en} ({state.code})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label style={styles.label}>
+                  ZIP / ZIP+4
+                  <input
+                    inputMode="numeric"
+                    value={form.postal_code || ""}
+                    onChange={(event) => updateFormField("postal_code", event.target.value)}
+                    placeholder="5 цифр или ZIP+4"
+                    style={styles.input}
+                  />
+                </label>
+              </>
+            ) : null}
+
+                        <label style={styles.label}>
               Адрес
               <input
                 value={form.address}
                 onChange={(event) => updateFormField("address", event.target.value)}
-                placeholder="Адрес"
+                placeholder={formMarket === "US" ? "Адрес для сведений заявки (геопроверка после создания доступа)" : "Адрес"}
                 style={styles.input}
               />
             </label>
@@ -845,8 +906,8 @@ export default function AdminOpenOwnerPage(){
                     onChange={(event) => updateFormField("work_mode", event.target.value)}
                     style={styles.input}
                   >
-                    <option value="independent">Независимый мастер</option>
-                    <option value="attached_to_salon">Прикрепить к салону</option>
+                    {formMarket !== "US" ? <option value="independent">Независимый мастер</option> : null}
+                    <option value="attached_to_salon">Прикрепить к действующему салону</option>
                   </select>
                 </label>
 
@@ -856,7 +917,7 @@ export default function AdminOpenOwnerPage(){
                     <input
                       value={form.salon_slug}
                       onChange={(event) => updateFormField("salon_slug", event.target.value)}
-                      placeholder="totem-demo-salon"
+                      placeholder={formMarket === "US" ? "Слаг действующего US-салона" : "Слаг салона"}
                       style={styles.input}
                     />
                   </label>
@@ -876,11 +937,11 @@ export default function AdminOpenOwnerPage(){
           </div>
 
           <div style={styles.buttonRow}>
-            <button type="button" onClick={runPrecheck} disabled={actionLoading} style={styles.secondaryButton}>
+            <button type="button" onClick={runPrecheck} disabled={actionLoading || (formMarket === "US" && !usOwnerEnabled)} style={styles.secondaryButton}>
               Проверить
             </button>
 
-            <button type="button" onClick={createRequest} disabled={actionLoading || !canCreateRequest(precheckResult)} style={styles.primaryButton}>
+            <button type="button" onClick={createRequest} disabled={actionLoading || !canCreateRequest(precheckResult) || precheckSignature.current !== JSON.stringify(form) || (formMarket === "US" && !usOwnerEnabled)} style={styles.primaryButton}>
               Создать заявку
             </button>
 
@@ -888,6 +949,14 @@ export default function AdminOpenOwnerPage(){
               Обновить
             </button>
           </div>
+
+          {formMarket === "US" ? (
+            <div style={styles.helperText}>
+              {geoCatalogLoading ? "Загружаются официальные штаты и IANA-зоны…"
+                : geoCatalogError ? "US геокаталог недоступен: " + geoCatalogError
+                : "Адрес и IANA-пояс первичного US-филиала подтверждаются отдельно после создания доступа. Без геопроверки активация невозможна."}
+            </div>
+          ) : null}
 
           {precheckResult ? (
             <div style={styles.resultBox}>
@@ -901,6 +970,7 @@ export default function AdminOpenOwnerPage(){
 
         <section style={styles.panel}>
           <h2 style={styles.panelTitle}>Заявки</h2>
+          <p style={styles.helperText}>Показаны последние 100 заявок без скрытой фильтрации. Непривязанные заявки отмечены отдельно; KG им не присваивается автоматически.</p>
 
           {sortedRequests.length === 0 ? (
             <div>Заявок нет</div>
@@ -917,6 +987,7 @@ export default function AdminOpenOwnerPage(){
                   }}
                 >
                   <div><strong>#{request.id}</strong> {request.name || "-"}</div>
+                  <div style={styles.marketBadge}>{ADMIN_MARKET_LABELS[requestMarketCode(request)]}</div>
                   <div>{request.owner_type || "-"} / {request.slug_final || request.slug_requested || "-"}</div>
                   <div>{getStatusLabel(request.status)} / email: {request.email_status || "-"}</div>
                   <div>{formatDateTime(request.created_at)}</div>
@@ -930,10 +1001,29 @@ export default function AdminOpenOwnerPage(){
       {selectedRequest ? (
         <section style={styles.panel}>
           <h2 style={styles.panelTitle}>Выбранная заявка #{selectedRequest.id}</h2>
+          <div style={styles.marketBadge}>
+            Рынок заявки: {ADMIN_MARKET_LABELS[requestMarket]}
+            {requestMarket === "US" ? " · USD" : ""}
+          </div>
+          {requestDetailLoading ? <p style={styles.helperText}>Проверяется карточка заявки и привязка рынка…</p> : null}
+          {requestMarket === "US" && !selectedMutationsAllowed ? (
+            <div style={styles.inlineWarning}>
+              US-действия запрещены, пока Backend не подтвердил рынок, карточку и разрешение активации.
+            </div>
+          ) : null}
 
           <div style={styles.detailGrid}>
             <div><strong>Статус:</strong> {selectedRequest.status || "-"}</div>
             <div><strong>Статус email:</strong> {selectedRequest.email_status || "-"}</div>
+            {requestMarket === "US" && selectedRequest.owner_type === "salon" ? (
+              <>
+                <div><strong>Штат:</strong> {selectedRequest.precheck_result_json?.normalized?.state_code || "-"}</div>
+                <div><strong>ZIP:</strong> {selectedRequest.precheck_result_json?.normalized?.postal_code || "-"}</div>
+                <div><strong>Филиал:</strong> {geoReadback?.location_ready ? "Подтверждён" : "Ожидает подтверждения"}</div>
+              </>
+            ) : null}
+            {requestMarket === "US" && selectedRequest.owner_type === "master" ?
+              <div><strong>US-салон:</strong> {selectedRequest.salon_slug || "-"}</div> : null}
             <div><strong>Тип:</strong> {selectedRequest.owner_type || "-"}</div>
             <div><strong>Слаг:</strong> {selectedRequest.slug_final || "-"}</div>
             <div><strong>email:</strong> {selectedRequest.email || "-"}</div>
@@ -948,7 +1038,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={() => runRequestAction("Одобрение", approveAdminOpenOwnerRequest)}
-              disabled={actionLoading || !canApprove(selectedRequest)}
+              disabled={actionLoading || !canApprove(selectedRequest) || !selectedMutationsAllowed}
               style={styles.primaryButton}
             >
               Одобрить
@@ -957,7 +1047,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={() => runRequestAction("Создание доступа", provisionAdminOpenOwnerRequest)}
-              disabled={actionLoading || !canProvision(selectedRequest)}
+              disabled={actionLoading || !canProvision(selectedRequest) || !selectedMutationsAllowed}
               style={styles.primaryButton}
             >
               Создать доступ
@@ -966,7 +1056,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={runActivate}
-              disabled={actionLoading || !canActivate(selectedRequest)}
+              disabled={actionLoading || !canActivate(selectedRequest) || !selectedMutationsAllowed || (requestMarket === "US" && selectedRequest.owner_type === "salon" && geoReadback?.location_ready !== true)}
               style={styles.primaryButton}
             >
               Активировать
@@ -975,7 +1065,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={runEmailPreview}
-              disabled={actionLoading || !canPreviewEmail(selectedRequest)}
+              disabled={actionLoading || !canPreviewEmail(selectedRequest) || !selectedMutationsAllowed}
               style={styles.secondaryButton}
             >
               Предпросмотр email
@@ -984,7 +1074,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={runSendEmail}
-              disabled={actionLoading || !canSendEmail(selectedRequest)}
+              disabled={actionLoading || !canSendEmail(selectedRequest) || !selectedMutationsAllowed}
               style={styles.secondaryButton}
             >
               Отправить email
