@@ -1,0 +1,66 @@
+name: RELEASE SDK master booking and schedule network boundary
+on:
+  push:
+    branches:
+      - release/sdk-cabinet-transport-boundary-20261119
+    paths:
+      - src/master/pages/MasterBookingsPage.jsx
+      - src/master/pages/MasterSchedulePage.jsx
+      - src/master/MasterBookingsPage.jsx
+      - src/api/publicApi.js
+      - src/api/masterCabinetTransportBoundary.test.mjs
+      - .github/workflows/sdk-cabinet-transport-boundary.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cabinet-transport-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      RAILWAY_TOKEN: ""
+      ODOO_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install production-locked dependencies
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Syntax-check full API files and offline test
+        run: |
+          set -euo pipefail
+          node --check src/api/internal.js
+          node --check src/api/publicApi.js
+          node --check src/api/masterCabinetTransportBoundary.test.mjs
+      - name: Offline legacy request shapes and public lifecycle transport
+        run: |
+          set -euo pipefail
+          node --test src/api/masterTransport.test.mjs
+          node --test src/api/masterCabinetTransportBoundary.test.mjs
+      - name: Verify removed legacy master page has no external imports
+        run: |
+          set -euo pipefail
+          test ! -e src/master/MasterBookingsPage.jsx
+          if git grep -n 'MasterBookingsPage' -- src |
+            grep -v -E '^(src/App\.jsx|src/master/pages/MasterBookingsPage\.jsx|src/api/masterCabinetTransportBoundary\.test\.mjs|src/MASTER_SYSTEM_PROGRESS\.txt):'; then
+            echo 'UNEXPECTED_OLD_MASTER_BOOKINGS_REFERENCE'
+            exit 1
+          fi
+      - name: No direct duplicate master network transports
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          ! grep -Eq 'fetch\s*\(' src/master/pages/MasterBookingsPage.jsx
+          ! grep -Eq 'fetch\s*\(' src/master/pages/MasterSchedulePage.jsx
+          grep -Fq 'postSalonBookingLifecycle' src/api/publicApi.js
+          grep -Fq 'masterCabinetLegacyJson' src/api/internal.js
+          echo 'ONE_MASTER_BOOKING_TRANSPORT; PUBLIC_LIFECYCLE_IN_PUBLIC_CLIENT; KG_KZ_UNCHANGED'
+      - name: Full Vite production build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html

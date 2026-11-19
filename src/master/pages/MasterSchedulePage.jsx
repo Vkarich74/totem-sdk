@@ -3,11 +3,10 @@ import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
 import { getMasterBookings } from "../../api/internal"
+import { postSalonBookingLifecycle } from "../../api/publicApi.js"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import { normalizeUsMasterScheduleFeed, classifyUnresolvedMasterMarketProbe } from "../../us/usBookingModel.js"
 import UsMasterWorkingHoursEditor from "./UsMasterWorkingHoursEditor.jsx"
-
-const API_BASE = import.meta.env.VITE_API_BASE || window.API_BASE || "https://api.totemv.com"
 
 function normalizeBookingsResponse(payload){
 if(Array.isArray(payload)) return payload
@@ -551,18 +550,7 @@ alert(renderUi(uiError(uiMessage("master.s0298"))))
 return
 }
 
-const response=await fetch(
-uiTemplate(["","/public/salons/"], [API_BASE])+encodeURIComponent(actionSalonSlug)+"/bookings/"+booking.id+"/lifecycle",
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify(
-{action:lifecycleAction}
-)
-}
-)
+const response=await postSalonBookingLifecycle(actionSalonSlug,booking.id,lifecycleAction)
 
 if(!response.ok){
 throw new Error("STATUS_UPDATE_FAILED")

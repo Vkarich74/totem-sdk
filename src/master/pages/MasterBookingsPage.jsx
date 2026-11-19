@@ -2,18 +2,13 @@ import { uiMoney, UiValue, uiMessage, uiDate, uiTemplate, uiError, useUiMessages
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { getAuthAccessToken, getMasterBookings, getMasterServices } from "../../api/internal"
+import { masterCabinetLegacyJson, getMasterBookings, getMasterServices } from "../../api/internal"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import UsPayC11RefundCard from "../../us/UsPayC11RefundCard.jsx"
 
 import PageSection from "../../cabinet/PageSection"
 import TableSection from "../../cabinet/TableSection"
 import EmptyState from "../../cabinet/EmptyState"
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  window.API_BASE ||
-  "https://api.totemv.com"
 
 function normalizeBookingsResponse(payload){
   if(Array.isArray(payload)) return payload
@@ -296,28 +291,18 @@ export default function MasterBookingsPage() {
     }
 
     const start = date + "T" + time + ":00+06:00"
-    const token = getAuthAccessToken()
-
     try {
-      const response = await fetch(
-        API_BASE + "/internal/masters/" + encodeURIComponent(masterSlug) + "/bookings",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: "Bearer " + token } : {})
-          },
-          body: JSON.stringify({
-            client_name: client,
-            phone: phone,
-            start_at: start,
-            service_id: Number(serviceId)
-          })
-        }
+      const payload = await masterCabinetLegacyJson(
+        "/masters/" + encodeURIComponent(masterSlug) + "/bookings",
+        { method: "POST", body: {
+          client_name: client,
+          phone: phone,
+          start_at: start,
+          service_id: Number(serviceId)
+        }}
       )
 
-      const payload = await response.json().catch(() => null)
-      if (!response.ok || payload?.ok === false) {
+      if (payload?.ok === false) {
         throw new Error(payload?.error || "MASTER_BOOKING_CREATE_FAILED")
       }
 
