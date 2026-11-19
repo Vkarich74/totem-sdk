@@ -1,0 +1,36 @@
+name: Admin US Open Owner — source-only Vite integrity
+
+on:
+  push:
+    branches:
+      - "release/admin-us-open-owner-sdk-d-*"
+    paths:
+      - "src/admin/pages/AdminOpenOwnerPage.jsx"
+      - "src/api/internal.js"
+      - ".github/workflows/admin-us-open-owner-sdk-safe.yml"
+  pull_request:
+    paths:
+      - "src/admin/pages/AdminOpenOwnerPage.jsx"
+      - "src/api/internal.js"
+      - ".github/workflows/admin-us-open-owner-sdk-safe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Build entire React SDK; no API/DB call, no business fixtures
+        run: npm run build
+      - name: Explicit safety note
+        run: |
+          echo "No PostgreSQL service. No SQL/DDL, no test users, salons, masters, bookings, payments or Odoo."

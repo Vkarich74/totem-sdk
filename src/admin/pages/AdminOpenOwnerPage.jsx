@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import AdminNavigation from "../AdminNavigation"
 import {
   approveAdminOpenOwnerRequest,
   createAdminOpenOwnerRequest,
   getAdminOpenOwnerAudit,
   getAdminOpenOwnerStats,
+  getAdminOpenOwnerRequest,
+  getAdminMarketCatalog,
+  getAdminUsGeoCatalog,
+  getAdminUsPrimaryLocation,
+  prepareAdminUsPrimaryLocation,
   listAdminOpenOwnerRequests,
   precheckAdminOpenOwner,
   previewAdminOpenOwnerEmail,
@@ -12,7 +17,7 @@ import {
   sendAdminOpenOwnerEmail,
 } from "../../api/internal"
 
-function formatDateTime(value){
+function formatDateTime(value, marketCode = "KG", verifiedTimezone = ""){
   if(!value){
     return "-"
   }
@@ -24,7 +29,7 @@ function formatDateTime(value){
     }
 
     return date.toLocaleString("ru-RU", {
-      timeZone: "Asia/Bishkek",
+      timeZone: marketCode === "US" ? (verifiedTimezone || "UTC") : "Asia/Bishkek",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -62,6 +67,59 @@ function renderOpenOwnerErrors(errors){
   if(!Array.isArray(errors)) return stringifyValue(errors)
   if(!errors.length) return "-"
   return errors.map(code => OPEN_OWNER_PHONE_MESSAGES[String(code)] || String(code)).join("; ")
+}
+
+const ADMIN_MARKET_LABELS = Object.freeze({
+  KG: "Кыргызстан · KG",
+  US: "США · US",
+  KZ: "Казахстан · KZ (неактивен)",
+  UNCLASSIFIED: "Рынок не подтверждён",
+})
+
+function requestMarketCode(request){
+  const raw = request?.market_code ??
+    request?.precheck_result_json?.normalized?.market_code ??
+    request?.precheck_result_json?.market_code ??
+    ""
+  const code = String(raw || "").toUpperCase()
+  return ["KG", "US", "KZ"].includes(code) ? code : "UNCLASSIFIED"
+}
+
+function canMutateOwnerRequest(request, catalog){
+  const code = requestMarketCode(request)
+  if(code === "KZ") return false
+  if(code !== "US") return true // Legacy KG/unclassified preserve existing controls.
+  const market = catalog.find(row => row.market_code === "US")
+  return market?.owner_activation_enabled === true &&
+    market?.admin_operation_enabled === true && market?.currency_code === "USD"
+}
+
+function blankUsGeoDraft(request = null){
+  const normalized = request?.precheck_result_json?.normalized || {}
+  return {
+    location_code: "main",
+    state_code: String(normalized.state_code || ""),
+    city_name: String(request?.city || ""),
+    street_line1: "",
+    street_line2: "",
+    postal_code: String(normalized.postal_code || ""),
+    timezone_name: "",
+    is_primary: true,
+  }
+}
+
+function normalizeGeoDraft(location){
+  if(!location) return null
+  return {
+    location_code: String(location.location_code || "main"),
+    state_code: String(location.state_code || ""),
+    city_name: String(location.city_name || ""),
+    street_line1: String(location.street_line1 || ""),
+    street_line2: String(location.street_line2 || ""),
+    postal_code: String(location.postal_code || ""),
+    timezone_name: String(location.timezone_name || ""),
+    is_primary: true,
+  }
 }
 
 function buildDefaultForm(){
@@ -205,6 +263,117 @@ export default function AdminOpenOwnerPage(){
   const [audit, setAudit] = useState(null)
   const [auditLoading, setAuditLoading] = useState(false)
 
+  const [marketCatalog, setMarketCatalog] = useState([])
+  const [marketCatalogError, setMarketCatalogError] = useState("")
+  const [marketCatalogLoading, setMarketCatalogLoading] = useState(true)
+  const [geoCatalog, setGeoCatalog] = useState(null)
+  const [geoCatalogError, setGeoCatalogError] = useState("")
+  const [geoCatalogLoading, setGeoCatalogLoading] = useState(false)
+  const [geoDraft, setGeoDraft] = useState(blankUsGeoDraft)
+  const [geoReadback, setGeoReadback] = useState(null)
+  const [geoSubmitting, setGeoSubmitting] = useState(false)
+  const [requestDetailLoading, setRequestDetailLoading] = useState(false)
+  const [selectedDetailVerified, setSelectedDetailVerified] = useState(false)
+  const formEpoch = useRef(0)
+  const precheckSignature = useRef("")
+  const selectionEpoch = useRef(0)
+
+  const formMarket = form.market_code === "US" ? "US" : "KG"
+  const usCatalogRecord = marketCatalog.find(item => item.market_code === "US")
+  const usOwnerEnabled = usCatalogRecord?.owner_activation_enabled === true &&
+    usCatalogRecord?.admin_operation_enabled === true &&
+    usCatalogRecord?.currency_code === "USD"
+  const requestMarket = requestMarketCode(selectedRequest)
+  const selectedUsReady = requestMarket !== "US" ||
+    (usOwnerEnabled && selectedDetailVerified && !requestDetailLoading)
+  const selectedMutationsAllowed = canMutateOwnerRequest(selectedRequest, marketCatalog) &&
+    selectedUsReady
+
+  async function loadMarketCatalog(){
+    try {
+      setMarketCatalogLoading(true)
+      setMarketCatalogError("")
+      const result = await getAdminMarketCatalog()
+      if(!result.ok) throw new Error(result.error || "ADMIN_MARKETS_UNAVAILABLE")
+      const actual = result.markets.filter(item => ["KG", "US", "KZ"].includes(item.market_code))
+      if(!actual.some(item => item.market_code === "KG" && item.admin_operation_enabled === true)){
+        throw new Error("KG_ADMIN_MARKET_NOT_READY")
+      }
+      setMarketCatalog(actual)
+    }catch(e){
+      // Do not break the old KG workflow if the additive catalog is unavailable.
+      // For US this is intentionally fail-closed.
+      setMarketCatalog([])
+      setMarketCatalogError(e?.message || "ADMIN_MARKETS_UNAVAILABLE")
+    }finally{
+      setMarketCatalogLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadMarketCatalog()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if(form.market_code !== "US" && requestMarket !== "US") return undefined
+    let active = true
+    async function readCatalog(){
+      setGeoCatalogLoading(true)
+      setGeoCatalogError("")
+      try {
+        const result = await getAdminUsGeoCatalog()
+        if(!result.ok) throw new Error(result.error || "US_GEO_CATALOG_UNAVAILABLE")
+        if(active) setGeoCatalog({ states:result.states, timezones:result.timezones })
+      }catch(e){
+        if(active){setGeoCatalog(null);setGeoCatalogError(e?.message || "US_GEO_CATALOG_UNAVAILABLE")}
+      }finally{
+        if(active) setGeoCatalogLoading(false)
+      }
+    }
+    readCatalog()
+    return () => {active=false}
+  }, [form.market_code, requestMarket])
+
+  async function loadSelectedRequest(requestId){
+    const safeId = String(requestId || "").trim()
+    if(!safeId) return
+    const epoch = ++selectionEpoch.current
+    setRequestDetailLoading(true)
+    setSelectedDetailVerified(false)
+    setGeoReadback(null)
+    setGeoDraft(blankUsGeoDraft())
+    try{
+      const result = await getAdminOpenOwnerRequest(safeId)
+      if(epoch !== selectionEpoch.current) return
+      if(!result.ok || !result.request || String(result.request.id) !== safeId){
+        throw new Error(result.error || "OWNER_OPENING_DETAIL_READ_FAILED")
+      }
+      const detail = result.request
+      const market = requestMarketCode(detail)
+      setSelectedRequest(detail)
+      setSelectedDetailVerified(true)
+      setGeoDraft(blankUsGeoDraft(detail))
+      if(market === "US" && detail.owner_type === "salon" &&
+         ["provisioned", "activated", "email_ready", "email_sent", "email_failed"].includes(detail.status)){
+        const location = await getAdminUsPrimaryLocation(safeId)
+        if(epoch !== selectionEpoch.current) return
+        if(!location.ok) throw new Error(location.error || "US_PRIMARY_LOCATION_READ_FAILED")
+        const primary = location.locations.find(item => item.is_primary === true)
+        if(primary) setGeoDraft(normalizeGeoDraft(primary))
+        setGeoReadback(location)
+      }
+    }catch(e){
+      if(epoch === selectionEpoch.current){
+        setError(e?.message || "OWNER_OPENING_DETAIL_READ_FAILED")
+        setSelectedDetailVerified(false)
+        setGeoReadback(null)
+      }
+    }finally{
+      if(epoch === selectionEpoch.current) setRequestDetailLoading(false)
+    }
+  }
+
   async function loadData(){
     try{
       setLoading(true)
@@ -229,10 +398,8 @@ export default function AdminOpenOwnerPage(){
       setStats(nextStats)
       setRequests(nextRequests)
 
-      if(selectedRequestId){
-        const found = nextRequests.find((item) => String(item.id) === String(selectedRequestId))
-        setSelectedRequest(found || null)
-      }
+      // Keep the separately verified detail/readback; list cards are partial DTOs.
+      // A selected item may also be outside the most recent 100 rows.
     }catch(e){
       setStats(null)
       setRequests([])
@@ -247,45 +414,79 @@ export default function AdminOpenOwnerPage(){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+
   function updateFormField(name, value){
+    formEpoch.current += 1
+    precheckSignature.current = ""
+    setPrecheckResult(null)
+    setEmailPreview(null)
+    setNotice("")
     setForm((current) => {
-      const next = {
-        ...current,
-        [name]: value,
+      if(name === "market_code"){
+        // A switch of jurisdiction never reuses a KG phone, address, or owner.
+        const fresh=buildDefaultForm()
+        fresh.owner_type=current.owner_type
+        if(value === "US"){
+          return {
+            ...fresh,market_code:"US",phone:"",city:"",address:"",
+            state_code:"",postal_code:"",
+            work_mode:current.owner_type === "master" ? "attached_to_salon" : "independent",
+          }
+        }
+        return fresh // KG retains the original blank market field contract.
       }
-
-      if(name === "owner_type" && value === "salon"){
-        next.work_mode = "independent"
+      const next={...current,[name]:value}
+      if(name === "owner_type"){
+        next.work_mode = value === "master" && current.market_code === "US"
+          ? "attached_to_salon" : "independent"
         next.salon_slug = ""
+        if(value === "master"){
+          next.state_code = ""
+          next.postal_code = ""
+        }
       }
-
       return next
     })
   }
 
+
   async function runPrecheck(){
+    if(formMarket === "US" && (!usOwnerEnabled || marketCatalogLoading)){
+      setError("US_ADMIN_ACTIVATION_HOLD")
+      return
+    }
+    const epoch=formEpoch.current
     try{
       setActionLoading(true)
       setError("")
       setNotice("")
       setPrecheckResult(null)
+      precheckSignature.current = ""
 
-      const result = await precheckAdminOpenOwner(form)
+      const result=await precheckAdminOpenOwner(form)
+      if(epoch !== formEpoch.current) return
+      if(!result.ok) throw new Error(result.error || "PRECHECK_FAILED")
 
-      if(!result.ok){
-        throw new Error(result.error || "PRECHECK_FAILED")
-      }
-
-      setPrecheckResult(result.result || result)
-      setNotice(result.valid ? "Проверка пройдена" : "Проверка не пройдена")
+      const checked=result.result || result
+      setPrecheckResult(checked)
+      if(checked.valid) precheckSignature.current=JSON.stringify(form)
+      setNotice(checked.valid ? "Проверка пройдена" : "Проверка не пройдена")
     }catch(e){
-      setError(e?.message || "PRECHECK_FAILED")
+      if(epoch === formEpoch.current) setError(e?.message || "PRECHECK_FAILED")
     }finally{
       setActionLoading(false)
     }
   }
 
   async function createRequest(){
+    if(!precheckResult?.valid || precheckSignature.current !== JSON.stringify(form)){
+      setError("RECHECK_REQUIRED_AFTER_FORM_CHANGE")
+      return
+    }
+    if(formMarket === "US" && !usOwnerEnabled){
+      setError("US_ADMIN_ACTIVATION_HOLD")
+      return
+    }
     try{
       setActionLoading(true)
       setError("")
@@ -303,9 +504,12 @@ export default function AdminOpenOwnerPage(){
       setPrecheckResult(null)
       setEmailPreview(null)
       setAudit(null)
+      formEpoch.current += 1
+      precheckSignature.current = ""
       setForm(buildDefaultForm())
 
       await loadData()
+      if(result.request?.id) await loadSelectedRequest(result.request.id)
     }catch(e){
       setError(e?.message || "CREATE_REQUEST_FAILED")
     }finally{
@@ -319,6 +523,10 @@ export default function AdminOpenOwnerPage(){
       return
     }
 
+    if(!selectedMutationsAllowed || requestMarket === "KZ"){
+      setError("OWNER_MARKET_NOT_READY")
+      return
+    }
     try{
       setActionLoading(true)
       setError("")
@@ -333,6 +541,7 @@ export default function AdminOpenOwnerPage(){
       setSelectedRequest(result.request || selectedRequest)
       setNotice(`${actionName}: выполнено`)
       await loadData()
+      await loadSelectedRequest(selectedRequest.id)
     }catch(e){
       setError(e?.message || `${actionName}: ошибка`)
     }finally{
@@ -346,6 +555,10 @@ export default function AdminOpenOwnerPage(){
       return
     }
 
+    if(!selectedMutationsAllowed){
+      setError("OWNER_MARKET_NOT_READY")
+      return
+    }
     try{
       setActionLoading(true)
       setError("")
@@ -362,6 +575,7 @@ export default function AdminOpenOwnerPage(){
       setEmailPreview(result.preview || null)
       setNotice("Предпросмотр email готов")
       await loadData()
+      await loadSelectedRequest(selectedRequest.id)
     }catch(e){
       setError(e?.message || "EMAIL_PREVIEW_FAILED")
     }finally{
@@ -370,6 +584,11 @@ export default function AdminOpenOwnerPage(){
   }
 
   async function runActivate(){
+    if(requestMarket === "US" && selectedRequest?.owner_type === "salon" &&
+       geoReadback?.location_ready !== true){
+      setError("US_PRIMARY_LOCATION_NOT_READY")
+      return
+    }
     await runRequestAction("Активация", activateAdminOpenOwnerRequest)
   }
 
@@ -406,13 +625,63 @@ export default function AdminOpenOwnerPage(){
     }
   }
 
+
   function selectRequest(request){
+    selectionEpoch.current += 1
     setSelectedRequestId(String(request?.id || ""))
     setSelectedRequest(request || null)
+    setSelectedDetailVerified(false)
+    setGeoReadback(null)
+    setGeoDraft(blankUsGeoDraft())
     setEmailPreview(null)
     setAudit(null)
     setNotice("")
     setError("")
+    if(request?.id) loadSelectedRequest(request.id)
+  }
+
+  function updateGeoField(name,value){
+    setGeoDraft(current => ({...current,[name]:value}))
+    setNotice("")
+  }
+
+  async function runPrepareUsLocation(){
+    if(!selectedRequest?.id || requestMarket !== "US" ||
+       selectedRequest.owner_type !== "salon" ||
+       selectedRequest.status !== "provisioned" ||
+       !selectedMutationsAllowed || !geoCatalog ||
+       geoReadback?.can_prepare !== true || geoReadback?.location_ready === true){
+      setError("US_PRIMARY_LOCATION_NOT_AVAILABLE")
+      return
+    }
+    if(!geoCatalog.states.some(item=>item.code===geoDraft.state_code) ||
+       !geoCatalog.timezones.includes(geoDraft.timezone_name) ||
+       !geoDraft.street_line1.trim() || !geoDraft.city_name.trim() ||
+       !geoDraft.postal_code.trim() || !geoDraft.location_code.trim()){
+      setError("US_PRIMARY_LOCATION_FIELDS_REQUIRED")
+      return
+    }
+    try{
+      setGeoSubmitting(true)
+      setError("")
+      setNotice("")
+      const result=await prepareAdminUsPrimaryLocation(selectedRequest.id,{
+        ...geoDraft,is_primary:true,
+      })
+      if(!result.ok) throw new Error(result.error || "US_PRIMARY_LOCATION_PREPARE_FAILED")
+      const readback=await getAdminUsPrimaryLocation(selectedRequest.id)
+      if(!readback.ok || readback.location_ready !== true){
+        throw new Error(readback.error || "US_PRIMARY_LOCATION_NOT_READY")
+      }
+      setGeoReadback(readback)
+      setNotice(result.idempotent ? "Филиал уже подтверждён" :
+        "Геопроверка филиала подтверждена на сервере")
+      await loadAudit(selectedRequest.id)
+    }catch(e){
+      setError(e?.message || "US_PRIMARY_LOCATION_PREPARE_FAILED")
+    }finally{
+      setGeoSubmitting(false)
+    }
   }
 
   const visibleStats = useMemo(() => {
@@ -449,6 +718,13 @@ export default function AdminOpenOwnerPage(){
       <AdminNavigation />
 
       <h1 style={{ margin: "0 0 16px" }}>Открытие владельца</h1>
+      <div style={styles.marketNotice}>
+        <strong>Рынки регистрации:</strong> KG — действующий; US — отдельный контур;
+        KZ — неактивен. Рынок записи определяется сервером, не номером телефона.
+        {marketCatalogError ? <div style={styles.inlineWarning}>
+          Не удалось получить каталог рынков: {marketCatalogError}. Открытие US заблокировано; прежний KG-контур доступен.
+        </div> : null}
+      </div>
 
       {error ? <div style={styles.errorBox}>Ошибка: {error}</div> : null}
       {notice ? <div style={styles.noticeBox}>{notice}</div> : null}
@@ -482,6 +758,29 @@ export default function AdminOpenOwnerPage(){
           <h2 style={styles.panelTitle}>Новый салон / мастер</h2>
 
           <div style={styles.formGrid}>
+            <label style={styles.label}>
+              Рынок (ручной выбор)
+              <select
+                value={formMarket}
+                onChange={(event) => updateFormField("market_code", event.target.value)}
+                disabled={actionLoading}
+                style={styles.input}
+              >
+                <option value="KG">Кыргызстан · KG</option>
+                <option value="US">США · US {usOwnerEnabled ? "· готов к ручной активации" : "· HOLD"}</option>
+                <option value="KZ" disabled>Казахстан · KZ · неактивен</option>
+              </select>
+            </label>
+            <div style={{...styles.label, justifyContent:"center"}}>
+              <strong>Валюта: {formMarket === "US" ? "USD" : "KGS"}</strong>
+              {formMarket === "US"
+                ? <span style={styles.inlineWarning}>
+                    {marketCatalogLoading ? "Проверяется разрешение US…"
+                      : usOwnerEnabled ? "Разрешённый сервером US-контур"
+                      : "US АКТИВАЦИЯ ВЫКЛЮЧЕНА. Записи не создаются до серверного разрешения."}
+                  </span>
+                : <span style={styles.helperText}>Исторический порядок регистрации KG сохранён.</span>}
+            </div>
             <label style={styles.label}>
               Тип
               <select
@@ -532,7 +831,7 @@ export default function AdminOpenOwnerPage(){
                 autoComplete="tel"
                 value={form.phone}
                 onChange={(event) => updateFormField("phone", event.target.value)}
-                placeholder="+7 925 608 20 00 / +996 555 123 456"
+                placeholder={formMarket === "US" ? "+1 212 555 0100" : "+7 925 608 20 00 / +996 555 123 456"}
                 style={styles.input}
               />
             </label>
@@ -542,17 +841,48 @@ export default function AdminOpenOwnerPage(){
               <input
                 value={form.city}
                 onChange={(event) => updateFormField("city", event.target.value)}
-                placeholder="Бишкек"
+                placeholder={formMarket === "US" ? "Город в США" : "Бишкек"}
                 style={styles.input}
               />
             </label>
 
-            <label style={styles.label}>
+            {formMarket === "US" && form.owner_type === "salon" ? (
+              <>
+                <label style={styles.label}>
+                  Штат США / DC
+                  <select
+                    value={form.state_code || ""}
+                    onChange={(event) => updateFormField("state_code", event.target.value)}
+                    style={styles.input}
+                    disabled={!geoCatalog}
+                  >
+                    <option value="">Выберите штат</option>
+                    {(geoCatalog?.states || []).map((state) => (
+                      <option key={state.code} value={state.code}>
+                        {state.name_en} ({state.code})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label style={styles.label}>
+                  ZIP / ZIP+4
+                  <input
+                    inputMode="numeric"
+                    value={form.postal_code || ""}
+                    onChange={(event) => updateFormField("postal_code", event.target.value)}
+                    placeholder="5 цифр или ZIP+4"
+                    style={styles.input}
+                  />
+                </label>
+              </>
+            ) : null}
+
+                        <label style={styles.label}>
               Адрес
               <input
                 value={form.address}
                 onChange={(event) => updateFormField("address", event.target.value)}
-                placeholder="Адрес"
+                placeholder={formMarket === "US" ? "Адрес для сведений заявки (геопроверка после создания доступа)" : "Адрес"}
                 style={styles.input}
               />
             </label>
@@ -576,8 +906,8 @@ export default function AdminOpenOwnerPage(){
                     onChange={(event) => updateFormField("work_mode", event.target.value)}
                     style={styles.input}
                   >
-                    <option value="independent">Независимый мастер</option>
-                    <option value="attached_to_salon">Прикрепить к салону</option>
+                    {formMarket !== "US" ? <option value="independent">Независимый мастер</option> : null}
+                    <option value="attached_to_salon">Прикрепить к действующему салону</option>
                   </select>
                 </label>
 
@@ -587,7 +917,7 @@ export default function AdminOpenOwnerPage(){
                     <input
                       value={form.salon_slug}
                       onChange={(event) => updateFormField("salon_slug", event.target.value)}
-                      placeholder="totem-demo-salon"
+                      placeholder={formMarket === "US" ? "Слаг действующего US-салона" : "Слаг салона"}
                       style={styles.input}
                     />
                   </label>
@@ -607,11 +937,11 @@ export default function AdminOpenOwnerPage(){
           </div>
 
           <div style={styles.buttonRow}>
-            <button type="button" onClick={runPrecheck} disabled={actionLoading} style={styles.secondaryButton}>
+            <button type="button" onClick={runPrecheck} disabled={actionLoading || (formMarket === "US" && !usOwnerEnabled)} style={styles.secondaryButton}>
               Проверить
             </button>
 
-            <button type="button" onClick={createRequest} disabled={actionLoading || !canCreateRequest(precheckResult)} style={styles.primaryButton}>
+            <button type="button" onClick={createRequest} disabled={actionLoading || !canCreateRequest(precheckResult) || precheckSignature.current !== JSON.stringify(form) || (formMarket === "US" && !usOwnerEnabled)} style={styles.primaryButton}>
               Создать заявку
             </button>
 
@@ -619,6 +949,14 @@ export default function AdminOpenOwnerPage(){
               Обновить
             </button>
           </div>
+
+          {formMarket === "US" ? (
+            <div style={styles.helperText}>
+              {geoCatalogLoading ? "Загружаются официальные штаты и IANA-зоны…"
+                : geoCatalogError ? "US геокаталог недоступен: " + geoCatalogError
+                : "Адрес и IANA-пояс первичного US-филиала подтверждаются отдельно после создания доступа. Без геопроверки активация невозможна."}
+            </div>
+          ) : null}
 
           {precheckResult ? (
             <div style={styles.resultBox}>
@@ -632,6 +970,7 @@ export default function AdminOpenOwnerPage(){
 
         <section style={styles.panel}>
           <h2 style={styles.panelTitle}>Заявки</h2>
+          <p style={styles.helperText}>Показаны последние 100 заявок без скрытой фильтрации. Непривязанные заявки отмечены отдельно; KG им не присваивается автоматически.</p>
 
           {sortedRequests.length === 0 ? (
             <div>Заявок нет</div>
@@ -648,6 +987,7 @@ export default function AdminOpenOwnerPage(){
                   }}
                 >
                   <div><strong>#{request.id}</strong> {request.name || "-"}</div>
+                  <div style={styles.marketBadge}>{ADMIN_MARKET_LABELS[requestMarketCode(request)]}</div>
                   <div>{request.owner_type || "-"} / {request.slug_final || request.slug_requested || "-"}</div>
                   <div>{getStatusLabel(request.status)} / email: {request.email_status || "-"}</div>
                   <div>{formatDateTime(request.created_at)}</div>
@@ -661,10 +1001,29 @@ export default function AdminOpenOwnerPage(){
       {selectedRequest ? (
         <section style={styles.panel}>
           <h2 style={styles.panelTitle}>Выбранная заявка #{selectedRequest.id}</h2>
+          <div style={styles.marketBadge}>
+            Рынок заявки: {ADMIN_MARKET_LABELS[requestMarket]}
+            {requestMarket === "US" ? " · USD" : ""}
+          </div>
+          {requestDetailLoading ? <p style={styles.helperText}>Проверяется карточка заявки и привязка рынка…</p> : null}
+          {requestMarket === "US" && !selectedMutationsAllowed ? (
+            <div style={styles.inlineWarning}>
+              US-действия запрещены, пока Backend не подтвердил рынок, карточку и разрешение активации.
+            </div>
+          ) : null}
 
           <div style={styles.detailGrid}>
             <div><strong>Статус:</strong> {selectedRequest.status || "-"}</div>
             <div><strong>Статус email:</strong> {selectedRequest.email_status || "-"}</div>
+            {requestMarket === "US" && selectedRequest.owner_type === "salon" ? (
+              <>
+                <div><strong>Штат:</strong> {selectedRequest.precheck_result_json?.normalized?.state_code || "-"}</div>
+                <div><strong>ZIP:</strong> {selectedRequest.precheck_result_json?.normalized?.postal_code || "-"}</div>
+                <div><strong>Филиал:</strong> {geoReadback?.location_ready ? "Подтверждён" : "Ожидает подтверждения"}</div>
+              </>
+            ) : null}
+            {requestMarket === "US" && selectedRequest.owner_type === "master" ?
+              <div><strong>US-салон:</strong> {selectedRequest.salon_slug || "-"}</div> : null}
             <div><strong>Тип:</strong> {selectedRequest.owner_type || "-"}</div>
             <div><strong>Слаг:</strong> {selectedRequest.slug_final || "-"}</div>
             <div><strong>email:</strong> {selectedRequest.email || "-"}</div>
@@ -679,7 +1038,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={() => runRequestAction("Одобрение", approveAdminOpenOwnerRequest)}
-              disabled={actionLoading || !canApprove(selectedRequest)}
+              disabled={actionLoading || !canApprove(selectedRequest) || !selectedMutationsAllowed}
               style={styles.primaryButton}
             >
               Одобрить
@@ -688,7 +1047,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={() => runRequestAction("Создание доступа", provisionAdminOpenOwnerRequest)}
-              disabled={actionLoading || !canProvision(selectedRequest)}
+              disabled={actionLoading || !canProvision(selectedRequest) || !selectedMutationsAllowed}
               style={styles.primaryButton}
             >
               Создать доступ
@@ -697,7 +1056,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={runActivate}
-              disabled={actionLoading || !canActivate(selectedRequest)}
+              disabled={actionLoading || !canActivate(selectedRequest) || !selectedMutationsAllowed || (requestMarket === "US" && selectedRequest.owner_type === "salon" && geoReadback?.location_ready !== true)}
               style={styles.primaryButton}
             >
               Активировать
@@ -706,7 +1065,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={runEmailPreview}
-              disabled={actionLoading || !canPreviewEmail(selectedRequest)}
+              disabled={actionLoading || !canPreviewEmail(selectedRequest) || !selectedMutationsAllowed}
               style={styles.secondaryButton}
             >
               Предпросмотр email
@@ -715,7 +1074,7 @@ export default function AdminOpenOwnerPage(){
             <button
               type="button"
               onClick={runSendEmail}
-              disabled={actionLoading || !canSendEmail(selectedRequest)}
+              disabled={actionLoading || !canSendEmail(selectedRequest) || !selectedMutationsAllowed}
               style={styles.secondaryButton}
             >
               Отправить email
@@ -730,6 +1089,109 @@ export default function AdminOpenOwnerPage(){
               Аудит
             </button>
           </div>
+
+          {requestMarket === "US" && selectedRequest.owner_type === "salon" &&
+           ["provisioned","activated","email_ready","email_sent","email_failed"].includes(selectedRequest.status) ? (
+            <div style={styles.resultBox}>
+              <h3 style={styles.smallTitle}>Первичный филиал США — обязательная геопроверка</h3>
+              <div><strong>Готовность:</strong> {geoReadback?.location_ready === true
+                ? "VERIFIED / ENABLED / PRIMARY"
+                : requestDetailLoading ? "Проверяется…"
+                : "NOT_READY — активация салона запрещена"}</div>
+              {geoReadback?.locations?.length ? (
+                <div style={styles.helperText}>
+                  Существующих филиалов: {geoReadback.locations.length}.
+                  {geoReadback.locations.filter(item => item.enabled === true).length} включено.
+                  {geoReadback.locations.find(item => item.is_primary)?.timezone_name
+                    ? " Подтверждённый IANA-пояс: " +
+                      geoReadback.locations.find(item => item.is_primary).timezone_name
+                    : ""}
+                </div>
+              ) : null}
+              {selectedRequest.status === "provisioned" && geoReadback?.location_ready !== true ? (
+                <>
+                  <p style={styles.helperText}>
+                    Вводится только адрес существующего настоящего US-салона.
+                    Данные сверяются с Census и IANA на сервере, без создания тестовых салонов.
+                  </p>
+                  <div style={styles.formGrid}>
+                    <label style={styles.label}>
+                      Код первичного филиала
+                      <input
+                        value={geoDraft.location_code}
+                        onChange={(event) => updateGeoField("location_code", event.target.value)}
+                        placeholder="main"
+                        style={styles.input}
+                        disabled={geoSubmitting || !selectedMutationsAllowed}
+                      />
+                    </label>
+                    <label style={styles.label}>
+                      Штат (из подтверждённой заявки)
+                      <input readOnly value={geoDraft.state_code} style={styles.readonlyInput} />
+                    </label>
+                    <label style={styles.label}>
+                      Город (из подтверждённой заявки)
+                      <input readOnly value={geoDraft.city_name} style={styles.readonlyInput} />
+                    </label>
+                    <label style={styles.label}>
+                      ZIP (из подтверждённой заявки)
+                      <input readOnly value={geoDraft.postal_code} style={styles.readonlyInput} />
+                    </label>
+                    <label style={styles.label}>
+                      Улица и номер дома
+                      <input
+                        value={geoDraft.street_line1}
+                        onChange={(event) => updateGeoField("street_line1", event.target.value)}
+                        placeholder="Фактическая улица и номер"
+                        style={styles.input}
+                        disabled={geoSubmitting || !selectedMutationsAllowed}
+                      />
+                    </label>
+                    <label style={styles.label}>
+                      Адрес, строка 2 (необязательно)
+                      <input
+                        value={geoDraft.street_line2}
+                        onChange={(event) => updateGeoField("street_line2", event.target.value)}
+                        placeholder="Помещение, этаж, офис"
+                        style={styles.input}
+                        disabled={geoSubmitting || !selectedMutationsAllowed}
+                      />
+                    </label>
+                    <label style={styles.label}>
+                      Часовой пояс IANA конкретного филиала
+                      <select
+                        value={geoDraft.timezone_name}
+                        onChange={(event) => updateGeoField("timezone_name", event.target.value)}
+                        style={styles.input}
+                        disabled={!geoCatalog || geoSubmitting || !selectedMutationsAllowed}
+                      >
+                        <option value="">Выберите подтверждённый пояс</option>
+                        {(geoCatalog?.timezones || []).map(zone =>
+                          <option key={zone} value={zone}>{zone}</option>
+                        )}
+                      </select>
+                    </label>
+                    <div style={styles.helperText}>UTC не является часовым поясом US-филиала.
+                      Без подтверждения адреса кнопка активации останется заблокированной.</div>
+                  </div>
+                  <div style={styles.buttonRow}>
+                    <button
+                      type="button"
+                      onClick={runPrepareUsLocation}
+                      disabled={geoSubmitting || actionLoading || !geoCatalog ||
+                        !selectedMutationsAllowed || geoReadback?.can_prepare !== true}
+                      style={styles.primaryButton}
+                    >
+                      {geoSubmitting ? "Проверяется адрес…" : "Подтвердить реальный US-филиал"}
+                    </button>
+                  </div>
+                  {!selectedMutationsAllowed ? <p style={styles.inlineWarning}>
+                    Функция отключена до серверного разрешения. Форма доступна для просмотра.
+                  </p> : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
 
           {emailPreview ? (
             <div style={styles.resultBox}>
@@ -805,6 +1267,26 @@ export default function AdminOpenOwnerPage(){
 }
 
 const styles = {
+  marketNotice: {
+    background:"#eff6ff",border:"1px solid #bfdbfe",
+    borderRadius:8,padding:12,marginBottom:16,lineHeight:1.5,
+  },
+  marketBadge: {
+    display:"inline-block",fontSize:12,fontWeight:700,
+    color:"#1e40af",background:"#eff6ff",padding:"2px 7px",
+    borderRadius:6,marginBottom:4,
+  },
+  helperText: {
+    color:"#475569",fontSize:13,lineHeight:1.5,marginTop:8,marginBottom:8,
+  },
+  inlineWarning: {
+    display:"block",color:"#92400e",fontSize:13,fontWeight:700,
+    padding:7,background:"#fef3c7",borderRadius:6,marginTop:5,
+  },
+  readonlyInput: {
+    border:"1px solid #cbd5e1",borderRadius:8,padding:"10px 12px",
+    font:"inherit",background:"#f1f5f9",color:"#475569",
+  },
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
