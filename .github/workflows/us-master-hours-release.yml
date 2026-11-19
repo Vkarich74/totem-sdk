@@ -1,0 +1,61 @@
+name: RELEASE US master hours and mixed-market scope — SDK
+on:
+  push:
+    branches:
+      - release/us-master-hours-prod-aligned-20261119
+    paths:
+      - src/master/pages/MasterSchedulePage.jsx
+      - src/master/pages/UsMasterWorkingHoursEditor.jsx
+      - src/api/internal.js
+      - src/us/usBookingModel.js
+      - src/us/usBookingModel.test.mjs
+      - .github/workflows/us-master-hours-release.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  us-master-hours-sdk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      RAILWAY_TOKEN: ""
+      ODOO_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned SDK including Vite
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: US schedule contract in three different OS timezones
+        run: |
+          set -euo pipefail
+          TZ=Asia/Bishkek node src/us/usBookingModel.test.mjs
+          TZ=America/New_York node src/us/usBookingModel.test.mjs
+          TZ=Pacific/Honolulu node src/us/usBookingModel.test.mjs
+          node --test src/us/usBookingNavigation.test.mjs
+      - name: Single canonical SDK transport, no new calendar router
+        run: |
+          set -euo pipefail
+          grep -Fq 'getMasterUsWorkingHours(' src/api/internal.js
+          grep -Fq 'putMasterUsWorkingHours(' src/api/internal.js
+          grep -Fq '<UsMasterWorkingHoursEditor' src/master/pages/MasterSchedulePage.jsx
+          ! grep -E 'fetch\(|getAuthAccessToken|VITE_API_BASE|/salons/.*/working-hours' src/master/pages/UsMasterWorkingHoursEditor.jsx
+          grep -Fq 'verifyUsMasterHoursSaved' src/master/pages/UsMasterWorkingHoursEditor.jsx
+          grep -Fq 'classifyUnresolvedMasterMarketProbe(raw)' src/master/pages/MasterSchedulePage.jsx
+          grep -Fq 'MASTER_US_MIXED_MARKETS' src/us/usBookingModel.js
+          grep -Fq 'marketProbePending' src/master/pages/MasterSchedulePage.jsx
+          echo 'ONE_SDK_TRANSPORT; US_ONLY_EDIT; KG_KZ_LEGACY_MASTER_SCHEDULE_UNCHANGED'
+      - name: Full React Vite owner cabinets build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html
+          echo 'US_MASTER_HOURS_SDK_BUILD_PASS'
+      - name: No PostgreSQL, no test salons, no deployment
+        run: |
+          test -z "${DATABASE_URL:-}"
+          echo 'NO_TEST_SALONS; NO_DB; NO_DEPLOY; NO_ODOO'

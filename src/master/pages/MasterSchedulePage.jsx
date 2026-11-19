@@ -4,7 +4,8 @@ import { useMaster } from "../MasterContext"
 import PageSection from "../../cabinet/PageSection"
 import { getMasterBookings } from "../../api/internal"
 import { useMarketContext } from "../../market/MarketContext.jsx"
-import { normalizeUsMasterScheduleFeed } from "../../us/usBookingModel.js"
+import { normalizeUsMasterScheduleFeed, classifyUnresolvedMasterMarketProbe } from "../../us/usBookingModel.js"
+import UsMasterWorkingHoursEditor from "./UsMasterWorkingHoursEditor.jsx"
 
 const API_BASE = import.meta.env.VITE_API_BASE || window.API_BASE || "https://api.totemv.com"
 
@@ -344,8 +345,17 @@ return usScoped
 
 export default function MasterSchedulePage(){
  const { renderUi } = useUiMessages();
- const {status:marketStatus,context:marketContext} = useMarketContext()
- const isUsMarket = marketStatus === "ready" && marketContext?.market_code === "US"
+ const {
+   status:marketStatus,context:marketContext,
+   business_context_status:businessContextStatus,
+   context_source:marketContextSource,userId:marketUserId,
+ } = useMarketContext()
+ const explicitUsMarket = marketStatus === "ready" &&
+   marketContext?.market_code === "US"
+ const unresolvedMasterMarket = marketStatus === "ready" &&
+   businessContextStatus === "unresolved" &&
+   marketContextSource === "platform_ui_default"
+ const [probedScope,setProbedScope] = useState({key:"",mode:"pending"})
  const [usSelectedDay,setUsSelectedDay] = useState("")
 
 const {
@@ -353,7 +363,8 @@ loading: masterLoading,
 error: masterError,
 master,
 slug,
-salonSlug
+salonSlug,
+canWrite
 }=useMaster()
 
 const [bookings,setBookings]=useState([])
@@ -365,6 +376,18 @@ const [statusOverrides,setStatusOverrides]=useState({})
 const [actionLoading,setActionLoading]=useState({})
 const [clockTick,setClockTick]=useState(0)
 const routeSlug=master?.slug || slug
+const marketScopeKey=JSON.stringify([
+  routeSlug,marketUserId,marketContextSource,businessContextStatus,
+  marketContext?.market_code
+])
+const probeIsCurrent=probedScope.key===marketScopeKey
+const isUsMarket=explicitUsMarket ||
+  (unresolvedMasterMarket && probeIsCurrent && probedScope.mode==="us")
+const marketProbePending=Boolean(routeSlug) && unresolvedMasterMarket &&
+  (!probeIsCurrent || probedScope.mode==="checking" ||
+    probedScope.mode==="pending")
+const mixedMarketBlocked=unresolvedMasterMarket &&
+  probeIsCurrent && probedScope.mode==="mixed"
 
 async function refreshBookingsFromBackend(){
 if(!routeSlug){
@@ -404,22 +427,55 @@ return
 try{
 setBookingsLoading(true)
 setBookingsError("")
-const nextBookings = await fetchMasterBookingsSnapshot(routeSlug,isUsMarket)
-
-if(!cancelled){
-setBookings(nextBookings)
-if(isUsMarket){
-  const future = nextBookings.find(b=>b.starts_ms >= Date.now())
-  const days = [...new Set(nextBookings.map(b=>b.local_date))].sort()
-  setUsSelectedDay(future?.local_date || days.at(-1) || "")
+if(unresolvedMasterMarket){
+  setProbedScope({key:marketScopeKey,mode:"checking"})
 }
+let nextBookings
+let verifiedUs=explicitUsMarket
+if(unresolvedMasterMarket){
+  // An unresolved multiple-salon master can receive platform KG defaults.
+  // Ask only the EXISTING authenticated US-scoped master bookings API.
+  // No inference from browser TZ, KG fallback, or a selected salon.
+  const raw=await getMasterBookings(routeSlug,{usLocationScope:true})
+  const scope=classifyUnresolvedMasterMarketProbe(raw)
+  if(scope.mode==="mixed"){
+    if(!cancelled){
+      setBookings([])
+      setProbedScope({key:marketScopeKey,mode:"mixed"})
+      setBookingsError("MASTER_US_MIXED_MARKETS")
+    }
+    return
+  }
+  if(scope.mode==="us"){
+    nextBookings=scope.bookings
+    verifiedUs=true
+  }else{
+    // KG/KZ-only masters keep the exact original legacy request.
+    nextBookings=await fetchMasterBookingsSnapshot(routeSlug,false)
+    verifiedUs=false
+  }
+}else{
+  nextBookings=await fetchMasterBookingsSnapshot(routeSlug,explicitUsMarket)
+}
+if(!cancelled){
+  if(unresolvedMasterMarket){
+    setProbedScope({key:marketScopeKey,mode:verifiedUs?"us":"legacy"})
+  }
+  setBookings(nextBookings)
+  if(verifiedUs){
+    const future=nextBookings.find(b=>b.starts_ms>=Date.now())
+    const days=[...new Set(nextBookings.map(b=>b.local_date))].sort()
+    setUsSelectedDay(future?.local_date||days.at(-1)||"")
+  }
 }
 }catch(error){
 console.error("MASTER_SCHEDULE_BOOKINGS_LOAD_FAILED",error)
-
 if(!cancelled){
-setBookings([])
-setBookingsError(uiError(error?.message || "MASTER_BOOKINGS_LOAD_FAILED"))
+  setBookings([])
+  if(unresolvedMasterMarket){
+    setProbedScope({key:marketScopeKey,mode:"error"})
+  }
+  setBookingsError(uiError(error?.message || "MASTER_BOOKINGS_LOAD_FAILED"))
 }
 }finally{
 if(!cancelled){
@@ -433,7 +489,8 @@ loadBookings()
 return()=>{
 cancelled=true
 }
-},[master?.slug,slug,marketStatus,isUsMarket])
+},[master?.slug,slug,marketStatus,explicitUsMarket,
+   unresolvedMasterMarket,marketScopeKey])
 
 useEffect(()=>{
 const timer=setInterval(()=>{
@@ -621,21 +678,48 @@ return{calendar,skip}
 
 },[bookings,dateKey,statusOverrides,clockTick,isUsMarket])
 
-const loading=masterLoading || bookingsLoading
+const loading=masterLoading || bookingsLoading || marketProbePending
 const error=masterError || bookingsError
 
 if(loading)return<PageSection title={uiMessage("master.s0300")}><div><UiValue value={uiMessage("salon.s0118")} /></div></PageSection>
 
+if(mixedMarketBlocked){
+  return (
+    <PageSection title="Расписание мастера">
+      <div role="alert" style={{
+        border:"1px solid #fecaca",background:"#fef2f2",
+        color:"#991b1b",borderRadius:10,padding:14,
+      }}>
+        Мастер связан одновременно с салонами США и другого рынка.
+        Часовой пояс и режим расписания не определены однозначно.
+        Календарь не использует настройки Кыргызстана как замену
+        американскому филиалу. Изменения расписания недоступны.
+      </div>
+    </PageSection>
+  )
+}
+
 // US is an exact per-booking location timeline. There is no trustworthy
 // global 07:00–21:00 grid for a master operating across several US zones.
 // Do not display fake availability or invoke the legacy public status API.
-if(isUsMarket && !loading && !error){
+if(isUsMarket && !masterLoading && !masterError && !bookingsLoading){
   const dates=[...new Set(bookings.map(b=>b.local_date))].sort()
   const chosen=dates.includes(usSelectedDay) ? usSelectedDay : (dates.at(-1) || "")
   const shown=bookings.filter(b=>b.local_date===chosen)
   return (
     <PageSection title="Расписание мастера · США">
-      <p style={{fontSize:13,color:"#475569",lineHeight:1.6,marginTop:0}}>
+      <UsMasterWorkingHoursEditor
+        masterSlug={routeSlug}
+        canWrite={canWrite===true}
+      />
+      {bookingsError ? (
+        <p role="alert" style={{color:"#b42318",fontSize:13}}>
+          Записи не удалось проверить: {bookingsError}.
+          Настройка рабочих часов доступна отдельно; сохранение с
+          предстоящими записями будет заблокировано сервером.
+        </p>
+      ) : null}
+      <p style={{fontSize:13,color:"#475569",lineHeight:1.6,marginTop:16}}>
         Время каждой записи соответствует часовому поясу физического
         филиала, подтверждённому сервером. При работе в нескольких
         штатах записи не объединяются по часовому поясу компьютера.
@@ -653,13 +737,13 @@ if(isUsMarket && !loading && !error){
             ))}
           </select>
         </label>
-      ) : (
+      ) : !bookingsError ? (
         <p role="status" style={{padding:14,background:"#f8fafc",
           border:"1px solid #cbd5e1",borderRadius:10}}>
           Подтверждённых записей в филиалах США пока нет.
           Свободные слоты не предполагаются без точного расписания филиала.
         </p>
-      )}
+      ) : null}
       <div style={{display:"grid",gap:12,marginTop:16}}>
         {shown.map(b=>(
           <article key={b.id} style={{padding:15,
