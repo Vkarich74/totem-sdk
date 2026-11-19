@@ -1512,6 +1512,31 @@ export async function getMasterBookings(
     : {ok:true,bookings:j.bookings || []};
 }
 
+// US-MASTER-BOOKING-02: a master-only manual booking via the SAME
+// canonical public transaction after server-side direct owner verification.
+// Idempotency key must remain unchanged while the request is uncertain.
+export async function postUsMasterManualBooking(masterSlug,body,idempotencyKey) {
+  const slug=String(masterSlug||"").trim();
+  if(!/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(slug)||
+     typeof idempotencyKey!=="string"||
+     !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)||
+     !getAuthAccessToken()) {
+    throw Error("US_MANUAL_MASTER_SESSION_OR_KEY_REQUIRED");
+  }
+  const r=await safeInternalJson(
+    "/masters/"+encodeURIComponent(slug)+"/us-manual-bookings",
+    {method:"POST",cache:"no-store",credentials:"omit",
+     headers:{"idempotency-key":idempotencyKey},
+     body:JSON.stringify(body)}
+  );
+  if(!r.ok||r.json?.ok!==true) {
+    const error=new Error(String(r.json?.error||"US_MANUAL_BOOKING_FAILED"));
+    error.status=Number(r.status||0);
+    throw error;
+  }
+  return r.json;
+}
+
 // Existing canonical master router: US-only location working hours.
 // All network/auth work remains in safeInternalJson; no second transport.
 async function masterUsHoursRequest(masterSlug,{method="GET",
