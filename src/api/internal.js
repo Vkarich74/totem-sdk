@@ -1775,6 +1775,45 @@ export async function updateMasterService(masterSlug = getMasterSlug(), serviceI
   return { ok:true, service: j.service || j.item || j.data || j };
 }
 
+// US-SERVICES-01: reuse the canonical owner token/base/JSON error transport.
+function scopedUsServiceLinkPath(ownerType,ownerSlug) {
+  if (!["salon","master"].includes(ownerType) ||
+      typeof ownerSlug!=="string" ||
+      !/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(ownerSlug)) {
+    throw Error("US_SERVICE_LINK_OWNER_INVALID");
+  }
+  return "/us-service-links/"+ownerType+"/"+encodeURIComponent(ownerSlug);
+}
+
+export async function getUsScopedServiceLinkOptions(ownerType,ownerSlug,{signal}={}) {
+  const response=await safeInternalRequest(
+    scopedUsServiceLinkPath(ownerType,ownerSlug)+"/options",
+    {method:"GET",signal});
+  if (!response.ok||response.json?.ok!==true) {
+    throw Error(String(response.json?.error||"US_SERVICE_LINK_OPTIONS_UNAVAILABLE"));
+  }
+  const data=response.json;
+  if(data.market_code!=="US"||data.currency_code!=="USD"||
+     data.owner_type!==ownerType||data.owner_slug!==ownerSlug||
+     !Array.isArray(data.salons)||!Array.isArray(data.masters)||
+     !Array.isArray(data.catalog_services)) {
+    throw Error("US_SERVICE_LINK_OPTIONS_CONTRACT_MISMATCH");
+  }
+  return data;
+}
+
+export async function createUsScopedServiceLink(ownerType,ownerSlug,payload,{signal}={}) {
+  const response=await safeInternalRequest(
+    scopedUsServiceLinkPath(ownerType,ownerSlug),
+    {method:"POST",signal,
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify(payload)});
+  if (!response.ok||response.json?.ok!==true) {
+    throw Error(String(response.json?.error||"US_SERVICE_LINK_SAVE_UNAVAILABLE"));
+  }
+  return response.json;
+}
+
 export async function attachSalonService(salonSlug = getSalonSlug(), payload = {}){
   const r = await safeInternalJson(`/salons/${salonSlug}/services`, {
     method: "POST",
