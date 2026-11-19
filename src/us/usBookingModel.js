@@ -518,3 +518,18 @@ export function createUsBookingRequest({
     client_payload: { name, phone },
   });
 }
+
+// Existing KG/KZ quick-booking form has a fixed +06:00 legacy input.
+// Never use that form for US IANA locations or an unresolved master market.
+// The Backend applies the authoritative salon market gate independently.
+export function allowsLegacyMasterQuickBooking({
+  status, context, context_source, business_context_status,
+}={}) {
+  if(status!=="ready" || !["KG","KZ"].includes(context?.market_code))
+    return false;
+  if(business_context_status==="unresolved" &&
+     context_source==="platform_ui_default")
+    return false;
+  return true;
+}
+

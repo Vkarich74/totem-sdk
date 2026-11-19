@@ -1,0 +1,69 @@
+name: RELEASE US cabinet market scope and owner lifecycle — SDK
+on:
+  push:
+    branches:
+      - release/us-cabinet-booking-boundary-sdk-20261119
+    paths:
+      - src/us/usBookingModel.js
+      - src/us/usCabinetBookingBoundary.test.mjs
+      - src/master/pages/MasterBookingsPage.jsx
+      - src/master/pages/MasterSchedulePage.jsx
+      - src/api/publicApi.js
+      - src/api/masterCabinetTransportBoundary.test.mjs
+      - src/i18n/messages.js
+      - .github/workflows/us-cabinet-booking-boundary-sdk.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  us-cabinet-booking-sdk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      RAILWAY_TOKEN: ""
+      ODOO_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Pinned offline install
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Source syntax checks
+        run: |
+          set -euo pipefail
+          node --check src/us/usBookingModel.js
+          node --check src/api/publicApi.js
+          node --check src/api/masterCabinetTransportBoundary.test.mjs
+          node --check src/us/usCabinetBookingBoundary.test.mjs
+      - name: Existing SDK transport and US/legacy guard contracts
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          node --test src/api/masterTransport.test.mjs
+          node --test src/api/masterCabinetTransportBoundary.test.mjs
+          node --test src/us/usCabinetBookingBoundary.test.mjs
+      - name: US service price, IANA/DST and booking model across host TZ
+        run: |
+          set -euo pipefail
+          for tz in America/New_York America/Los_Angeles Asia/Bishkek; do
+            echo "HOST_TZ=$tz"
+            TZ="$tz" node --test src/us/usBookingModel.test.mjs
+          done
+      - name: No new cabinets/transport/payments or test data
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          ! grep -Eq 'fetch\s*\(' src/master/pages/MasterBookingsPage.jsx
+          ! grep -Eq 'fetch\s*\(' src/master/pages/MasterSchedulePage.jsx
+          grep -Fq 'getAuthAccessToken' src/api/publicApi.js
+          grep -Fq 'allowsLegacyMasterQuickBooking' src/us/usBookingModel.js
+          echo 'ONE_EXISTING_SDK; KG_KZ_FALLBACK_PRESERVED; NO_TEST_USERS'
+      - name: Full production Vite build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html

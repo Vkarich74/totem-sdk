@@ -46,9 +46,10 @@ test("public lifecycle URL/method/JSON payload preserved offline", async () => {
     .replace("import.meta.env.VITE_API_BASE","viteBase");
   const calls=[];
   const fetchMock=async (url,opts)=>{calls.push({url,opts});return {ok:true,status:200};};
-  const fn=new Function("fetch","window","API","viteBase",
+  const fn=new Function("fetch","window","API","viteBase","getAuthAccessToken",
     impl+"\nreturn postSalonBookingLifecycle;")(
-      fetchMock,{API_BASE:"https://example.test"},"https://fallback.test","");
+      fetchMock,{API_BASE:"https://example.test"},"https://fallback.test","",
+      ()=>"offline-owner-session");
   const result=await fn("salon",49,"complete");
   assert.equal(result.status,200);
   assert.equal(calls.length,1);
@@ -56,5 +57,6 @@ test("public lifecycle URL/method/JSON payload preserved offline", async () => {
     "https://example.test/public/salons/salon/bookings/49/lifecycle");
   assert.equal(calls[0].opts.method,"POST");
   assert.equal(calls[0].opts.headers["Content-Type"],"application/json");
+  assert.equal(calls[0].opts.headers.Authorization,"Bearer offline-owner-session");
   assert.equal(calls[0].opts.body,JSON.stringify({action:"complete"}));
 });
