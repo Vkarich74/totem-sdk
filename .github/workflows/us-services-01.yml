@@ -1,0 +1,47 @@
+name: US-SERVICES-01 SDK owner service create and attach
+on:
+  push:
+    branches:
+      - release/us-services-01-scoped-links-20261119
+  pull_request:
+    paths:
+      - src/api/internal.js
+      - src/us/UsServiceLinkEditor.jsx
+      - src/master/pages/MasterServicesPage.jsx
+      - src/salon/pages/ServicesPage.jsx
+      - .github/workflows/us-services-01.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  us-sdk-service-link:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      VITE_US_PAY_C11_LIVE_REFUNDS_ENABLED: "false"
+      VITE_US_PAY_C11_LIVE_PAYMENTS_ENABLED: "false"
+      DATABASE_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install isolated dependencies
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Syntax and immutable USD owner price model
+        run: |
+          set -euo pipefail
+          node --check src/api/internal.js
+          node --test src/us/usOwnerPriceModel.test.mjs src/us/usCabinetBookingBoundary.test.mjs src/us/usBookingModel.test.mjs
+      - name: Vite compile all React pages
+        run: npm run build
+      - name: Safety contract
+        run: |
+          set -euo pipefail
+          test -z "$DATABASE_URL"
+          grep -Fq 'getUsScopedServiceLinkOptions' src/us/UsServiceLinkEditor.jsx
+          grep -Fq 'parseUsPriceResponse' src/us/UsServiceLinkEditor.jsx
+          grep -Fq 'services.filter(s => s?.market_code === "US")' src/master/pages/MasterServicesPage.jsx
+          grep -Fq 'canWrite={canWrite === true}' src/master/pages/MasterServicesPage.jsx
+          echo "US_SERVICES_01_SDK_BUILD_PASS"
