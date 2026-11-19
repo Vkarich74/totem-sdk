@@ -1003,10 +1003,11 @@ export async function getBookings(salonSlug = getSalonSlug()){
   return { ok:true, bookings: j.bookings || [] };
 }
 
-export async function getSalonCalendar(salonSlug = getSalonSlug(), date){
+export async function getSalonCalendar(salonSlug = getSalonSlug(), date, locationCode = ""){
   const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
   const suffix = buildQuery({
-    date: String(date || "").trim()
+    ...(date ? {date: String(date).trim()} : {}),
+    ...(locationCode ? {location_code: String(locationCode).trim()} : {})
   });
 
   const r = await safeInternalJson(`/salons/${safeSlug}/calendar${suffix}`, { method: "GET" });
@@ -1017,12 +1018,54 @@ export async function getSalonCalendar(salonSlug = getSalonSlug(), date){
   return {
     ok:true,
     salon: j.salon || null,
+    market_code: j.market_code || null,
+    location: j.location || null,
     date: j.date || null,
     masters: j.masters || [],
     working_hours: j.working_hours || [],
     events: j.events || [],
     summary: j.summary || {}
   };
+}
+
+// Existing US owner location endpoint: one SDK network transport for
+// the branch editor AND the salon calendar. No extra core API.
+export async function getSalonUsLocations(salonSlug = getSalonSlug(), {signal} = {}){
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const r = await safeInternalJson(`/salons/${safeSlug}/us-locations`, {
+    method:"GET",cache:"no-store",signal
+  });
+  if(!r.ok || r.json?.ok !== true){
+    const error = new Error(String(r.json?.error || "US_LOCATIONS_REQUEST_FAILED"));
+    error.status = r.status || 0;
+    throw error;
+  }
+  return r.json;
+}
+
+export async function mutateSalonUsLocation(
+  salonSlug, method, locationCode = "", payload = null, {signal, activate = false} = {}
+){
+  if(!["POST","PUT"].includes(method) ||
+     (activate && method !== "POST") ||
+     (activate && !locationCode) ||
+     (locationCode && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(locationCode))) {
+    throw new Error("US_LOCATIONS_METHOD_INVALID");
+  }
+  const safeSlug = encodeURIComponent(String(salonSlug || "").trim());
+  const suffix = locationCode
+    ? `/${encodeURIComponent(String(locationCode))}` : "";
+  const path = `/salons/${safeSlug}/us-locations${suffix}${activate ? "/activate" : ""}`;
+  const r = await safeInternalJson(path, {
+    method,cache:"no-store",signal,
+    ...(payload ? {body:JSON.stringify(payload)} : {})
+  });
+  if(!r.ok || r.json?.ok !== true){
+    const error = new Error(String(r.json?.error || "US_LOCATIONS_REQUEST_FAILED"));
+    error.status = r.status || 0;
+    throw error;
+  }
+  return r.json;
 }
 
 export async function getOwnerQrPaymentOptions(bookingId){

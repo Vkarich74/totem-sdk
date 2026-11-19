@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   US_STATE_CODES, validateUsLocationCatalog, usLocationsForState,
   normalizeUsPhoneDraft, getUsBusinessDate, formatUsPrice,
+  getUsCalendarLocations, verifyUsCalendarLocationResponse,
   formatUsLocationAddress, isValidUsSlot, createUsBookingRequest,
 } from "./usBookingModel.js";
 import { translate, localeLabels, messages } from "../i18n/messages.js";
@@ -86,6 +87,51 @@ assert.deepEqual(ruKeys.sort(),enKeys.sort());
 assert.equal(translate("en-US","us.book.title"),"Book an appointment");
 assert.equal(translate("ru-KG","us.book.title"),"Запись в салон");
 assert.equal(translate("en-US","us.book.bookingNumber",{number:52}),"Booking number: 52");
+
+// USA-01 calendar: selected physical branch is required; never fallback UTC.
+const registry = {
+  ok:true, market_code:"US", currency_code:"USD",
+  locations:[
+    {location_code:"west",timezone_name:"America/Los_Angeles",
+      city_name:"Los Angeles",state_code:"CA",enabled:true,is_primary:false},
+    {location_code:"east",timezone_name:"America/New_York",
+      city_name:"New York",state_code:"NY",enabled:true,is_primary:true},
+    {location_code:"draft",timezone_name:"America/Chicago",
+      city_name:"Chicago",state_code:"IL",enabled:false,is_primary:false},
+  ],
+};
+const activeLocations = getUsCalendarLocations(registry);
+assert.deepEqual(activeLocations.map(row=>row.location_code),["east","west"]);
+assert.equal(activeLocations[0].timezone,"America/New_York");
+assert.equal(Object.isFrozen(activeLocations),true);
+assert.deepEqual(getUsCalendarLocations({...registry,locations:registry.locations.slice(2)}),[]);
+for(const bad of [
+  {...registry,market_code:"KG"},
+  {...registry,currency_code:"KGS"},
+  {...registry,locations:[{...registry.locations[0],timezone_name:"Etc/UTC"}]},
+  {...registry,locations:[registry.locations[0],registry.locations[0]]},
+  {...registry,locations:null},
+]) assert.throws(()=>getUsCalendarLocations(bad));
+const scopedCalendar = {
+  ok:true,market_code:"US",
+  date:{location_code:"east",timezone:"America/New_York",requested_date:"2026-11-18"},
+  location:{location_code:"east",timezone:"America/New_York"},
+  masters:[],working_hours:[],events:[],
+};
+assert.equal(verifyUsCalendarLocationResponse(
+  scopedCalendar,activeLocations[0]).market_code,"US");
+for(const invalid of [
+  {...scopedCalendar,market_code:"KG"},
+  {...scopedCalendar,date:{...scopedCalendar.date,location_code:"west"}},
+  {...scopedCalendar,location:{...scopedCalendar.location,timezone:"Etc/UTC"}},
+  {...scopedCalendar,events:null},
+]) assert.throws(
+  ()=>verifyUsCalendarLocationResponse(invalid,activeLocations[0]),
+  /US_CALENDAR_LOCATION_READBACK_MISMATCH/
+);
+assert.equal(getUsBusinessDate(
+  "2026-11-18T03:30:00.000Z","America/Los_Angeles"),"2026-11-17");
+
 console.log("US04_SDK_MODEL_TRANSLATION_UNIT=PASS",JSON.stringify({
   states_and_dc:51,translations_en_ru:37,location_address_zip:true,
   us_phone_syntax:true,iana_business_date:true,usd:true,slot_payload:true,

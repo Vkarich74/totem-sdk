@@ -2,13 +2,9 @@
 // No fabricated or empty salons/locations are generated.
 // The backend revalidates owner auth, market, billing, state, zone and ZIP.
 import { useEffect, useState } from "react";
-import { getAuthAccessToken } from "../../api/internal";
-
-const API = String(
-  import.meta.env.VITE_API_BASE ||
-  (typeof window !== "undefined" ? window.TOTEM_API_BASE : "") ||
-  "https://api.totemv.com"
-).replace(/\/$/, "");
+import {
+  getSalonUsLocations, mutateSalonUsLocation
+} from "../../api/internal";
 
 const blank = Object.freeze({
   location_code: "", state_code: "", city_name: "", street_line1: "",
@@ -105,31 +101,18 @@ function checkDraft(form, editing) {
 }
 
 async function request(slug, method="GET", pathname="", body=null, signal=null) {
-  const token=getAuthAccessToken();
-  if (!token) {
-    const error=new Error("Sign in to manage salon branches.");
-    error.status=401;
-    throw error;
+  if (method === "GET" && pathname === "") {
+    return getSalonUsLocations(slug,{signal});
   }
-  const response=await fetch(
-    `${API}/internal/salons/${encodeURIComponent(slug)}/us-locations${pathname}`,
-    {
-      method, credentials:"omit",signal,
-      headers:{
-        "Accept":"application/json",
-        "Authorization":`Bearer ${token}`,
-        ...(body ? {"Content-Type":"application/json"} : {}),
-      },
-      ...(body ? {body:JSON.stringify(body)} : {}),
-    }
-  );
-  const payload=await response.json().catch(()=>null);
-  if(!response.ok || payload?.ok!==true){
-    const error=new Error(payload?.error||"US_LOCATIONS_REQUEST_FAILED");
-    error.status=response.status;
-    throw error;
+  const path = String(pathname || "").replace(/^\//,"");
+  const activate = path.endsWith("/activate");
+  const code = activate ? path.slice(0,-"/activate".length) : path;
+  if (method === "GET" || (method !== "POST" && method !== "PUT") ||
+      (code && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(code)) ||
+      (activate && !code)) {
+    throw new Error("US_LOCATIONS_METHOD_INVALID");
   }
-  return payload;
+  return mutateSalonUsLocation(slug,method,code,body,{signal,activate});
 }
 
 export default function UsSalonLocationsEditor({ slug, canWrite }) {
