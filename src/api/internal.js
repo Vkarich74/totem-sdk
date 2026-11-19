@@ -1438,6 +1438,53 @@ export async function getMasterBookings(
     : {ok:true,bookings:j.bookings || []};
 }
 
+// Existing canonical master router: US-only location working hours.
+// All network/auth work remains in safeInternalJson; no second transport.
+async function masterUsHoursRequest(masterSlug,{method="GET",
+  salonSlug="",locationCode="",body=null,signal}={}){
+  const master=String(masterSlug||"").trim();
+  const salon=String(salonSlug||"").trim();
+  const location=String(locationCode||"").trim();
+  if(!/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(master) ||
+     (!!salon !== !!location) || (method!=="GET" && method!=="PUT") ||
+     (method==="PUT" && !salon) ||
+     (salon && !/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(salon)) ||
+     (location && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(location))) {
+    throw new Error("US_MASTER_HOURS_SCOPE_INVALID");
+  }
+  const suffix=salon
+    ? "?salon_slug="+encodeURIComponent(salon)+"&location_code="+
+      encodeURIComponent(location) : "";
+  const r=await safeInternalJson(
+    `/masters/${encodeURIComponent(master)}/us-working-hours${suffix}`,
+    {method,cache:"no-store",signal,
+      ...(method==="PUT"?{body:JSON.stringify(body)}:{})}
+  );
+  if(!r.ok || r.json?.ok!==true){
+    const detail=r.json||r.detail?.json||{};
+    const problem=new Error(String(detail.error||r.error||"US_MASTER_HOURS_REQUEST_FAILED"));
+    problem.status=Number(r.status||r.detail?.status||0);
+    throw problem;
+  }
+  return r.json;
+}
+
+export async function getMasterUsWorkingHours(
+  masterSlug,{salonSlug="",locationCode="",signal}={}
+){
+  return masterUsHoursRequest(masterSlug,{
+    method:"GET",salonSlug,locationCode,signal,
+  });
+}
+
+export async function putMasterUsWorkingHours(
+  masterSlug,{salonSlug,locationCode,body,signal}={}
+){
+  return masterUsHoursRequest(masterSlug,{
+    method:"PUT",salonSlug,locationCode,body,signal,
+  });
+}
+
 export async function getMasterPendingCashBookings(masterSlug = getMasterSlug()){
   const r = await safeInternalJson(`/masters/${masterSlug}/pending-cash-bookings`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"MASTER_PENDING_CASH_BOOKINGS_FETCH_FAILED", detail:r };
