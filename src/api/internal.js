@@ -169,6 +169,29 @@ async function safeInternalRequest(path, opts = {}){
   };
 }
 
+// Compatibility adapter for existing src/api/master.js callers.
+// Reuses this canonical SDK transport, token, URL and error parser.
+// It does not create another API client, route or login/session mechanism.
+export async function masterCabinetLegacyJson(path, { method = "GET", body } = {}) {
+  if (typeof path !== "string" || !path.startsWith("/masters/")) {
+    throw new Error("MASTER_LEGACY_PATH_INVALID");
+  }
+  const response = await safeInternalRequest(path, {
+    method,
+    ...(body === undefined ? {} : {
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(String(response.json?.error || response.json?.message || "API_ERROR"));
+  }
+  if (response.json === null || typeof response.json === "undefined") {
+    throw new Error("API_ERROR");
+  }
+  return response.json;
+}
+
 function buildQuery(params = {}){
   const searchParams = new URLSearchParams();
 

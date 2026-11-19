@@ -1,0 +1,55 @@
+name: RELEASE SDK master legacy transport consolidation
+on:
+  push:
+    branches:
+      - release/sdk-master-transport-20261119
+    paths:
+      - src/api/internal.js
+      - src/api/master.js
+      - src/api/masterTransport.test.mjs
+      - .github/workflows/sdk-master-transport-release.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  master-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      RAILWAY_TOKEN: ""
+      ODOO_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned build dependencies
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: Syntax-check existing canonical SDK files
+        run: |
+          set -euo pipefail
+          node --check src/api/master.js
+          node --check src/api/internal.js
+          node --check src/api/masterTransport.test.mjs
+      - name: Strict offline transport/shape compatibility regression
+        run: |
+          set -euo pipefail
+          node --test src/api/masterTransport.test.mjs
+      - name: Guard one transport, no extra routers/users
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          test -z "${RAILWAY_TOKEN:-}"
+          ! grep -Eq 'fetch\s*\(' src/api/master.js
+          ! grep -Fq 'api.totemv.com' src/api/master.js
+          grep -Fq 'masterCabinetLegacyJson' src/api/internal.js
+          grep -Fq 'safeInternalRequest(path,' src/api/internal.js
+          echo 'NO_PARALLEL_API_TRANSPORT; NO_DB_OR_USERS'
+      - name: Full Vite production build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html

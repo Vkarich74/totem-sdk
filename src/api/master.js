@@ -1,146 +1,69 @@
-import { getAuthAccessToken } from "./internal.js"
-
-const API = "https://api.totemv.com"
+// Backward-compatible master API facade.
+// Every request delegates to the existing canonical src/api/internal.js transport.
+// Preserve the original exports, URLs, methods, bodies and response shapes.
+import { masterCabinetLegacyJson } from "./internal.js";
 
 function normalize(res) {
-  if (!res) return []
-  if (Array.isArray(res)) return res
-  if (Array.isArray(res.bookings)) return res.bookings
-  if (Array.isArray(res.clients)) return res.clients
-  if (Array.isArray(res.data)) return res.data
-  return []
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.bookings)) return res.bookings;
+  if (Array.isArray(res.clients)) return res.clients;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
 }
 
-async function handleResponse(r) {
-  const j = await r.json()
-
-  if (!r.ok) {
-    throw new Error(j?.error || j?.message || "API_ERROR")
-  }
-
-  return j
-}
-
-function buildAuthHeaders(extraHeaders = {}) {
-  const headers = {
-    ...(extraHeaders || {})
-  }
-
-  const token = getAuthAccessToken()
-  if (token && !headers.Authorization) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
-  return headers
-}
-
-// ======================
-// METRICS
-// ======================
-
+// METRICS — legacy callers expect a metrics object, not an SDK envelope.
 export async function getMasterMetrics(slug) {
-  const r = await fetch(API + "/internal/masters/" + slug + "/metrics")
-  const j = await handleResponse(r)
-  return j.metrics || j
+  const j = await masterCabinetLegacyJson("/masters/" + slug + "/metrics");
+  return j.metrics || j;
 }
 
 export async function getMasterNotifications(slug, options = {}) {
-  const qs = new URLSearchParams()
+  const qs = new URLSearchParams();
   if (typeof options.limit !== "undefined" && options.limit !== null && options.limit !== "") {
-    qs.set("limit", String(options.limit))
+    qs.set("limit", String(options.limit));
   }
-
-  const suffix = qs.toString() ? `?${qs.toString()}` : ""
-  const r = await fetch(
-    API + "/internal/masters/" + encodeURIComponent(String(slug || "").trim()) + "/notifications" + suffix,
-    {
-      headers: buildAuthHeaders()
-    }
-  )
-  return handleResponse(r)
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return masterCabinetLegacyJson(
+    "/masters/" + encodeURIComponent(String(slug || "").trim()) + "/notifications" + suffix
+  );
 }
 
 export async function markMasterNotificationRead(slug, notificationUid) {
-  const r = await fetch(
-    API + "/internal/masters/" + encodeURIComponent(String(slug || "").trim()) + "/notifications/" + encodeURIComponent(String(notificationUid || "").trim()) + "/read",
-    {
-      method: "POST",
-      headers: buildAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({})
-    }
-  )
-  return handleResponse(r)
+  return masterCabinetLegacyJson(
+    "/masters/" + encodeURIComponent(String(slug || "").trim()) +
+      "/notifications/" + encodeURIComponent(String(notificationUid || "").trim()) + "/read",
+    { method: "POST", body: {} }
+  );
 }
 
-// ======================
-// BOOKINGS
-// ======================
-
+// BOOKINGS / CLIENTS — preserve the legacy array return value.
 export async function getMasterBookings(slug) {
-  const r = await fetch(
-    API + "/internal/masters/" + slug + "/bookings"
-  )
-  const j = await handleResponse(r)
-  return normalize(j)
+  const j = await masterCabinetLegacyJson("/masters/" + slug + "/bookings");
+  return normalize(j);
 }
-
-// ======================
-// CLIENTS
-// ======================
 
 export async function getMasterClients(slug) {
-  const r = await fetch(
-    API + "/internal/masters/" + slug + "/clients"
-  )
-  const j = await handleResponse(r)
-  return normalize(j)
+  const j = await masterCabinetLegacyJson("/masters/" + slug + "/clients");
+  return normalize(j);
 }
 
-// ======================
-// SERVICES
-// ======================
-
+// SERVICES — preserve the exact backend response, including metadata/errors.
 export async function getMasterServices(slug) {
-  const r = await fetch(
-    API + "/internal/masters/" + slug + "/services",
-    {
-      headers: buildAuthHeaders()
-    }
-  )
-  return handleResponse(r)
+  return masterCabinetLegacyJson("/masters/" + slug + "/services");
 }
 
 export async function createMasterService(slug, payload) {
-  const r = await fetch(
-    API + "/internal/masters/" + slug + "/services",
-    {
-      method: "POST",
-      headers: buildAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(payload),
-    }
-  )
-  return handleResponse(r)
+  return masterCabinetLegacyJson("/masters/" + slug + "/services",
+    { method: "POST", body: payload });
 }
 
 export async function updateMasterService(slug, id, payload) {
-  const r = await fetch(
-    API + "/internal/masters/" + slug + "/services/" + id,
-    {
-      method: "PATCH",
-      headers: buildAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(payload),
-    }
-  )
-  return handleResponse(r)
+  return masterCabinetLegacyJson("/masters/" + slug + "/services/" + id,
+    { method: "PATCH", body: payload });
 }
 
 export async function deleteMasterService(slug, id) {
-  const r = await fetch(
-    API + "/internal/masters/" + slug + "/services/" + id,
-    {
-      method: "DELETE",
-      headers: buildAuthHeaders()
-    }
-  )
-  return handleResponse(r)
+  return masterCabinetLegacyJson("/masters/" + slug + "/services/" + id,
+    { method: "DELETE" });
 }
