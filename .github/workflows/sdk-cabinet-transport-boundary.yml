@@ -46,7 +46,7 @@ jobs:
           set -euo pipefail
           test ! -e src/master/MasterBookingsPage.jsx
           if git grep -n 'MasterBookingsPage' -- src |
-            grep -v -E '^(src/App\.jsx|src/master/pages/MasterBookingsPage\.jsx|src/api/masterCabinetTransportBoundary\.test\.mjs):'; then
+            grep -v -E '^(src/App\.jsx|src/master/pages/MasterBookingsPage\.jsx|src/api/masterCabinetTransportBoundary\.test\.mjs|src/MASTER_SYSTEM_PROGRESS\.txt):'; then
             echo 'UNEXPECTED_OLD_MASTER_BOOKINGS_REFERENCE'
             exit 1
           fi
