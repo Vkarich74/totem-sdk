@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import AdminNavigation from "../AdminNavigation"
 import {
   approveAdminOpenOwnerRequest,
   createAdminOpenOwnerRequest,
   getAdminOpenOwnerAudit,
   getAdminOpenOwnerStats,
+  getAdminOpenOwnerRequest,
+  getAdminMarketCatalog,
+  getAdminUsGeoCatalog,
+  getAdminUsPrimaryLocation,
+  prepareAdminUsPrimaryLocation,
   listAdminOpenOwnerRequests,
   precheckAdminOpenOwner,
   previewAdminOpenOwnerEmail,
@@ -12,7 +17,7 @@ import {
   sendAdminOpenOwnerEmail,
 } from "../../api/internal"
 
-function formatDateTime(value){
+function formatDateTime(value, marketCode = "KG", verifiedTimezone = ""){
   if(!value){
     return "-"
   }
@@ -24,7 +29,7 @@ function formatDateTime(value){
     }
 
     return date.toLocaleString("ru-RU", {
-      timeZone: "Asia/Bishkek",
+      timeZone: marketCode === "US" ? (verifiedTimezone || "UTC") : "Asia/Bishkek",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -62,6 +67,59 @@ function renderOpenOwnerErrors(errors){
   if(!Array.isArray(errors)) return stringifyValue(errors)
   if(!errors.length) return "-"
   return errors.map(code => OPEN_OWNER_PHONE_MESSAGES[String(code)] || String(code)).join("; ")
+}
+
+const ADMIN_MARKET_LABELS = Object.freeze({
+  KG: "Кыргызстан · KG",
+  US: "США · US",
+  KZ: "Казахстан · KZ (неактивен)",
+  UNCLASSIFIED: "Рынок не подтверждён",
+})
+
+function requestMarketCode(request){
+  const raw = request?.market_code ??
+    request?.precheck_result_json?.normalized?.market_code ??
+    request?.precheck_result_json?.market_code ??
+    ""
+  const code = String(raw || "").toUpperCase()
+  return ["KG", "US", "KZ"].includes(code) ? code : "UNCLASSIFIED"
+}
+
+function canMutateOwnerRequest(request, catalog){
+  const code = requestMarketCode(request)
+  if(code === "KZ") return false
+  if(code !== "US") return true // Legacy KG/unclassified preserve existing controls.
+  const market = catalog.find(row => row.market_code === "US")
+  return market?.owner_activation_enabled === true &&
+    market?.admin_operation_enabled === true && market?.currency_code === "USD"
+}
+
+function blankUsGeoDraft(request = null){
+  const normalized = request?.precheck_result_json?.normalized || {}
+  return {
+    location_code: "main",
+    state_code: String(normalized.state_code || ""),
+    city_name: String(request?.city || ""),
+    street_line1: "",
+    street_line2: "",
+    postal_code: String(normalized.postal_code || ""),
+    timezone_name: "",
+    is_primary: true,
+  }
+}
+
+function normalizeGeoDraft(location){
+  if(!location) return null
+  return {
+    location_code: String(location.location_code || "main"),
+    state_code: String(location.state_code || ""),
+    city_name: String(location.city_name || ""),
+    street_line1: String(location.street_line1 || ""),
+    street_line2: String(location.street_line2 || ""),
+    postal_code: String(location.postal_code || ""),
+    timezone_name: String(location.timezone_name || ""),
+    is_primary: true,
+  }
 }
 
 function buildDefaultForm(){
