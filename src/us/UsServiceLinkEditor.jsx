@@ -57,11 +57,10 @@ export default function UsServiceLinkEditor({
 
   const targets=ownerType==="salon"
     ? (options?.masters||[]):(options?.salons||[]);
-  const candidates=useMemo(()=>{
-    const all=options?.catalog_services||[];
-    if(ownerType==="master")return all;
-    return all.filter(item=>String(item.master_id)===target);
-  },[options,ownerType,target]);
+  // Salon administrator may reuse only catalog links from this same salon.
+  // Master may reuse only their own US catalog from an active US relation.
+  // Both scopes are verified again by the Backend on POST.
+  const candidates=useMemo(()=>options?.catalog_services||[],[options]);
   const selectedCandidate=candidates.find(item=>String(item.service_pk)===catalogId);
   const durationValue=Number(duration);
   const amountMinor=parseUsdMinor(usd);
