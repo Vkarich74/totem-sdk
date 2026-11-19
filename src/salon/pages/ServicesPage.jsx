@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { resolveSalonSlug, useSalonContext } from "../SalonContext";
 import { useMarketContext } from "../../market/MarketContext.jsx";
 import UsOwnerPriceEditor from "../../us/UsOwnerPriceEditor.jsx";
+import UsServiceLinkEditor from "../../us/UsServiceLinkEditor.jsx";
 import { attachSalonService, getMasterServices, getSalonMasters, getSalonServices, updateMasterService } from "../../api/internal";
 
 import PageSection from "../../cabinet/PageSection";
@@ -156,7 +157,8 @@ export default function ServicesPage() {
   const slug = resolveSalonSlug(routeSlug);
   const { canWrite } = useSalonContext();
   const { status: marketStatus, context: marketContext } = useMarketContext();
-  const isUsMarket = marketStatus === "ready" && marketContext?.market_code === "US";
+  const marketReady = marketStatus === "ready" && Boolean(marketContext?.market_code);
+  const isUsMarket = marketReady && marketContext?.market_code === "US";
 
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -282,8 +284,12 @@ export default function ServicesPage() {
 
   useEffect(() => {
     loadServices(true);
-    loadMasterServices(false);
-  }, [slug]);
+    // The US editor obtains only explicitly authorized same-salon
+    // catalog choices from its dedicated owner-scoped endpoint.
+    // Never enumerate master cabinets or unrelated markets in US mode.
+    if (marketReady && !isUsMarket) loadMasterServices(false);
+    else setMasterServices([]);
+  }, [slug, marketReady, isUsMarket]);
 
   async function toggleActive(service) {
     try {
@@ -478,6 +484,21 @@ export default function ServicesPage() {
           ]}
         />
 
+        {!marketReady ? (
+          <div role="status" style={{padding:14,border:"1px solid #f59e0b",
+            borderRadius:10,color:"#854d0e"}}>
+            Рынок салона не подтверждён. Изменение услуг заблокировано.
+          </div>
+        ) : null}
+        {isUsMarket ? (
+          <UsServiceLinkEditor
+            ownerType="salon"
+            ownerSlug={slug}
+            canWrite={canWrite === true}
+            onSaved={() => loadServices(true)}
+          />
+        ) : null}
+        {marketReady && !isUsMarket ? (
         <div style={cardStyle()}>
           <h3 style={sectionTitleStyle()}><UiValue value={uiMessage("salon.s0758")} /></h3>
           {isUsMarket ? (
@@ -554,6 +575,8 @@ export default function ServicesPage() {
           )}
         </div>
 
+        ) : null}
+
         {success && (
           <div
             style={{
@@ -586,14 +609,14 @@ export default function ServicesPage() {
           </div>
         )}
 
-        {!loading && services.length === 0 && !error && (
+        {marketReady && !loading && services.length === 0 && !error && (
           <EmptyState
             title={uiMessage("salon.s0769")}
             text={uiMessage("salon.s0770")}
           />
         )}
 
-        {!loading && services.length > 0 && (
+        {marketReady && !loading && services.length > 0 && (
           <>
             <div style={{ ...cardStyle(), padding: "16px" }}>
               <div
@@ -664,6 +687,7 @@ export default function ServicesPage() {
                       </div>
                     </div>
 
+                    {!isUsMarket ? (<>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <button
                         onClick={() => toggleActive(service)}
@@ -687,6 +711,7 @@ export default function ServicesPage() {
                         style={buttonStyle("default", isProcessing || attachLoading)}
                       ><UiValue value={uiMessage("salon.s0780")} /></button>
                     </div>
+                    </>) : null}
                     {isUsMarket && service.active && service.id ? (
                       <UsOwnerPriceEditor
                         key={`salon-usd-${slug}-${service.id}`}

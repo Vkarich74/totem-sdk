@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import UsOwnerPriceEditor from "../../us/UsOwnerPriceEditor.jsx"
+import UsServiceLinkEditor from "../../us/UsServiceLinkEditor.jsx"
 import {
   createMasterService,
   deleteMasterService,
@@ -59,7 +60,8 @@ export default function MasterServicesPage() {
   const { renderUi } = useUiMessages();
   const { master, slug: contextSlug, canWrite } = useMaster() || {}
   const { status: marketStatus, context: marketContext } = useMarketContext()
-  const isUsMarket = marketStatus === "ready" && marketContext?.market_code === "US"
+  const marketReady = marketStatus === "ready" && Boolean(marketContext?.market_code)
+  const isUsMarket = marketReady && marketContext?.market_code === "US"
 
   const slug = useMemo(() => {
     return master?.slug || contextSlug || null
@@ -80,8 +82,10 @@ export default function MasterServicesPage() {
   const [deletingId, setDeletingId] = useState(null)
 
   const visibleServices = useMemo(() => {
+    // Never expose legacy mutation controls while the region is unknown.
+    if (!marketReady) return []
     // Each US USD price belongs to one exact salon_master_services.id link.
-    if (isUsMarket) return services
+    if (isUsMarket) return services.filter(s => s?.market_code === "US")
     const map = new Map()
     services.forEach((s) => {
       const key = s?.service_pk || s?.catalog_service_id || s?.name
@@ -89,7 +93,7 @@ export default function MasterServicesPage() {
       map.set(key, s)
     })
     return Array.from(map.values())
-  }, [services, isUsMarket])
+  }, [services, isUsMarket, marketReady])
 
   async function loadServices() {
     if (!slug) {
@@ -341,7 +345,7 @@ export default function MasterServicesPage() {
         ><UiValue value={uiMessage("master.s0217")} /></div>
       </div>
 
-      {!isUsMarket ? (
+      {marketReady && !isUsMarket ? (
       <div
         style={{
           border: "1px solid #e7e7e7",
@@ -397,20 +401,21 @@ export default function MasterServicesPage() {
           }}
         ><UiValue value={uiMessage("master.s0219")} /></div>
       </div>
+      ) : isUsMarket ? (
+        <UsServiceLinkEditor
+          ownerType="master"
+          ownerSlug={slug}
+          canWrite={canWrite === true}
+          onSaved={() => loadServices()}
+        />
       ) : (
-        <div role="status" style={{
-          padding:16,border:"1px solid #f5c978",borderRadius:12,
-          background:"#fffbeb",color:"#854d0e",lineHeight:1.6,
-        }}>
-          Для создания новой услуги США требуется выбрать конкретный
-          действующий салон США. Старый маршрут мастера автоматически
-          выбирает последний салон и не подтверждает рынок — поэтому
-          создание пока заблокировано. Существующие услуги можно
-          настраивать ниже, в отдельных ценах USD.
+        <div role="status" style={{padding:14,border:"1px solid #f59e0b",
+          borderRadius:10,color:"#854d0e"}}>
+          Рынок салона не подтверждён. Изменение услуг заблокировано.
         </div>
       )}
 
-      {!isUsMarket ? (<form
+      {marketReady && !isUsMarket ? (<form
         onSubmit={handleCreate}
         style={{
           border: "1px solid #e7e7e7",
@@ -697,6 +702,11 @@ export default function MasterServicesPage() {
                       }}
                     >
                       <UiValue value={name} />
+                      {isUsMarket && service.salon_slug ? (
+                        <div style={{fontSize:12,color:"#475569",fontWeight:400}}>
+                          Салон: {service.salon_slug}
+                        </div>
+                      ) : null}
                     </div>
 
                     <div
@@ -750,6 +760,7 @@ export default function MasterServicesPage() {
                       ><UiValue value={uiMessage("master.s0241")} /></button>
                     ) : null}
 
+                    {!isUsMarket ? (<>
                     <button
                       type="button"
                       onClick={() => toggleActive(service)}
@@ -787,6 +798,7 @@ export default function MasterServicesPage() {
                     >
                       <UiValue value={isDeleting ? uiMessage("master.s0244") : uiMessage("salon.s0594")} />
                     </button>
+                    </>) : null}
                   </div>
                   {isUsMarket && isActive && serviceId ? (
                     <UsOwnerPriceEditor
