@@ -650,7 +650,7 @@ export default function AdminOpenOwnerPage(){
        selectedRequest.owner_type !== "salon" ||
        selectedRequest.status !== "provisioned" ||
        !selectedMutationsAllowed || !geoCatalog ||
-       geoReadback?.location_ready === true){
+       geoReadback?.can_prepare !== true || geoReadback?.location_ready === true){
       setError("US_PRIMARY_LOCATION_NOT_AVAILABLE")
       return
     }
@@ -1090,6 +1090,109 @@ export default function AdminOpenOwnerPage(){
             </button>
           </div>
 
+          {requestMarket === "US" && selectedRequest.owner_type === "salon" &&
+           ["provisioned","activated","email_ready","email_sent","email_failed"].includes(selectedRequest.status) ? (
+            <div style={styles.resultBox}>
+              <h3 style={styles.smallTitle}>Первичный филиал США — обязательная геопроверка</h3>
+              <div><strong>Готовность:</strong> {geoReadback?.location_ready === true
+                ? "VERIFIED / ENABLED / PRIMARY"
+                : requestDetailLoading ? "Проверяется…"
+                : "NOT_READY — активация салона запрещена"}</div>
+              {geoReadback?.locations?.length ? (
+                <div style={styles.helperText}>
+                  Существующих филиалов: {geoReadback.locations.length}.
+                  {geoReadback.locations.filter(item => item.enabled === true).length} включено.
+                  {geoReadback.locations.find(item => item.is_primary)?.timezone_name
+                    ? " Подтверждённый IANA-пояс: " +
+                      geoReadback.locations.find(item => item.is_primary).timezone_name
+                    : ""}
+                </div>
+              ) : null}
+              {selectedRequest.status === "provisioned" && geoReadback?.location_ready !== true ? (
+                <>
+                  <p style={styles.helperText}>
+                    Вводится только адрес существующего настоящего US-салона.
+                    Данные сверяются с Census и IANA на сервере, без создания тестовых салонов.
+                  </p>
+                  <div style={styles.formGrid}>
+                    <label style={styles.label}>
+                      Код первичного филиала
+                      <input
+                        value={geoDraft.location_code}
+                        onChange={(event) => updateGeoField("location_code", event.target.value)}
+                        placeholder="main"
+                        style={styles.input}
+                        disabled={geoSubmitting || !selectedMutationsAllowed}
+                      />
+                    </label>
+                    <label style={styles.label}>
+                      Штат (из подтверждённой заявки)
+                      <input readOnly value={geoDraft.state_code} style={styles.readonlyInput} />
+                    </label>
+                    <label style={styles.label}>
+                      Город (из подтверждённой заявки)
+                      <input readOnly value={geoDraft.city_name} style={styles.readonlyInput} />
+                    </label>
+                    <label style={styles.label}>
+                      ZIP (из подтверждённой заявки)
+                      <input readOnly value={geoDraft.postal_code} style={styles.readonlyInput} />
+                    </label>
+                    <label style={styles.label}>
+                      Улица и номер дома
+                      <input
+                        value={geoDraft.street_line1}
+                        onChange={(event) => updateGeoField("street_line1", event.target.value)}
+                        placeholder="Фактическая улица и номер"
+                        style={styles.input}
+                        disabled={geoSubmitting || !selectedMutationsAllowed}
+                      />
+                    </label>
+                    <label style={styles.label}>
+                      Адрес, строка 2 (необязательно)
+                      <input
+                        value={geoDraft.street_line2}
+                        onChange={(event) => updateGeoField("street_line2", event.target.value)}
+                        placeholder="Помещение, этаж, офис"
+                        style={styles.input}
+                        disabled={geoSubmitting || !selectedMutationsAllowed}
+                      />
+                    </label>
+                    <label style={styles.label}>
+                      Часовой пояс IANA конкретного филиала
+                      <select
+                        value={geoDraft.timezone_name}
+                        onChange={(event) => updateGeoField("timezone_name", event.target.value)}
+                        style={styles.input}
+                        disabled={!geoCatalog || geoSubmitting || !selectedMutationsAllowed}
+                      >
+                        <option value="">Выберите подтверждённый пояс</option>
+                        {(geoCatalog?.timezones || []).map(zone =>
+                          <option key={zone} value={zone}>{zone}</option>
+                        )}
+                      </select>
+                    </label>
+                    <div style={styles.helperText}>UTC не является часовым поясом US-филиала.
+                      Без подтверждения адреса кнопка активации останется заблокированной.</div>
+                  </div>
+                  <div style={styles.buttonRow}>
+                    <button
+                      type="button"
+                      onClick={runPrepareUsLocation}
+                      disabled={geoSubmitting || actionLoading || !geoCatalog ||
+                        !selectedMutationsAllowed || geoReadback?.can_prepare !== true}
+                      style={styles.primaryButton}
+                    >
+                      {geoSubmitting ? "Проверяется адрес…" : "Подтвердить реальный US-филиал"}
+                    </button>
+                  </div>
+                  {!selectedMutationsAllowed ? <p style={styles.inlineWarning}>
+                    Функция отключена до серверного разрешения. Форма доступна для просмотра.
+                  </p> : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
           {emailPreview ? (
             <div style={styles.resultBox}>
               <h3 style={styles.smallTitle}>Предпросмотр email</h3>
@@ -1164,6 +1267,26 @@ export default function AdminOpenOwnerPage(){
 }
 
 const styles = {
+  marketNotice: {
+    background:"#eff6ff",border:"1px solid #bfdbfe",
+    borderRadius:8,padding:12,marginBottom:16,lineHeight:1.5,
+  },
+  marketBadge: {
+    display:"inline-block",fontSize:12,fontWeight:700,
+    color:"#1e40af",background:"#eff6ff",padding:"2px 7px",
+    borderRadius:6,marginBottom:4,
+  },
+  helperText: {
+    color:"#475569",fontSize:13,lineHeight:1.5,marginTop:8,marginBottom:8,
+  },
+  inlineWarning: {
+    display:"block",color:"#92400e",fontSize:13,fontWeight:700,
+    padding:7,background:"#fef3c7",borderRadius:6,marginTop:5,
+  },
+  readonlyInput: {
+    border:"1px solid #cbd5e1",borderRadius:8,padding:"10px 12px",
+    font:"inherit",background:"#f1f5f9",color:"#475569",
+  },
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
