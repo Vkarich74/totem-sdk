@@ -2,7 +2,7 @@ import { Navigate, useSearchParams } from "react-router-dom";
 
 // Compatibility route for existing /#/bookings links. Its old inline
 // widget queried personal salon bookings from PUBLIC endpoints and offered
-// anonymous lifecycle actions. The existing authenticated SalonLayout is
+// anonymous status actions. The existing authenticated SalonLayout is
 // the sole owner dashboard; never add another bookings read/write client.
 export default function SalonBookingsPage({ slug = "" }) {
   const [searchParams] = useSearchParams();
