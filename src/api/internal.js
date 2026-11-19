@@ -1384,6 +1384,57 @@ export function patchMasterProfile(masterSlug, payload, options = {}){
   return patchCanonicalOwnerProfile("master", masterSlug, payload, options);
 }
 
+// Canonical SDK HTTP transport for existing US/USD service-price link.
+async function requestUsOwnerServicePrice(ownerType, ownerSlug, serviceLinkId,
+  { method = "GET", amountMinor, expectedVersion, signal } = {}) {
+  const type=String(ownerType || "").trim();
+  const slug=String(ownerSlug || "").trim();
+  const id=Number(serviceLinkId);
+  if (!["salon","master"].includes(type) ||
+      !/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(slug) ||
+      !Number.isSafeInteger(id) || id < 1 ||
+      !/^[1-9][0-9]*$/.test(String(serviceLinkId)) ||
+      !["GET","PUT"].includes(method)) {
+    throw new Error("US_PRICE_TARGET_INVALID");
+  }
+  if (!getAuthAccessToken()) {
+    const error=new Error("US_PRICE_OWNER_SESSION_REQUIRED");
+    error.status=401;
+    throw error;
+  }
+  const path=`/us-service-prices/${encodeURIComponent(type)}/${encodeURIComponent(slug)}/${id}`;
+  const r=await safeInternalJson(path,{
+    method,cache:"no-store",signal,credentials:"omit",
+    ...(method==="PUT"
+      ? {body:JSON.stringify({amount_minor:amountMinor,expected_version:expectedVersion})}
+      : {})
+  });
+  if (!r.ok || r.json?.ok!==true) {
+    const error=new Error(String(r.json?.error||"US_PRICE_REQUEST_FAILED"));
+    error.status=Number(r.status||0);
+    throw error;
+  }
+  return r.json;
+}
+
+export function getUsOwnerServicePrice(ownerType, ownerSlug, serviceLinkId,
+  { signal } = {}) {
+  return requestUsOwnerServicePrice(ownerType,ownerSlug,serviceLinkId,
+    {method:"GET",signal});
+}
+
+export function putUsOwnerServicePrice(ownerType, ownerSlug, serviceLinkId,
+  amountMinor, expectedVersion, { signal } = {}) {
+  if (!Number.isSafeInteger(amountMinor) || !Number.isSafeInteger(expectedVersion)
+      || expectedVersion < 0) {
+    const error=new Error("US_PRICE_AMOUNT_OR_VERSION_INVALID");
+    error.status=400;
+    throw error;
+  }
+  return requestUsOwnerServicePrice(ownerType,ownerSlug,serviceLinkId,
+    {method:"PUT",amountMinor,expectedVersion,signal});
+}
+
 /* ===============================
    MASTER API
 ================================ */
