@@ -519,6 +519,66 @@ export async function finishPasswordReset(payload){
    ADMIN OPEN OWNER API
 ================================ */
 
+// Admin market catalog is server authoritative. A DB-active market is not
+// necessarily enabled for owner opening (e.g. KZ policy, US feature HOLD).
+export async function getAdminMarketCatalog(){
+  const response = await safeInternalJson("/admin/markets", { method: "GET" });
+  const json = response.json;
+  if(!response.ok || !json?.ok){
+    return { ok:false, error:json?.error || "ADMIN_MARKETS_UNAVAILABLE", status:response.status };
+  }
+  const items = json?.data?.items;
+  if(!Array.isArray(items)){
+    return { ok:false, error:"ADMIN_MARKET_CATALOG_INVALID" };
+  }
+  return { ok:true, markets:items, result:json };
+}
+
+export async function getAdminUsGeoCatalog(){
+  const response = await safeInternalJson("/admin/open-owner/us-geo-catalog", { method: "GET" });
+  const json = response.json;
+  if(!response.ok || !json?.ok){
+    return { ok:false, error:json?.error || "US_GEO_CATALOG_UNAVAILABLE", status:response.status };
+  }
+  if(json.market_code !== "US" || json.currency_code !== "USD" ||
+     !Array.isArray(json.states) || !Array.isArray(json.timezones) ||
+     json.states.length !== 51 || json.timezones.length !== 29){
+    return { ok:false, error:"US_GEO_CATALOG_CONTRACT_MISMATCH" };
+  }
+  return { ok:true, states:json.states, timezones:json.timezones, result:json };
+}
+
+export async function getAdminUsPrimaryLocation(requestId){
+  const id=encodeURIComponent(String(requestId||"").trim());
+  const response = await safeInternalJson(`/admin/open-owner/requests/${id}/us-primary-location`, { method:"GET" });
+  const json=response.json;
+  if(!response.ok || !json?.ok){
+    return { ok:false, error:json?.error || "US_PRIMARY_LOCATION_READ_FAILED", status:response.status };
+  }
+  if(json.market_code !== "US" || json.currency_code !== "USD" ||
+     !Array.isArray(json.locations)){
+    return { ok:false, error:"US_PRIMARY_LOCATION_READBACK_MISMATCH" };
+  }
+  return { ok:true, location_ready:json.location_ready===true,
+    can_prepare:json.can_prepare===true, locations:json.locations, result:json };
+}
+
+export async function prepareAdminUsPrimaryLocation(requestId,payload){
+  const id=encodeURIComponent(String(requestId||"").trim());
+  const response=await safeInternalJson(`/admin/open-owner/requests/${id}/us-primary-location`,{
+    method:"POST",body:JSON.stringify(payload || {})
+  });
+  const json=response.json;
+  if(!response.ok || !json?.ok){
+    return {ok:false,error:json?.error || "US_PRIMARY_LOCATION_PREPARE_FAILED",status:response.status};
+  }
+  if(json.market_code !== "US" || json.currency_code !== "USD" ||
+     json.location?.enabled !== true || json.location?.geo_status !== "VERIFIED_GEOMETRY"){
+    return {ok:false,error:"US_PRIMARY_LOCATION_POST_READBACK_MISMATCH"};
+  }
+  return {ok:true,location:json.location,idempotent:json.idempotent===true,result:json};
+}
+
 export async function getAdminOpenOwnerStats(){
   const r = await safeInternalJson(`/admin/open-owner/stats`, { method: "GET" });
   if(!r.ok) return { ok:false, error:"ADMIN_OPEN_OWNER_STATS_FETCH_FAILED", detail:r };
