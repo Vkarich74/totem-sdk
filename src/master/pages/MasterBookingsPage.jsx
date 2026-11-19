@@ -4,7 +4,10 @@ import { useMaster } from "../MasterContext"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { masterCabinetLegacyJson, getMasterBookings, getMasterServices } from "../../api/internal"
 import { useMarketContext } from "../../market/MarketContext.jsx"
-import { allowsLegacyMasterQuickBooking } from "../../us/usBookingModel.js"
+import {
+  allowsLegacyMasterQuickBooking,
+  normalizeUsMasterScheduleFeed, classifyUnresolvedMasterMarketProbe,
+} from "../../us/usBookingModel.js"
 import UsPayC11RefundCard from "../../us/UsPayC11RefundCard.jsx"
 
 import PageSection from "../../cabinet/PageSection"
@@ -44,6 +47,15 @@ function rowHoverStyle(e, enter) {
 
 function formatDateTime(value){ if (!value) return "—"; return uiDate(value, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); }
 
+// US rows are prevalidated by the same IANA/DST model as master schedule.
+function formatVerifiedBookingTime(booking, usScope){
+  if(!usScope)return formatDateTime(booking?.start_at);
+  if(!booking?.local_date || !booking?.local_time ||
+     !booking?.location_timezone || !booking?.utc_offset)return "—";
+  return booking.local_date+" "+booking.local_time+
+    " ("+booking.location_timezone+", "+booking.utc_offset+")";
+}
+
 function useIsMobile(){
   const getValue = () => {
     if(typeof window === "undefined") return false
@@ -82,6 +94,7 @@ export default function MasterBookingsPage() {
     context: marketContext, status: marketStatus,
     context_source: marketContextSource,
     business_context_status: businessContextStatus,
+    userId: marketUserId,
   } = useMarketContext();
   const legacyQuickBookingAllowed = allowsLegacyMasterQuickBooking({
     status:marketStatus,context:marketContext,
@@ -101,6 +114,7 @@ export default function MasterBookingsPage() {
   } = useMaster()
 
   const [bookings, setBookings] = useState([])
+  const [bookingsScope, setBookingsScope] = useState({key:"",mode:"pending"})
   const [bookingsLoading, setBookingsLoading] = useState(true)
   const [bookingsError, setBookingsError] = useState("")
   const [empty, setEmpty] = useState(false)
@@ -116,6 +130,15 @@ export default function MasterBookingsPage() {
 
   const masterSlug = master?.slug || slug
   const isCreateMode = bookingId === "new"
+  const explicitUsMarket = marketStatus === "ready" && marketContext?.market_code === "US"
+  const unresolvedMasterMarket = marketStatus === "ready" &&
+    businessContextStatus === "unresolved" && marketContextSource === "platform_ui_default"
+  const bookingsScopeKey = JSON.stringify([
+    masterSlug, marketUserId, marketStatus, marketContext?.market_code,
+    marketContextSource, businessContextStatus,
+  ])
+  const verifiedUsBookings = bookingsScope.key === bookingsScopeKey &&
+    bookingsScope.mode === "us"
 
   useEffect(() => {
     if(!isCreateMode) return
@@ -190,60 +213,89 @@ export default function MasterBookingsPage() {
   }, [isCreateMode, masterSlug, legacyQuickBookingAllowed])
 
   useEffect(()=>{
-    let cancelled = false
-
+    let cancelled=false
     async function loadBookings(){
+      if(marketStatus!=="ready"){
+        if(!cancelled){
+          setBookings([])
+          setEmpty(false)
+          setBookingsScope({key:bookingsScopeKey,mode:"unavailable"})
+          setBookingsLoading(marketStatus!=="error")
+          setBookingsError(marketStatus==="error"
+            ? uiMessage("master.bookingsMarketUnavailable") : "")
+        }
+        return
+      }
       if(!masterSlug){
         if(!cancelled){
           setBookings([])
           setBookingsLoading(false)
           setBookingsError(uiError("SLUG_MISSING"))
           setEmpty(false)
+          setBookingsScope({key:bookingsScopeKey,mode:"error"})
         }
         return
       }
-
       try{
         setBookingsLoading(true)
         setBookingsError("")
         setEmpty(false)
-
-        const result = await getMasterBookings(masterSlug)
-
-        if(!result?.ok){
-          const status = Number(result?.detail?.status || result?.detail?.response?.status || 0)
-          throw new Error(status ? "MASTER_BOOKINGS_HTTP_" + status : (result?.error || "MASTER_BOOKINGS_LOAD_FAILED"))
+        let data
+        let mode="legacy"
+        if(explicitUsMarket || unresolvedMasterMarket){
+          // Read the existing US-scoped master feed; never infer a US timezone
+          // from the client's clock, selected salon or default KG context.
+          const usResult=await getMasterBookings(masterSlug,{usLocationScope:true})
+          if(explicitUsMarket){
+            if(!usResult?.ok)throw new Error("US_MASTER_BOOKINGS_UNAVAILABLE")
+            data=normalizeUsMasterScheduleFeed(usResult)
+            mode="us"
+          }else{
+            const scope=classifyUnresolvedMasterMarketProbe(usResult)
+            if(scope.mode==="mixed")throw new Error("MASTER_US_MIXED_MARKETS")
+            if(scope.mode==="us"){
+              data=scope.bookings
+              mode="us"
+            }else{
+              // KG/KZ-only affiliation: original legacy path unchanged.
+              const result=await getMasterBookings(masterSlug)
+              if(!result?.ok)throw new Error("MASTER_BOOKINGS_LOAD_FAILED")
+              data=normalizeBookingsResponse(result)
+            }
+          }
+        }else if(marketContext?.market_code==="KG" ||
+                 marketContext?.market_code==="KZ"){
+          const result=await getMasterBookings(masterSlug)
+          if(!result?.ok)throw new Error("MASTER_BOOKINGS_LOAD_FAILED")
+          data=normalizeBookingsResponse(result)
+        }else{
+          throw new Error("MASTER_MARKET_SCOPE_UNVERIFIED")
         }
-
-        const data = normalizeBookingsResponse(result)
-
         if(!cancelled){
           setBookings(data)
-          setEmpty(data.length === 0)
+          setEmpty(data.length===0)
+          setBookingsScope({key:bookingsScopeKey,mode})
         }
       }catch(error){
-        console.error("MASTER BOOKINGS LOAD ERROR", error)
-
+        console.error("MASTER BOOKINGS LOAD ERROR",error)
         if(!cancelled){
           setBookings([])
-          setBookingsError(uiError(error?.message || "MASTER_BOOKINGS_LOAD_FAILED"))
+          setBookingsError(error?.message==="MASTER_US_MIXED_MARKETS"
+            ? uiMessage("master.bookingsMixedMarkets")
+            : uiError(error?.message||"MASTER_BOOKINGS_LOAD_FAILED"))
           setEmpty(false)
+          setBookingsScope({key:bookingsScopeKey,mode:"error"})
         }
       }finally{
-        if(!cancelled){
-          setBookingsLoading(false)
-        }
+        if(!cancelled)setBookingsLoading(false)
       }
     }
-
     loadBookings()
+    return ()=>{cancelled=true}
+  },[masterSlug,bookingsScopeKey])
 
-    return ()=>{
-      cancelled = true
-    }
-  },[masterSlug])
-
-  const loading = masterLoading || bookingsLoading
+  const loading = masterLoading || bookingsLoading ||
+    (bookingsScope.key !== bookingsScopeKey && marketStatus !== "error")
   const error = masterError || bookingsError
 
   const selectedBooking = useMemo(()=>{
@@ -477,11 +529,11 @@ export default function MasterBookingsPage() {
             </div>
           )}
 
-          {booking.price && (
+          {!verifiedUsBookings && booking.price && (
             <div style={styles.detailRow}><UiValue value={uiMessage("master.s0240")} /><UiValue value={uiMoney(booking.price, booking.currency_code || booking.currency)} /></div>
           )}
 
-          <div style={styles.detailRow}><UiValue value={uiMessage("master.s0278")} /><UiValue value={formatDateTime(booking.start_at)} />
+          <div style={styles.detailRow}><UiValue value={uiMessage("master.s0278")} /><UiValue value={formatVerifiedBookingTime(booking,verifiedUsBookings)} />
           </div>
 
           <div style={styles.detailRow}><UiValue value={uiMessage("salon.s0350")} /><UiValue value={booking.client_name || "—"} />
@@ -489,7 +541,7 @@ export default function MasterBookingsPage() {
 
           <div><UiValue value={uiMessage("salon.s0351")} /><UiValue value={booking.phone || "—"} />
           </div>
-          {marketContext?.market_code === "US" ? (
+          {verifiedUsBookings ? (
             <UsPayC11RefundCard
               key={"refund-"+String(booking.id)}
               ownerType="master"
@@ -539,7 +591,7 @@ export default function MasterBookingsPage() {
                 <div style={styles.cardMeta}>
                   <div>
                     <div style={styles.metaLabel}><UiValue value={uiMessage("salon.s0233")} /></div>
-                    <div style={styles.metaValue}><UiValue value={formatDateTime(b.start_at)} /></div>
+                    <div style={styles.metaValue}><UiValue value={formatVerifiedBookingTime(b,verifiedUsBookings)} /></div>
                   </div>
 
                   <div>
@@ -591,7 +643,7 @@ export default function MasterBookingsPage() {
                     </td>
 
                     <td style={styles.tableCell}>
-                      <UiValue value={formatDateTime(b.start_at)} />
+                      <UiValue value={formatVerifiedBookingTime(b,verifiedUsBookings)} />
                     </td>
 
                     <td style={styles.tableCell}>
