@@ -1,0 +1,61 @@
+name: RELEASE stage 2 IANA master bookings list — existing SDK
+on:
+  push:
+    branches:
+      - release/sdk-master-bookings-iana-20261119
+    paths:
+      - src/master/pages/MasterBookingsPage.jsx
+      - src/i18n/messages.js
+      - src/us/usMasterBookingsReadScope.test.mjs
+      - .github/workflows/sdk-master-bookings-iana.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  master-bookings-iana:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ""
+      RAILWAY_TOKEN: ""
+      ODOO_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Locked dependency install without lifecycle scripts
+        run: npm ci --include=dev --ignore-scripts --no-audit --no-fund
+      - name: JS syntax checks
+        run: |
+          set -euo pipefail
+          node --check src/us/usBookingModel.js
+          node --check src/us/usMasterBookingsReadScope.test.mjs
+          node --check src/i18n/messages.js
+      - name: Offline US/KG/KZ read-contract and mixed-market guard
+        run: |
+          set -euo pipefail
+          test -z "${DATABASE_URL:-}"
+          node --test src/us/usMasterBookingsReadScope.test.mjs
+          node --test src/us/usCabinetBookingBoundary.test.mjs
+          node --test src/api/masterCabinetTransportBoundary.test.mjs
+      - name: Existing US IANA/DST validation under three local host zones
+        run: |
+          set -euo pipefail
+          for tz in America/New_York America/Los_Angeles Asia/Bishkek; do
+            TZ="$tz" node --test src/us/usBookingModel.test.mjs
+          done
+      - name: No new parallel cabinet, API, DB or test record
+        run: |
+          set -euo pipefail
+          ! grep -Eq 'fetch\s*\(' src/master/pages/MasterBookingsPage.jsx
+          grep -Fq 'getMasterBookings(masterSlug,{usLocationScope:true})' src/master/pages/MasterBookingsPage.jsx
+          test -z "${DATABASE_URL:-}"
+          echo 'ONE_EXISTING_MASTER_BOOKINGS_PAGE; PER_BOOKING_IANA; NO_PERSISTED_TEST_ENTITIES'
+      - name: Complete Vite production build
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s dist/index.html

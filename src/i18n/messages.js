@@ -1,5 +1,7 @@
 const ru = Object.freeze({
   "master.quickBookingUnavailable": "Ручная запись для этого рынка недоступна. Используйте бронирование с проверкой филиала, рабочего времени, услуги и цены.",
+  "master.bookingsMarketUnavailable": "Не удалось подтвердить регион и права доступа. Список записей не загружен.",
+  "master.bookingsMixedMarkets": "Мастер связан с несколькими рынками. Выберите подтверждённый регион; список записей не показан для защиты данных.",
   "us.book.title": "Запись в салон",
   "us.book.subtitle": "Запишитесь в {salon}",
   "us.book.details": "Данные записи",
@@ -1834,6 +1836,8 @@ const ru = Object.freeze({
 });
 const en = Object.freeze({
   "master.quickBookingUnavailable": "Manual booking is unavailable for this market. Use booking with verified location, working hours, service and price.",
+  "master.bookingsMarketUnavailable": "Market and access rights could not be verified. Bookings were not loaded.",
+  "master.bookingsMixedMarkets": "This master belongs to multiple markets. Select a verified market; bookings are hidden to protect data.",
   "us.book.title": "Book an appointment",
   "us.book.subtitle": "Book at {salon}",
   "us.book.details": "Appointment details",
