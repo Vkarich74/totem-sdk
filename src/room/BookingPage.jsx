@@ -794,7 +794,7 @@ export default function BookingPage() {
         }
 
         try {
-          const nextPaymentData = await createPendingDirectPayment(nextSuccessData.bookingId, selectedServicePrice);
+          const nextPaymentData = await createPendingDirectPayment(nextSuccessData);
 
           setPaymentData(nextPaymentData);
           setPaymentMethod("cash");
@@ -890,12 +890,18 @@ export default function BookingPage() {
     }
   }
 
-  async function createPendingDirectPayment(bookingId, servicePrice) {
-    const price = Number(servicePrice);
-
-    if (!Number.isFinite(price) || price <= 0) {
-      throw new Error("Не удалось определить цену услуги для оплаты наличными. Выберите услугу с ценой.");
+  async function createPendingDirectPayment(bookingData) {
+    // KG public booking: prove the exact booking, without any salon owner login.
+    const bookingId = Number(bookingData?.bookingId);
+    const clientId = Number(bookingData?.client?.id);
+    const cabinetUrl = String(bookingData?.clientCabinetUrl || "").trim();
+    const match = /^#\/client\/([1-9]\d*)\/([a-f0-9]{64})$/i.exec(cabinetUrl);
+    if (!Number.isSafeInteger(bookingId) || bookingId <= 0
+        || !Number.isSafeInteger(clientId) || clientId <= 0
+        || !match || Number(match[1]) !== clientId) {
+      throw new Error("Не удалось подтвердить право на запись для оплаты. Откройте защищённый кабинет клиента.");
     }
+    const bookingToken = match[2];
 
     const res = await fetch(`${API_BASE}/internal/payments/direct/pending`, {
       method: "POST",
@@ -904,7 +910,7 @@ export default function BookingPage() {
       },
       body: JSON.stringify({
         booking_id: bookingId,
-        service_price: price
+        booking_token: bookingToken
       })
     });
 
