@@ -1,4 +1,4 @@
-const CACHE_NAME = "totem-mobile-pwa-v3";
+const CACHE_NAME = "totem-mobile-pwa-v4";
 const DEFAULT_NOTIFICATION_ICON = "/icons/icon-192.png";
 
 function safeJsonParse(value) {
