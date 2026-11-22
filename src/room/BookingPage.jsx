@@ -777,7 +777,10 @@ export default function BookingPage() {
         time,
         clientName: normalizedName,
         client: data?.client || null,
-        clientCabinetUrl: data?.client_cabinet?.url || ""
+        clientCabinetUrl: data?.client_cabinet?.url || "",
+        // Compatibility price hint for the pre-security API only; the secured API
+        // validates this against immutable public.bookings.price_snapshot.
+        displayedServicePrice: getSelectedServicePrice(filteredServices, selectedService)
       };
 
       setSuccessData(nextSuccessData);
@@ -794,7 +797,7 @@ export default function BookingPage() {
         }
 
         try {
-          const nextPaymentData = await createPendingDirectPayment(nextSuccessData);
+          const nextPaymentData = await createPendingDirectPayment(nextSuccessData, selectedServicePrice);
 
           setPaymentData(nextPaymentData);
           setPaymentMethod("cash");
@@ -890,7 +893,7 @@ export default function BookingPage() {
     }
   }
 
-  async function createPendingDirectPayment(bookingData) {
+  async function createPendingDirectPayment(bookingData, legacyDisplayedPrice = null) {
     // KG public booking: prove the exact booking, without any salon owner login.
     const bookingId = Number(bookingData?.bookingId);
     const clientId = Number(bookingData?.client?.id);
@@ -902,6 +905,13 @@ export default function BookingPage() {
       throw new Error("Не удалось подтвердить право на запись для оплаты. Откройте защищённый кабинет клиента.");
     }
     const bookingToken = match[2];
+    // Two-phase safe deployment: the OLD Backend still requires service_price.
+    // The NEW Backend ignores the hint except for strict equality with its
+    // locked server snapshot. Once the Backend is released this hint can go.
+    const hint = legacyDisplayedPrice ?? bookingData?.displayedServicePrice;
+    const compatibilityPrice = Number(hint);
+    const compatibilityPayload = Number.isSafeInteger(compatibilityPrice) && compatibilityPrice > 0
+      ? { service_price: compatibilityPrice } : {};
 
     const res = await fetch(`${API_BASE}/internal/payments/direct/pending`, {
       method: "POST",
@@ -910,7 +920,8 @@ export default function BookingPage() {
       },
       body: JSON.stringify({
         booking_id: bookingId,
-        booking_token: bookingToken
+        booking_token: bookingToken,
+        ...compatibilityPayload
       })
     });
 
@@ -926,6 +937,28 @@ export default function BookingPage() {
       provider: data.provider || data?.payment?.provider || "direct",
       status: data.status || data?.payment?.status || "pending"
     };
+  }
+
+  async function retryPendingDirectPayment() {
+    // A cached pre-release page may have created the booking but failed to
+    // create the payment after the Backend security switch. Do NOT book again.
+    // The original clientCabinetUrl is preserved in per-tab sessionStorage.
+    if (!successData?.bookingId || paymentLoading || paymentLockRef.current) return;
+    paymentLockRef.current = true;
+    setPaymentLoading(true);
+    setPaymentError("");
+    try {
+      const recovered = await createPendingDirectPayment(successData, successData.displayedServicePrice);
+      setPaymentData(recovered);
+      setPaymentMethod("cash");
+      setOwnerQrPayment(null);
+      writeBookingPaymentState(slug, successData, recovered, null);
+    } catch (error) {
+      setPaymentError(error?.message || "Не удалось сохранить оплату. Запись уже создана — не создавайте её повторно.");
+    } finally {
+      paymentLockRef.current = false;
+      setPaymentLoading(false);
+    }
   }
 
   async function loadOwnerQrPaymentOptions(bookingId) {
@@ -1400,6 +1433,11 @@ export default function BookingPage() {
                       <div style={{ fontSize: 14, lineHeight: 1.6, color: "#334155" }}>
                         Вы оплатите услугу на месте после визита.
                       </div>
+                      {!paymentData && successData?.clientCabinetUrl ? (
+                        <MobileButton tone="primary" disabled={paymentLoading} onClick={() => void retryPendingDirectPayment()}>
+                          {paymentLoading ? "Сохраняем оплату..." : "Сохранить оплату для существующей записи"}
+                        </MobileButton>
+                      ) : null}
                       <div
                         style={{
                           display: "grid",
