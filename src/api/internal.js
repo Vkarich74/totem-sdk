@@ -1,3 +1,4 @@
+import { normalizeSharedRoleOptions, validateRoleSwitchSession } from "../us/sharedRoleContract.js";
 import { safeJson } from "../utils/apiSafe";
 import { getSalonSlug, getMasterSlug } from "../utils/slug";
 
@@ -274,6 +275,37 @@ export function resolveSession() {
   sessionRequest = request;
   request.finally(() => { if (sessionRequest === request) sessionRequest = null; }).catch(() => {});
   return request;
+}
+
+// Reuse the one existing token store and canonical internal transport. The
+// role token is verified against the server before replacing the old token.
+export async function getUsOwnSalonRoleOptions(salonSlug,{signal}={}){
+  const r=await safeInternalJson("/auth/role/options",{method:"GET",cache:"no-store",signal});
+  if(!r.ok||r.json?.ok!==true)return [];
+  return normalizeSharedRoleOptions(r.json.options,salonSlug);
+}
+export async function switchUsOwnSalonContext({role,masterRequestId,password,masterSlug}={}){
+  const oldToken=getAuthAccessToken();
+  if(!oldToken||typeof password!=="string"||!password||!["master","salon_admin"].includes(role))
+    throw Error("US_ROLE_CONTEXT_INVALID");
+  const before=await resolveSession();
+  if(!before.ok||!before.authenticated||before.auth?.source!=="session"||
+     before.role!==(role==="master"?"salon_admin":"master")||
+     role==="salon_admin"&&before.auth?.us_role_context!=="own_salon_master_v1")
+    throw Error("US_ROLE_CONTEXT_INVALID");
+  const body={role,password,...(role==="master"?{master_request_id:masterRequestId}:{})};
+  const r=await safeInternalJson("/auth/role/switch",{method:"POST",cache:"no-store",
+    headers:{Authorization:"Bearer "+oldToken},body:JSON.stringify(body)});
+  if(!r.ok||r.json?.ok!==true)throw Error(r.json?.error||"US_ROLE_CONTEXT_SWITCH_FAILED");
+  const access=r.json.access_token;
+  if(typeof access!=="string"||!access||r.json.role!==role)
+    throw Error("US_ROLE_CONTEXT_RESPONSE_INVALID");
+  const check=await safeInternalJson("/auth/session/resolve",{method:"GET",cache:"no-store",headers:{Authorization:"Bearer "+access}});
+  if(!check.ok||!validateRoleSwitchSession(before,check.json,role,masterSlug)||
+      getAuthAccessToken()!==oldToken)
+    throw Error("US_ROLE_CONTEXT_RESPONSE_INVALID");
+  setAuthAccessToken(access);
+  return {role,master_slug:role==="master"?check.json.auth.master_slug:null};
 }
 
 async function localeApiJson(path, { method = "GET", body, signal, token } = {}) {

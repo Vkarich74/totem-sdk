@@ -1,6 +1,7 @@
 import { uiMoney, UiValue, uiMessage, uiDate, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
+import {useSharedMasterRole} from "../../us/SharedMasterRole.jsx"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { masterCabinetLegacyJson, getMasterBookings, getMasterServices } from "../../api/internal"
 import { useMarketContext } from "../../market/MarketContext.jsx"
@@ -89,7 +90,17 @@ function SummaryCard({ label, value, hint }){
   )
 }
 
-export default function MasterBookingsPage() {
+export default function MasterBookingsPage(){
+  const shared=useSharedMasterRole()
+  const {slug,master,reload}=useMaster()
+  if(shared)return <PageSection title={uiMessage("salon.s0014")}>
+    <UsMasterManualBooking masterSlug={slug} canWrite={shared.caps?.booking===true}/>
+    <p>Booking history and lifecycle actions are not authorized in this limited role.</p>
+  </PageSection>
+  return <StandardMasterBookingsPage/>
+}
+
+function StandardMasterBookingsPage(){
   const { renderUi } = useUiMessages();
   const {
     context: marketContext, status: marketStatus,

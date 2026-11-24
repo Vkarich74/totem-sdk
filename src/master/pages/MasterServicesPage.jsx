@@ -1,6 +1,9 @@
 import { UiValue, uiMessage, uiMoney, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
+import {useSharedMasterRole} from "../../us/SharedMasterRole.jsx"
+import {normalizeSharedServices} from "../../us/sharedRoleContract.js"
+import {getMasterServices as getSharedMasterServices} from "../../api/internal.js"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import UsOwnerPriceEditor from "../../us/UsOwnerPriceEditor.jsx"
 import UsServiceLinkEditor from "../../us/UsServiceLinkEditor.jsx"
@@ -59,9 +62,10 @@ function getServiceKey(service, index) {
 export default function MasterServicesPage() {
   const { renderUi } = useUiMessages();
   const { master, slug: contextSlug, canWrite } = useMaster() || {}
+  const shared=useSharedMasterRole()
   const { status: marketStatus, context: marketContext } = useMarketContext()
-  const marketReady = marketStatus === "ready" && Boolean(marketContext?.market_code)
-  const isUsMarket = marketReady && marketContext?.market_code === "US"
+  const marketReady = shared?shared.status==="ready":marketStatus === "ready" && Boolean(marketContext?.market_code)
+  const isUsMarket = shared?marketReady:marketReady && marketContext?.market_code === "US"
 
   const slug = useMemo(() => {
     return master?.slug || contextSlug || null
@@ -85,6 +89,7 @@ export default function MasterServicesPage() {
     // Never expose legacy mutation controls while the region is unknown.
     if (!marketReady) return []
     // Each US USD price belongs to one exact salon_master_services.id link.
+    if (shared) return normalizeSharedServices(services,shared.caps)
     if (isUsMarket) return services.filter(s => s?.market_code === "US")
     const map = new Map()
     services.forEach((s) => {
@@ -93,7 +98,7 @@ export default function MasterServicesPage() {
       map.set(key, s)
     })
     return Array.from(map.values())
-  }, [services, isUsMarket, marketReady])
+  }, [services, isUsMarket, marketReady, shared?.caps])
 
   async function loadServices() {
     if (!slug) {
@@ -107,7 +112,8 @@ export default function MasterServicesPage() {
     setError("")
 
     try {
-      const response = await getMasterServices(slug)
+      const response = shared?await getSharedMasterServices(slug):await getMasterServices(slug)
+      if(shared&&response?.ok!==true)throw Error("US_SHARED_SERVICES_UNAVAILABLE")
       const normalized = normalizeServicesResponse(response)
       setServices(normalized)
     } catch (e) {
@@ -405,7 +411,7 @@ export default function MasterServicesPage() {
         <UsServiceLinkEditor
           ownerType="master"
           ownerSlug={slug}
-          canWrite={canWrite === true}
+          canWrite={shared?shared.caps?.services===true:canWrite === true}
           onSaved={() => loadServices()}
         />
       ) : (
@@ -800,14 +806,14 @@ export default function MasterServicesPage() {
                     </button>
                     </>) : null}
                   </div>
-                  {isUsMarket && isActive && serviceId ? (
+                  {isUsMarket && isActive && serviceId && (!shared||shared.caps?.price===true) ? (
                     <UsOwnerPriceEditor
                       key={`master-usd-${slug}-${serviceId}`}
                       ownerType="master"
                       ownerSlug={slug}
                       serviceLinkId={serviceId}
                       isUsMarket={isUsMarket}
-                      canWrite={canWrite === true}
+                      canWrite={shared?shared.caps?.price===true:canWrite === true}
                     />
                   ) : null}
                 </div>

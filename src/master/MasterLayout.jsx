@@ -1,7 +1,10 @@
 import { uiError, UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
-import { Outlet } from "react-router-dom"
+import { Outlet, useLocation, useParams } from "react-router-dom"
+import {SharedMasterRoleProvider,useSharedMasterRole,SharedMasterReturn,allowedSharedSections} from "../us/SharedMasterRole.jsx"
+import PageSection from "../cabinet/PageSection.jsx"
+import {isSharedMasterSession} from "../us/sharedRoleContract.js"
 import { useEffect, useState } from "react"
-import { MasterProvider, useMaster } from "./MasterContext"
+import { MasterProvider, useMaster, resolveMasterSlug } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
 import MobileBottomNav from "../mobile/MobileBottomNav"
 import CabinetHeader from "../cabinet/CabinetHeader"
@@ -130,10 +133,11 @@ function SessionGate({ slug, children }){
         ""
       )
 
+      const limited=session?.auth?.us_role_context==="own_salon_master_v1";
       const hasAccess =
         authenticated &&
         role === "master" &&
-        (!masterSlug || masterSlug === String(slug || ""))
+        (limited?isSharedMasterSession(session,slug):(!masterSlug || masterSlug === String(slug || "")))
 
       if(!hasAccess){
         clearAuthAccessToken()
@@ -149,7 +153,7 @@ function SessionGate({ slug, children }){
         return
       }
 
-      setState({ loading: false, allowed: true })
+      setState({ loading: false, allowed: true, shared:limited?session:null })
     }
 
     run()
@@ -186,6 +190,7 @@ function SessionGate({ slug, children }){
     return null
   }
 
+  if(state.shared)return <SharedMasterRoleProvider key={slug} slug={slug} session={state.shared}>{children}</SharedMasterRoleProvider>
   return children
 }
 
@@ -198,17 +203,26 @@ function MasterLayoutInner(){
     billingBlockReason,
     loading: masterLoading
   } = useMaster()
+  const shared=useSharedMasterRole()
+  const location=useLocation()
+  const sections=shared?allowedSharedSections(shared.caps):null
+  const path=location.pathname.split("/").filter(Boolean)
+  const section=path[2]||"dashboard"
+  const allowed=shared?shared.status==="ready"&&path[0]==="master"&&path[1]===slug&&path.length<=3&&sections.includes(section):true
+  const page=allowed?<Outlet/>:<PageSection title={shared?.status==="loading"?"Checking access…":"Access unavailable"}>
+    {shared?.status==="ready"?"This operation is not authorized in the shared Master role.":"Access expired, revoked or unavailable."}
+  </PageSection>
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
 
   useEffect(() => {
     window.__TOTEM_MASTER_BILLING__ = {
       billing: billingAccess,
       billingLoading: masterLoading,
-      canWrite,
-      canWithdraw,
+      canWrite:shared?false:canWrite,
+      canWithdraw:shared?false:canWithdraw,
       billingBlockReason
     }
-  }, [billingAccess, masterLoading, canWrite, canWithdraw, billingBlockReason])
+  }, [billingAccess, masterLoading, canWrite, canWithdraw, billingBlockReason, shared])
 
   useEffect(() => {
     function handleResize() {
@@ -237,29 +251,29 @@ function MasterLayoutInner(){
   }
 
   return (
-    <SessionGate slug={slug}>
       <div style={{ position: "relative", height: "100%" }}>
-        <BillingBanner
+        {!shared&&<BillingBanner
           billingAccess={billingAccess}
           billingBlockReason={billingBlockReason}
           canWrite={canWrite}
           canWithdraw={canWithdraw}
-        />
+        />}
 
         {isMobile ? (
           <>
             <CabinetHeader slug={slug} onLogout={logout} />
+            {shared&&<SharedMasterReturn/>}
             <div style={{
               minHeight: "100vh",
               background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 46%, #f8fafc 100%)",
               padding: "16px 12px 104px",
               boxSizing: "border-box"
             }}>
-              <Outlet />
+              {page}
             </div>
             <MobileBottomNav
-              activeKey={getMasterMobileActiveKey()}
-              items={[
+              activeKey={shared?section:getMasterMobileActiveKey()}
+              items={shared?sections.map(key=>({key,label:uiMessage(({dashboard:"salon.s0013",bookings:"salon.s0014",schedule:"salon.s0023",services:"salon.s0024",settings:"salon.s0025"})[key]),href:"#/master/"+encodeURIComponent(slug)+"/"+key})):[ 
                 {
                   key: "dashboard",
                   label: uiMessage("salon.s0013"),
@@ -293,7 +307,7 @@ function MasterLayoutInner(){
         {!isMobile ? (
           <CabinetLayout
             header={<CabinetHeader slug={slug} onLogout={logout} />}
-            sidebar={<MasterSidebar slug={slug} />}
+            sidebar={<MasterSidebar slug={slug} allowedSections={sections} />}
             page={
               <div style={{
                 background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 46%, #f8fafc 100%)",
@@ -301,25 +315,29 @@ function MasterLayoutInner(){
                 padding: "12px 12px 16px",
                 borderRadius: "24px"
               }}>
-                <Outlet />
+                {shared&&<SharedMasterReturn/>}
+                {page}
               </div>
             }
           />
         ) : null}
 
-        <BillingOverlay
+        {!shared&&<BillingOverlay
           billingAccess={billingAccess}
           billingBlockReason={billingBlockReason}
-        />
+        />}
       </div>
-    </SessionGate>
   )
 }
 
 export default function MasterLayout(){
+  const {slug:routeSlug}=useParams()
+  const slug=resolveMasterSlug(routeSlug)
   return (
-    <MasterProvider>
-      <MasterLayoutInner />
-    </MasterProvider>
+    <SessionGate key={slug} slug={slug}>
+      <MasterProvider>
+        <MasterLayoutInner />
+      </MasterProvider>
+    </SessionGate>
   )
 }
