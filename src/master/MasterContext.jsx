@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { getMaster } from "../api/internal"
+import {useSharedMasterRole} from "../us/SharedMasterRole.jsx"
 
 const MasterContext = createContext(null)
 
@@ -107,6 +108,7 @@ export function MasterProvider({ children }){
   const { slug: routeSlug } = useParams()
   const slug = useMemo(() => resolveMasterSlug(routeSlug), [routeSlug])
 
+  const shared=useSharedMasterRole()
   const [master, setMaster] = useState(null)
   const [billingAccess, setBillingAccess] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -175,11 +177,11 @@ export function MasterProvider({ children }){
   }
 
   useEffect(() => {
-    load(slug)
-  }, [slug])
+    if(!shared)load(slug)
+  }, [slug, Boolean(shared)])
 
-  const canWrite = deriveCanWrite(billingAccess)
-  const canWithdraw = deriveCanWithdraw(billingAccess)
+  const canWrite = shared?false:deriveCanWrite(billingAccess)
+  const canWithdraw = shared?false:deriveCanWithdraw(billingAccess)
   const billingBlockReason = deriveBillingBlockReason(billingAccess)
   const salonSlug =
     master?.salon_slug ||
@@ -192,17 +194,17 @@ export function MasterProvider({ children }){
     <MasterContext.Provider
       value={{
         slug,
-        salonSlug,
-        master,
-        billing_access: billingAccess,
-        billingAccess,
+        salonSlug:shared?shared.salonSlug:salonSlug,
+        master:shared?shared.root?.master||null:master,
+        billing_access:shared?shared.root?.billing_access||null:billingAccess,
+        billingAccess:shared?shared.root?.billing_access||null:billingAccess,
         canWrite,
         canWithdraw,
         billingBlockReason,
-        loading,
-        error,
-        empty,
-        reload: () => load(slug)
+        loading:shared?shared.status==="loading":loading,
+        error:shared?(shared.status==="blocked"?"US_SHARED_AUTHORITY_REQUIRED":null):error,
+        empty:shared?false:empty,
+        reload:shared?shared.refresh:() => load(slug)
       }}
     >
       {children}

@@ -3,6 +3,7 @@ import { UiValue, uiMessage, uiDate, uiJoin, uiTemplate, uiError, useUiMessages 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { useMaster } from "../MasterContext"
+import {useSharedMasterRole} from "../../us/SharedMasterRole.jsx"
 import OwnerProfileSettings from "../../cabinet/OwnerProfileSettings.jsx"
 import PageSection from "../../cabinet/PageSection"
 import OwnerBookingQrCard from "../../components/OwnerBookingQrCard"
@@ -552,7 +553,17 @@ function getBillingUi(billingAccess, billingBlockReason){
   }
 }
 
-export default function MasterSettingsPage() {
+export default function MasterSettingsPage(){
+  const shared=useSharedMasterRole()
+  const {slug,master,reload}=useMaster()
+  if(shared)return <PageSection title={uiMessage("master.s0165")}>
+    <OwnerProfileSettings ownerType="master" ownerSlug={slug} canWrite={shared.caps?.profile===true} onPersisted={reload}/>
+    <p>Financial and merchant settings remain in the salon owner account.</p>
+  </PageSection>
+  return <StandardMasterSettingsPage/>
+}
+
+function StandardMasterSettingsPage(){
   const {
     master,
     slug,

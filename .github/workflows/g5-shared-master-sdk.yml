@@ -5,7 +5,10 @@ on:
       - 'src/api/internal.js'
       - 'src/master/MasterLayout.jsx'
       - 'src/salon/SalonLayout.jsx'
-      - 'src/us/SharedMasterCabinet.jsx'
+      - 'src/us/SharedMasterRole.jsx'
+      - 'src/master/MasterContext.jsx'
+      - 'src/master/MasterSidebar.jsx'
+      - 'src/master/pages/Master*.jsx'
       - 'src/us/sharedRoleContract*'
       - '.github/workflows/g5-shared-master-sdk.yml'
 permissions:

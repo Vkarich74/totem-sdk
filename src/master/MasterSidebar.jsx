@@ -63,12 +63,14 @@ function renderMenu(items, menuStyle) {
   )
 }
 
-export default function MasterSidebar({ slug }) {
+export default function MasterSidebar({ slug, allowedSections=null }) {
   if (!String(slug || "").trim()) {
     return null
   }
 
   const menuStyle = ({ isActive }) => buildMenuStyle(isActive)
+  const scoped=Array.isArray(allowedSections)
+  const visible=items=>scoped?items.filter(item=>allowedSections.some(key=>item.to===buildMasterPath(slug,key))):items
 
   const mainItems = [
     { to: buildMasterPath(slug, "dashboard"), label: uiMessage("salon.s0013") },
@@ -114,11 +116,11 @@ export default function MasterSidebar({ slug }) {
       </div>
 
       <SectionTitle note={uiMessage("master.s0022")}><UiValue value={uiMessage("salon.s0022")} /></SectionTitle>
-      <UiValue value={renderMenu(mainItems, menuStyle)} />
+      <UiValue value={renderMenu(visible(mainItems), menuStyle)} />
 
 
-      <SectionTitle note={uiMessage("master.s0024")}><UiValue value={uiMessage("salon.s0017")} /></SectionTitle>
-      <UiValue value={renderMenu(financeItems, menuStyle)} />
+      {!scoped&&<><SectionTitle note={uiMessage("master.s0024")}><UiValue value={uiMessage("salon.s0017")} /></SectionTitle>
+      <UiValue value={renderMenu(financeItems, menuStyle)} /></>}
 
       <div
         style={{
