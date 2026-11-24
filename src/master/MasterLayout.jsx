@@ -1,5 +1,7 @@
 import { uiError, UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
 import { Outlet } from "react-router-dom"
+import SharedMasterCabinet from "../us/SharedMasterCabinet.jsx"
+import {isSharedMasterSession} from "../us/sharedRoleContract.js"
 import { useEffect, useState } from "react"
 import { MasterProvider, useMaster } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
@@ -130,10 +132,11 @@ function SessionGate({ slug, children }){
         ""
       )
 
+      const limited=session?.auth?.us_role_context==="own_salon_master_v1";
       const hasAccess =
         authenticated &&
         role === "master" &&
-        (!masterSlug || masterSlug === String(slug || ""))
+        (limited?isSharedMasterSession(session,slug):(!masterSlug || masterSlug === String(slug || "")))
 
       if(!hasAccess){
         clearAuthAccessToken()
@@ -149,7 +152,7 @@ function SessionGate({ slug, children }){
         return
       }
 
-      setState({ loading: false, allowed: true })
+      setState({ loading: false, allowed: true, shared:limited?session:null })
     }
 
     run()
@@ -186,6 +189,7 @@ function SessionGate({ slug, children }){
     return null
   }
 
+  if(state.shared)return <SharedMasterCabinet key={slug} slug={slug} session={state.shared}/>
   return children
 }
 

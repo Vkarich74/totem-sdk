@@ -1,5 +1,6 @@
 import { uiError, UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
 import { Outlet } from "react-router-dom"
+import {SalonSharedMasterSwitch} from "../us/SharedMasterCabinet.jsx"
 import { useEffect, useState } from "react"
 import { SalonProvider, useSalonContext } from "./SalonContext"
 import SalonSidebar from "./SalonSidebar"
@@ -257,6 +258,7 @@ function SalonLayoutInner(){
           canWithdraw={canWithdraw}
         />
 
+        <SalonSharedMasterSwitch salonSlug={slug}/>
         {isMobile ? (
           <>
             <CabinetHeader slug={slug} onLogout={logout} />

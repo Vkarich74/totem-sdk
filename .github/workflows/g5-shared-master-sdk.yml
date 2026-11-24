@@ -1,0 +1,30 @@
+name: G5 shared Master SDK — isolated build and role contract (no deploy)
+on:
+  pull_request:
+    paths:
+      - 'src/api/internal.js'
+      - 'src/master/MasterLayout.jsx'
+      - 'src/salon/SalonLayout.jsx'
+      - 'src/us/SharedMasterCabinet.jsx'
+      - 'src/us/sharedRoleContract*'
+      - '.github/workflows/g5-shared-master-sdk.yml'
+permissions:
+  contents: read
+jobs:
+  sdk-role:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --test src/us/sharedRoleContract.test.mjs src/api/masterCabinetTransportBoundary.test.mjs src/api/masterTransport.test.mjs src/cabinet/ownerProfileModel.test.mjs
+      - run: npm run build
+        env:
+          VITE_API_BASE: http://127.0.0.1:4123
