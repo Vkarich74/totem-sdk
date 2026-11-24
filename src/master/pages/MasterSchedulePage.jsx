@@ -1,6 +1,7 @@
 import { UiValue, uiMessage, uiMoney, uiTemplate, uiConcat, uiError, useUiMessages } from "../../i18n/uiMessages.js";
 import { useEffect, useMemo, useState } from "react"
 import { useMaster } from "../MasterContext"
+import {useSharedMasterRole} from "../../us/SharedMasterRole.jsx"
 import PageSection from "../../cabinet/PageSection"
 import { getMasterBookings } from "../../api/internal"
 import { postSalonBookingLifecycle } from "../../api/publicApi.js"
@@ -343,6 +344,16 @@ return usScoped
 }
 
 export default function MasterSchedulePage(){
+  const shared=useSharedMasterRole()
+  const {slug,master,reload}=useMaster()
+  if(shared)return <PageSection title={uiMessage("salon.s0023")}>
+    <UsMasterWorkingHoursEditor masterSlug={slug} canWrite={shared.caps?.hours===true}/>
+    <p>Booking history and lifecycle actions are not authorized in this limited role.</p>
+  </PageSection>
+  return <StandardMasterSchedulePage/>
+}
+
+function StandardMasterSchedulePage(){
  const { renderUi } = useUiMessages();
  const {
    status:marketStatus,context:marketContext,

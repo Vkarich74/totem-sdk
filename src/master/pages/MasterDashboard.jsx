@@ -6,6 +6,7 @@ import PageSection from "../../cabinet/PageSection"
 import StatCard from "../../cabinet/StatCard"
 import StatGrid from "../../cabinet/StatGrid"
 import { useMaster } from "../MasterContext"
+import {useSharedMasterRole} from "../../us/SharedMasterRole.jsx"
 import {
   confirmMasterCashPayment,
   confirmOwnerQrPayment,
@@ -263,7 +264,23 @@ function getOwnerQrActionErrorMessage(error){
   return code || uiMessage("salon.s0299")
 }
 
-export default function MasterDashboard() {
+export default function MasterDashboard(){
+  const shared=useSharedMasterRole()
+  const {slug,master,reload}=useMaster()
+  if(shared)return <PageSection title={uiMessage("salon.s0013")}>
+    <p>One salon subscription. Only the explicitly authorized operations are available.</p>
+    <p>{master?.name||slug}</p>
+    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+      {shared.caps?.services&&<Link to={"/master/"+encodeURIComponent(slug)+"/services"}><UiValue value={uiMessage("salon.s0024")}/></Link>}
+      {shared.caps?.hours&&<Link to={"/master/"+encodeURIComponent(slug)+"/schedule"}><UiValue value={uiMessage("salon.s0023")}/></Link>}
+      {shared.caps?.booking&&<Link to={"/master/"+encodeURIComponent(slug)+"/bookings"}><UiValue value={uiMessage("salon.s0014")}/></Link>}
+      <Link to={"/master/"+encodeURIComponent(slug)+"/settings"}><UiValue value={uiMessage("salon.s0025")}/></Link>
+    </div>
+  </PageSection>
+  return <StandardMasterDashboard/>
+}
+
+function StandardMasterDashboard(){
   const { renderUi } = useUiMessages();
   const {
     loading: masterLoading,
