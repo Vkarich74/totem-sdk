@@ -90,7 +90,6 @@ export default function ResetPasswordPage(){
       });
 
       if(loginResult?.ok && loginResult?.access_token){
-        window.localStorage.setItem("TOTEM_AUTH_TOKEN", loginResult.access_token);
         navigate(
           role === "master"
             ? `/master/${slug}/dashboard`

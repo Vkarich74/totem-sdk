@@ -1,8 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation } from "react-router-dom";
 import {
   getAuthAccessToken, resolveSession, getLocaleOwnerContext, getLocalePreference,
-  saveLocalePreference, getPublicMarketContext,
+  saveLocalePreference, getPublicMarketContext, getAuthRevision, subscribeAuthRevision,
 } from "../api/internal.js";
 import { loadUiLocaleContext, resolveLocaleOwner, writeLocaleChoice } from "../i18n/localeStorage.js";
 import { translate } from "../i18n/messages.js";
@@ -12,7 +12,6 @@ const API = {
   resolveSession, getOwnerContext: getLocaleOwnerContext,
   getPreference: getLocalePreference, getPublicContext: getPublicMarketContext,
 };
-const AUTH_KEYS = new Set(["TOTEM_AUTH_TOKEN", "TOTEM_ACCESS_TOKEN", "TOTEM_INTERNAL_TOKEN"]);
 
 function unavailableState() {
   return { status: "loading", context: null, locale: null, saveStatus: "idle", errorKey: null };
@@ -20,7 +19,8 @@ function unavailableState() {
 
 export function MarketContextProvider({ children }) {
   const location = useLocation();
-  const [token, setToken] = useState(getAuthAccessToken);
+  const revision=useSyncExternalStore(subscribeAuthRevision,getAuthRevision,getAuthRevision);
+  const token=getAuthAccessToken();
   const owner = resolveLocaleOwner({
     pathname: location.pathname, search: location.search,
     publicPath: window.location.pathname, publicSearch: window.location.search,
@@ -29,31 +29,13 @@ export function MarketContextProvider({ children }) {
   const ownerType = owner?.type ?? null;
   const ownerSlug = owner?.slug ?? null;
   const admin = /^\/admin(\/|$)/.test(location.pathname);
-  const requestKey = JSON.stringify([token, ownerType, ownerSlug, admin]);
+  const requestKey = JSON.stringify([revision, ownerType, ownerSlug, admin]);
   const currentKey = useRef(requestKey);
   currentKey.current = requestKey;
   const [stored, setStored] = useState(unavailableState);
   const state = stored.requestKey === requestKey ? stored : unavailableState();
   const saving = useRef(false);
   const saveAbort = useRef(null);
-
-  useEffect(() => {
-    const sync = () => setToken(getAuthAccessToken());
-    const external = event => {
-      if (event.key !== null && !AUTH_KEYS.has(event.key)) return;
-      // Window token fallbacks must not resurrect an account logged out in
-      // another tab. The actual token remains in the existing auth store.
-      for (const key of AUTH_KEYS) window[key] = "";
-      window.__TOTEM_UI_LOCALE__ = null;
-      sync();
-    };
-    window.addEventListener("totem:auth-changed", sync);
-    window.addEventListener("storage", external);
-    return () => {
-      window.removeEventListener("totem:auth-changed", sync);
-      window.removeEventListener("storage", external);
-    };
-  }, []);
 
   useEffect(() => {
     let active = true;

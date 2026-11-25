@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useSyncExternalStore } from "react";
 import { HashRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import ErrorBoundary from "./core/ErrorBoundary";
 import { MarketContextProvider, useMarketContext } from "./market/MarketContext.jsx";
@@ -80,7 +80,7 @@ import ResetPasswordPage from "./auth/ResetPasswordPage";
 import {
   clearAuthAccessToken,
   hasAuthAccessToken,
-  resolveSession
+  resolveSession, getAuthAccessToken, getAuthRevision, subscribeAuthRevision, captureAuthContext, isAuthContextCurrent, logoutCurrentSession
 } from "./api/internal";
 
 const SALON_STATIC_SEGMENTS = new Set([
@@ -169,12 +169,10 @@ function getCurrentAdminReturnTo() {
   return "/admin";
 }
 
-function getStoredAuthToken() {
-  return String(
-    window.localStorage.getItem("TOTEM_AUTH_TOKEN") ||
-    window.localStorage.getItem("TOTEM_ACCESS_TOKEN") ||
-    ""
-  ).trim();
+function getStoredAuthToken(){return getAuthAccessToken();}
+function SessionScope({children}){
+  const revision=useSyncExternalStore(subscribeAuthRevision,getAuthRevision,getAuthRevision);
+  return <Fragment key={revision}>{children}</Fragment>;
 }
 
 function decodeAuthTokenPayload(token) {
@@ -198,10 +196,6 @@ function getAuthTokenRole(token) {
   const payload = decodeAuthTokenPayload(token);
   return String(payload?.role || "").toLowerCase();
 }
-
-function clearStoredAuthTokens() {
-    clearAuthAccessToken();
-  }
 
 function getStoredSalonSlug() {
   return (
@@ -427,7 +421,7 @@ function AuthBootstrapGate({ children }){
       const token = getStoredAuthToken();
 
       if(token && getAuthTokenRole(token) === "admin"){
-        clearStoredAuthTokens();
+        void logoutCurrentSession();
 
         if(active){
           setState({ loading: false });
@@ -442,16 +436,16 @@ function AuthBootstrapGate({ children }){
         return;
       }
 
+      const context=captureAuthContext();
       const session = await resolveSession();
 
       if(!active) return;
+      if(!isAuthContextCurrent(context)){setState({loading:false});return;}
 
       if(!session?.ok || !session?.authenticated){
         clearAuthAccessToken();
-        clearStoredAuthTokens();
       }else if(String(session?.auth?.role || session?.role || "").toLowerCase() === "admin"){
         clearAuthAccessToken();
-        clearStoredAuthTokens();
       }
 
       setState({ loading: false });
@@ -506,7 +500,8 @@ function AdminAuthGate({ children }) {
     let active = true;
 
     async function run() {
-      const token = String(window.localStorage.getItem("TOTEM_AUTH_TOKEN") || "").trim();
+      const context=captureAuthContext();
+      const token=context.token;
 
       if (!token) {
         if (active) {
@@ -530,7 +525,7 @@ function AdminAuthGate({ children }) {
         });
         const payload = await response.json().catch(() => null);
 
-        if (!active) return;
+        if (!active||!isAuthContextCurrent(context)) return;
 
         if (response.status === 401) {
           clearAuthAccessToken();
@@ -687,7 +682,7 @@ function CabinetRouter() {
       <Route path="mobile/admin/salon/:slug" element={<MobileLiteAdminRoute roleType="salon" />} />
       <Route path="mobile/admin/:roleType/:slug" element={<MobileLiteAdminDynamicRoute />} />
 
-      <Route path="salon" element={<SalonLayout />}>
+      <Route path="salon" element={<SessionScope><SalonLayout /></SessionScope>}>
         <Route index element={<DashboardPage />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="calendar" element={<CalendarPage />} />
@@ -706,7 +701,7 @@ function CabinetRouter() {
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 
-      <Route path="salon/:slug" element={<SalonLayout />}>
+      <Route path="salon/:slug" element={<SessionScope><SalonLayout /></SessionScope>}>
         <Route index element={<DashboardPage />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="calendar" element={<CalendarPage />} />
@@ -729,7 +724,7 @@ function CabinetRouter() {
         <Route index element={<RedirectToMasterSlug />} />
       </Route>
 
-      <Route path="master/:slug" element={<MasterLayout />}>
+      <Route path="master/:slug" element={<SessionScope><MasterLayout /></SessionScope>}>
         <Route index element={<MasterDashboard />} />
         <Route path="dashboard" element={<MasterDashboard />} />
         <Route path="bookings" element={<MasterBookingsPage />} />
@@ -829,11 +824,11 @@ export default function App() {
           {isAdminLoginRoute() ? (
             <AdminRouter />
           ) : (
-            <AdminAuthGate>
+            <SessionScope><AdminAuthGate>
               <AdminLayout>
                 <AdminRouter />
               </AdminLayout>
-            </AdminAuthGate>
+            </AdminAuthGate></SessionScope>
           )}
           </MarketContextProvider>
         </HashRouter>

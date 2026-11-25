@@ -1,9 +1,9 @@
 import { UiValue, uiMessage, uiMoney, uiTemplate, uiConcat, uiError, useUiMessages } from "../../i18n/uiMessages.js";
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useMaster } from "../MasterContext"
 import {useSharedMasterRole} from "../../us/SharedMasterRole.jsx"
 import PageSection from "../../cabinet/PageSection"
-import { getMasterBookings } from "../../api/internal"
+import { getMasterBookings, captureAuthContext, isAuthContextCurrent } from "../../api/internal"
 import { postSalonBookingLifecycle } from "../../api/publicApi.js"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import { normalizeUsMasterScheduleFeed, classifyUnresolvedMasterMarketProbe } from "../../us/usBookingModel.js"
@@ -345,7 +345,7 @@ return usScoped
 
 export default function MasterSchedulePage(){
   const shared=useSharedMasterRole()
-  const {slug,master,reload}=useMaster()
+  const {slug}=useMaster()
   if(shared)return <PageSection title={uiMessage("salon.s0023")}>
     <UsMasterWorkingHoursEditor masterSlug={slug} canWrite={shared.caps?.hours===true}/>
     <p>Booking history and lifecycle actions are not authorized in this limited role.</p>
@@ -374,6 +374,7 @@ error: masterError,
 master,
 slug,
 salonSlug,
+billingAccess,
 canWrite
 }=useMaster()
 
@@ -384,6 +385,8 @@ const [bookingsError,setBookingsError]=useState("")
 const [dateKey,setDateKey]=useState(todayKey())
 const [statusOverrides,setStatusOverrides]=useState({})
 const [actionLoading,setActionLoading]=useState({})
+const actionInFlight=useRef(new Set())
+const [loadedScope,setLoadedScope]=useState("")
 const [clockTick,setClockTick]=useState(0)
 const routeSlug=master?.slug || slug
 const marketScopeKey=JSON.stringify([
@@ -398,25 +401,29 @@ const marketProbePending=Boolean(routeSlug) && unresolvedMasterMarket &&
     probedScope.mode==="pending")
 const mixedMarketBlocked=unresolvedMasterMarket &&
   probeIsCurrent && probedScope.mode==="mixed"
-
-async function refreshBookingsFromBackend(){
-if(!routeSlug){
-setBookings([])
-setBookingsLoading(false)
-setBookingsError(uiError("SLUG_MISSING"))
-return []
-}
-
-setBookingsError("")
-const nextBookings = await fetchMasterBookingsSnapshot(routeSlug,isUsMarket)
-setBookings(nextBookings)
-return nextBookings
+const currentScope=useRef(marketScopeKey)
+currentScope.current=marketScopeKey
+const legacyMarket=String(marketContext?.market_code||"")
+const positiveId=value=>/^[1-9][0-9]*$/.test(String(value??""))&&Number.isSafeInteger(Number(value))
+const validSlug=value=>typeof value==="string"&&/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(value)
+const calendarCanWrite=canWrite===true&&billingAccess?.can_write===true&&
+  marketStatus==="ready"&&["KG","KZ"].includes(legacyMarket)&&
+  !isUsMarket&&!marketProbePending&&!mixedMarketBlocked&&
+  (!unresolvedMasterMarket||(probeIsCurrent&&probedScope.mode==="legacy"))&&
+  !masterLoading&&!masterError&&!bookingsLoading&&!bookingsError&&
+  loadedScope===marketScopeKey&&master?.slug===slug&&positiveId(master?.id)
+const canCreateFromCalendar=calendarCanWrite&&!unresolvedMasterMarket&&validSlug(salonSlug)
+function hasBookingWriteScope(booking){
+  return calendarCanWrite&&positiveId(booking?.id)&&positiveId(booking?.master_id)&&
+    Number(booking.master_id)===Number(master?.id)&&positiveId(booking?.salon_id)&&
+    validSlug(booking?.salon_slug)&&booking?.booking_market_code===legacyMarket
 }
 
 useEffect(()=>{
 let cancelled=false
 
 async function loadBookings(){
+setLoadedScope("")
 if(marketStatus !== "ready"){
   if(!cancelled){
     setBookings([])
@@ -472,6 +479,7 @@ if(!cancelled){
     setProbedScope({key:marketScopeKey,mode:verifiedUs?"us":"legacy"})
   }
   setBookings(nextBookings)
+  setLoadedScope(marketScopeKey)
   if(verifiedUs){
     const future=nextBookings.find(b=>b.starts_ms>=Date.now())
     const days=[...new Set(nextBookings.map(b=>b.local_date))].sort()
@@ -524,72 +532,59 @@ window.location.hash=uiTemplate(["/master/","/bookings/",""], [routeSlug, id])
 }
 
 function createBooking(time){
+if(!canCreateFromCalendar)return
 const routeSlug=getMasterRouteSlug()
 if(!routeSlug)return
 window.location.hash=uiTemplate(["/master/","/bookings/new?time=","&date=",""], [routeSlug, encodeURIComponent(time), encodeURIComponent(dateKey)])
 }
 
-function resolveActionSalonSlug(){
-return salonSlug || master?.salon_slug || master?.salonSlug || ""
-}
-
 async function quickAction(e,booking,action){
 e.stopPropagation()
+const prior=typeof booking?.status==="string"?normalizeStatus(booking.status):""
+const expected=action==="confirm"?"confirmed":action==="done"?"completed":action==="cancel"?"cancelled":""
+const lifecycleAction=action==="done"?"complete":action
+const allowed=(["reserved","pending","created","new"].includes(prior)&&["confirm","cancel"].includes(action))||
+  (prior==="confirmed"&&["done","cancel"].includes(action))
+if(!hasBookingWriteScope(booking)||!expected||!allowed)return
 
-const nextStatus=
-action==="confirm" ? "confirmed" :
-action==="done" ? "completed" :
-action==="cancel" ? "cancelled" :
-"reserved"
-
-const lifecycleAction=
-action==="confirm" ? "confirm" :
-action==="done" ? "complete" :
-action==="cancel" ? "cancel" :
-""
-
-setActionLoading((prev)=>( {
-...prev,
-[booking.id]:action
-}))
-
+const context=captureAuthContext(),scope=marketScopeKey
+if(!context.token||!isAuthContextCurrent(context))return
+const key=String(booking.id)
+if(actionInFlight.current.has(key))return
+actionInFlight.current.add(key)
+const stillCurrent=()=>isAuthContextCurrent(context)&&currentScope.current===scope
+setActionLoading(prev=>({...prev,[key]:action}))
 try{
-// A US master can work in multiple salons; the booking's verified salon
-// identity is authoritative. Never fall back to the currently selected salon.
-const actionSalonSlug=isUsMarket
-  ? String(booking?.salon_slug||"").trim()
-  : resolveActionSalonSlug()
-
-if(!actionSalonSlug){
-alert(renderUi(uiError(uiMessage("master.s0298"))))
-return
-}
-
-const response=await postSalonBookingLifecycle(actionSalonSlug,booking.id,lifecycleAction)
-
-if(!response.ok){
-throw new Error("STATUS_UPDATE_FAILED")
-}
-
-await refreshBookingsFromBackend()
-setStatusOverrides((prev)=>{
-const next={...prev}
-delete next[booking.id]
-return next
-})
-
+  // The canonical feed provides this booking's actual salon. Never use the
+  // master's most recently activated salon for a different booking.
+  const actionSalonSlug=booking.salon_slug
+  const response=await postSalonBookingLifecycle(actionSalonSlug,booking.id,lifecycleAction)
+  if(!stillCurrent())return
+  const result=await response.json()
+  if(!stillCurrent())return
+  if(!response.ok||result?.ok!==true||
+      ![expected,...(action==="confirm"?["already_confirmed"]:action==="cancel"?["already_cancelled"]:[])].includes(result.status)){
+    throw new Error("STATUS_UPDATE_FAILED")
+  }
+  const nextBookings=await fetchMasterBookingsSnapshot(routeSlug,false)
+  if(!stillCurrent())return
+  const matches=nextBookings.filter(row=>String(row.id)===key)
+  const updated=matches[0]
+  if(matches.length!==1||Number(updated.master_id)!==Number(booking.master_id)||
+    Number(updated.salon_id)!==Number(booking.salon_id)||updated.salon_slug!==actionSalonSlug||
+    updated.booking_market_code!==legacyMarket||typeof updated.status!=="string"||
+    normalizeStatus(updated.status)!==expected)throw new Error("MASTER_BOOKING_READBACK_MISMATCH")
+  setBookings(nextBookings)
+  setStatusOverrides(prev=>{const next={...prev};delete next[key];return next})
 }catch(error){
-if(error && error.message==="SALON_SLUG_NOT_FOUND"){
-alert(renderUi(uiError(uiMessage("master.s0298"))))
-}else{
-alert(renderUi(uiError(uiMessage("master.s0299"))))
-}
+  if(!stillCurrent())return
+  // Outcome may be uncertain: don't repeat a mutation against stale data.
+  setLoadedScope("")
+  setBookingsError(uiError(error?.message||"STATUS_UPDATE_FAILED"))
+  alert(renderUi(uiError(uiMessage("master.s0299"))))
 }finally{
-setActionLoading((prev)=>{
-const next={...prev}
-delete next[booking.id]
-return next
-})
+  actionInFlight.current.delete(key)
+  if(stillCurrent())setActionLoading(prev=>{const next={...prev};delete next[key];return next})
 }
 }
 
@@ -795,6 +790,7 @@ color:"#991b1b",
 borderRadius:"10px",
 padding:"12px"
 }}><UiValue value={uiMessage("master.s0301")} /></div>
+<button type="button" onClick={()=>window.location.reload()}>Обновить расписание</button>
 </PageSection>
 )
 }
@@ -979,7 +975,7 @@ transition:"all 0.15s ease"
 </span>
 </div>
 
-{!b && !isPast && (
+{!b && !isPast && canCreateFromCalendar && (
 
 <div
 onClick={()=>createBooking(s)}
@@ -1052,7 +1048,7 @@ boxShadow:b._isNow?"0 0 0 3px rgba(255,107,107,0.15)":"none"
 
 <div style={{marginTop:"8px",display:"flex",gap:"6px",position:"sticky",bottom:0,background:statusColor(b._status),paddingTop:"4px"}}>
 
-{canShowMasterActions(b._status) && (
+{hasBookingWriteScope(b) && canShowMasterActions(b._status) && (
 <>
 {(["reserved","pending","created","new"].includes(normalizeStatus(b._status))) && (
 <>

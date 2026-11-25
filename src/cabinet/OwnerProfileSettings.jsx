@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  getOwnerCabinetProfile, saveOwnerCabinetProfile,
+  getOwnerCabinetProfile, saveOwnerCabinetProfile, verifyOwnerCabinetProfileSave,
 } from "./ownerProfileClient.js";
 import {
-  PROFILE_FIELDS, ownerProfileChanged, verifyOwnerProfileSave,
+  PROFILE_FIELDS, ownerProfileChanged,
 } from "./ownerProfileModel.js";
 
 const css = {
@@ -59,6 +59,7 @@ function editableForm(record) {
 
 export default function OwnerProfileSettings({
   ownerType, ownerSlug, canWrite = false, onPersisted,
+  persistedConfirmation, onClearConfirmation,
 }) {
   const [state,setState] = useState("loading");
   const [record,setRecord] = useState(null);
@@ -106,10 +107,19 @@ export default function OwnerProfileSettings({
   );
   const writable=state==="ready" && !saving &&
     canWrite===true && record?.can_write===true;
+  // The salon context can remount this editor after a successful readback.
+  // Retain confirmation only for the exact same owner/session/revision.
+  const persistedMessage=record && persistedConfirmation &&
+    persistedConfirmation.owner_id===record.owner_id &&
+    persistedConfirmation.owner_slug===record.owner_slug &&
+    persistedConfirmation.auth_revision===record.auth_revision &&
+    persistedConfirmation.revision===record.revision && !modified && !saving
+    ? "Профиль сохранён. Совпадение данных подтверждено повторным чтением." : "";
 
   async function save(event) {
     event.preventDefault();
     if (!writable || !modified || !record) return;
+    onClearConfirmation?.();
     setSaving(true);
     setError("");
     setMessage("");
@@ -122,12 +132,12 @@ export default function OwnerProfileSettings({
       const fresh=await getOwnerCabinetProfile(ownerType,ownerSlug,{
         signal:abort.signal,
       });
-      const verified=verifyOwnerProfileSave(record,patched,fresh);
+      const verified=verifyOwnerCabinetProfileSave(record,patched,fresh);
       if (abort.signal.aborted) return;
       setRecord(verified);
       setForm(editableForm(verified));
       setMessage("Профиль сохранён. Совпадение данных подтверждено повторным чтением.");
-      await onPersisted?.();
+      await onPersisted?.(verified);
     }catch(problem){
       if (abort.signal.aborted || problem?.name==="AbortError") return;
       setError(messageFor(problem));
@@ -171,6 +181,7 @@ export default function OwnerProfileSettings({
                     onChange={event=>{
                       setForm(prev=>({...prev,[key]:event.target.value}));
                       setMessage("");
+                      onClearConfirmation?.();
                     }} />
                 ) : (
                   <input type={key==="logo_url"?"url":"text"} style={css.input}
@@ -182,6 +193,7 @@ export default function OwnerProfileSettings({
                     onChange={event=>{
                       setForm(prev=>({...prev,[key]:event.target.value}));
                       setMessage("");
+                      onClearConfirmation?.();
                     }} />
                 )}
               </label>
@@ -201,7 +213,7 @@ export default function OwnerProfileSettings({
           </button>
           <button type="button"
             style={{...css.button,background:"#fff",color:"#17203a"}}
-            disabled={saving} onClick={()=>setRefresh(n=>n+1)}>
+            disabled={saving} onClick={()=>{onClearConfirmation?.();setRefresh(n=>n+1);}}>
             Обновить данные
           </button>
           <span style={css.minor}>
@@ -213,7 +225,7 @@ export default function OwnerProfileSettings({
             Редактирование заблокировано правами или состоянием подписки.
           </p>
         ) : null}
-        {message && <p role="status" style={{color:"#067647"}}>{message}</p>}
+        {(message || persistedMessage) && <p role="status" style={{color:"#067647"}}>{message || persistedMessage}</p>}
         {error && <p role="alert" style={{color:"#b42318"}}>{error}</p>}
       </form>
       <div style={{borderTop:"1px solid #e2e8f0",paddingTop:12}}>

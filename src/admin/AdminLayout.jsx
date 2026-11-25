@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { clearAuthAccessToken } from "../api/internal.js";
+import { logoutCurrentSession } from "../api/internal.js";
 import "./pages/AdminDashboard.css";
 import "./AdminLayout.css";
 
@@ -123,7 +123,7 @@ export default function AdminLayout({ children }) {
   }, [menuOpen]);
 
   function logout() {
-    clearAuthAccessToken();
+    void logoutCurrentSession();
     window.location.hash = "#/admin/login";
     window.location.reload();
   }

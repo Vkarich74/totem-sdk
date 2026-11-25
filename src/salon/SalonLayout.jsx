@@ -1,17 +1,16 @@
 import { uiError, UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
-import { Outlet } from "react-router-dom"
+import { Outlet, useParams } from "react-router-dom"
 import {SalonSharedMasterSwitch} from "../us/SharedMasterRole.jsx"
 import { useEffect, useState } from "react"
-import { SalonProvider, useSalonContext } from "./SalonContext"
+import { SalonProvider, useSalonContext, resolveSalonSlug } from "./SalonContext"
 import SalonSidebar from "./SalonSidebar"
 import MobileBottomNav from "../mobile/MobileBottomNav"
 import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
 import {
   hasAuthAccessToken,
-  clearAuthAccessToken,
   logoutCurrentSession,
-  resolveSession
+  resolveSession, captureAuthContext, isAuthContextCurrent
 } from "../api/internal"
 
 function BillingBanner({ billingAccess, billingBlockReason, canWrite, canWithdraw }){
@@ -120,9 +119,10 @@ function SessionGate({ slug, children }){
         return
       }
 
+      const context=captureAuthContext()
       const session = await resolveSession()
 
-      if(!active) return
+      if(!active||!isAuthContextCurrent(context)) return
 
       const authenticated = Boolean(session?.ok && session?.authenticated)
       const role = String(session?.role || session?.auth?.role || session?.identity?.role || "")
@@ -139,8 +139,6 @@ function SessionGate({ slug, children }){
         )
 
       if(!authenticated || !hasSalonAccess){
-        clearAuthAccessToken()
-
         const safeSlug = String(slug || "").trim()
         const params = new URLSearchParams()
         params.set("role", "salon_admin")
@@ -230,12 +228,8 @@ function SalonLayoutInner(){
     }
   }, [])
 
-  async function logout(){
-    try{
-      await logoutCurrentSession()
-    }catch(e){
-      clearAuthAccessToken()
-    }
+  function logout(){
+    void logoutCurrentSession()
 
     const params = new URLSearchParams()
     params.set("role", "salon_admin")
@@ -244,7 +238,6 @@ function SalonLayoutInner(){
   }
 
   return (
-    <SessionGate slug={slug}>
       <div style={{
         position: "relative",
         minHeight: "100vh",
@@ -314,14 +307,15 @@ function SalonLayoutInner(){
           billingBlockReason={billingBlockReason}
         />
       </div>
-    </SessionGate>
   )
 }
 
 export default function SalonLayout(){
+  const {slug:routeSlug}=useParams()
+  const slug=resolveSalonSlug(routeSlug)
   return (
-    <SalonProvider>
-      <SalonLayoutInner />
-    </SalonProvider>
+    <SessionGate key={slug} slug={slug}>
+      <SalonProvider><SalonLayoutInner /></SalonProvider>
+    </SessionGate>
   )
 }

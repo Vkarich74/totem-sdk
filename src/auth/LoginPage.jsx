@@ -1,7 +1,7 @@
 import { useMarketContext } from "../market/MarketContext.jsx";
 import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { authLogin, authStart, clearAuthAccessToken } from "../api/internal"
+import { authLogin, authStart, clearAuthAccessToken, getAuthAccessToken, logoutCurrentSession } from "../api/internal"
 
 
 function decodeAuthTokenRole(token){
@@ -23,16 +23,7 @@ function decodeAuthTokenRole(token){
 }
 
 function clearAdminTokenForCabinetLogin(){
-  const authToken = window.localStorage.getItem("TOTEM_AUTH_TOKEN")
-  const accessToken = window.localStorage.getItem("TOTEM_ACCESS_TOKEN")
-
-  if(decodeAuthTokenRole(authToken) === "admin"){
-    window.localStorage.removeItem("TOTEM_AUTH_TOKEN")
-  }
-
-  if(decodeAuthTokenRole(accessToken) === "admin"){
-    window.localStorage.removeItem("TOTEM_ACCESS_TOKEN")
-  }
+  if(decodeAuthTokenRole(getAuthAccessToken())==="admin")void logoutCurrentSession()
 }
 
 function shouldClearAdminToken(originRole){

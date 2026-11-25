@@ -9,88 +9,81 @@ const API_BASE = String(
   "https://api.totemv.com"
 ).replace(/\/$/, "") + "/internal";
 const TEMPLATE_VERSION = "v1";
-const AUTH_TOKEN_STORAGE_KEYS = [
-  "TOTEM_AUTH_TOKEN",
-  "TOTEM_ACCESS_TOKEN",
-  "TOTEM_INTERNAL_TOKEN"
-];
-
-/* ===============================
-   AUTH TOKEN / TRANSPORT
-================================ */
-
-function getStoredWindowValue(key){
-  try{
-    return window[key] || "";
-  }catch(e){
-    return "";
-  }
+const AUTH_TOKEN_KEY="TOTEM_AUTH_TOKEN";
+const AUTH_EPOCH_KEY="TOTEM_AUTH_EPOCH";
+const LEGACY_AUTH_KEYS=["TOTEM_ACCESS_TOKEN","TOTEM_INTERNAL_TOKEN"];
+let authRevision=0, observedToken="", observedEpoch="", storageFailed=false;
+function readStored(key){
+  try{return String(window.localStorage.getItem(key)||"").trim();}
+  catch{storageFailed=true;return "";}
 }
-
-function getStoredLocalValue(key){
-  try{
-    return window.localStorage.getItem(key) || "";
-  }catch(e){
-    return "";
-  }
+function clearAccountGlobals(){
+  for(const key of [AUTH_TOKEN_KEY,...LEGACY_AUTH_KEYS])window[key]="";
+  for(const key of ["__TOTEM_UI_LOCALE__","__TOTEM_MARKET_CONTEXT__","__TOTEM_SALON_BILLING__","__TOTEM_MASTER_BILLING__"])window[key]=null;
 }
-
-export function getAuthAccessToken(){
-  for(const key of AUTH_TOKEN_STORAGE_KEYS){
-    const localValue = getStoredLocalValue(key);
-    if(localValue) return localValue;
-
-    const windowValue = getStoredWindowValue(key);
-    if(windowValue) return windowValue;
+function syncAuth(){
+  const token=readStored(AUTH_TOKEN_KEY),epoch=readStored(AUTH_EPOCH_KEY);
+  const next=storageFailed?"":token;
+  if(next!==observedToken||epoch!==observedEpoch){
+    observedToken=next;observedEpoch=epoch;authRevision++;clearAccountGlobals();
   }
-
-  return "";
+  return observedToken;
 }
-
+syncAuth();
+export function getAuthAccessToken(){return syncAuth();}
+export function getAuthRevision(){syncAuth();return authRevision;}
+export function subscribeAuthRevision(listener){
+  const changed=()=>{syncAuth();listener();};
+  const external=event=>{if(event.key===null||event.key===AUTH_TOKEN_KEY||event.key===AUTH_EPOCH_KEY)changed();};
+  window.addEventListener("totem:auth-changed",changed);window.addEventListener("storage",external);
+  return ()=>{window.removeEventListener("totem:auth-changed",changed);window.removeEventListener("storage",external);};
+}
+export function captureAuthContext(){const token=getAuthAccessToken();return {token,revision:authRevision};}
+export function isAuthContextCurrent(context){return getAuthAccessToken()===context.token&&authRevision===context.revision;}
+function assertAuthContext(context){if(!isAuthContextCurrent(context))throw Error("AUTH_CONTEXT_CHANGED");}
 export function setAuthAccessToken(token){
-  const normalized = String(token || "").trim();
-
+  const normalized=String(token||"").trim();
+  // The primary token is authoritative; never resurrect an alias/window token.
   try{
-    if(normalized){
-      window.localStorage.setItem("TOTEM_AUTH_TOKEN", normalized);
-      window.localStorage.setItem("TOTEM_ACCESS_TOKEN", normalized);
-      window.TOTEM_AUTH_TOKEN = normalized;
-      window.TOTEM_ACCESS_TOKEN = normalized;
-    }else{
-      for(const key of AUTH_TOKEN_STORAGE_KEYS){
-        window.localStorage.removeItem(key);
-      }
-      window.TOTEM_AUTH_TOKEN = "";
-      window.TOTEM_ACCESS_TOKEN = "";
-      window.TOTEM_INTERNAL_TOKEN = "";
-    }
-  }catch(e){
-    try{
-      if(normalized){
-        window.TOTEM_AUTH_TOKEN = normalized;
-        window.TOTEM_ACCESS_TOKEN = normalized;
-      }else{
-        window.TOTEM_AUTH_TOKEN = "";
-        window.TOTEM_ACCESS_TOKEN = "";
-        window.TOTEM_INTERNAL_TOKEN = "";
-      }
-    }catch(innerError){
-      /* no-op */
-    }
+    window.localStorage.setItem(AUTH_TOKEN_KEY,normalized);
+    window.localStorage.setItem(AUTH_EPOCH_KEY,window.crypto.randomUUID());
+    for(const key of LEGACY_AUTH_KEYS)window.localStorage.removeItem(key);
+    storageFailed=false;
+  }catch{
+    storageFailed=true;
+    try{window.localStorage.removeItem(AUTH_TOKEN_KEY);}catch{}
   }
-
-  window.__TOTEM_UI_LOCALE__ = null;
+  authRevision++;observedToken=storageFailed?"":normalized;observedEpoch=readStored(AUTH_EPOCH_KEY);
+  clearAccountGlobals();
   window.dispatchEvent(new Event("totem:auth-changed"));
-  return normalized;
+  if(storageFailed&&normalized)throw Error("AUTH_STORAGE_UNAVAILABLE");
+  return storageFailed?"":normalized;
 }
-
-export function clearAuthAccessToken(){
-  return setAuthAccessToken("");
+export function clearAuthAccessToken(){return setAuthAccessToken("");}
+export function hasAuthAccessToken(){return Boolean(getAuthAccessToken());}
+function tokenRole(token){
+  try{const v=token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+    return JSON.parse(window.atob(v.padEnd(Math.ceil(v.length/4)*4,"="))).role;
+  }catch{return "";}
 }
-
-export function hasAuthAccessToken(){
-  return Boolean(getAuthAccessToken());
+function logoutPath(token){return tokenRole(token)==="admin"?"/admin/auth/logout":"/auth/logout";}
+async function revokeCapturedToken(token,path,localCleared){
+  if(!token)return {ok:localCleared,local_cleared:localCleared,server_revoked:false,no_session:true};
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),5000);
+  try{
+    const result=await safeJson(API_BASE+path,{method:"POST",cache:"no-store",headers:{Authorization:"Bearer "+token},signal:controller.signal,keepalive:true});
+    const revoked=result.ok&&result.json?.ok===true;
+    return {ok:revoked&&localCleared,local_cleared:localCleared,server_revoked:revoked};
+  }catch{return {ok:false,local_cleared:localCleared,server_revoked:false,error:"AUTH_LOGOUT_REMOTE_UNCONFIRMED"};}
+  finally{clearTimeout(timeout);}
 }
+function beginAuthAttempt(){
+  const previous=getAuthAccessToken();clearAuthAccessToken();
+  if(previous)void revokeCapturedToken(previous,logoutPath(previous),!storageFailed);
+  if(storageFailed)throw Error("AUTH_STORAGE_UNAVAILABLE");
+  return captureAuthContext();
+}
+function acceptAuthAttempt(attempt,token){assertAuthContext(attempt);return setAuthAccessToken(token);}
 
 function buildJsonHeaders(extraHeaders = {}, includeContentType = true){
   const headers = {
@@ -133,20 +126,26 @@ async function safeInternalJson(path, opts = {}){
   const method = String(opts.method || "GET").toUpperCase();
   const headers = buildJsonHeaders(opts.headers || {}, method !== "GET");
 
-  return safeJson(`${API_BASE}${path}`, {
+  const context=captureAuthContext();
+  const result=await safeJson(`${API_BASE}${path}`, {
     ...opts,
     method,
-    headers
+    headers,
+    cache:"no-store"
   });
+  assertAuthContext(context);
+  return result;
 }
 
 async function safeInternalRequest(path, opts = {}){
   const method = String(opts.method || "GET").toUpperCase();
   const headers = buildAuthHeaders(opts.headers || {});
+  const context=captureAuthContext();
   const r = await fetch(`${API_BASE}${path}`, {
     ...opts,
     method,
-    headers
+    headers,
+    cache:"no-store"
   });
 
   const ct = (r.headers.get("content-type") || "").toLowerCase();
@@ -161,6 +160,7 @@ async function safeInternalRequest(path, opts = {}){
     }
   }
 
+  assertAuthContext(context);
   return {
     ok:r.ok,
     status:r.status,
@@ -265,15 +265,14 @@ async function requestSession(){
   };
 }
 
-let sessionRequest = null;
-let sessionRequestToken = null;
-export function resolveSession() {
-  const token = getAuthAccessToken();
-  if (sessionRequest && sessionRequestToken === token) return sessionRequest;
-  sessionRequestToken = token;
-  const request = requestSession();
-  sessionRequest = request;
-  request.finally(() => { if (sessionRequest === request) sessionRequest = null; }).catch(() => {});
+let sessionRequest=null,sessionRequestRevision=-1;
+export function resolveSession(){
+  const revision=getAuthRevision();
+  if(sessionRequest&&sessionRequestRevision===revision)return sessionRequest;
+  sessionRequestRevision=revision;
+  const request=requestSession().catch(()=>({ok:false,error:"AUTH_SESSION_RESOLVE_FAILED"}));
+  sessionRequest=request;
+  request.finally(()=>{if(sessionRequest===request)sessionRequest=null;}).catch(()=>{});
   return request;
 }
 
@@ -290,7 +289,8 @@ const US_ROLE_SWITCH_CODE_RELEASE_APPROVED=false;
 export const isUsOwnSalonRoleSwitchReleased=()=>US_ROLE_SWITCH_CODE_RELEASE_APPROVED;
 export async function switchUsOwnSalonContext({role,masterRequestId,password,masterSlug}={}){
   if(!US_ROLE_SWITCH_CODE_RELEASE_APPROVED)throw Error("US_ROLE_CONTEXT_HOLD");
-  const oldToken=getAuthAccessToken();
+  const context=captureAuthContext();
+  const oldToken=context.token;
   if(!oldToken||typeof password!=="string"||!password||!["master","salon_admin"].includes(role))
     throw Error("US_ROLE_CONTEXT_INVALID");
   const before=await resolveSession();
@@ -307,13 +307,14 @@ export async function switchUsOwnSalonContext({role,masterRequestId,password,mas
     throw Error("US_ROLE_CONTEXT_RESPONSE_INVALID");
   const check=await safeInternalJson("/auth/session/resolve",{method:"GET",cache:"no-store",headers:{Authorization:"Bearer "+access}});
   if(!check.ok||!validateRoleSwitchSession(before,check.json,role,masterSlug)||
-      getAuthAccessToken()!==oldToken)
+      !isAuthContextCurrent(context))
     throw Error("US_ROLE_CONTEXT_RESPONSE_INVALID");
   setAuthAccessToken(access);
   return {role,master_slug:role==="master"?check.json.auth.master_slug:null};
 }
 
 async function localeApiJson(path, { method = "GET", body, signal, token } = {}) {
+  if(token && token!==getAuthAccessToken())throw Error("AUTH_CONTEXT_CHANGED");
   const response = await safeInternalRequest(path, {
     method, signal,
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -365,6 +366,7 @@ export async function loginWithPassword({ email = "", phone = "", password = "" 
   if(String(phone || "").trim()) body.phone = String(phone).trim();
   body.password = String(password || "");
 
+  const attempt=beginAuthAttempt();
   const r = await safeInternalJson(`/auth/login`, {
     method: "POST",
     body: JSON.stringify(body)
@@ -379,8 +381,9 @@ export async function loginWithPassword({ email = "", phone = "", password = "" 
   }
 
   if(accessToken){
-    setAuthAccessToken(accessToken);
+    acceptAuthAttempt(attempt,accessToken);
   }else{
+    assertAuthContext(attempt);
     clearAuthAccessToken();
   }
 
@@ -414,6 +417,7 @@ export async function authLogin({ login = "", password = "", role = "", slug = "
     body.slug = String(slug).trim();
   }
 
+  const attempt=beginAuthAttempt();
   const r = await safeInternalJson(`/auth/login`, {
     method: "POST",
     body: JSON.stringify(body)
@@ -428,8 +432,9 @@ export async function authLogin({ login = "", password = "", role = "", slug = "
   }
 
   if(accessToken){
-    setAuthAccessToken(accessToken);
+    acceptAuthAttempt(attempt,accessToken);
   }else{
+    assertAuthContext(attempt);
     clearAuthAccessToken();
   }
 
@@ -442,22 +447,21 @@ export async function authLogin({ login = "", password = "", role = "", slug = "
   };
 }
 
-export async function logoutCurrentSession(){
-  const r = await safeInternalJson(`/auth/logout`, { method: "POST" });
-  if(!r.ok) return { ok:false, error:"AUTH_LOGOUT_FETCH_FAILED", detail:r };
-  const j = r.json;
-  if(!j || !j.ok) return { ok:false, error:"AUTH_LOGOUT_API_NOT_OK", detail:j };
-  clearAuthAccessToken();
-  return { ok:true };
+export function logoutCurrentSession(){
+  const token=getAuthAccessToken();clearAuthAccessToken();
+  return revokeCapturedToken(token,logoutPath(token),!storageFailed);
 }
-
-export async function logoutAllSessions(){
-  const r = await safeInternalJson(`/auth/logout-all`, { method: "POST" });
-  if(!r.ok) return { ok:false, error:"AUTH_LOGOUT_ALL_FETCH_FAILED", detail:r };
-  const j = r.json;
-  if(!j || !j.ok) return { ok:false, error:"AUTH_LOGOUT_ALL_API_NOT_OK", detail:j };
-  clearAuthAccessToken();
-  return { ok:true };
+export function logoutAllSessions(){
+  const token=getAuthAccessToken();
+  if(tokenRole(token)==="admin")return Promise.resolve({ok:false,error:"ADMIN_LOGOUT_ALL_UNSUPPORTED"});
+  clearAuthAccessToken();return revokeCapturedToken(token,"/auth/logout-all",!storageFailed);
+}
+export async function adminLogin({email,password}={}){
+  const attempt=beginAuthAttempt();
+  const r=await safeInternalJson("/admin/auth/login",{method:"POST",cache:"no-store",body:JSON.stringify({email,password})});
+  const token=String(r.json?.access_token||"").trim();
+  if(!r.ok||r.json?.ok!==true||!token)throw Error("ADMIN_LOGIN_FAILED");
+  acceptAuthAttempt(attempt,token);return {ok:true};
 }
 
 export async function startAuth(payload){
@@ -496,6 +500,7 @@ export async function authStart({ login = "", purpose = "", role = "", slug = ""
 }
 
 export async function verifyAuth(payload){
+  const attempt=beginAuthAttempt();
   const r = await safeInternalJson(`/auth/verify`, {
     method: "POST",
     body: JSON.stringify(payload || {})
@@ -506,8 +511,9 @@ export async function verifyAuth(payload){
 
   const accessToken = String(j.access_token || j.token || "").trim();
   if(accessToken){
-    setAuthAccessToken(accessToken);
+    acceptAuthAttempt(attempt,accessToken);
   }else{
+    assertAuthContext(attempt);
     clearAuthAccessToken();
   }
 
@@ -2074,41 +2080,26 @@ export async function getMasterSalaryObligations(masterSlug = getMasterSlug(), p
    BOOKING ACTIONS
 ================================ */
 
-export async function bookingAction(id, action){
-  const normalizedAction = String(action || "").trim().toLowerCase();
-
-  if(normalizedAction === "complete" || normalizedAction === "cancel"){
-    const salonSlug = getSalonSlug();
-
-    if(!salonSlug){
-      return { ok:false, error:"SALON_SLUG_MISSING" };
-    }
-
-    const publicApiBase = String(
-      import.meta.env.VITE_API_BASE ||
-      window.TOTEM_API_BASE ||
-      "https://api.totemv.com"
-    ).replace(/\/$/, "");
-    const r = await safeJson(
-      `${publicApiBase}/public/salons/${encodeURIComponent(salonSlug)}/bookings/${id}/lifecycle`,
-      {
-        method: "POST",
-        headers: buildJsonHeaders(),
-        body: JSON.stringify({ action: normalizedAction })
-      }
-    );
-
-    if(!r.ok) return { ok:false, error:"BOOKING_ACTION_FETCH_FAILED", detail:r };
-    const j = r.json;
-    if(!j || !j.ok) return { ok:false, error:"BOOKING_ACTION_API_NOT_OK", detail:j };
-    return { ok:true, result: j };
-  }
-
-  const r = await safeInternalJson(`/bookings/${id}/${action}`, { method:"PATCH" });
-  if(!r.ok) return { ok:false, error:"BOOKING_ACTION_FETCH_FAILED", detail:r };
-  const j = r.json;
-  if(!j || !j.ok) return { ok:false, error:"BOOKING_ACTION_API_NOT_OK", detail:j };
-  return { ok:true, result: j };
+// All salon booking lifecycle actions use the existing authorized tenant route.
+export async function bookingAction(id, action, salonSlug){
+  const normalizedAction=String(action||"").trim().toLowerCase();
+  const slug=String(salonSlug||"");
+  if(!/^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/.test(slug) ||
+     !/^[1-9][0-9]*$/.test(String(id)) || !Number.isSafeInteger(Number(id)) ||
+     !["confirm","complete","cancel"].includes(normalizedAction))
+    return {ok:false,error:"BOOKING_ACTION_TARGET_INVALID"};
+  const context=captureAuthContext();
+  if(!context.token)return {ok:false,error:"BOOKING_OWNER_SESSION_REQUIRED"};
+  const r=await safeJson(
+    API_BASE.slice(0,-"/internal".length)+"/public/salons/"+encodeURIComponent(slug)+"/bookings/"+encodeURIComponent(String(id))+"/lifecycle",
+    {method:"POST",cache:"no-store",headers:buildJsonHeaders({Authorization:"Bearer "+context.token}),
+      body:JSON.stringify({action:normalizedAction})});
+  assertAuthContext(context);
+  const expected={confirm:"confirmed",complete:"completed",cancel:"cancelled"}[normalizedAction];
+  const acceptable=[expected,...(normalizedAction==="confirm"?["already_confirmed"]:normalizedAction==="cancel"?["already_cancelled"]:[])];
+  if(!r.ok || r.json?.ok!==true || !acceptable.includes(r.json.status))
+    return {ok:false,error:"BOOKING_ACTION_API_NOT_OK",detail:r};
+  return {ok:true,result:r.json};
 }
 
 /* ===============================
@@ -2761,22 +2752,7 @@ export async function createMasterWithdraw(amount, billingAccess, masterSlug = g
    TEMPLATE SYSTEM SHARED
 ================================ */
 
-function getInternalTemplateToken(){
-  const authToken = getAuthAccessToken();
-  if(authToken){
-    return authToken;
-  }
-
-  try{
-    return (
-      window.localStorage.getItem("TOTEM_INTERNAL_TOKEN") ||
-      window.TOTEM_INTERNAL_TOKEN ||
-      ""
-    );
-  }catch(e){
-    return window.TOTEM_INTERNAL_TOKEN || "";
-  }
-}
+function getInternalTemplateToken(){return getAuthAccessToken();}
 
 export function hasInternalTemplateToken(){
   return Boolean(getInternalTemplateToken());
@@ -2793,12 +2769,7 @@ async function safeTemplateJson(path, opts = {}){
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const r = await safeJson(`${API_BASE}${path}`, {
-    ...opts,
-    headers
-  });
-
-  return r;
+  return safeInternalJson(path,{...opts,headers});
 }
 
 function buildTemplatePublicPath(ownerType, ownerSlug){

@@ -11,9 +11,8 @@ import CabinetHeader from "../cabinet/CabinetHeader"
 import CabinetLayout from "../cabinet/CabinetLayout"
 import {
   hasAuthAccessToken,
-  clearAuthAccessToken,
   logoutCurrentSession,
-  resolveSession
+  resolveSession, captureAuthContext, isAuthContextCurrent
 } from "../api/internal"
 
 function BillingBanner({ billingAccess, billingBlockReason, canWrite, canWithdraw }){
@@ -121,9 +120,10 @@ function SessionGate({ slug, children }){
         return
       }
 
+      const context=captureAuthContext()
       const session = await resolveSession()
 
-      if(!active) return
+      if(!active||!isAuthContextCurrent(context)) return
 
       const authenticated = Boolean(session?.ok && session?.authenticated)
       const role = String(session?.role || session?.identity?.role || session?.auth?.role || "")
@@ -140,8 +140,6 @@ function SessionGate({ slug, children }){
         (limited?isSharedMasterSession(session,slug):(!masterSlug || masterSlug === String(slug || "")))
 
       if(!hasAccess){
-        clearAuthAccessToken()
-
         const params = new URLSearchParams()
         params.set("role", "master")
         if(slug) params.set("slug", slug)
@@ -237,12 +235,8 @@ function MasterLayoutInner(){
     }
   }, [])
 
-  async function logout(){
-    try{
-      await logoutCurrentSession()
-    }catch(e){
-      clearAuthAccessToken()
-    }
+  function logout(){
+    void logoutCurrentSession()
 
     const params = new URLSearchParams()
     params.set("role", "master")

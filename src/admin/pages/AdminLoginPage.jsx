@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-const API_BASE = (window.TOTEM_API_BASE || "https://api.totemv.com").replace(/\/$/, "")
+import { adminLogin } from "../../api/internal.js"
 
 function getReturnTo(){
   const hash = window.location.hash || ""
@@ -41,30 +41,7 @@ export default function AdminLoginPage() {
     setError("")
 
     try {
-      const response = await fetch(`${API_BASE}/internal/admin/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      })
-
-      const payload = await response.json()
-
-      if (!response.ok || payload?.ok !== true) {
-        throw new Error(payload?.error || `HTTP_${response.status}`)
-      }
-
-      const token = String(payload?.access_token || "").trim()
-
-      if (!token) {
-        throw new Error("NO_ACCESS_TOKEN")
-      }
-
-      window.localStorage.setItem("TOTEM_AUTH_TOKEN", token)
+      await adminLogin({email,password})
       const returnTo = getReturnTo()
       const targetHash = returnTo ? getAdminTargetHash(returnTo) : "#/admin"
       window.location.hash = targetHash

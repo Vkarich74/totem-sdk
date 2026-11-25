@@ -588,6 +588,14 @@ export default function SettingsPage() {
     reload,
   } = useSalonContext()
   const { context: marketContext } = useMarketContext()
+  const [profileConfirmation,setProfileConfirmation]=useState(null)
+  async function profilePersisted(verified){
+    setProfileConfirmation({
+      owner_id:verified.owner_id, owner_slug:verified.owner_slug,
+      auth_revision:verified.auth_revision, revision:verified.revision,
+    })
+    await reload()
+  }
 
   const billingUi = useMemo(
     () => getBillingUi(billingAccess, billingBlockReason),
@@ -662,7 +670,9 @@ export default function SettingsPage() {
             ownerType="salon"
             ownerSlug={slug}
             canWrite={canWrite}
-            onPersisted={reload}
+            onPersisted={profilePersisted}
+            persistedConfirmation={profileConfirmation}
+            onClearConfirmation={()=>setProfileConfirmation(null)}
           />
         </Block>
 

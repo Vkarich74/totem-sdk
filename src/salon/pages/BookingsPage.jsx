@@ -1,5 +1,5 @@
 import { UiValue, uiMessage, uiMoney, uiDate, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
 import * as api from "../../api/internal"
 import { resolveSalonSlug, useSalonContext } from "../SalonContext"
@@ -119,8 +119,8 @@ function SummaryCard({ label, value, hint }){
 
 export default function BookingsPage(){
   const { renderUi } = useUiMessages();
-  const { context: ownerMarketContext } = useMarketContext();
-  const { identity: salonIdentity } = useSalonContext();
+  const { context: ownerMarketContext, status: marketStatus } = useMarketContext();
+  const { identity: salonIdentity, billingAccess, canWrite, loading: ownerLoading, error: ownerError } = useSalonContext();
   const isUsMarket = ownerMarketContext?.market_code === "US";
   const { slug: routeSlug } = useParams()
   const isMobile = useIsMobile()
@@ -134,6 +134,16 @@ export default function BookingsPage(){
   const [error, setError] = useState("")
   const [loadingAction, setLoadingAction] = useState(null)
   const [selectedBookingId, setSelectedBookingId] = useState(null)
+  const actionInFlight=useRef(false)
+  const [actionUnconfirmed,setActionUnconfirmed]=useState(false)
+  const scope=JSON.stringify([salonSlug,ownerMarketContext?.market_code,api.getAuthRevision()])
+  const currentScope=useRef(scope)
+  currentScope.current=scope
+  const canManage=canWrite===true&&billingAccess?.can_write===true&&
+    !ownerLoading&&!ownerError&&salonIdentity?.slug===salonSlug&&
+    Number.isSafeInteger(Number(salonIdentity?.id))&&Number(salonIdentity.id)>0&&
+    marketStatus==="ready"&&["KG","KZ","US"].includes(ownerMarketContext?.market_code)&&
+    !loading&&!error&&!actionUnconfirmed
 
   async function load(){
     if(!salonSlug){
@@ -186,26 +196,40 @@ export default function BookingsPage(){
     return () => {
       cancelled = true
     }
-  }, [salonSlug, loadingAction])
+  }, [salonSlug])
 
-  async function action(id, type){
-    if(loadingAction) return
-
+  async function action(id,type){
+    if(!canManage||actionInFlight.current)return
+    const matches=bookings.filter(b=>String(b.id)===String(id))
+    const before=matches[0]
+    if(matches.length!==1||!before||
+      !((before.status==="reserved"&&["confirm","cancel"].includes(type))||
+        (before.status==="confirmed"&&["complete","cancel"].includes(type))))return
+    const auth=api.captureAuthContext()
+    if(!auth.token)return
+    const stillCurrent=()=>api.isAuthContextCurrent(auth)&&currentScope.current===scope
+    actionInFlight.current=true
+    setLoadingAction(id)
     try{
-      setLoadingAction(id)
-      const response = await api.bookingAction(id, type)
-
-      if(!response?.ok){
-        alert(renderUi(uiError(uiMessage("salon.s0208"))))
-        return
-      }
-
-      await load()
+      const response=await api.bookingAction(id,type,salonSlug)
+      if(!stillCurrent())return
+      if(!response?.ok)throw Error("BOOKING_ACTION_UNCONFIRMED")
+      const fresh=await api.getBookings(salonSlug)
+      if(!stillCurrent())return
+      const rows=fresh?.bookings
+      const found=Array.isArray(rows)?rows.filter(b=>String(b.id)===String(id)):[]
+      const expected={confirm:"confirmed",complete:"completed",cancel:"cancelled"}[type]
+      const actual=String(found[0]?.status||"").toLowerCase().replace(/^canceled$/,"cancelled")
+      if(fresh?.ok!==true||found.length!==1||actual!==expected)
+        throw Error("BOOKING_ACTION_UNCONFIRMED")
+      setBookings(sortBookings(rows.map(normalizeBooking)))
     }catch(actionError){
-      console.error("SALON BOOKING ACTION ERROR", actionError)
+      if(!stillCurrent())return
+      setActionUnconfirmed(true)
       alert(renderUi(uiError(uiMessage("salon.s0209"))))
     }finally{
-      setLoadingAction(null)
+      actionInFlight.current=false
+      if(stillCurrent())setLoadingAction(null)
     }
   }
 
@@ -447,18 +471,22 @@ export default function BookingsPage(){
                   />
                 ) : null}
 
+                {actionUnconfirmed && <div role="alert">
+                  Изменение статуса не подтверждено. Обновите записи перед следующим действием.
+                  <button type="button" onClick={()=>window.location.reload()}>Обновить записи</button>
+                </div>}
                 <div style={styles.actionsRow}>
-                  {selectedBooking.status === "reserved" && (
+                  {canManage && selectedBooking.status === "reserved" && (
                     <>
-                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "confirm")}><UiValue value={uiMessage("salon.s0234")} /></ActionButton>
-                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "cancel")}><UiValue value={uiMessage("salon.s0235")} /></ActionButton>
+                      <ActionButton disabled={loadingAction !== null} onClick={() => action(selectedBooking.id, "confirm")}><UiValue value={uiMessage("salon.s0234")} /></ActionButton>
+                      <ActionButton disabled={loadingAction !== null} onClick={() => action(selectedBooking.id, "cancel")}><UiValue value={uiMessage("salon.s0235")} /></ActionButton>
                     </>
                   )}
 
-                  {selectedBooking.status === "confirmed" && (
+                  {canManage && selectedBooking.status === "confirmed" && (
                     <>
-                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "complete")}><UiValue value={uiMessage("salon.s0236")} /></ActionButton>
-                      <ActionButton disabled={loadingAction === selectedBooking.id} onClick={() => action(selectedBooking.id, "cancel")}><UiValue value={uiMessage("salon.s0235")} /></ActionButton>
+                      <ActionButton disabled={loadingAction !== null} onClick={() => action(selectedBooking.id, "complete")}><UiValue value={uiMessage("salon.s0236")} /></ActionButton>
+                      <ActionButton disabled={loadingAction !== null} onClick={() => action(selectedBooking.id, "cancel")}><UiValue value={uiMessage("salon.s0235")} /></ActionButton>
                     </>
                   )}
 

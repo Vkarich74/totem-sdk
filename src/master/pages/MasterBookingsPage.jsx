@@ -1,9 +1,9 @@
 import { uiMoney, UiValue, uiMessage, uiDate, uiTemplate, uiError, useUiMessages } from "../../i18n/uiMessages.js";
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useMaster } from "../MasterContext"
 import {useSharedMasterRole} from "../../us/SharedMasterRole.jsx"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { masterCabinetLegacyJson, getMasterBookings, getMasterServices } from "../../api/internal"
+import { masterCabinetLegacyJson, getMasterBookings, getMasterServices, captureAuthContext, isAuthContextCurrent } from "../../api/internal"
 import { useMarketContext } from "../../market/MarketContext.jsx"
 import {
   allowsLegacyMasterQuickBooking,
@@ -123,7 +123,7 @@ function StandardMasterBookingsPage(){
     error: masterError,
     master,
     slug,
-    canWrite
+    canWrite, billingAccess
   } = useMaster()
 
   const [bookings, setBookings] = useState([])
@@ -140,6 +140,9 @@ function StandardMasterBookingsPage(){
   const [createError, setCreateError] = useState("")
   const [serviceOptions, setServiceOptions] = useState([])
   const [serviceOptionsLoading, setServiceOptionsLoading] = useState(false)
+  const [creating,setCreating]=useState(false)
+  const [createUnconfirmed,setCreateUnconfirmed]=useState(false)
+  const createInFlight=useRef(false)
 
   const masterSlug = master?.slug || slug
   const isCreateMode = bookingId === "new"
@@ -152,6 +155,11 @@ function StandardMasterBookingsPage(){
   ])
   const verifiedUsBookings = bookingsScope.key === bookingsScopeKey &&
     bookingsScope.mode === "us"
+  const currentScope=useRef(bookingsScopeKey)
+  currentScope.current=bookingsScopeKey
+  const legacyWriteAllowed=legacyQuickBookingAllowed&&canWrite===true&&
+    billingAccess?.can_write===true&&!masterLoading&&!masterError&&
+    master?.slug===slug&&Number.isSafeInteger(Number(master?.id))&&Number(master.id)>0
 
   useEffect(() => {
     if(!isCreateMode) return
@@ -164,7 +172,7 @@ function StandardMasterBookingsPage(){
     let cancelled = false
 
     async function loadServiceOptions(){
-      if(!isCreateMode || !masterSlug || !legacyQuickBookingAllowed){
+      if(!isCreateMode || !masterSlug || !legacyWriteAllowed){
         if(!cancelled){
           setServiceOptions([])
           setServiceOptionsLoading(false)
@@ -223,7 +231,7 @@ function StandardMasterBookingsPage(){
     return () => {
       cancelled = true
     }
-  }, [isCreateMode, masterSlug, legacyQuickBookingAllowed])
+  }, [isCreateMode, masterSlug, legacyWriteAllowed])
 
   useEffect(()=>{
     let cancelled=false
@@ -361,7 +369,7 @@ function StandardMasterBookingsPage(){
       <PageSection title="Ручная запись мастера · США">
         <UsMasterManualBooking
           masterSlug={masterSlug}
-          canWrite={canWrite===true}
+          canWrite={canWrite===true&&billingAccess?.can_write===true}
           initialDate={bookingDate}
           onBooked={() => navigate("/master/"+encodeURIComponent(masterSlug)+"/schedule")}
         />
@@ -382,18 +390,23 @@ function StandardMasterBookingsPage(){
   async function createBooking(date, time) {
     // US master bookings require the canonical location-specific public
     // availability/price transaction. Never send KG +06:00 legacy payload.
-    if(!legacyQuickBookingAllowed){
+    if(!legacyWriteAllowed||creating||createUnconfirmed||createInFlight.current){
       setCreateError(uiMessage("master.quickBookingUnavailable"))
       return
     }
     if (!masterSlug) return
 
-    if (!date || !time || !client.trim()) {
+    if (!date || !time || !client.trim()||!serviceOptions.some(s=>String(s?.id??s?.service_id??"")===String(serviceId))) {
       setCreateError(uiError(uiMessage("master.s0264")))
       return
     }
 
     const start = date + "T" + time + ":00+06:00"
+    const auth=captureAuthContext(),scope=bookingsScopeKey
+    if(!auth.token)return
+    const stillCurrent=()=>isAuthContextCurrent(auth)&&currentScope.current===scope
+    createInFlight.current=true
+    setCreating(true)
     try {
       const payload = await masterCabinetLegacyJson(
         "/masters/" + encodeURIComponent(masterSlug) + "/bookings",
@@ -405,20 +418,27 @@ function StandardMasterBookingsPage(){
         }}
       )
 
-      if (payload?.ok === false) {
-        throw new Error(payload?.error || "MASTER_BOOKING_CREATE_FAILED")
-      }
+      if(!stillCurrent())return
+      const booked=payload?.booking
+      if(payload?.ok!==true||!Number.isSafeInteger(Number(booked?.id))||Number(booked.id)<1||
+         Number(booked.master_id)!==Number(master.id)||booked.status!=="reserved"||
+         !Number.isFinite(Date.parse(booked.start_at))||Date.parse(booked.start_at)!==Date.parse(start))
+        throw Error("MASTER_BOOKING_CREATE_NOT_CONFIRMED")
 
       setCreateError("")
       navigate(uiTemplate(["/master/","/schedule"], [masterSlug]))
       return
     } catch (e) {
-      console.error("createBooking error", e)
+      if(!stillCurrent())return
+      setCreateUnconfirmed(true)
       setCreateError(uiError(e?.message || "MASTER_BOOKING_CREATE_FAILED"))
+    }finally{
+      createInFlight.current=false
+      if(stillCurrent())setCreating(false)
     }
   }
 
-  if (isCreateMode && !legacyQuickBookingAllowed) {
+  if (isCreateMode && !legacyWriteAllowed) {
     return (
       <div style={{ padding: "20px" }}>
         <button
@@ -444,6 +464,7 @@ function StandardMasterBookingsPage(){
 
         <PageSection title={uiMessage("master.s0266")}>
           <div style={styles.createForm}>
+            {createUnconfirmed&&<div role="alert">Результат создания не подтверждён. Перед новой записью проверьте расписание.</div>}
             {createError && (
               <div style={styles.errorBanner}>
                 <UiValue value={createError} />
@@ -498,7 +519,7 @@ function StandardMasterBookingsPage(){
                 value={serviceId}
                 onChange={(e) => setServiceId(e.target.value)}
                 style={styles.fieldInput}
-                disabled={serviceOptionsLoading || serviceOptions.length === 0}
+                disabled={!legacyWriteAllowed || creating || createUnconfirmed || serviceOptionsLoading || serviceOptions.length === 0}
               >
                 {serviceOptions.length === 0 ? (
                   <option value=""><UiValue value={uiMessage("master.s0271")} /></option>
@@ -520,7 +541,7 @@ function StandardMasterBookingsPage(){
               <button
                 onClick={() => createBooking(bookingDate, bookingTime)}
                 style={styles.primaryButton}
-                disabled={serviceOptionsLoading || serviceOptions.length === 0}
+                disabled={!legacyWriteAllowed || creating || createUnconfirmed || serviceOptionsLoading || serviceOptions.length === 0}
               ><UiValue value={uiMessage("master.s0273")} /></button>
 
               <button

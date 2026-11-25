@@ -1,4 +1,5 @@
-const CACHE_NAME = "totem-mobile-pwa-v4";
+const CACHE_NAME = "totem-mobile-pwa-v5";
+const OWN_CACHE = /^totem-mobile-pwa-v[0-9]+$/;
 const DEFAULT_NOTIFICATION_ICON = "/icons/icon-192.png";
 
 function safeJsonParse(value) {
@@ -138,7 +139,7 @@ self.addEventListener("activate", (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME)
+          .filter((name) => OWN_CACHE.test(name) && name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       );
       await self.clients.claim();
@@ -146,105 +147,58 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-function isBypassedPathname(pathname) {
-  return (
-    pathname.startsWith("/internal") ||
-    pathname.startsWith("/public") ||
-    pathname.startsWith("/api")
-  );
+// G5-03: Cache Storage is shared between all accounts on this origin.
+// Cache only immutable, content-hashed Vite assets. Never cache application
+// data, arbitrary destinations, authenticated requests, or foreign origins.
+function isImmutableAsset(request, url) {
+  return url.origin === self.location.origin &&
+    !url.search && !url.hash &&
+    !request.headers.has("authorization") &&
+    !request.headers.has("range") &&
+    /^\/assets\/[A-Za-z0-9_-]+-[A-Za-z0-9_-]{8,}\.(?:js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|avif|woff2?|ttf)$/.test(url.pathname);
 }
 
-function isStaticAssetRequest(request) {
-  if (request.destination && request.destination !== "document") {
-    return true;
-  }
-
-  return /\/(?:assets|icons)\//.test(new URL(request.url).pathname) || /\.(?:js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|woff2?|ttf|map|json|webmanifest)$/.test(new URL(request.url).pathname);
-}
-
-function isAppAssetRequest(request) {
-  return new URL(request.url).pathname.startsWith("/assets/");
+function canStore(response, request) {
+  if (!response || !response.ok || response.status !== 200 ||
+      response.type !== "basic" || response.redirected ||
+      response.url !== request.url) return false;
+  const directives = (response.headers.get("cache-control") || "")
+    .toLowerCase().split(",").map(value => value.trim());
+  return directives.includes("public") && directives.includes("immutable") &&
+    !directives.some(value => /^(?:private|no-store|no-cache)(?:\s*=|$)/.test(value)) &&
+    (response.headers.get("vary") || "").toLowerCase().split(",")
+      .every(value => ["", "accept-encoding"].includes(value.trim()));
 }
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-
-  if (request.method !== "GET") {
-    return;
-  }
-
+  if (request.method !== "GET") return;
   const url = new URL(request.url);
+  if (url.origin !== self.location.origin ||
+      request.headers.has("authorization") || request.headers.has("range")) return;
 
-  if (isBypassedPathname(url.pathname)) {
-    return;
-  }
-
+  // Preserve network-only SPA navigation, without intercepting API paths.
+  if (/^\/(?:internal|public|api)(?:\/|$)/.test(url.pathname)) return;
   if (request.mode === "navigate") {
-    event.respondWith(
-      (async () => {
-        try {
-          return await fetch(request);
-        } catch (error) {
-          return fetch("/");
-        }
-      })()
-    );
+    event.respondWith(fetch(request).catch(() => fetch("/")));
     return;
   }
-
-  if (isAppAssetRequest(request)) {
-    event.respondWith(
-      (async () => {
-        const cache = await caches.open(CACHE_NAME);
-        const cached = await cache.match(request);
-
-        try {
-          const response = await fetch(request);
-          if (response && response.ok) {
-            await cache.put(request, response.clone());
-          }
-          return response;
-        } catch (error) {
-          if (cached) {
-            return cached;
-          }
-
-          return fetch(request);
-        }
-      })()
-    );
-    return;
-  }
-
-  if (!isStaticAssetRequest(request)) {
-    return;
-  }
-
-  event.respondWith(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      const cached = await cache.match(request);
-
-      const networkPromise = fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            cache.put(request, response.clone());
-          }
-          return response;
-        })
-        .catch(() => null);
-
-      if (cached) {
-        networkPromise.catch(() => null);
-        return cached;
-      }
-
-      const fresh = await networkPromise;
-      if (fresh) {
-        return fresh;
-      }
-
-      return fetch(request);
-    })()
-  );
+  if (!isImmutableAsset(request, url)) return;
+  event.respondWith((async () => {
+    let cache;
+    try { cache = await caches.open(CACHE_NAME); } catch { return fetch(request); }
+    let response;
+    try {
+      response = await fetch(request);
+    } catch (error) {
+      const cached = await cache.match(request).catch(() => undefined);
+      if (canStore(cached, request)) return cached;
+      throw error;
+    }
+    try {
+      if (canStore(response, request)) await cache.put(request, response.clone());
+      else await cache.delete(request);
+    } catch { /* Cache failure must not replace a successful network response. */ }
+    return response;
+  })());
 });
