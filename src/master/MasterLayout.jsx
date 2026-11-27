@@ -2,7 +2,7 @@ import { uiError, UiValue, uiMessage, uiTemplate } from "../i18n/uiMessages.js";
 import { Outlet, useLocation, useParams } from "react-router-dom"
 import {SharedMasterRoleProvider,useSharedMasterRole,SharedMasterReturn,allowedSharedSections} from "../us/SharedMasterRole.jsx"
 import PageSection from "../cabinet/PageSection.jsx"
-import {isSharedMasterSession} from "../us/sharedRoleContract.js"
+import {readMasterCabinetAccess} from "../us/sharedRoleContract.js"
 import { useEffect, useState } from "react"
 import { MasterProvider, useMaster, resolveMasterSlug } from "./MasterContext"
 import MasterSidebar from "./MasterSidebar"
@@ -125,19 +125,7 @@ function SessionGate({ slug, children }){
 
       if(!active||!isAuthContextCurrent(context)) return
 
-      const authenticated = Boolean(session?.ok && session?.authenticated)
-      const role = String(session?.role || session?.identity?.role || session?.auth?.role || "")
-      const masterSlug = String(
-        session?.identity?.master_slug ||
-        session?.auth?.master_slug ||
-        ""
-      )
-
-      const limited=session?.auth?.us_role_context==="own_salon_master_v1";
-      const hasAccess =
-        authenticated &&
-        role === "master" &&
-        (limited?isSharedMasterSession(session,slug):(!masterSlug || masterSlug === String(slug || "")))
+      const {allowed:hasAccess,limited}=readMasterCabinetAccess(session,slug)
 
       if(!hasAccess){
         const params = new URLSearchParams()

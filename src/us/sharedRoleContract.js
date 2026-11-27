@@ -10,6 +10,22 @@ export function isSharedMasterSession(s,slug){
     positive(s.auth.master_request_id)&&slugPattern.test(String(slug||""))&&s.auth.master_slug===slug&&
     s.identity?.salons?.length===0&&Array.isArray(s.identity?.masters)&&s.identity.masters.length===1&&positive(s.identity.masters[0]);
 }
+// A partial server response must not downgrade a limited US role to an
+// ordinary master cabinet. These markers are server identity evidence only.
+export function hasSharedMasterContextEvidence(s){
+  return s?.auth?.us_role_context!=null||s?.auth?.master_request_id!=null||
+    (Array.isArray(s?.identity?.ownership)&&s.identity.ownership.some(
+      item=>item?.relation==="verified_own_salon_role_context"));
+}
+export function readMasterCabinetAccess(s,slug){
+  const authenticated=Boolean(s?.ok&&s?.authenticated);
+  const role=String(s?.role||s?.identity?.role||s?.auth?.role||"");
+  const masterSlug=String(s?.identity?.master_slug||s?.auth?.master_slug||"");
+  const limited=hasSharedMasterContextEvidence(s);
+  const allowed=authenticated&&role==="master"&&
+    (limited?isSharedMasterSession(s,slug):(!masterSlug||masterSlug===String(slug||"")));
+  return {allowed,limited};
+}
 export function normalizeSharedRoleOptions(rows,salonSlug){
   if(!slugPattern.test(String(salonSlug||""))||!Array.isArray(rows)||rows.length!==1)return [];
   const r=rows[0];
@@ -24,7 +40,7 @@ export function validateRoleSwitchSession(before,after,role,slug){
      !before.auth?.session_id||before.auth.session_id!==after.auth.session_id)return false;
   if(role==="master")return before.role==="salon_admin"&&isSharedMasterSession(after,slug);
   return role==="salon_admin"&&before.auth.us_role_context==="own_salon_master_v1"&&
-    !after.auth.us_role_context&&Array.isArray(after.identity?.salons)&&after.identity.salons.length===1&&positive(after.identity.salons[0]);
+    !hasSharedMasterContextEvidence(after)&&Array.isArray(after.identity?.salons)&&after.identity.salons.length===1&&positive(after.identity.salons[0]);
 }
 export function readSharedCapabilities(root,session,slug,now=Date.now()){
   if(!isSharedMasterSession(session,slug)||root?.ok!==true||root.master?.slug!==slug||
